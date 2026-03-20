@@ -13,7 +13,7 @@ result = evalution.run(
         dtype="bfloat16",
         attn_implementation="sdpa",
         device="cuda:0",
-        batch_size=1,
+        batch_size="auto",
     ),
     tests=[
         evalution.gsm8k_platinum(
@@ -24,6 +24,11 @@ result = evalution.run(
     ],
 )
 ```
+
+`Transformer(batch_size="auto")` is the default. Evalution will choose a per-suite batch size from
+the suite row count, rendered prompt token lengths, GPU VRAM, and dtype. A suite can still override
+that with `gsm8k_platinum(batch_size=...)` when it needs a smaller or larger batch than the engine
+default.
 
 Current built-in coverage:
 

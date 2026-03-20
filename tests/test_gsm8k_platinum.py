@@ -11,12 +11,24 @@ gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum
 
 
 class FakeSession:
-    def __init__(self, responses: list[str], *, batch_size: int | None = None) -> None:
+    def __init__(
+        self,
+        responses: list[str],
+        *,
+        batch_size: int | None = None,
+        resolved_batch_size: int | None = None,
+    ) -> None:
         self.responses = responses
         self.requests = []
         self.batch_size = batch_size
+        self.resolved_batch_size = resolved_batch_size
         self.generate_batch_sizes: list[int | None] = []
         self._response_index = 0
+        self.resolve_calls = 0
+
+    def resolve_batch_size(self, requests) -> int:
+        self.resolve_calls += 1
+        return self.resolved_batch_size
 
     def generate(self, requests, *, batch_size=None):
         self.generate_batch_sizes.append(batch_size)
@@ -135,3 +147,28 @@ def test_gsm8k_platinum_suite_batch_size_overrides_engine_default(monkeypatch) -
 
     assert result.metrics["exact_match,strict-match"] == 1.0
     assert session.generate_batch_sizes == [2, 2, 1]
+
+
+def test_gsm8k_platinum_uses_session_batch_size_resolver(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": f"What is 40 plus {offset}?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+            for offset in range(5)
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    suite = evalution.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+    )
+    session = FakeSession(["The answer is 42."] * 5, batch_size=99, resolved_batch_size=3)
+    result = suite.evaluate(session)
+
+    assert result.metrics["exact_match,strict-match"] == 1.0
+    assert session.resolve_calls == 1
+    assert session.generate_batch_sizes == [3, 2]

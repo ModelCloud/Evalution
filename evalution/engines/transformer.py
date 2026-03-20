@@ -1,12 +1,46 @@
 from __future__ import annotations
 
 import gc
+from statistics import mean
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from evalution.config import Model
 from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.engines.memory import build_memory_profile, gib_to_bytes, resolve_dtype
+from evalution.logbar import get_logger
+
+_AUTO_BATCH_SIZE = "auto"
+_AUTO_BATCH_LADDER = (
+    1,
+    2,
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    40,
+    48,
+    64,
+    80,
+    96,
+    128,
+    160,
+    192,
+    256,
+    320,
+    384,
+    512,
+    640,
+    768,
+    896,
+    1024,
+    1280,
+    1536,
+    2048,
+)
 
 
 def _truncate_at_stop(text: str, stop_strings: list[str]) -> str:
@@ -26,7 +60,7 @@ class Transformer:
     attention_impl: str | None = None
     device: str | None = None
     device_map: str | dict[str, Any] | None = None
-    batch_size: int = 1
+    batch_size: int | str = _AUTO_BATCH_SIZE
     max_new_tokens: int = 256
     trust_remote_code: bool | None = None
     padding_side: str = "left"
@@ -48,6 +82,7 @@ class TransformerSession:
     tokenizer: Any
     input_device: Any
     stop_criteria_cache: dict[tuple[str, ...], Any] = field(default_factory=dict, repr=False)
+    auto_batch_size_cache: dict[tuple[Any, ...], int] = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_config(cls, config: Transformer, model_config: Model) -> TransformerSession:
@@ -80,7 +115,7 @@ class TransformerSession:
             "revision": model_config.revision,
             "trust_remote_code": trust_remote_code,
         }
-        resolved_dtype = _resolve_dtype(config.dtype)
+        resolved_dtype = resolve_dtype(config.dtype)
         if resolved_dtype is not None:
             load_kwargs["dtype"] = resolved_dtype
         attn_implementation = config.attention_impl or config.attn_implementation
@@ -119,7 +154,7 @@ class TransformerSession:
         if not requests:
             return []
 
-        effective_batch_size = batch_size or self.config.batch_size
+        effective_batch_size = batch_size or self.resolve_batch_size(requests)
         outputs: list[GenerationOutput] = []
 
         for start in range(0, len(requests), effective_batch_size):
@@ -191,6 +226,7 @@ class TransformerSession:
 
     def close(self) -> None:
         self.stop_criteria_cache.clear()
+        self.auto_batch_size_cache.clear()
         with suppress(Exception):
             del self.model
         with suppress(Exception):
@@ -214,8 +250,47 @@ class TransformerSession:
         return request.prompt
 
     @property
-    def batch_size(self) -> int:
+    def batch_size(self) -> int | str:
         return self.config.batch_size
+
+    def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
+        configured_batch_size = _normalize_batch_size(self.config.batch_size)
+        if configured_batch_size != _AUTO_BATCH_SIZE:
+            return configured_batch_size
+        if not requests:
+            return 1
+
+        stats = self._batch_size_stats(requests)
+        cache_key = (
+            stats["row_count"],
+            stats["min_prompt_tokens"],
+            stats["avg_prompt_tokens"],
+            stats["max_prompt_tokens"],
+            stats["max_new_tokens"],
+            stats["dtype_name"],
+            stats["dtype_bytes"],
+            stats["total_vram_gib"],
+            stats["parameter_count_billions"],
+        )
+        cached = self.auto_batch_size_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        resolved = self._estimate_auto_batch_size(stats)
+        self.auto_batch_size_cache[cache_key] = resolved
+        get_logger().info(
+            "auto batch size resolved to %d for %d row(s); prompt_tokens(min/avg/max)=%d/%.1f/%d, "
+            "max_new_tokens=%d, dtype=%s, total_vram_gib=%.1f",
+            resolved,
+            stats["row_count"],
+            stats["min_prompt_tokens"],
+            stats["avg_prompt_tokens"],
+            stats["max_prompt_tokens"],
+            stats["max_new_tokens"],
+            stats["dtype_name"],
+            stats["total_vram_gib"],
+        )
+        return resolved
 
     def _get_stop_criteria(self, stop_strings: list[str]) -> Any:
         from transformers import StopStringCriteria
@@ -227,27 +302,83 @@ class TransformerSession:
             self.stop_criteria_cache[cache_key] = criteria
         return criteria
 
+    def _batch_size_stats(self, requests: list[GenerationRequest]) -> dict[str, Any]:
+        import torch
 
-def _resolve_dtype(dtype: str | None) -> Any:
-    if dtype is None:
-        return None
-    if dtype == "auto":
-        return "auto"
+        rendered_prompts = [self._render_request(request) for request in requests]
+        encoded = self.tokenizer(rendered_prompts, padding=False)
+        prompt_lengths = [len(token_ids) for token_ids in encoded["input_ids"]]
+        del encoded
+        del rendered_prompts
 
-    import torch
+        max_new_tokens = max(
+            request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
+            for request in requests
+        )
+        memory_profile = build_memory_profile(
+            self.model,
+            input_device=self.input_device,
+            configured_dtype=self.config.dtype,
+        )
 
-    mapping = {
-        "float16": torch.float16,
-        "fp16": torch.float16,
-        "bfloat16": torch.bfloat16,
-        "bf16": torch.bfloat16,
-        "float32": torch.float32,
-        "fp32": torch.float32,
-    }
-    try:
-        return mapping[dtype]
-    except KeyError as exc:
-        raise ValueError(f"unsupported dtype: {dtype}") from exc
+        return {
+            "row_count": len(requests),
+            "min_prompt_tokens": min(prompt_lengths),
+            "avg_prompt_tokens": float(mean(prompt_lengths)),
+            "max_prompt_tokens": max(prompt_lengths),
+            "max_new_tokens": max_new_tokens,
+            "dtype_name": memory_profile.dtype_name,
+            "dtype_bytes": memory_profile.dtype_bytes,
+            "total_vram_gib": memory_profile.total_vram_gib,
+            "free_vram_gib": memory_profile.free_vram_gib,
+            "parameter_count_billions": memory_profile.parameter_count_billions,
+            "kv_cache_bytes_per_token": memory_profile.kv_cache_bytes_per_token,
+        }
+
+    def _estimate_auto_batch_size(self, stats: dict[str, Any]) -> int:
+        row_count = stats["row_count"]
+        tokens_per_request = stats["avg_prompt_tokens"] + stats["max_new_tokens"]
+        if tokens_per_request <= 0:
+            return 1
+
+        if self.input_device.type != "cuda":
+            raw_batch_size = max(1, int(2048 / tokens_per_request))
+            return min(row_count, _friendly_batch_size(raw_batch_size))
+
+        dtype_scale = 2.0 / max(stats["dtype_bytes"], 1)
+        total_token_budget = stats["total_vram_gib"] * 2048.0 * dtype_scale
+
+        if stats["free_vram_gib"] > 0.0 and stats["total_vram_gib"] > 0.0:
+            free_ratio = min(1.0, stats["free_vram_gib"] / stats["total_vram_gib"])
+            total_token_budget *= max(0.35, free_ratio)
+
+        spread_ratio = stats["max_prompt_tokens"] / max(stats["min_prompt_tokens"], 1)
+        total_token_budget /= max(1.0, spread_ratio ** 0.25)
+        max_from_tokens = max(1, int(total_token_budget / tokens_per_request))
+
+        max_from_vram = row_count
+        kv_cache_bytes_per_token = stats["kv_cache_bytes_per_token"]
+        if kv_cache_bytes_per_token is not None and stats["total_vram_gib"] > 0.0:
+            if stats["free_vram_gib"] > 0.0:
+                available_budget_gib = min(
+                    stats["total_vram_gib"] * 0.72,
+                    stats["free_vram_gib"] * 0.90,
+                )
+            else:
+                available_budget_gib = stats["total_vram_gib"] * 0.50
+            request_bytes = (
+                (stats["max_prompt_tokens"] + stats["max_new_tokens"])
+                * kv_cache_bytes_per_token
+                * 3.5
+            )
+            if request_bytes > 0:
+                max_from_vram = max(
+                    1,
+                    int(gib_to_bytes(available_budget_gib) / request_bytes),
+                )
+
+        raw_batch_size = max(1, min(row_count, max_from_tokens, max_from_vram))
+        return min(row_count, _friendly_batch_size(raw_batch_size))
 
 
 def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:
@@ -275,3 +406,20 @@ def _common_stop_strings(batch: list[GenerationRequest]) -> list[str] | None:
     if all(request.stop == first for request in batch):
         return first
     return None
+
+
+def _normalize_batch_size(batch_size: int | str) -> int | str:
+    if batch_size == _AUTO_BATCH_SIZE:
+        return _AUTO_BATCH_SIZE
+    if not isinstance(batch_size, int) or batch_size <= 0:
+        raise ValueError("batch_size must be a positive integer or 'auto'")
+    return batch_size
+
+
+def _friendly_batch_size(raw_batch_size: int) -> int:
+    friendly = 1
+    for candidate in _AUTO_BATCH_LADDER:
+        if candidate > raw_batch_size:
+            break
+        friendly = candidate
+    return max(1, friendly)
