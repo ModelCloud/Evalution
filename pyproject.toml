@@ -9,6 +9,10 @@ description = "Python package for Evalution."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
+dependencies = [
+    "datasets>=4.8.3",
+    "transformers>=5.0.0",
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -29,3 +33,7 @@ include = ["evalution*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "integration: tests that require external model assets or full inference",
+    "slow: tests that are expensive to run",
+]
