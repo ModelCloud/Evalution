@@ -44,6 +44,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["dtype"] == "bfloat16"
     assert result.engine["attn_implementation"] == "sdpa"
     assert result.engine["batch_size"] == "auto"
+    assert result.engine["paged_attention"] == "auto"
     assert len(result.tests) == 1
 
     test_result = result.tests[0]

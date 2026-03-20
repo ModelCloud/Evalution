@@ -14,6 +14,7 @@ result = evalution.run(
         attn_implementation="sdpa",
         device="cuda:0",
         batch_size="auto",
+        paged_attention="auto",
     ),
     tests=[
         evalution.gsm8k_platinum(
@@ -25,10 +26,13 @@ result = evalution.run(
 )
 ```
 
-`Transformer(batch_size="auto")` is the default. Evalution will choose a per-suite batch size from
-the suite row count, rendered prompt token lengths, GPU VRAM, and dtype. A suite can still override
-that with `gsm8k_platinum(batch_size=...)` when it needs a smaller or larger batch than the engine
-default.
+`Transformer(batch_size="auto", paged_attention="auto")` is the default. Evalution will choose a
+per-suite batch size from the suite row count, rendered prompt token lengths, GPU VRAM, and dtype.
+On compatible CUDA `transformers` models it will also switch to paged continuous batching
+automatically for `flash_attention_2`, using `paged|flash_attention_2` and logging the effective
+attention backend before execution. Callers can still force paged attention on other supported
+backends with `paged_attention=True`, or force plain static generation with `paged_attention=False`.
+A suite can still override batch sizing with `gsm8k_platinum(batch_size=...)`.
 
 Current built-in coverage:
 

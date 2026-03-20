@@ -12,6 +12,7 @@ from evalution.engines.memory import build_memory_profile, gib_to_bytes, resolve
 from evalution.logbar import get_logger
 
 _AUTO_BATCH_SIZE = "auto"
+_AUTO_PAGED_ATTENTION = "auto"
 _AUTO_BATCH_LADDER = (
     1,
     2,
@@ -61,6 +62,7 @@ class Transformer:
     device: str | None = None
     device_map: str | dict[str, Any] | None = None
     batch_size: int | str = _AUTO_BATCH_SIZE
+    paged_attention: bool | str = _AUTO_PAGED_ATTENTION
     max_new_tokens: int = 256
     trust_remote_code: bool | None = None
     padding_side: str = "left"
@@ -81,8 +83,14 @@ class TransformerSession:
     model: Any
     tokenizer: Any
     input_device: Any
+    requested_attn_implementation: str | None = None
+    effective_attn_implementation: str | None = None
+    paged_attention_enabled: bool = False
+    generation_backend: str = "generate"
+    standard_batch_size_cap: int | None = None
     stop_criteria_cache: dict[tuple[str, ...], Any] = field(default_factory=dict, repr=False)
     auto_batch_size_cache: dict[tuple[Any, ...], int] = field(default_factory=dict, repr=False)
+    execution_logged: bool = field(default=False, repr=False)
 
     @classmethod
     def from_config(cls, config: Transformer, model_config: Model) -> TransformerSession:
@@ -118,7 +126,8 @@ class TransformerSession:
         resolved_dtype = resolve_dtype(config.dtype)
         if resolved_dtype is not None:
             load_kwargs["dtype"] = resolved_dtype
-        attn_implementation = config.attention_impl or config.attn_implementation
+        raw_attn_implementation = config.attention_impl or config.attn_implementation
+        attn_implementation = _base_attn_implementation(raw_attn_implementation)
         if attn_implementation is not None:
             load_kwargs["attn_implementation"] = attn_implementation
         if config.device_map is not None:
@@ -134,12 +143,43 @@ class TransformerSession:
         else:
             input_device = _resolve_input_device(model, prefer=config.device)
 
+        requested_attn_implementation = (
+            attn_implementation
+            or getattr(model.config, "_attn_implementation", None)
+            or getattr(model.config, "attn_implementation", None)
+        )
+        paged_attention_config = config.paged_attention
+        if raw_attn_implementation is not None and raw_attn_implementation.startswith("paged|"):
+            paged_attention_config = True
+        paged_attention_enabled = _resolve_paged_attention(
+            paged_attention=paged_attention_config,
+            attn_implementation=requested_attn_implementation,
+            model=model,
+            input_device=input_device,
+        )
+        effective_attn_implementation = _effective_attn_implementation(
+            requested_attn_implementation,
+            paged_attention_enabled=paged_attention_enabled,
+        )
+        generation_backend = "continuous_batching" if paged_attention_enabled else "generate"
+        get_logger().info(
+            "transformer attention requested=%s effective=%s backend=%s paged_attention=%s",
+            requested_attn_implementation,
+            effective_attn_implementation,
+            generation_backend,
+            paged_attention_enabled,
+        )
+
         return cls(
             config=config,
             model_config=model_config,
             model=model,
             tokenizer=tokenizer,
             input_device=input_device,
+            requested_attn_implementation=requested_attn_implementation,
+            effective_attn_implementation=effective_attn_implementation,
+            paged_attention_enabled=paged_attention_enabled,
+            generation_backend=generation_backend,
         )
 
     def generate(
@@ -148,81 +188,21 @@ class TransformerSession:
         *,
         batch_size: int | None = None,
     ) -> list[GenerationOutput]:
-        import torch
-        from transformers import StoppingCriteriaList
-
         if not requests:
             return []
 
         effective_batch_size = batch_size or self.resolve_batch_size(requests)
-        outputs: list[GenerationOutput] = []
-
-        for start in range(0, len(requests), effective_batch_size):
-            batch = requests[start : start + effective_batch_size]
-            rendered_prompts = None
-            encoded = None
-            generated = None
+        if not self.paged_attention_enabled and self.standard_batch_size_cap is not None:
+            effective_batch_size = min(effective_batch_size, self.standard_batch_size_cap)
+        self._log_generation_execution()
+        if self.paged_attention_enabled:
             try:
-                rendered_prompts = [self._render_request(request) for request in batch]
-                encoded = self.tokenizer(
-                    rendered_prompts,
-                    return_tensors="pt",
-                    padding=True,
-                )
-                encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
-                max_new_tokens = max(
-                    request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
-                    for request in batch
-                )
-                do_sample = any(request.do_sample for request in batch)
-                generation_kwargs = {
-                    **self.config.generation_kwargs,
-                    "do_sample": do_sample,
-                    "max_new_tokens": max_new_tokens,
-                    "pad_token_id": self.tokenizer.pad_token_id,
-                }
-                if self.tokenizer.eos_token_id is not None:
-                    generation_kwargs.setdefault("eos_token_id", self.tokenizer.eos_token_id)
-                if do_sample:
-                    generation_kwargs.setdefault("temperature", batch[0].temperature)
-                else:
-                    generation_kwargs["temperature"] = 1.0
-                    generation_kwargs["top_p"] = 1.0
-                    generation_kwargs.pop("top_k", None)
-
-                common_stop_strings = _common_stop_strings(batch)
-                if common_stop_strings:
-                    generation_kwargs["stopping_criteria"] = StoppingCriteriaList(
-                        [self._get_stop_criteria(common_stop_strings)]
-                    )
-
-                with torch.inference_mode():
-                    generated = self.model.generate(**encoded, **generation_kwargs)
-
-                # `generate()` returns the full padded prompt plus new tokens. With left padding,
-                # slicing by the unpadded token count leaks prompt-tail tokens into the decode.
-                input_length = encoded["input_ids"].shape[1]
-                for index, token_ids in enumerate(generated):
-                    generated_tokens = token_ids[input_length:]
-                    text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
-                    text = _truncate_at_stop(text, batch[index].stop).strip()
-                    outputs.append(
-                        GenerationOutput(
-                            prompt=rendered_prompts[index],
-                            text=text,
-                            metadata=batch[index].metadata,
-                        )
-                    )
-            finally:
-                if generated is not None:
-                    del generated
-                if encoded is not None:
-                    del encoded
-                del batch
-                if rendered_prompts is not None:
-                    del rendered_prompts
-
-        return outputs
+                return self._generate_paged(requests, batch_size=effective_batch_size)
+            except Exception as exc:
+                fallback_batch_size = _fallback_batch_size(effective_batch_size)
+                self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
+                return self._generate_standard(requests, batch_size=fallback_batch_size)
+        return self._generate_standard(requests, batch_size=effective_batch_size)
 
     def close(self) -> None:
         self.stop_criteria_cache.clear()
@@ -252,6 +232,15 @@ class TransformerSession:
     @property
     def batch_size(self) -> int | str:
         return self.config.batch_size
+
+    def describe_execution(self) -> dict[str, Any]:
+        return {
+            "requested_attn_implementation": self.requested_attn_implementation,
+            "effective_attn_implementation": self.effective_attn_implementation,
+            "paged_attention": self.paged_attention_enabled,
+            "generation_backend": self.generation_backend,
+            "standard_batch_size_cap": self.standard_batch_size_cap,
+        }
 
     def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
         configured_batch_size = _normalize_batch_size(self.config.batch_size)
@@ -303,8 +292,6 @@ class TransformerSession:
         return criteria
 
     def _batch_size_stats(self, requests: list[GenerationRequest]) -> dict[str, Any]:
-        import torch
-
         rendered_prompts = [self._render_request(request) for request in requests]
         encoded = self.tokenizer(rendered_prompts, padding=False)
         prompt_lengths = [len(token_ids) for token_ids in encoded["input_ids"]]
@@ -380,6 +367,191 @@ class TransformerSession:
         raw_batch_size = max(1, min(row_count, max_from_tokens, max_from_vram))
         return min(row_count, _friendly_batch_size(raw_batch_size))
 
+    def _generate_standard(
+        self,
+        requests: list[GenerationRequest],
+        *,
+        batch_size: int,
+    ) -> list[GenerationOutput]:
+        import torch
+        from transformers import StoppingCriteriaList
+
+        outputs: list[GenerationOutput] = []
+        for start in range(0, len(requests), batch_size):
+            batch = requests[start : start + batch_size]
+            rendered_prompts = None
+            encoded = None
+            generated = None
+            try:
+                rendered_prompts = [self._render_request(request) for request in batch]
+                encoded = self.tokenizer(
+                    rendered_prompts,
+                    return_tensors="pt",
+                    padding=True,
+                )
+                encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
+                generation_kwargs = self._build_generation_kwargs(batch)
+                common_stop_strings = _common_stop_strings(batch)
+                if common_stop_strings:
+                    generation_kwargs["stopping_criteria"] = StoppingCriteriaList(
+                        [self._get_stop_criteria(common_stop_strings)]
+                    )
+
+                with torch.inference_mode():
+                    generated = self.model.generate(**encoded, **generation_kwargs)
+
+                # `generate()` returns the full padded prompt plus new tokens. With left padding,
+                # slicing by the unpadded token count leaks prompt-tail tokens into the decode.
+                input_length = encoded["input_ids"].shape[1]
+                for index, token_ids in enumerate(generated):
+                    generated_tokens = token_ids[input_length:]
+                    text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
+                    text = _truncate_at_stop(text, batch[index].stop).strip()
+                    outputs.append(
+                        GenerationOutput(
+                            prompt=rendered_prompts[index],
+                            text=text,
+                            metadata=batch[index].metadata,
+                        )
+                    )
+                    del generated_tokens
+            finally:
+                if generated is not None:
+                    del generated
+                if encoded is not None:
+                    del encoded
+                del batch
+                if rendered_prompts is not None:
+                    del rendered_prompts
+        return outputs
+
+    def _generate_paged(
+        self,
+        requests: list[GenerationRequest],
+        *,
+        batch_size: int,
+    ) -> list[GenerationOutput]:
+        outputs: list[GenerationOutput] = []
+        for start in range(0, len(requests), batch_size):
+            batch = requests[start : start + batch_size]
+            rendered_prompts = None
+            encoded = None
+            generated = None
+            generation_config = None
+            try:
+                rendered_prompts = [self._render_request(request) for request in batch]
+                encoded = self.tokenizer(rendered_prompts, add_special_tokens=False)["input_ids"]
+                generation_config = self._build_generation_config(batch)
+                generated = self.model.generate_batch(
+                    encoded,
+                    generation_config=generation_config,
+                    progress_bar=False,
+                )
+                missing_keys = [
+                    f"req_{index}"
+                    for index in range(len(batch))
+                    if f"req_{index}" not in generated
+                ]
+                if missing_keys:
+                    raise RuntimeError(
+                        "continuous batching returned incomplete results: "
+                        f"missing {len(missing_keys)}/{len(batch)} request(s); "
+                        f"first_missing={missing_keys[0]}"
+                    )
+
+                for index in range(len(batch)):
+                    request_output = generated[f"req_{index}"]
+                    generated_tokens = request_output.generated_tokens
+                    text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
+                    text = _truncate_at_stop(text, batch[index].stop).strip()
+                    outputs.append(
+                        GenerationOutput(
+                            prompt=rendered_prompts[index],
+                            text=text,
+                            metadata=batch[index].metadata,
+                        )
+                    )
+                    del generated_tokens
+                    del request_output
+            finally:
+                if generated is not None:
+                    del generated
+                if generation_config is not None:
+                    del generation_config
+                if encoded is not None:
+                    del encoded
+                del batch
+                if rendered_prompts is not None:
+                    del rendered_prompts
+        return outputs
+
+    def _build_generation_kwargs(self, batch: list[GenerationRequest]) -> dict[str, Any]:
+        max_new_tokens = max(
+            request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
+            for request in batch
+        )
+        do_sample = any(request.do_sample for request in batch)
+        generation_kwargs = {
+            **self.config.generation_kwargs,
+            "do_sample": do_sample,
+            "max_new_tokens": max_new_tokens,
+            "pad_token_id": self.tokenizer.pad_token_id,
+        }
+        if self.tokenizer.eos_token_id is not None:
+            generation_kwargs.setdefault("eos_token_id", self.tokenizer.eos_token_id)
+        if do_sample:
+            generation_kwargs.setdefault("temperature", batch[0].temperature)
+        else:
+            generation_kwargs["temperature"] = 1.0
+            generation_kwargs["top_p"] = 1.0
+            generation_kwargs.pop("top_k", None)
+        return generation_kwargs
+
+    def _build_generation_config(self, batch: list[GenerationRequest]) -> Any:
+        from transformers import GenerationConfig
+
+        generation_kwargs = self._build_generation_kwargs(batch)
+        generation_config = GenerationConfig.from_model_config(self.model.config)
+        for key, value in generation_kwargs.items():
+            setattr(generation_config, key, value)
+        common_stop_strings = _common_stop_strings(batch)
+        generation_config.stop_strings = list(common_stop_strings) if common_stop_strings else None
+        return generation_config
+
+    def _log_generation_execution(self) -> None:
+        if self.execution_logged:
+            return
+        get_logger().info(
+            "transformer generation using backend=%s attention=%s batch_size_cap=%s",
+            self.generation_backend,
+            self.effective_attn_implementation or self.requested_attn_implementation,
+            self.standard_batch_size_cap,
+        )
+        self.execution_logged = True
+
+    def _disable_paged_attention(self, exc: Exception, *, fallback_batch_size: int) -> None:
+        logger = get_logger()
+        previous_attention = self.effective_attn_implementation or self.requested_attn_implementation
+        base_attention = _base_attn_implementation(self.requested_attn_implementation)
+        setter = getattr(self.model, "set_attn_implementation", None)
+        if callable(setter) and base_attention is not None:
+            with suppress(Exception):
+                setter(base_attention)
+
+        self.paged_attention_enabled = False
+        self.generation_backend = "generate"
+        self.effective_attn_implementation = base_attention or self.requested_attn_implementation
+        self.standard_batch_size_cap = fallback_batch_size
+        self.execution_logged = False
+        logger.warning(
+            "paged attention failed for attention=%s: %s; falling back to backend=%s attention=%s batch_size_cap=%d",
+            previous_attention,
+            exc,
+            self.generation_backend,
+            self.effective_attn_implementation,
+            fallback_batch_size,
+        )
+
 
 def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:
     import torch
@@ -406,6 +578,70 @@ def _common_stop_strings(batch: list[GenerationRequest]) -> list[str] | None:
     if all(request.stop == first for request in batch):
         return first
     return None
+
+
+def _base_attn_implementation(attn_implementation: str | None) -> str | None:
+    if attn_implementation is None:
+        return None
+    if attn_implementation.startswith("paged|"):
+        return attn_implementation.split("paged|", maxsplit=1)[1]
+    return attn_implementation
+
+
+def _effective_attn_implementation(
+    attn_implementation: str | None,
+    *,
+    paged_attention_enabled: bool,
+) -> str | None:
+    if attn_implementation is None:
+        return None
+    if paged_attention_enabled and not attn_implementation.startswith("paged|"):
+        return f"paged|{attn_implementation}"
+    return attn_implementation
+
+
+def _resolve_paged_attention(
+    *,
+    paged_attention: bool | str,
+    attn_implementation: str | None,
+    model: Any,
+    input_device: Any,
+) -> bool:
+    normalized = _normalize_paged_attention(paged_attention)
+    if normalized is False:
+        return False
+
+    can_use_paged_attention = (
+        getattr(input_device, "type", None) == "cuda"
+        and callable(getattr(model, "generate_batch", None))
+        and callable(getattr(model, "set_attn_implementation", None))
+    )
+    if normalized == _AUTO_PAGED_ATTENTION:
+        return can_use_paged_attention and _supports_auto_paged_attention(attn_implementation)
+    if normalized and not can_use_paged_attention:
+        get_logger().warning(
+            "paged attention requested but unsupported on this session; falling back to standard generate()"
+        )
+        return False
+    return bool(normalized)
+
+
+def _normalize_paged_attention(paged_attention: bool | str) -> bool | str:
+    if paged_attention == _AUTO_PAGED_ATTENTION:
+        return _AUTO_PAGED_ATTENTION
+    if not isinstance(paged_attention, bool):
+        raise ValueError("paged_attention must be a boolean or 'auto'")
+    return paged_attention
+
+
+def _supports_auto_paged_attention(attn_implementation: str | None) -> bool:
+    return _base_attn_implementation(attn_implementation) == "flash_attention_2"
+
+
+def _fallback_batch_size(batch_size: int) -> int:
+    if batch_size <= 1:
+        return 1
+    return _friendly_batch_size(max(1, batch_size // 2))
 
 
 def _normalize_batch_size(batch_size: int | str) -> int | str:

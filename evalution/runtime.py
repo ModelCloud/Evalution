@@ -22,6 +22,9 @@ def run(
     logger.info("building engine %s for model %s", type(engine).__name__, model_config.path)
     with spinner(f"Loading {type(engine).__name__} engine"):
         session = engine.build(model_config)
+    describe_execution = getattr(session, "describe_execution", None)
+    if callable(describe_execution):
+        logger.info("engine execution=%s", describe_execution())
     try:
         results = []
         for test in tests:
