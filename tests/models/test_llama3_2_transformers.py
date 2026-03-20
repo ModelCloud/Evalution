@@ -27,7 +27,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
             model=evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
             engine=evalution.Transformer(
                 dtype="bfloat16",
-                attn_implementation="sdpa",
+                attn_implementation="flash_attention_2",
                 device="cuda:0",
                 batch_size="auto",
             ),
@@ -35,6 +35,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 evalution.gsm8k_platinum(
                     variant="cot",
                     apply_chat_template=True,
+                    batch_size=64,
                     max_new_tokens=96,
                     streaming=True,
                 )
@@ -43,7 +44,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
     assert result.engine["dtype"] == "bfloat16"
-    assert result.engine["attn_implementation"] == "sdpa"
+    assert result.engine["attn_implementation"] == "flash_attention_2"
     assert result.engine["batch_size"] == "auto"
     assert result.engine["paged_attention"] == "auto"
     assert len(result.tests) == 1

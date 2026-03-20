@@ -8,6 +8,8 @@ from typing import Any, Protocol
 class GenerationRequest:
     prompt: str | None = None
     messages: list[dict[str, str]] | None = None
+    rendered_prompt: str | None = None
+    input_ids: list[int] | None = None
     add_generation_prompt: bool = True
     stop: list[str] = field(default_factory=list)
     max_new_tokens: int = 256

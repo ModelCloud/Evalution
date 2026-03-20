@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import importlib
+import threading
 
 from datasets import Dataset
 
 import evalution
-from evalution.engines.base import GenerationOutput
+from evalution.engines.base import GenerationOutput, GenerationRequest
 
 gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
 
@@ -47,6 +48,45 @@ class FakeSession:
 
     def close(self) -> None:
         return None
+
+
+class PreparingFakeSession(FakeSession):
+    def __init__(
+        self,
+        responses: list[str],
+        *,
+        batch_size: int | None = None,
+        resolved_batch_size: int | None = None,
+    ) -> None:
+        super().__init__(
+            responses,
+            batch_size=batch_size,
+            resolved_batch_size=resolved_batch_size,
+        )
+        self.prepare_thread_names: list[str] = []
+        self.prepare_batch_sizes: list[int] = []
+
+    def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+        self.prepare_thread_names.append(threading.current_thread().name)
+        self.prepare_batch_sizes.append(len(requests))
+        prepared: list[GenerationRequest] = []
+        for index, request in enumerate(requests):
+            prompt = request.prompt or str(request.messages)
+            prepared.append(
+                GenerationRequest(
+                    prompt=request.prompt,
+                    messages=request.messages,
+                    rendered_prompt=prompt,
+                    input_ids=[index + 1, index + 2, index + 3],
+                    add_generation_prompt=request.add_generation_prompt,
+                    stop=list(request.stop),
+                    max_new_tokens=request.max_new_tokens,
+                    do_sample=request.do_sample,
+                    temperature=request.temperature,
+                    metadata=dict(request.metadata),
+                )
+            )
+        return prepared
 
 
 def test_gsm8k_platinum_cot_llama_uses_multiturn_chat_by_default(monkeypatch) -> None:
@@ -230,3 +270,38 @@ def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> No
     assert result.metadata["streaming"] is True
     assert calls
     assert calls[0]["streaming"] is True
+
+
+def test_gsm8k_platinum_prefetches_remaining_streaming_batches_on_background_thread(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": f"What is 40 plus {offset}?",
+                "answer": f"40 + {offset} = {40 + offset}\n#### {40 + offset}",
+                "cleaning_status": "consensus",
+            }
+            for offset in range(260)
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    suite = evalution.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+        streaming=True,
+    )
+    session = PreparingFakeSession(
+        ["The answer is 42."] * 260,
+        resolved_batch_size=32,
+    )
+
+    suite.evaluate(session)
+
+    assert session.resolve_request_counts == [gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS]
+    assert session.prepare_batch_sizes[0] == gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS
+    assert session.prepare_thread_names[0] == "MainThread"
+    assert any(
+        name.startswith("evalution-prefetch")
+        for name in session.prepare_thread_names[1:]
+    )
+    assert sum(session.prepare_batch_sizes) == 260

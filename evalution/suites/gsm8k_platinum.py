@@ -3,8 +3,10 @@ from __future__ import annotations
 import random
 import re
 from collections import defaultdict
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, replace
 from itertools import islice
+from queue import Queue
 from time import perf_counter
 from typing import Any, Literal
 
@@ -18,6 +20,7 @@ from evalution.suites.base import TestSuite
 GSM8KPlatinumVariant = Literal["base", "cot", "cot_llama", "cot_zeroshot", "default"]
 
 _AUTO_BATCH_PREVIEW_ROWS = 256
+_BATCH_PREFETCH_QUEUE_SIZE = 2
 
 _REGEXES_TO_IGNORE = [",", r"\$", r"(?s).*#### ", r"\.$"]
 _FLEXIBLE_EXTRACT_PATTERN = r"(-?[$0-9.,]{2,})|(-?[0-9]+)"
@@ -111,6 +114,17 @@ class _PreparedSample:
     doc: dict[str, Any]
     target: str
     request: GenerationRequest
+
+
+@dataclass(frozen=True, slots=True)
+class _PrefetchedBatch:
+    samples: list[_PreparedSample]
+    prepared_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class _PrefetchFailure:
+    error: BaseException
 
 
 def _base_prompt(doc: dict[str, Any]) -> str:
@@ -249,10 +263,14 @@ class GSM8KPlatinum(TestSuite):
             docs=docs,
             fewshot_docs=fewshot_docs,
             fewshot_as_multiturn=fewshot_as_multiturn,
-            prepare_bar=prepare_bar,
         )
         preview_size = min(total, _AUTO_BATCH_PREVIEW_ROWS)
-        preview_samples = list(islice(prepared_iter, preview_size))
+        preview_samples = _collect_preview_samples(
+            prepared_iter,
+            preview_size=preview_size,
+            prepare_bar=prepare_bar,
+        )
+        preview_samples = _prepare_batch_for_session(session, preview_samples)
 
         aggregate_scores: defaultdict[str, float] = defaultdict(float)
         samples: list[SampleResult] = []
@@ -262,6 +280,13 @@ class GSM8KPlatinum(TestSuite):
             or 1
         )
         logger.info("%s: using batch_size=%d", spec.task_name, effective_batch_size)
+        logger.info(
+            "%s: request preparation mode=%s",
+            spec.task_name,
+            "threaded_prefetch"
+            if callable(getattr(session, "prepare_requests", None))
+            else "inline",
+        )
         invalid_predictions = 0
         generation_wall_s = 0.0
         scoring_wall_s = 0.0
@@ -278,12 +303,15 @@ class GSM8KPlatinum(TestSuite):
         )
         try:
             batch_index = 0
-            for prepared_batch in _iter_batches(
+            for prefetched_batch in _iter_prefetched_batches(
+                session,
                 preview_samples,
                 prepared_iter,
                 batch_size=effective_batch_size,
+                prepare_bar=prepare_bar,
             ):
                 batch_index += 1
+                prepared_batch = prefetched_batch.samples
                 batch_requests = [sample.request for sample in prepared_batch]
                 generation_started = perf_counter()
                 batch_outputs = session.generate(batch_requests, batch_size=len(batch_requests))
@@ -349,6 +377,8 @@ class GSM8KPlatinum(TestSuite):
             close_prepared_iter = getattr(prepared_iter, "close", None)
             if callable(close_prepared_iter):
                 close_prepared_iter()
+            prepare_bar.title(f"{spec.task_name}: prepared requests")
+            prepare_bar.draw()
             prepare_bar.close()
             score_bar.close()
 
@@ -443,32 +473,26 @@ class GSM8KPlatinum(TestSuite):
         docs: list[dict[str, Any]] | Any,
         fewshot_docs: list[dict[str, Any]],
         fewshot_as_multiturn: bool,
-        prepare_bar: Any,
     ) -> Any:
-        try:
-            for index, doc in enumerate(docs):
-                fewshots = self._select_fewshots(
-                    spec=spec,
-                    docs=fewshot_docs,
-                    doc=doc,
-                    index=index,
-                )
-                request = self._build_request(
-                    spec=spec,
-                    doc=doc,
-                    fewshots=fewshots,
-                    fewshot_as_multiturn=fewshot_as_multiturn,
-                )
-                prepare_bar.next().draw()
-                yield _PreparedSample(
-                    index=index,
-                    doc=doc,
-                    target=spec.target_builder(doc),
-                    request=request,
-                )
-        finally:
-            prepare_bar.title(f"{spec.task_name}: prepared requests")
-            prepare_bar.draw()
+        for index, doc in enumerate(docs):
+            fewshots = self._select_fewshots(
+                spec=spec,
+                docs=fewshot_docs,
+                doc=doc,
+                index=index,
+            )
+            request = self._build_request(
+                spec=spec,
+                doc=doc,
+                fewshots=fewshots,
+                fewshot_as_multiturn=fewshot_as_multiturn,
+            )
+            yield _PreparedSample(
+                index=index,
+                doc=doc,
+                target=spec.target_builder(doc),
+                request=request,
+            )
 
     def _build_plain_prompt(
         self,
@@ -535,25 +559,92 @@ def _session_batch_size(
     return None
 
 
-def _iter_batches(
+def _collect_preview_samples(
+    prepared_iter: Any,
+    *,
+    preview_size: int,
+    prepare_bar: Any,
+) -> list[_PreparedSample]:
+    preview_samples: list[_PreparedSample] = []
+    for sample in islice(prepared_iter, preview_size):
+        preview_samples.append(sample)
+        prepare_bar.next().draw()
+    return preview_samples
+
+
+def _prepare_batch_for_session(
+    session: InferenceSession,
+    batch: list[_PreparedSample],
+) -> list[_PreparedSample]:
+    prepare_requests = getattr(session, "prepare_requests", None)
+    if not callable(prepare_requests):
+        return batch
+
+    prepared_requests = prepare_requests([sample.request for sample in batch])
+    return [
+        replace(sample, request=prepared_request)
+        for sample, prepared_request in zip(batch, prepared_requests, strict=True)
+    ]
+
+
+def _iter_prefetched_batches(
+    session: InferenceSession,
     preview_samples: list[_PreparedSample],
     prepared_iter: Any,
     *,
     batch_size: int,
+    prepare_bar: Any,
 ) -> Any:
-    batch: list[_PreparedSample] = []
-    for sample in preview_samples:
-        batch.append(sample)
-        if len(batch) == batch_size:
-            yield batch
-            batch = []
-    for sample in prepared_iter:
-        batch.append(sample)
-        if len(batch) == batch_size:
-            yield batch
-            batch = []
-    if batch:
-        yield batch
+    sentinel = object()
+    queue: Queue[Any] = Queue(maxsize=_BATCH_PREFETCH_QUEUE_SIZE)
+
+    def worker() -> None:
+        try:
+            batch: list[_PreparedSample] = []
+            for sample in prepared_iter:
+                batch.append(sample)
+                if len(batch) == batch_size:
+                    queue.put(
+                        _PrefetchedBatch(
+                            samples=_prepare_batch_for_session(session, batch),
+                            prepared_count=len(batch),
+                        )
+                    )
+                    batch = []
+            if batch:
+                queue.put(
+                    _PrefetchedBatch(
+                        samples=_prepare_batch_for_session(session, batch),
+                        prepared_count=len(batch),
+                    )
+                )
+        except BaseException as exc:
+            queue.put(_PrefetchFailure(exc))
+        finally:
+            queue.put(sentinel)
+
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="evalution-prefetch") as executor:
+        executor.submit(worker)
+
+        batch: list[_PreparedSample] = []
+        for sample in preview_samples:
+            batch.append(sample)
+            if len(batch) == batch_size:
+                yield _PrefetchedBatch(samples=batch, prepared_count=0)
+                batch = []
+        if batch:
+            yield _PrefetchedBatch(samples=batch, prepared_count=0)
+
+        while True:
+            prefetched = queue.get()
+            if prefetched is sentinel:
+                break
+            if isinstance(prefetched, _PrefetchFailure):
+                raise prefetched.error
+            if prefetched.prepared_count:
+                for _ in range(prefetched.prepared_count):
+                    prepare_bar.next().draw()
+            yield prefetched
 
 
 def _limit_docs(docs: Any, limit: int | None) -> Any:

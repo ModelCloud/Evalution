@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import torch
 from transformers import PretrainedConfig
 
 from evalution.config import Model
@@ -88,6 +89,117 @@ def test_transformer_session_describes_auto_paged_attention_on_cuda_like_session
     }
 
 
+def test_transformer_session_prepare_requests_batches_tokenization() -> None:
+    class FakePrepareTokenizer:
+        def __init__(self) -> None:
+            self.encode_calls: list[list[str]] = []
+
+        def __call__(self, prompts, *, add_special_tokens=False, padding=False):
+            assert add_special_tokens is False
+            assert padding is False
+            assert isinstance(prompts, list)
+            self.encode_calls.append(list(prompts))
+            return {
+                "input_ids": [
+                    [index + 1, index + 2, index + 3]
+                    for index, _prompt in enumerate(prompts)
+                ]
+            }
+
+        def apply_chat_template(self, messages, *, tokenize=False, add_generation_prompt=True):
+            assert tokenize is False
+            assert add_generation_prompt is True
+            return f"chat::{messages[0]['content']}"
+
+    prepare_tokenizer = FakePrepareTokenizer()
+    session = TransformerSession(
+        config=Transformer(),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(dtype="bfloat16"),
+        tokenizer=SimpleNamespace(),
+        prepare_tokenizer=prepare_tokenizer,
+        input_device=SimpleNamespace(type="cpu"),
+    )
+
+    prepared = session.prepare_requests(
+        [
+            GenerationRequest(prompt="Q: 1 + 1\nA:"),
+            GenerationRequest(messages=[{"role": "user", "content": "Q: 2 + 2\nA:"}]),
+            GenerationRequest(
+                prompt="Q: 3 + 3\nA:",
+                rendered_prompt="Q: 3 + 3\nA:",
+                input_ids=[9, 9, 9],
+            ),
+        ]
+    )
+
+    assert prepare_tokenizer.encode_calls == [["Q: 1 + 1\nA:", "chat::Q: 2 + 2\nA:"]]
+    assert prepared[0].rendered_prompt == "Q: 1 + 1\nA:"
+    assert prepared[0].input_ids == [1, 2, 3]
+    assert prepared[1].rendered_prompt == "chat::Q: 2 + 2\nA:"
+    assert prepared[1].input_ids == [2, 3, 4]
+    assert prepared[2].rendered_prompt == "Q: 3 + 3\nA:"
+    assert prepared[2].input_ids == [9, 9, 9]
+
+
+def test_transformer_session_generate_reuses_pretokenized_requests() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+
+        def __init__(self) -> None:
+            self.pad_calls = 0
+            self.encode_calls = 0
+
+        def __call__(self, prompts, **kwargs):
+            del prompts, kwargs
+            self.encode_calls += 1
+            raise AssertionError("pretokenized requests should not be re-encoded")
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            assert return_tensors == "pt"
+            assert padding is True
+            self.pad_calls += 1
+            return {
+                "input_ids": torch.tensor([[1, 2, 3]], dtype=torch.long),
+                "attention_mask": torch.tensor([[1, 1, 1]], dtype=torch.long),
+            }
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class FakeModel:
+        def generate(self, **kwargs):
+            del kwargs
+            return torch.tensor([[1, 2, 3, 4, 5]], dtype=torch.long)
+
+    tokenizer = FakeTokenizer()
+    session = TransformerSession(
+        config=Transformer(),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=tokenizer,
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.generate(
+        [
+            GenerationRequest(
+                prompt="Q: 40 + 2\nA:",
+                rendered_prompt="Q: 40 + 2\nA:",
+                input_ids=[1, 2, 3],
+            )
+        ],
+        batch_size=1,
+    )
+
+    assert len(outputs) == 1
+    assert outputs[0].text == "The answer is 42."
+    assert tokenizer.pad_calls == 1
+    assert tokenizer.encode_calls == 0
+
+
 def test_transformer_session_generate_uses_generate_batch_when_paged_attention_is_enabled() -> None:
     class FakeTokenizer:
         pad_token_id = 0
@@ -97,7 +209,7 @@ def test_transformer_session_generate_uses_generate_batch_when_paged_attention_i
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
-                prompts = [prompts]
+                return {"input_ids": [11, 12, 13]}
             return {"input_ids": [[11, 12, 13] for _ in prompts]}
 
         def decode(self, token_ids, *, skip_special_tokens=False):

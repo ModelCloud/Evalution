@@ -3,7 +3,7 @@ from __future__ import annotations
 import gc
 from statistics import mean
 from contextlib import suppress
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
 from evalution.config import Model
@@ -83,6 +83,7 @@ class TransformerSession:
     model: Any
     tokenizer: Any
     input_device: Any
+    prepare_tokenizer: Any | None = None
     requested_attn_implementation: str | None = None
     effective_attn_implementation: str | None = None
     paged_attention_enabled: bool = False
@@ -175,6 +176,11 @@ class TransformerSession:
             model_config=model_config,
             model=model,
             tokenizer=tokenizer,
+            prepare_tokenizer=_clone_prepare_tokenizer(
+                tokenizer=tokenizer,
+                model_config=model_config,
+                trust_remote_code=trust_remote_code,
+            ),
             input_device=input_device,
             requested_attn_implementation=requested_attn_implementation,
             effective_attn_implementation=effective_attn_implementation,
@@ -211,6 +217,8 @@ class TransformerSession:
             del self.model
         with suppress(Exception):
             del self.tokenizer
+        with suppress(Exception):
+            del self.prepare_tokenizer
         gc.collect()
         with suppress(Exception):
             import torch
@@ -219,8 +227,13 @@ class TransformerSession:
                 torch.cuda.empty_cache()
 
     def _render_request(self, request: GenerationRequest) -> str:
+        if request.rendered_prompt is not None:
+            return request.rendered_prompt
+        return self._render_request_with_tokenizer(self.tokenizer, request)
+
+    def _render_request_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> str:
         if request.messages is not None:
-            return self.tokenizer.apply_chat_template(
+            return tokenizer.apply_chat_template(
                 request.messages,
                 tokenize=False,
                 add_generation_prompt=request.add_generation_prompt,
@@ -241,6 +254,44 @@ class TransformerSession:
             "generation_backend": self.generation_backend,
             "standard_batch_size_cap": self.standard_batch_size_cap,
         }
+
+    def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+        tokenizer = self.prepare_tokenizer or self.tokenizer
+        prepared: list[GenerationRequest] = list(requests)
+        missing_indexes: list[int] = []
+        missing_prompts: list[str] = []
+
+        for index, request in enumerate(prepared):
+            if request.rendered_prompt is not None and request.input_ids is not None:
+                continue
+            missing_indexes.append(index)
+            missing_prompts.append(
+                request.rendered_prompt
+                if request.rendered_prompt is not None
+                else self._render_request_with_tokenizer(tokenizer, request)
+            )
+
+        if not missing_indexes:
+            return prepared
+
+        encoded = tokenizer(
+            missing_prompts,
+            add_special_tokens=False,
+            padding=False,
+        )["input_ids"]
+        for index, rendered_prompt, input_ids in zip(
+            missing_indexes,
+            missing_prompts,
+            encoded,
+            strict=True,
+        ):
+            prepared[index] = replace(
+                prepared[index],
+                rendered_prompt=rendered_prompt,
+                input_ids=list(input_ids),
+            )
+        del encoded
+        return prepared
 
     def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
         configured_batch_size = _normalize_batch_size(self.config.batch_size)
@@ -292,11 +343,22 @@ class TransformerSession:
         return criteria
 
     def _batch_size_stats(self, requests: list[GenerationRequest]) -> dict[str, Any]:
-        rendered_prompts = [self._render_request(request) for request in requests]
-        encoded = self.tokenizer(rendered_prompts, padding=False)
-        prompt_lengths = [len(token_ids) for token_ids in encoded["input_ids"]]
-        del encoded
-        del rendered_prompts
+        prompt_lengths = [
+            len(request.input_ids)
+            if request.input_ids is not None
+            else None
+            for request in requests
+        ]
+        if any(length is None for length in prompt_lengths):
+            rendered_prompts = [self._render_request(request) for request in requests if request.input_ids is None]
+            encoded = self.tokenizer(rendered_prompts, padding=False)
+            fallback_lengths = iter(len(token_ids) for token_ids in encoded["input_ids"])
+            prompt_lengths = [
+                length if length is not None else next(fallback_lengths)
+                for length in prompt_lengths
+            ]
+            del encoded
+            del rendered_prompts
 
         max_new_tokens = max(
             request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
@@ -384,11 +446,7 @@ class TransformerSession:
             generated = None
             try:
                 rendered_prompts = [self._render_request(request) for request in batch]
-                encoded = self.tokenizer(
-                    rendered_prompts,
-                    return_tensors="pt",
-                    padding=True,
-                )
+                encoded = self._encode_standard_batch(batch)
                 encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
                 generation_kwargs = self._build_generation_kwargs(batch)
                 common_stop_strings = _common_stop_strings(batch)
@@ -440,7 +498,15 @@ class TransformerSession:
             generation_config = None
             try:
                 rendered_prompts = [self._render_request(request) for request in batch]
-                encoded = self.tokenizer(rendered_prompts, add_special_tokens=False)["input_ids"]
+                encoded = [
+                    list(request.input_ids)
+                    if request.input_ids is not None
+                    else self.tokenizer(
+                        rendered_prompts[index],
+                        add_special_tokens=False,
+                    )["input_ids"]
+                    for index, request in enumerate(batch)
+                ]
                 generation_config = self._build_generation_config(batch)
                 generated = self.model.generate_batch(
                     encoded,
@@ -507,6 +573,19 @@ class TransformerSession:
             generation_kwargs.pop("top_k", None)
         return generation_kwargs
 
+    def _encode_standard_batch(self, batch: list[GenerationRequest]) -> dict[str, Any]:
+        if all(request.input_ids is not None for request in batch):
+            return self.tokenizer.pad(
+                {"input_ids": [list(request.input_ids) for request in batch]},
+                return_tensors="pt",
+                padding=True,
+            )
+        return self.tokenizer(
+            [self._render_request(request) for request in batch],
+            return_tensors="pt",
+            padding=True,
+        )
+
     def _build_generation_config(self, batch: list[GenerationRequest]) -> Any:
         from transformers import GenerationConfig
 
@@ -568,6 +647,33 @@ def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:
         return torch.device(str(device))
 
     return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
+def _clone_prepare_tokenizer(
+    *,
+    tokenizer: Any,
+    model_config: Model,
+    trust_remote_code: bool | None,
+) -> Any | None:
+    with suppress(Exception):
+        from transformers import AutoTokenizer
+
+        prepare_tokenizer = AutoTokenizer.from_pretrained(
+            model_config.tokenizer_path or model_config.path,
+            revision=model_config.revision,
+            trust_remote_code=trust_remote_code,
+            **model_config.tokenizer_kwargs,
+        )
+        prepare_tokenizer.padding_side = tokenizer.padding_side
+        if prepare_tokenizer.pad_token_id is None:
+            if tokenizer.pad_token is not None:
+                prepare_tokenizer.pad_token = tokenizer.pad_token
+            elif tokenizer.eos_token is not None:
+                prepare_tokenizer.pad_token = tokenizer.eos_token
+            elif tokenizer.unk_token is not None:
+                prepare_tokenizer.pad_token = tokenizer.unk_token
+        return prepare_tokenizer
+    return None
 
 
 def _common_stop_strings(batch: list[GenerationRequest]) -> list[str] | None:
