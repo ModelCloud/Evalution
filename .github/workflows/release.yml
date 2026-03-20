@@ -1,0 +1,106 @@
+name: Release
+
+defaults:
+  run:
+    shell: bash -le {0}
+
+concurrency:
+  group: ${{ github.event.inputs.ref || github.ref }}-workflow-release
+  cancel-in-progress: true
+
+on:
+  release:
+    types: [published]
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, Tag or Commit SHA"
+        required: false
+        default: ""
+      upload_pypi:
+        description: "Upload to PyPI"
+        type: boolean
+        required: false
+        default: false
+
+env:
+  ref: ${{ github.event.inputs.ref || github.ref }}
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  build-distributions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install build requirements
+        run: |
+          python -V
+          pip install pip build setuptools wheel twine packaging -U
+
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Validate packaging files
+        run: |
+          if [ ! -f pyproject.toml ] && [ ! -f setup.py ] && [ ! -f setup.cfg ]; then
+            echo "::error::Missing pyproject.toml or setup.py/setup.cfg for package build."
+            exit 1
+          fi
+
+      - name: Build package
+        run: |
+          python -m build
+          twine check dist/*
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/*
+
+  upload-pypi:
+    needs: build-distributions
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'release' || github.event.inputs.upload_pypi == 'true') && !cancelled()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install upload requirements
+        run: |
+          python -V
+          pip install pip twine -U
+
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: dist
+          path: dist
+
+      - name: Upload distributions to PyPI
+        env:
+          TWINE_USERNAME: "__token__"
+          TWINE_PASSWORD: ${{ secrets.PYPI_KEY }}
+        run: |
+          python -m twine upload dist/*

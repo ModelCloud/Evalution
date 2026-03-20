@@ -1,0 +1,74 @@
+name: Unit Tests
+
+defaults:
+  run:
+    shell: bash -le {0}
+
+on:
+  push:
+  pull_request:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "GitHub ref: Branch, Tag or Commit SHA"
+        required: false
+        default: ""
+
+env:
+  ref: ${{ github.event.inputs.ref || github.ref }}
+  PYTHON_VERSION: "3.12"
+
+concurrency:
+  group: ${{ github.event.inputs.ref || github.ref }}-workflow-unit-tests
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -V
+          pip install pip build setuptools wheel pytest -U
+
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+          if [ -f pyproject.toml ] || [ -f setup.py ] || [ -f setup.cfg ]; then
+            pip install -e .
+          else
+            echo "::error::Missing pyproject.toml or setup.py/setup.cfg for package installation."
+            exit 1
+          fi
+
+      - name: Run tests
+        run: |
+          if [ ! -d tests ]; then
+            echo "::error::tests/ directory not found."
+            exit 1
+          fi
+
+          mkdir -p artifacts
+          pytest --durations=0 tests --junitxml=artifacts/unit-tests.xml
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-results
+          path: artifacts/*
+          if-no-files-found: ignore
