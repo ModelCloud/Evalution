@@ -29,3 +29,4 @@ Current built-in coverage:
 
 - Hugging Face `transformers` inference engine
 - `gsm8k_platinum` suite ported from `lm-eval`
+- `logbar`-powered runtime logging and evaluation progress bars

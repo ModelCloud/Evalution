@@ -9,6 +9,7 @@ from typing import Any, Literal
 from datasets import load_dataset
 
 from evalution.engines.base import GenerationRequest, InferenceSession
+from evalution.logbar import get_logger, progress, spinner
 from evalution.results import SampleResult, TestResult
 from evalution.suites.base import TestSuite
 
@@ -191,27 +192,38 @@ class GSM8KPlatinum(TestSuite):
     def evaluate(self, session: InferenceSession) -> TestResult:
         variant_name = "base" if self.variant == "default" else self.variant
         spec = _VARIANTS[variant_name]
+        logger = get_logger()
         fewshot_as_multiturn = (
             self.fewshot_as_multiturn
             if self.fewshot_as_multiturn is not None
             else self.apply_chat_template
         )
 
-        all_docs = list(
-            load_dataset(
-                self.dataset_path,
-                self.dataset_name,
-                split=self.split,
-                cache_dir=self.cache_dir,
-            )
+        logger.info(
+            "loading dataset %s/%s split=%s for %s",
+            self.dataset_path,
+            self.dataset_name,
+            self.split,
+            spec.task_name,
         )
+        with spinner(f"{spec.task_name}: loading dataset"):
+            all_docs = list(
+                load_dataset(
+                    self.dataset_path,
+                    self.dataset_name,
+                    split=self.split,
+                    cache_dir=self.cache_dir,
+                )
+            )
         docs = all_docs
         if self.limit is not None:
             docs = all_docs[: self.limit]
+        logger.info("%s: evaluating %d sample(s)", spec.task_name, len(docs))
 
         requests: list[GenerationRequest] = []
         targets: list[str] = []
-        for index, doc in enumerate(docs):
+        prepare_iter = progress(docs, title=f"{spec.task_name}: preparing requests")
+        for index, doc in enumerate(prepare_iter):
             fewshots = self._select_fewshots(spec=spec, docs=all_docs, doc=doc, index=index)
             request = self._build_request(
                 spec=spec,
@@ -222,10 +234,15 @@ class GSM8KPlatinum(TestSuite):
             requests.append(request)
             targets.append(spec.target_builder(doc))
 
-        outputs = session.generate(requests, batch_size=self.batch_size)
+        with spinner(f"{spec.task_name}: generating {len(requests)} sample(s)"):
+            outputs = session.generate(requests, batch_size=self.batch_size)
         aggregate_scores: defaultdict[str, float] = defaultdict(float)
         samples: list[SampleResult] = []
-        for index, (doc, target, output) in enumerate(zip(docs, targets, outputs, strict=True)):
+        score_iter = progress(range(len(outputs)), title=f"{spec.task_name}: scoring")
+        for index in score_iter:
+            doc = docs[index]
+            target = targets[index]
+            output = outputs[index]
             strict_prediction = _extract_match(
                 output.text,
                 spec.strict_pattern,
@@ -265,6 +282,7 @@ class GSM8KPlatinum(TestSuite):
             metric_name: total / denominator
             for metric_name, total in aggregate_scores.items()
         }
+        logger.info("%s: metrics=%s", spec.task_name, metrics)
         return TestResult(
             name=spec.task_name,
             metrics=metrics,

@@ -11,6 +11,7 @@ requires-python = ">=3.10"
 license = "Apache-2.0"
 dependencies = [
     "datasets>=4.8.3",
+    "logbar>=0.3.0",
     "transformers>=5.0.0",
 ]
 classifiers = [
@@ -36,4 +37,10 @@ pythonpath = ["."]
 markers = [
     "integration: tests that require external model assets or full inference",
     "slow: tests that are expensive to run",
+]
+filterwarnings = [
+    "ignore:The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated.*:DeprecationWarning",
+    "ignore:Importing from torchao\\.dtypes\\.uintx\\.dyn_int8_act_int4_wei_cpu_layout is deprecated.*:DeprecationWarning",
+    "ignore:Importing from torchao\\.dtypes\\.uintx\\.uintx_layout is deprecated.*:DeprecationWarning",
+    "ignore:Importing BlockSparseLayout from torchao\\.dtypes is deprecated.*:DeprecationWarning",
 ]
