@@ -36,6 +36,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                     variant="cot",
                     apply_chat_template=True,
                     max_new_tokens=96,
+                    streaming=True,
                 )
             ],
         )
@@ -52,6 +53,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert test_result.metadata["variant"] == "cot"
     assert test_result.metadata["apply_chat_template"] is True
     assert test_result.metadata["fewshot_as_multiturn"] is True
+    assert test_result.metadata["streaming"] is True
     assert test_result.metadata["num_fewshot"] == 8
     assert len(test_result.samples) > 1000
     assert set(test_result.metrics) == {

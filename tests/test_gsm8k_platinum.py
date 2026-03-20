@@ -22,12 +22,14 @@ class FakeSession:
         self.requests = []
         self.batch_size = batch_size
         self.resolved_batch_size = resolved_batch_size
+        self.resolve_request_counts: list[int] = []
         self.generate_batch_sizes: list[int | None] = []
         self._response_index = 0
         self.resolve_calls = 0
 
     def resolve_batch_size(self, requests) -> int:
         self.resolve_calls += 1
+        self.resolve_request_counts.append(len(requests))
         return self.resolved_batch_size
 
     def generate(self, requests, *, batch_size=None):
@@ -172,3 +174,59 @@ def test_gsm8k_platinum_uses_session_batch_size_resolver(monkeypatch) -> None:
     assert result.metrics["exact_match,strict-match"] == 1.0
     assert session.resolve_calls == 1
     assert session.generate_batch_sizes == [3, 2]
+
+
+def test_gsm8k_platinum_uses_bounded_preview_for_auto_batch_size_resolution(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": f"What is 40 plus {offset}?",
+                "answer": f"40 + {offset} = {40 + offset}\n#### {40 + offset}",
+                "cleaning_status": "consensus",
+            }
+            for offset in range(300)
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    suite = evalution.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+    )
+    session = FakeSession(["The answer is 42."] * 300, resolved_batch_size=32)
+    suite.evaluate(session)
+
+    assert session.resolve_calls == 1
+    assert session.resolve_request_counts == [gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS]
+
+
+def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+        ]
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_load_dataset(*args, **kwargs):
+        del args
+        calls.append(kwargs)
+        return dataset
+
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", fake_load_dataset)
+
+    suite = evalution.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+        streaming=True,
+    )
+    session = FakeSession(["The answer is 42."])
+    result = suite.evaluate(session)
+
+    assert result.metadata["streaming"] is True
+    assert calls
+    assert calls[0]["streaming"] is True

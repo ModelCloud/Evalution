@@ -4,17 +4,20 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from itertools import islice
 from time import perf_counter
 from typing import Any, Literal
 
 from datasets import load_dataset
 
 from evalution.engines.base import GenerationRequest, InferenceSession
-from evalution.logbar import get_logger, manual_progress, progress, spinner
+from evalution.logbar import get_logger, manual_progress, spinner
 from evalution.results import SampleResult, TestResult
 from evalution.suites.base import TestSuite
 
 GSM8KPlatinumVariant = Literal["base", "cot", "cot_llama", "cot_zeroshot", "default"]
+
+_AUTO_BATCH_PREVIEW_ROWS = 256
 
 _REGEXES_TO_IGNORE = [",", r"\$", r"(?s).*#### ", r"\.$"]
 _FLEXIBLE_EXTRACT_PATTERN = r"(-?[$0-9.,]{2,})|(-?[0-9]+)"
@@ -100,6 +103,14 @@ class _VariantSpec:
     target_builder: Any
     num_fewshot: int
     fewshots: tuple[dict[str, str], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedSample:
+    index: int
+    doc: dict[str, Any]
+    target: str
+    request: GenerationRequest
 
 
 def _base_prompt(doc: dict[str, Any]) -> str:
@@ -189,6 +200,7 @@ class GSM8KPlatinum(TestSuite):
     temperature: float = 0.0
     fewshot_seed: int = 0
     cache_dir: str | None = None
+    streaming: bool = False
 
     def evaluate(self, session: InferenceSession) -> TestResult:
         variant_name = "base" if self.variant == "default" else self.variant
@@ -209,39 +221,46 @@ class GSM8KPlatinum(TestSuite):
         )
         dataset_load_started = perf_counter()
         with spinner(f"{spec.task_name}: loading dataset"):
-            all_docs = list(
-                load_dataset(
-                    self.dataset_path,
-                    self.dataset_name,
-                    split=self.split,
-                    cache_dir=self.cache_dir,
-                )
+            loaded_docs = load_dataset(
+                self.dataset_path,
+                self.dataset_name,
+                split=self.split,
+                cache_dir=self.cache_dir,
+                streaming=self.streaming,
             )
         dataset_load_wall_s = perf_counter() - dataset_load_started
         logger.info("%s: dataset load wall_time=%.3fs", spec.task_name, dataset_load_wall_s)
-        docs = all_docs
-        if self.limit is not None:
-            docs = all_docs[: self.limit]
-        logger.info("%s: evaluating %d sample(s)", spec.task_name, len(docs))
+        docs = _limit_docs(loaded_docs, self.limit)
+        if _requires_full_doc_materialization(spec):
+            docs = list(docs)
+            fewshot_docs = docs
+        else:
+            fewshot_docs = list(spec.fewshots)
 
-        requests: list[GenerationRequest] = []
-        targets: list[str] = []
-        prepare_iter = progress(docs, title=f"{spec.task_name}: preparing requests")
-        for index, doc in enumerate(prepare_iter):
-            fewshots = self._select_fewshots(spec=spec, docs=all_docs, doc=doc, index=index)
-            request = self._build_request(
-                spec=spec,
-                doc=doc,
-                fewshots=fewshots,
-                fewshot_as_multiturn=fewshot_as_multiturn,
-            )
-            requests.append(request)
-            targets.append(spec.target_builder(doc))
+        total = _doc_count(docs, loaded_docs=loaded_docs, limit=self.limit, split=self.split)
+        logger.info("%s: evaluating %d sample(s)", spec.task_name, total)
+
+        prepare_bar = manual_progress(
+            total,
+            title=f"{spec.task_name}: preparing requests",
+        )
+        prepared_iter = self._iter_prepared_samples(
+            spec=spec,
+            docs=docs,
+            fewshot_docs=fewshot_docs,
+            fewshot_as_multiturn=fewshot_as_multiturn,
+            prepare_bar=prepare_bar,
+        )
+        preview_size = min(total, _AUTO_BATCH_PREVIEW_ROWS)
+        preview_samples = list(islice(prepared_iter, preview_size))
 
         aggregate_scores: defaultdict[str, float] = defaultdict(float)
         samples: list[SampleResult] = []
-        total = len(requests)
-        effective_batch_size = self.batch_size or _session_batch_size(session, requests) or 1
+        effective_batch_size = (
+            self.batch_size
+            or _session_batch_size(session, [sample.request for sample in preview_samples])
+            or 1
+        )
         logger.info("%s: using batch_size=%d", spec.task_name, effective_batch_size)
         invalid_predictions = 0
         generation_wall_s = 0.0
@@ -258,16 +277,23 @@ class GSM8KPlatinum(TestSuite):
             subtitle=f"batch_size={effective_batch_size}",
         )
         try:
-            for start in range(0, total, effective_batch_size):
-                batch_requests = requests[start : start + effective_batch_size]
+            batch_index = 0
+            for prepared_batch in _iter_batches(
+                preview_samples,
+                prepared_iter,
+                batch_size=effective_batch_size,
+            ):
+                batch_index += 1
+                batch_requests = [sample.request for sample in prepared_batch]
                 generation_started = perf_counter()
                 batch_outputs = session.generate(batch_requests, batch_size=len(batch_requests))
                 generation_wall_s += perf_counter() - generation_started
                 scoring_started = perf_counter()
                 for batch_offset, output in enumerate(batch_outputs):
-                    index = start + batch_offset
-                    doc = docs[index]
-                    target = targets[index]
+                    prepared_sample = prepared_batch[batch_offset]
+                    index = prepared_sample.index
+                    doc = prepared_sample.doc
+                    target = prepared_sample.target
                     strict_prediction = _extract_match(
                         output.text,
                         spec.strict_pattern,
@@ -315,11 +341,15 @@ class GSM8KPlatinum(TestSuite):
                         )
                     )
                     score_bar.subtitle(
-                        f"batch={start // effective_batch_size + 1}/{(total + effective_batch_size - 1) // effective_batch_size}"
+                        f"batch={batch_index}/{(total + effective_batch_size - 1) // effective_batch_size}"
                     )
                     score_bar.next().draw()
                 scoring_wall_s += perf_counter() - scoring_started
         finally:
+            close_prepared_iter = getattr(prepared_iter, "close", None)
+            if callable(close_prepared_iter):
+                close_prepared_iter()
+            prepare_bar.close()
             score_bar.close()
 
         denominator = len(samples) or 1
@@ -347,6 +377,7 @@ class GSM8KPlatinum(TestSuite):
                 "num_fewshot": spec.num_fewshot,
                 "apply_chat_template": self.apply_chat_template,
                 "fewshot_as_multiturn": fewshot_as_multiturn,
+                "streaming": self.streaming,
             },
         )
 
@@ -404,6 +435,40 @@ class GSM8KPlatinum(TestSuite):
             do_sample=self.do_sample,
             temperature=self.temperature,
         )
+
+    def _iter_prepared_samples(
+        self,
+        *,
+        spec: _VariantSpec,
+        docs: list[dict[str, Any]] | Any,
+        fewshot_docs: list[dict[str, Any]],
+        fewshot_as_multiturn: bool,
+        prepare_bar: Any,
+    ) -> Any:
+        try:
+            for index, doc in enumerate(docs):
+                fewshots = self._select_fewshots(
+                    spec=spec,
+                    docs=fewshot_docs,
+                    doc=doc,
+                    index=index,
+                )
+                request = self._build_request(
+                    spec=spec,
+                    doc=doc,
+                    fewshots=fewshots,
+                    fewshot_as_multiturn=fewshot_as_multiturn,
+                )
+                prepare_bar.next().draw()
+                yield _PreparedSample(
+                    index=index,
+                    doc=doc,
+                    target=spec.target_builder(doc),
+                    request=request,
+                )
+        finally:
+            prepare_bar.title(f"{spec.task_name}: prepared requests")
+            prepare_bar.draw()
 
     def _build_plain_prompt(
         self,
@@ -468,6 +533,63 @@ def _session_batch_size(
     if config_batch_size is not None:
         return int(config_batch_size)
     return None
+
+
+def _iter_batches(
+    preview_samples: list[_PreparedSample],
+    prepared_iter: Any,
+    *,
+    batch_size: int,
+) -> Any:
+    batch: list[_PreparedSample] = []
+    for sample in preview_samples:
+        batch.append(sample)
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+    for sample in prepared_iter:
+        batch.append(sample)
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+
+def _limit_docs(docs: Any, limit: int | None) -> Any:
+    if limit is None:
+        return docs
+    if hasattr(docs, "select") and hasattr(docs, "__len__"):
+        return docs.select(range(min(limit, len(docs))))
+    return islice(docs, limit)
+
+
+def _doc_count(
+    docs: Any,
+    *,
+    loaded_docs: Any,
+    limit: int | None,
+    split: str,
+) -> int:
+    if hasattr(docs, "__len__"):
+        count = len(docs)
+        return min(limit, count) if limit is not None else count
+
+    split_info = getattr(getattr(loaded_docs, "info", None), "splits", {}).get(split)
+    if split_info is not None and getattr(split_info, "num_examples", None) is not None:
+        count = int(split_info.num_examples)
+        return min(limit, count) if limit is not None else count
+
+    if limit is not None:
+        return int(limit)
+
+    raise ValueError(
+        "streaming dataset row count is unavailable; set `limit` or use a dataset split with known num_examples"
+    )
+
+
+def _requires_full_doc_materialization(spec: _VariantSpec) -> bool:
+    return not spec.fewshots and spec.num_fewshot > 0
 
 
 def _extract_match(
