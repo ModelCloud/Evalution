@@ -213,6 +213,10 @@ class TransformerSession:
             raise ValueError("generation requests must define either `prompt` or `messages`")
         return request.prompt
 
+    @property
+    def batch_size(self) -> int:
+        return self.config.batch_size
+
     def _get_stop_criteria(self, stop_strings: list[str]) -> Any:
         from transformers import StopStringCriteria
 

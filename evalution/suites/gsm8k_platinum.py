@@ -237,7 +237,7 @@ class GSM8KPlatinum(TestSuite):
         aggregate_scores: defaultdict[str, float] = defaultdict(float)
         samples: list[SampleResult] = []
         total = len(requests)
-        effective_batch_size = self.batch_size or 1
+        effective_batch_size = self.batch_size or _session_batch_size(session) or 1
         invalid_predictions = 0
         score_bar = manual_progress(
             total,
@@ -429,6 +429,18 @@ class GSM8KPlatinum(TestSuite):
 
 def gsm8k_platinum(**kwargs: Any) -> GSM8KPlatinum:
     return GSM8KPlatinum(**kwargs)
+
+
+def _session_batch_size(session: InferenceSession) -> int | None:
+    batch_size = getattr(session, "batch_size", None)
+    if batch_size is not None:
+        return int(batch_size)
+
+    config = getattr(session, "config", None)
+    config_batch_size = getattr(config, "batch_size", None)
+    if config_batch_size is not None:
+        return int(config_batch_size)
+    return None
 
 
 def _extract_match(
