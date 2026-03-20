@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from types import SimpleNamespace
 
 import torch
@@ -264,6 +265,204 @@ def test_transformer_session_generate_uses_generate_batch_when_paged_attention_i
     assert call["inputs"] == [[11, 12, 13]]
     assert call["progress_bar"] is False
     assert call["generation_config"].stop_strings == ["Q:"]
+
+
+def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_and_generate() -> None:
+    class BlockingTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+
+        def __init__(self) -> None:
+            self._state_lock = threading.Lock()
+            self._active_calls = 0
+            self.overlap_detected = False
+            self.prepare_started = threading.Event()
+            self.pad_started = threading.Event()
+            self.allow_prepare_finish = threading.Event()
+
+        def _enter(self) -> None:
+            with self._state_lock:
+                self._active_calls += 1
+                if self._active_calls > 1:
+                    self.overlap_detected = True
+
+        def _exit(self) -> None:
+            with self._state_lock:
+                self._active_calls -= 1
+
+        def __call__(self, prompts, *, add_special_tokens=False, padding=False, **kwargs):
+            del kwargs
+            assert add_special_tokens is False
+            assert padding is False
+            assert isinstance(prompts, list)
+            self._enter()
+            try:
+                self.prepare_started.set()
+                assert self.allow_prepare_finish.wait(timeout=1.0)
+                return {"input_ids": [[1, 2, 3] for _ in prompts]}
+            finally:
+                self._exit()
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            del encoded_inputs
+            assert return_tensors == "pt"
+            assert padding is True
+            self._enter()
+            try:
+                self.pad_started.set()
+                return {
+                    "input_ids": torch.tensor([[1, 2, 3]], dtype=torch.long),
+                    "attention_mask": torch.tensor([[1, 1, 1]], dtype=torch.long),
+                }
+            finally:
+                self._exit()
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class FakeModel:
+        def generate(self, **kwargs):
+            del kwargs
+            return torch.tensor([[1, 2, 3, 4, 5]], dtype=torch.long)
+
+    tokenizer = BlockingTokenizer()
+    session = TransformerSession(
+        config=Transformer(),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=tokenizer,
+        prepare_tokenizer=None,
+        input_device=torch.device("cpu"),
+    )
+
+    prepare_errors: list[BaseException] = []
+    generate_errors: list[BaseException] = []
+
+    def run_prepare() -> None:
+        try:
+            session.prepare_requests([GenerationRequest(prompt="Q: 1 + 1\nA:")])
+        except BaseException as exc:  # pragma: no cover - asserted below
+            prepare_errors.append(exc)
+
+    def run_generate() -> None:
+        try:
+            session.generate(
+                [
+                    GenerationRequest(
+                        prompt="Q: 40 + 2\nA:",
+                        rendered_prompt="Q: 40 + 2\nA:",
+                        input_ids=[1, 2, 3],
+                    )
+                ],
+                batch_size=1,
+            )
+        except BaseException as exc:  # pragma: no cover - asserted below
+            generate_errors.append(exc)
+
+    prepare_thread = threading.Thread(target=run_prepare)
+    generate_thread = threading.Thread(target=run_generate)
+
+    prepare_thread.start()
+    assert tokenizer.prepare_started.wait(timeout=1.0)
+    generate_thread.start()
+
+    assert not tokenizer.pad_started.wait(timeout=0.1)
+
+    tokenizer.allow_prepare_finish.set()
+    prepare_thread.join(timeout=1.0)
+    generate_thread.join(timeout=1.0)
+
+    assert not prepare_errors
+    assert not generate_errors
+    assert tokenizer.overlap_detected is False
+
+
+def test_transformer_session_serializes_generate_calls() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            del encoded_inputs
+            assert return_tensors == "pt"
+            assert padding is True
+            return {
+                "input_ids": torch.tensor([[1, 2, 3]], dtype=torch.long),
+                "attention_mask": torch.tensor([[1, 1, 1]], dtype=torch.long),
+            }
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class BlockingModel:
+        def __init__(self) -> None:
+            self._state_lock = threading.Lock()
+            self._active_calls = 0
+            self._call_count = 0
+            self.overlap_detected = False
+            self.first_started = threading.Event()
+            self.second_started = threading.Event()
+            self.allow_first_finish = threading.Event()
+
+        def generate(self, **kwargs):
+            del kwargs
+            with self._state_lock:
+                self._active_calls += 1
+                self._call_count += 1
+                call_number = self._call_count
+                if self._active_calls > 1:
+                    self.overlap_detected = True
+            try:
+                if call_number == 1:
+                    self.first_started.set()
+                    assert self.allow_first_finish.wait(timeout=1.0)
+                else:
+                    self.second_started.set()
+                return torch.tensor([[1, 2, 3, 4, 5]], dtype=torch.long)
+            finally:
+                with self._state_lock:
+                    self._active_calls -= 1
+
+    model = BlockingModel()
+    session = TransformerSession(
+        config=Transformer(),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+    requests = [
+        GenerationRequest(
+            prompt="Q: 40 + 2\nA:",
+            rendered_prompt="Q: 40 + 2\nA:",
+            input_ids=[1, 2, 3],
+        )
+    ]
+    errors: list[BaseException] = []
+
+    def run_generate() -> None:
+        try:
+            session.generate(requests, batch_size=1)
+        except BaseException as exc:  # pragma: no cover - asserted below
+            errors.append(exc)
+
+    first_thread = threading.Thread(target=run_generate)
+    second_thread = threading.Thread(target=run_generate)
+
+    first_thread.start()
+    assert model.first_started.wait(timeout=1.0)
+
+    second_thread.start()
+    assert not model.second_started.wait(timeout=0.1)
+
+    model.allow_first_finish.set()
+    first_thread.join(timeout=1.0)
+    second_thread.join(timeout=1.0)
+
+    assert not errors
+    assert model.overlap_detected is False
 
 
 def test_transformer_session_falls_back_to_standard_generate_when_paged_generation_fails(monkeypatch) -> None:

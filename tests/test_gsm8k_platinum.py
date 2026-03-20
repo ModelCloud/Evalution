@@ -305,3 +305,39 @@ def test_gsm8k_platinum_prefetches_remaining_streaming_batches_on_background_thr
         for name in session.prepare_thread_names[1:]
     )
     assert sum(session.prepare_batch_sizes) == 260
+
+
+def test_gsm8k_platinum_streaming_prefetch_and_generation_respect_resolved_batch_size(
+    monkeypatch,
+) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+            for _ in range(300)
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    suite = evalution.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+        streaming=True,
+    )
+    max_batch_size = 32
+    session = PreparingFakeSession(
+        ["The answer is 42."] * 300,
+        resolved_batch_size=max_batch_size,
+    )
+
+    result = suite.evaluate(session)
+
+    assert len(result.samples) == 300
+    assert session.generate_batch_sizes == [32, 32, 32, 32, 32, 32, 32, 32, 32, 12]
+    assert all(size is not None and size <= max_batch_size for size in session.generate_batch_sizes)
+    assert session.prepare_batch_sizes[0] == gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS
+    assert session.prepare_batch_sizes[1:] == [32, 12]
+    assert all(size <= max_batch_size for size in session.prepare_batch_sizes[1:])

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import gc
-from statistics import mean
+import threading
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field, replace
+from statistics import mean
 from typing import Any
 
 from evalution.config import Model
@@ -92,6 +93,14 @@ class TransformerSession:
     stop_criteria_cache: dict[tuple[str, ...], Any] = field(default_factory=dict, repr=False)
     auto_batch_size_cache: dict[tuple[Any, ...], int] = field(default_factory=dict, repr=False)
     execution_logged: bool = field(default=False, repr=False)
+    _generation_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _state_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _tokenizer_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _prepare_tokenizer_lock: threading.RLock = field(
+        default_factory=threading.RLock,
+        init=False,
+        repr=False,
+    )
 
     @classmethod
     def from_config(cls, config: Transformer, model_config: Model) -> TransformerSession:
@@ -197,28 +206,36 @@ class TransformerSession:
         if not requests:
             return []
 
-        effective_batch_size = batch_size or self.resolve_batch_size(requests)
-        if not self.paged_attention_enabled and self.standard_batch_size_cap is not None:
-            effective_batch_size = min(effective_batch_size, self.standard_batch_size_cap)
-        self._log_generation_execution()
-        if self.paged_attention_enabled:
-            try:
-                return self._generate_paged(requests, batch_size=effective_batch_size)
-            except Exception as exc:
-                fallback_batch_size = _fallback_batch_size(effective_batch_size)
-                self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
-                return self._generate_standard(requests, batch_size=fallback_batch_size)
-        return self._generate_standard(requests, batch_size=effective_batch_size)
+        with self._generation_lock:
+            effective_batch_size = batch_size or self.resolve_batch_size(requests)
+            with self._state_lock:
+                paged_attention_enabled = self.paged_attention_enabled
+                standard_batch_size_cap = self.standard_batch_size_cap
+            if not paged_attention_enabled and standard_batch_size_cap is not None:
+                effective_batch_size = min(effective_batch_size, standard_batch_size_cap)
+            self._log_generation_execution()
+            if paged_attention_enabled:
+                try:
+                    return self._generate_paged(requests, batch_size=effective_batch_size)
+                except Exception as exc:
+                    fallback_batch_size = _fallback_batch_size(effective_batch_size)
+                    self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
+                    return self._generate_standard(requests, batch_size=fallback_batch_size)
+            return self._generate_standard(requests, batch_size=effective_batch_size)
 
     def close(self) -> None:
-        self.stop_criteria_cache.clear()
-        self.auto_batch_size_cache.clear()
-        with suppress(Exception):
-            del self.model
-        with suppress(Exception):
-            del self.tokenizer
-        with suppress(Exception):
-            del self.prepare_tokenizer
+        with self._generation_lock:
+            with self._prepare_tokenizer_lock:
+                with self._tokenizer_lock:
+                    with self._state_lock:
+                        self.stop_criteria_cache.clear()
+                        self.auto_batch_size_cache.clear()
+                        with suppress(Exception):
+                            del self.model
+                        with suppress(Exception):
+                            del self.tokenizer
+                        with suppress(Exception):
+                            del self.prepare_tokenizer
         gc.collect()
         with suppress(Exception):
             import torch
@@ -247,51 +264,54 @@ class TransformerSession:
         return self.config.batch_size
 
     def describe_execution(self) -> dict[str, Any]:
-        return {
-            "requested_attn_implementation": self.requested_attn_implementation,
-            "effective_attn_implementation": self.effective_attn_implementation,
-            "paged_attention": self.paged_attention_enabled,
-            "generation_backend": self.generation_backend,
-            "standard_batch_size_cap": self.standard_batch_size_cap,
-        }
+        with self._state_lock:
+            return {
+                "requested_attn_implementation": self.requested_attn_implementation,
+                "effective_attn_implementation": self.effective_attn_implementation,
+                "paged_attention": self.paged_attention_enabled,
+                "generation_backend": self.generation_backend,
+                "standard_batch_size_cap": self.standard_batch_size_cap,
+            }
 
     def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
         tokenizer = self.prepare_tokenizer or self.tokenizer
-        prepared: list[GenerationRequest] = list(requests)
-        missing_indexes: list[int] = []
-        missing_prompts: list[str] = []
+        tokenizer_lock = self._lock_for_tokenizer(tokenizer)
+        with tokenizer_lock:
+            prepared: list[GenerationRequest] = list(requests)
+            missing_indexes: list[int] = []
+            missing_prompts: list[str] = []
 
-        for index, request in enumerate(prepared):
-            if request.rendered_prompt is not None and request.input_ids is not None:
-                continue
-            missing_indexes.append(index)
-            missing_prompts.append(
-                request.rendered_prompt
-                if request.rendered_prompt is not None
-                else self._render_request_with_tokenizer(tokenizer, request)
-            )
+            for index, request in enumerate(prepared):
+                if request.rendered_prompt is not None and request.input_ids is not None:
+                    continue
+                missing_indexes.append(index)
+                missing_prompts.append(
+                    request.rendered_prompt
+                    if request.rendered_prompt is not None
+                    else self._render_request_with_tokenizer(tokenizer, request)
+                )
 
-        if not missing_indexes:
+            if not missing_indexes:
+                return prepared
+
+            encoded = tokenizer(
+                missing_prompts,
+                add_special_tokens=False,
+                padding=False,
+            )["input_ids"]
+            for index, rendered_prompt, input_ids in zip(
+                missing_indexes,
+                missing_prompts,
+                encoded,
+                strict=True,
+            ):
+                prepared[index] = replace(
+                    prepared[index],
+                    rendered_prompt=rendered_prompt,
+                    input_ids=list(input_ids),
+                )
+            del encoded
             return prepared
-
-        encoded = tokenizer(
-            missing_prompts,
-            add_special_tokens=False,
-            padding=False,
-        )["input_ids"]
-        for index, rendered_prompt, input_ids in zip(
-            missing_indexes,
-            missing_prompts,
-            encoded,
-            strict=True,
-        ):
-            prepared[index] = replace(
-                prepared[index],
-                rendered_prompt=rendered_prompt,
-                input_ids=list(input_ids),
-            )
-        del encoded
-        return prepared
 
     def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
         configured_batch_size = _normalize_batch_size(self.config.batch_size)
@@ -300,46 +320,58 @@ class TransformerSession:
         if not requests:
             return 1
 
-        stats = self._batch_size_stats(requests)
-        cache_key = (
-            stats["row_count"],
-            stats["min_prompt_tokens"],
-            stats["avg_prompt_tokens"],
-            stats["max_prompt_tokens"],
-            stats["max_new_tokens"],
-            stats["dtype_name"],
-            stats["dtype_bytes"],
-            stats["total_vram_gib"],
-            stats["parameter_count_billions"],
-        )
-        cached = self.auto_batch_size_cache.get(cache_key)
-        if cached is not None:
-            return cached
+        with self._generation_lock:
+            stats = self._batch_size_stats(requests)
+            cache_key = (
+                stats["row_count"],
+                stats["min_prompt_tokens"],
+                stats["avg_prompt_tokens"],
+                stats["max_prompt_tokens"],
+                stats["max_new_tokens"],
+                stats["dtype_name"],
+                stats["dtype_bytes"],
+                stats["total_vram_gib"],
+                stats["parameter_count_billions"],
+            )
+            with self._state_lock:
+                cached = self.auto_batch_size_cache.get(cache_key)
+            if cached is not None:
+                return cached
 
-        resolved = self._estimate_auto_batch_size(stats)
-        self.auto_batch_size_cache[cache_key] = resolved
-        get_logger().info(
-            "auto batch size resolved to %d for %d row(s); prompt_tokens(min/avg/max)=%d/%.1f/%d, "
-            "max_new_tokens=%d, dtype=%s, total_vram_gib=%.1f",
-            resolved,
-            stats["row_count"],
-            stats["min_prompt_tokens"],
-            stats["avg_prompt_tokens"],
-            stats["max_prompt_tokens"],
-            stats["max_new_tokens"],
-            stats["dtype_name"],
-            stats["total_vram_gib"],
-        )
-        return resolved
+            resolved = self._estimate_auto_batch_size(stats)
+            with self._state_lock:
+                cached = self.auto_batch_size_cache.get(cache_key)
+                if cached is not None:
+                    return cached
+                self.auto_batch_size_cache[cache_key] = resolved
+            get_logger().info(
+                "auto batch size resolved to %d for %d row(s); prompt_tokens(min/avg/max)=%d/%.1f/%d, "
+                "max_new_tokens=%d, dtype=%s, total_vram_gib=%.1f",
+                resolved,
+                stats["row_count"],
+                stats["min_prompt_tokens"],
+                stats["avg_prompt_tokens"],
+                stats["max_prompt_tokens"],
+                stats["max_new_tokens"],
+                stats["dtype_name"],
+                stats["total_vram_gib"],
+            )
+            return resolved
 
     def _get_stop_criteria(self, stop_strings: list[str]) -> Any:
         from transformers import StopStringCriteria
 
         cache_key = tuple(stop_strings)
-        criteria = self.stop_criteria_cache.get(cache_key)
+        with self._state_lock:
+            criteria = self.stop_criteria_cache.get(cache_key)
         if criteria is None:
-            criteria = StopStringCriteria(self.tokenizer, list(cache_key))
-            self.stop_criteria_cache[cache_key] = criteria
+            with self._tokenizer_lock:
+                criteria = StopStringCriteria(self.tokenizer, list(cache_key))
+            with self._state_lock:
+                cached = self.stop_criteria_cache.get(cache_key)
+                if cached is not None:
+                    return cached
+                self.stop_criteria_cache[cache_key] = criteria
         return criteria
 
     def _batch_size_stats(self, requests: list[GenerationRequest]) -> dict[str, Any]:
@@ -350,8 +382,13 @@ class TransformerSession:
             for request in requests
         ]
         if any(length is None for length in prompt_lengths):
-            rendered_prompts = [self._render_request(request) for request in requests if request.input_ids is None]
-            encoded = self.tokenizer(rendered_prompts, padding=False)
+            with self._tokenizer_lock:
+                rendered_prompts = [
+                    self._render_request(request)
+                    for request in requests
+                    if request.input_ids is None
+                ]
+                encoded = self.tokenizer(rendered_prompts, padding=False)
             fallback_lengths = iter(len(token_ids) for token_ids in encoded["input_ids"])
             prompt_lengths = [
                 length if length is not None else next(fallback_lengths)
@@ -445,8 +482,9 @@ class TransformerSession:
             encoded = None
             generated = None
             try:
-                rendered_prompts = [self._render_request(request) for request in batch]
-                encoded = self._encode_standard_batch(batch)
+                with self._tokenizer_lock:
+                    rendered_prompts = [self._render_request(request) for request in batch]
+                    encoded = self._encode_standard_batch(batch)
                 encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
                 generation_kwargs = self._build_generation_kwargs(batch)
                 common_stop_strings = _common_stop_strings(batch)
@@ -461,18 +499,19 @@ class TransformerSession:
                 # `generate()` returns the full padded prompt plus new tokens. With left padding,
                 # slicing by the unpadded token count leaks prompt-tail tokens into the decode.
                 input_length = encoded["input_ids"].shape[1]
-                for index, token_ids in enumerate(generated):
-                    generated_tokens = token_ids[input_length:]
-                    text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
-                    text = _truncate_at_stop(text, batch[index].stop).strip()
-                    outputs.append(
-                        GenerationOutput(
-                            prompt=rendered_prompts[index],
-                            text=text,
-                            metadata=batch[index].metadata,
+                with self._tokenizer_lock:
+                    for index, token_ids in enumerate(generated):
+                        generated_tokens = token_ids[input_length:]
+                        text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
+                        text = _truncate_at_stop(text, batch[index].stop).strip()
+                        outputs.append(
+                            GenerationOutput(
+                                prompt=rendered_prompts[index],
+                                text=text,
+                                metadata=batch[index].metadata,
+                            )
                         )
-                    )
-                    del generated_tokens
+                        del generated_tokens
             finally:
                 if generated is not None:
                     del generated
@@ -497,16 +536,17 @@ class TransformerSession:
             generated = None
             generation_config = None
             try:
-                rendered_prompts = [self._render_request(request) for request in batch]
-                encoded = [
-                    list(request.input_ids)
-                    if request.input_ids is not None
-                    else self.tokenizer(
-                        rendered_prompts[index],
-                        add_special_tokens=False,
-                    )["input_ids"]
-                    for index, request in enumerate(batch)
-                ]
+                with self._tokenizer_lock:
+                    rendered_prompts = [self._render_request(request) for request in batch]
+                    encoded = [
+                        list(request.input_ids)
+                        if request.input_ids is not None
+                        else self.tokenizer(
+                            rendered_prompts[index],
+                            add_special_tokens=False,
+                        )["input_ids"]
+                        for index, request in enumerate(batch)
+                    ]
                 generation_config = self._build_generation_config(batch)
                 generated = self.model.generate_batch(
                     encoded,
@@ -525,20 +565,21 @@ class TransformerSession:
                         f"first_missing={missing_keys[0]}"
                     )
 
-                for index in range(len(batch)):
-                    request_output = generated[f"req_{index}"]
-                    generated_tokens = request_output.generated_tokens
-                    text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
-                    text = _truncate_at_stop(text, batch[index].stop).strip()
-                    outputs.append(
-                        GenerationOutput(
-                            prompt=rendered_prompts[index],
-                            text=text,
-                            metadata=batch[index].metadata,
+                with self._tokenizer_lock:
+                    for index in range(len(batch)):
+                        request_output = generated[f"req_{index}"]
+                        generated_tokens = request_output.generated_tokens
+                        text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
+                        text = _truncate_at_stop(text, batch[index].stop).strip()
+                        outputs.append(
+                            GenerationOutput(
+                                prompt=rendered_prompts[index],
+                                text=text,
+                                metadata=batch[index].metadata,
+                            )
                         )
-                    )
-                    del generated_tokens
-                    del request_output
+                        del generated_tokens
+                        del request_output
             finally:
                 if generated is not None:
                     del generated
@@ -598,38 +639,52 @@ class TransformerSession:
         return generation_config
 
     def _log_generation_execution(self) -> None:
-        if self.execution_logged:
-            return
+        with self._state_lock:
+            if self.execution_logged:
+                return
+            backend = self.generation_backend
+            attention = self.effective_attn_implementation or self.requested_attn_implementation
+            batch_size_cap = self.standard_batch_size_cap
+            self.execution_logged = True
         get_logger().info(
             "transformer generation using backend=%s attention=%s batch_size_cap=%s",
-            self.generation_backend,
-            self.effective_attn_implementation or self.requested_attn_implementation,
-            self.standard_batch_size_cap,
+            backend,
+            attention,
+            batch_size_cap,
         )
-        self.execution_logged = True
 
     def _disable_paged_attention(self, exc: Exception, *, fallback_batch_size: int) -> None:
         logger = get_logger()
-        previous_attention = self.effective_attn_implementation or self.requested_attn_implementation
-        base_attention = _base_attn_implementation(self.requested_attn_implementation)
+        with self._state_lock:
+            previous_attention = self.effective_attn_implementation or self.requested_attn_implementation
+            requested_attention = self.requested_attn_implementation
+        base_attention = _base_attn_implementation(requested_attention)
         setter = getattr(self.model, "set_attn_implementation", None)
         if callable(setter) and base_attention is not None:
             with suppress(Exception):
                 setter(base_attention)
 
-        self.paged_attention_enabled = False
-        self.generation_backend = "generate"
-        self.effective_attn_implementation = base_attention or self.requested_attn_implementation
-        self.standard_batch_size_cap = fallback_batch_size
-        self.execution_logged = False
+        with self._state_lock:
+            self.paged_attention_enabled = False
+            self.generation_backend = "generate"
+            self.effective_attn_implementation = base_attention or requested_attention
+            self.standard_batch_size_cap = fallback_batch_size
+            self.execution_logged = False
+            effective_attention = self.effective_attn_implementation
+            generation_backend = self.generation_backend
         logger.warning(
             "paged attention failed for attention=%s: %s; falling back to backend=%s attention=%s batch_size_cap=%d",
             previous_attention,
             exc,
-            self.generation_backend,
-            self.effective_attn_implementation,
+            generation_backend,
+            effective_attention,
             fallback_batch_size,
         )
+
+    def _lock_for_tokenizer(self, tokenizer: Any) -> threading.RLock:
+        if tokenizer is not None and tokenizer is self.prepare_tokenizer and tokenizer is not self.tokenizer:
+            return self._prepare_tokenizer_lock
+        return self._tokenizer_lock
 
 
 def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:
