@@ -33,7 +33,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
             ),
             tests=[
                 evalution.gsm8k_platinum(
-                    variant="cot_llama",
+                    variant="cot",
                     apply_chat_template=True,
                     max_new_tokens=96,
                 )
@@ -47,8 +47,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert len(result.tests) == 1
 
     test_result = result.tests[0]
-    assert test_result.name == "gsm8k_platinum_cot_llama"
-    assert test_result.metadata["variant"] == "cot_llama"
+    assert test_result.name == "gsm8k_platinum_cot"
+    assert test_result.metadata["variant"] == "cot"
     assert test_result.metadata["apply_chat_template"] is True
     assert test_result.metadata["fewshot_as_multiturn"] is True
     assert test_result.metadata["num_fewshot"] == 8
@@ -74,9 +74,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert sample.target
         assert sample.prediction
         assert "<|start_header_id|>user<|end_header_id|>" in sample.prompt
-        assert "Given the following problem, reason and give a final answer to the problem." in sample.prompt
-        assert "Problem:" in sample.prompt
-        assert "The final answer is" in sample.prompt
+        assert "Q:" in sample.prompt
+        assert "A:" in sample.prompt
         assert set(sample.extracted) == {"strict-match", "flexible-extract"}
         assert set(sample.scores) == {
             "exact_match,strict-match",
@@ -91,6 +90,6 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert invalid_predictions / len(test_result.samples) < 0.20
 
     serialized = result.to_dict()
-    assert serialized["tests"][0]["name"] == "gsm8k_platinum_cot_llama"
+    assert serialized["tests"][0]["name"] == "gsm8k_platinum_cot"
     assert len(serialized["tests"][0]["samples"]) == len(test_result.samples)
     assert serialized["tests"][0]["samples"][0]["prediction"]

@@ -4,6 +4,7 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from time import perf_counter
 from typing import Any, Literal
 
 from datasets import load_dataset
@@ -206,6 +207,7 @@ class GSM8KPlatinum(TestSuite):
             self.split,
             spec.task_name,
         )
+        dataset_load_started = perf_counter()
         with spinner(f"{spec.task_name}: loading dataset"):
             all_docs = list(
                 load_dataset(
@@ -215,6 +217,8 @@ class GSM8KPlatinum(TestSuite):
                     cache_dir=self.cache_dir,
                 )
             )
+        dataset_load_wall_s = perf_counter() - dataset_load_started
+        logger.info("%s: dataset load wall_time=%.3fs", spec.task_name, dataset_load_wall_s)
         docs = all_docs
         if self.limit is not None:
             docs = all_docs[: self.limit]
@@ -240,6 +244,8 @@ class GSM8KPlatinum(TestSuite):
         effective_batch_size = self.batch_size or _session_batch_size(session, requests) or 1
         logger.info("%s: using batch_size=%d", spec.task_name, effective_batch_size)
         invalid_predictions = 0
+        generation_wall_s = 0.0
+        scoring_wall_s = 0.0
         score_bar = manual_progress(
             total,
             title=self._score_progress_title(
@@ -254,7 +260,10 @@ class GSM8KPlatinum(TestSuite):
         try:
             for start in range(0, total, effective_batch_size):
                 batch_requests = requests[start : start + effective_batch_size]
+                generation_started = perf_counter()
                 batch_outputs = session.generate(batch_requests, batch_size=len(batch_requests))
+                generation_wall_s += perf_counter() - generation_started
+                scoring_started = perf_counter()
                 for batch_offset, output in enumerate(batch_outputs):
                     index = start + batch_offset
                     doc = docs[index]
@@ -309,6 +318,7 @@ class GSM8KPlatinum(TestSuite):
                         f"batch={start // effective_batch_size + 1}/{(total + effective_batch_size - 1) // effective_batch_size}"
                     )
                     score_bar.next().draw()
+                scoring_wall_s += perf_counter() - scoring_started
         finally:
             score_bar.close()
 
@@ -317,6 +327,13 @@ class GSM8KPlatinum(TestSuite):
             metric_name: total / denominator
             for metric_name, total in aggregate_scores.items()
         }
+        logger.info(
+            "%s: wall_times dataset_load=%.3fs generation=%.3fs scoring=%.3fs",
+            spec.task_name,
+            dataset_load_wall_s,
+            generation_wall_s,
+            scoring_wall_s,
+        )
         logger.info("%s: metrics=%s", spec.task_name, metrics)
         return TestResult(
             name=spec.task_name,
