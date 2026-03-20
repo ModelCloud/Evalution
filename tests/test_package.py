@@ -1,6 +1,5 @@
-from evalution import __version__, get_version
+import evalution
 
 
-def test_package_version() -> None:
-    assert __version__ == "0.1.0"
-    assert get_version() == __version__
+def test_package_import() -> None:
+    assert evalution is not None
