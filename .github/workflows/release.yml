@@ -1,14 +1,11 @@
 name: Release
 
-defaults:
-  run:
-    shell: bash -le {0}
-
 concurrency:
-  group: ${{ github.event.inputs.ref || github.ref }}-workflow-release
+  group: ${{ github.event.inputs.ref || github.ref }}-workflow-${{ github.event_name }}
   cancel-in-progress: true
 
 on:
+  push:
   release:
     types: [published]
   repository_dispatch:
@@ -18,89 +15,115 @@ on:
         description: "Branch, Tag or Commit SHA"
         required: false
         default: ""
+      pr_number:
+        description: "PR Number"
+        required: false
+        type: number
       upload_pypi:
         description: "Upload to PyPI"
         type: boolean
         required: false
         default: false
+      upload_release:
+        description: "Upload to release (it only works with a tag ref)"
+        type: boolean
+        required: false
+        default: false
 
 env:
+  MAX_JOBS: 4
   ref: ${{ github.event.inputs.ref || github.ref }}
-  PYTHON_VERSION: "3.12"
 
 jobs:
-  build-distributions:
+  release-source:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    if: (github.event_name == 'release' || github.event.inputs.upload_pypi == 'true') && !cancelled()
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           ref: ${{ env.ref }}
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
+          python-version: "3.14"
+          cache: "pip"
 
-      - name: Install build requirements
+      - name: Install requirements
         run: |
-          python -V
-          pip install pip build setuptools wheel twine packaging -U
+          pip install pip build setuptools twine packaging -U
 
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      - name: Validate packaging files
-        run: |
-          if [ ! -f pyproject.toml ] && [ ! -f setup.py ] && [ ! -f setup.cfg ]; then
-            echo "::error::Missing pyproject.toml or setup.py/setup.cfg for package build."
-            exit 1
-          fi
-
       - name: Build package
         run: |
-          python -m build
+          python -m build --sdist
           twine check dist/*
 
-      - name: Upload distribution artifacts
+      - name: Upload source artifact
         uses: actions/upload-artifact@v7
         with:
-          name: dist
-          path: dist/*
+          name: sources
+          path: dist/*.tar.gz
 
-  upload-pypi:
-    needs: build-distributions
-    runs-on: ubuntu-latest
-    if: (github.event_name == 'release' || github.event.inputs.upload_pypi == 'true') && !cancelled()
-    permissions:
-      contents: read
-
-    steps:
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-
-      - name: Install upload requirements
-        run: |
-          python -V
-          pip install pip twine -U
-
-      - name: Download distribution artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: dist
-          path: dist
-
-      - name: Upload distributions to PyPI
+      - name: Upload sdist to pypi
+        if: (github.event_name == 'release' || github.event.inputs.upload_pypi == 'true') && !cancelled()
         env:
           TWINE_USERNAME: "__token__"
           TWINE_PASSWORD: ${{ secrets.PYPI_KEY }}
         run: |
-          python -m twine upload dist/*
+          python -m twine upload dist/*gz
+
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        py: ["3.14"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Codes
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          ref: ${{ env.ref }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.py }}
+          cache: "pip"
+
+      - name: Add msbuild to PATH
+        if: runner.os == 'Windows'
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install requirements
+        run: |
+          which python
+          python -V
+          pip install build setuptools twine packaging -U
+
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Compile
+        run: |
+          python -V
+          python setup.py bdist_wheel
+
+      - name: Test install
+        shell: bash
+        run: |
+          python -V
+          whl=$(ls -t dist/*.whl | head -n 1 | xargs basename)
+          echo "WHL_NAME=$whl" >> $GITHUB_ENV
+          twine check dist/$whl
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.WHL_NAME }}
+          path: dist/${{ env.WHL_NAME }}
