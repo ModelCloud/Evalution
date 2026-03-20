@@ -28,6 +28,15 @@ def progress(iterable: Any, *, title: str) -> Any:
     return bar
 
 
+def manual_progress(total: int, *, title: str, subtitle: str | None = None) -> Any:
+    bar = get_logger().pb(total, output_interval=progress_output_interval(total)).manual()
+    if title:
+        bar.title(title)
+    if subtitle:
+        bar.subtitle(subtitle)
+    return bar
+
+
 @contextmanager
 def spinner(title: str) -> Iterator[None]:
     with get_logger().spinner(title):

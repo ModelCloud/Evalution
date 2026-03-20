@@ -81,7 +81,7 @@ class TransformerSession:
         }
         resolved_dtype = _resolve_dtype(config.dtype)
         if resolved_dtype is not None:
-            load_kwargs["torch_dtype"] = resolved_dtype
+            load_kwargs["dtype"] = resolved_dtype
         attn_implementation = config.attention_impl or config.attn_implementation
         if attn_implementation is not None:
             load_kwargs["attn_implementation"] = attn_implementation
@@ -146,7 +146,9 @@ class TransformerSession:
             if do_sample:
                 generation_kwargs.setdefault("temperature", batch[0].temperature)
             else:
-                generation_kwargs.pop("temperature", None)
+                generation_kwargs["temperature"] = 1.0
+                generation_kwargs["top_p"] = 1.0
+                generation_kwargs.pop("top_k", None)
 
             common_stop_strings = _common_stop_strings(batch)
             if common_stop_strings:
@@ -157,9 +159,11 @@ class TransformerSession:
             with torch.inference_mode():
                 generated = self.model.generate(**encoded, **generation_kwargs)
 
-            input_lengths = encoded["attention_mask"].sum(dim=1).tolist()
+            # `generate()` returns the full padded prompt plus new tokens. With left padding,
+            # slicing by the unpadded token count leaks prompt-tail tokens into the decode.
+            input_length = encoded["input_ids"].shape[1]
             for index, token_ids in enumerate(generated):
-                generated_tokens = token_ids[input_lengths[index] :]
+                generated_tokens = token_ids[input_length:]
                 text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
                 text = _truncate_at_stop(text, batch[index].stop).strip()
                 outputs.append(

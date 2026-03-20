@@ -9,7 +9,7 @@ from typing import Any, Literal
 from datasets import load_dataset
 
 from evalution.engines.base import GenerationRequest, InferenceSession
-from evalution.logbar import get_logger, progress, spinner
+from evalution.logbar import get_logger, manual_progress, progress, spinner
 from evalution.results import SampleResult, TestResult
 from evalution.suites.base import TestSuite
 
@@ -234,48 +234,82 @@ class GSM8KPlatinum(TestSuite):
             requests.append(request)
             targets.append(spec.target_builder(doc))
 
-        with spinner(f"{spec.task_name}: generating {len(requests)} sample(s)"):
-            outputs = session.generate(requests, batch_size=self.batch_size)
         aggregate_scores: defaultdict[str, float] = defaultdict(float)
         samples: list[SampleResult] = []
-        score_iter = progress(range(len(outputs)), title=f"{spec.task_name}: scoring")
-        for index in score_iter:
-            doc = docs[index]
-            target = targets[index]
-            output = outputs[index]
-            strict_prediction = _extract_match(
-                output.text,
-                spec.strict_pattern,
-                group_select=spec.strict_group_select,
-            )
-            flexible_prediction = _extract_match(
-                output.text,
-                _FLEXIBLE_EXTRACT_PATTERN,
-                group_select=-1,
-            )
-            scores = {
-                "exact_match,strict-match": float(_exact_match(strict_prediction, target)),
-                "exact_match,flexible-extract": float(_exact_match(flexible_prediction, target)),
-            }
-            for metric_name, score in scores.items():
-                aggregate_scores[metric_name] += score
+        total = len(requests)
+        effective_batch_size = self.batch_size or 1
+        invalid_predictions = 0
+        score_bar = manual_progress(
+            total,
+            title=self._score_progress_title(
+                task_name=spec.task_name,
+                processed=0,
+                strict_total=0.0,
+                flexible_total=0.0,
+                invalid_predictions=0,
+            ),
+            subtitle=f"batch_size={effective_batch_size}",
+        )
+        try:
+            for start in range(0, total, effective_batch_size):
+                batch_requests = requests[start : start + effective_batch_size]
+                batch_outputs = session.generate(batch_requests, batch_size=len(batch_requests))
+                for batch_offset, output in enumerate(batch_outputs):
+                    index = start + batch_offset
+                    doc = docs[index]
+                    target = targets[index]
+                    strict_prediction = _extract_match(
+                        output.text,
+                        spec.strict_pattern,
+                        group_select=spec.strict_group_select,
+                    )
+                    flexible_prediction = _extract_match(
+                        output.text,
+                        _FLEXIBLE_EXTRACT_PATTERN,
+                        group_select=-1,
+                    )
+                    scores = {
+                        "exact_match,strict-match": float(_exact_match(strict_prediction, target)),
+                        "exact_match,flexible-extract": float(_exact_match(flexible_prediction, target)),
+                    }
+                    for metric_name, score in scores.items():
+                        aggregate_scores[metric_name] += score
+                    if flexible_prediction == "[invalid]":
+                        invalid_predictions += 1
 
-            samples.append(
-                SampleResult(
-                    index=index,
-                    prompt=output.prompt,
-                    target=target,
-                    prediction=output.text,
-                    extracted={
-                        "strict-match": strict_prediction,
-                        "flexible-extract": flexible_prediction,
-                    },
-                    scores=scores,
-                    metadata={
-                        "cleaning_status": doc.get("cleaning_status"),
-                    },
-                )
-            )
+                    samples.append(
+                        SampleResult(
+                            index=index,
+                            prompt=output.prompt,
+                            target=target,
+                            prediction=output.text,
+                            extracted={
+                                "strict-match": strict_prediction,
+                                "flexible-extract": flexible_prediction,
+                            },
+                            scores=scores,
+                            metadata={
+                                "cleaning_status": doc.get("cleaning_status"),
+                            },
+                        )
+                    )
+
+                    processed = len(samples)
+                    score_bar.title(
+                        self._score_progress_title(
+                            task_name=spec.task_name,
+                            processed=processed,
+                            strict_total=aggregate_scores["exact_match,strict-match"],
+                            flexible_total=aggregate_scores["exact_match,flexible-extract"],
+                            invalid_predictions=invalid_predictions,
+                        )
+                    )
+                    score_bar.subtitle(
+                        f"batch={start // effective_batch_size + 1}/{(total + effective_batch_size - 1) // effective_batch_size}"
+                    )
+                    score_bar.next().draw()
+        finally:
+            score_bar.close()
 
         denominator = len(samples) or 1
         metrics = {
@@ -296,6 +330,28 @@ class GSM8KPlatinum(TestSuite):
                 "apply_chat_template": self.apply_chat_template,
                 "fewshot_as_multiturn": fewshot_as_multiturn,
             },
+        )
+
+    @staticmethod
+    def _score_progress_title(
+        *,
+        task_name: str,
+        processed: int,
+        strict_total: float,
+        flexible_total: float,
+        invalid_predictions: int,
+    ) -> str:
+        if processed == 0:
+            strict_score = 0.0
+            flexible_score = 0.0
+        else:
+            strict_score = strict_total / processed
+            flexible_score = flexible_total / processed
+        return (
+            f"{task_name}: scoring "
+            f"strict={strict_score:.4f} "
+            f"flex={flexible_score:.4f} "
+            f"invalid={invalid_predictions}"
         )
 
     def _build_request(

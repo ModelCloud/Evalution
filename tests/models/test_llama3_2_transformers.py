@@ -29,13 +29,12 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 dtype="bfloat16",
                 attn_implementation="sdpa",
                 device="cuda:0",
-                batch_size=2,
+                batch_size=4,
             ),
             tests=[
                 evalution.gsm8k_platinum(
                     variant="cot",
                     apply_chat_template=True,
-                    limit=2,
                     max_new_tokens=96,
                 )
             ],
@@ -44,7 +43,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
     assert result.engine["dtype"] == "bfloat16"
     assert result.engine["attn_implementation"] == "sdpa"
-    assert result.engine["batch_size"] == 2
+    assert result.engine["batch_size"] == 4
     assert len(result.tests) == 1
 
     test_result = result.tests[0]
@@ -53,16 +52,22 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert test_result.metadata["apply_chat_template"] is True
     assert test_result.metadata["fewshot_as_multiturn"] is True
     assert test_result.metadata["num_fewshot"] == 8
-    assert len(test_result.samples) == 2
+    assert len(test_result.samples) > 1000
     assert set(test_result.metrics) == {
         "exact_match,strict-match",
         "exact_match,flexible-extract",
     }
+    flexible_score = test_result.metrics["exact_match,flexible-extract"]
+    strict_score = test_result.metrics["exact_match,strict-match"]
+    assert isinstance(flexible_score, float)
+    assert isinstance(strict_score, float)
+    assert 0.0 <= flexible_score <= 1.0
+    assert 0.0 <= strict_score <= 1.0
+    assert flexible_score >= 0.20
+    assert strict_score >= 0.10
 
-    for metric_value in test_result.metrics.values():
-        assert isinstance(metric_value, float)
-        assert 0.0 <= metric_value <= 1.0
-
+    invalid_predictions = 0
+    exact_matches = 0
     for index, sample in enumerate(test_result.samples):
         assert sample.index == index
         assert sample.prompt
@@ -76,10 +81,15 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
             "exact_match,strict-match",
             "exact_match,flexible-extract",
         }
-        for score in sample.scores.values():
-            assert score in {0.0, 1.0}
+        if sample.extracted["flexible-extract"] == "[invalid]":
+            invalid_predictions += 1
+        if sample.scores["exact_match,flexible-extract"] == 1.0:
+            exact_matches += 1
+
+    assert exact_matches > 0
+    assert invalid_predictions / len(test_result.samples) < 0.20
 
     serialized = result.to_dict()
     assert serialized["tests"][0]["name"] == "gsm8k_platinum_cot"
-    assert len(serialized["tests"][0]["samples"]) == 2
+    assert len(serialized["tests"][0]["samples"]) == len(test_result.samples)
     assert serialized["tests"][0]["samples"][0]["prediction"]
