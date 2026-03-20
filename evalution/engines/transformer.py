@@ -47,6 +47,7 @@ class TransformerSession:
     model: Any
     tokenizer: Any
     input_device: Any
+    stop_criteria_cache: dict[tuple[str, ...], Any] = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_config(cls, config: Transformer, model_config: Model) -> TransformerSession:
@@ -113,7 +114,7 @@ class TransformerSession:
         batch_size: int | None = None,
     ) -> list[GenerationOutput]:
         import torch
-        from transformers import StopStringCriteria, StoppingCriteriaList
+        from transformers import StoppingCriteriaList
 
         if not requests:
             return []
@@ -123,60 +124,73 @@ class TransformerSession:
 
         for start in range(0, len(requests), effective_batch_size):
             batch = requests[start : start + effective_batch_size]
-            rendered_prompts = [self._render_request(request) for request in batch]
-            encoded = self.tokenizer(
-                rendered_prompts,
-                return_tensors="pt",
-                padding=True,
-            )
-            encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
-            max_new_tokens = max(
-                request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
-                for request in batch
-            )
-            do_sample = any(request.do_sample for request in batch)
-            generation_kwargs = {
-                **self.config.generation_kwargs,
-                "do_sample": do_sample,
-                "max_new_tokens": max_new_tokens,
-                "pad_token_id": self.tokenizer.pad_token_id,
-            }
-            if self.tokenizer.eos_token_id is not None:
-                generation_kwargs.setdefault("eos_token_id", self.tokenizer.eos_token_id)
-            if do_sample:
-                generation_kwargs.setdefault("temperature", batch[0].temperature)
-            else:
-                generation_kwargs["temperature"] = 1.0
-                generation_kwargs["top_p"] = 1.0
-                generation_kwargs.pop("top_k", None)
-
-            common_stop_strings = _common_stop_strings(batch)
-            if common_stop_strings:
-                generation_kwargs["stopping_criteria"] = StoppingCriteriaList(
-                    [StopStringCriteria(self.tokenizer, common_stop_strings)]
+            rendered_prompts = None
+            encoded = None
+            generated = None
+            try:
+                rendered_prompts = [self._render_request(request) for request in batch]
+                encoded = self.tokenizer(
+                    rendered_prompts,
+                    return_tensors="pt",
+                    padding=True,
                 )
+                encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
+                max_new_tokens = max(
+                    request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
+                    for request in batch
+                )
+                do_sample = any(request.do_sample for request in batch)
+                generation_kwargs = {
+                    **self.config.generation_kwargs,
+                    "do_sample": do_sample,
+                    "max_new_tokens": max_new_tokens,
+                    "pad_token_id": self.tokenizer.pad_token_id,
+                }
+                if self.tokenizer.eos_token_id is not None:
+                    generation_kwargs.setdefault("eos_token_id", self.tokenizer.eos_token_id)
+                if do_sample:
+                    generation_kwargs.setdefault("temperature", batch[0].temperature)
+                else:
+                    generation_kwargs["temperature"] = 1.0
+                    generation_kwargs["top_p"] = 1.0
+                    generation_kwargs.pop("top_k", None)
 
-            with torch.inference_mode():
-                generated = self.model.generate(**encoded, **generation_kwargs)
-
-            # `generate()` returns the full padded prompt plus new tokens. With left padding,
-            # slicing by the unpadded token count leaks prompt-tail tokens into the decode.
-            input_length = encoded["input_ids"].shape[1]
-            for index, token_ids in enumerate(generated):
-                generated_tokens = token_ids[input_length:]
-                text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
-                text = _truncate_at_stop(text, batch[index].stop).strip()
-                outputs.append(
-                    GenerationOutput(
-                        prompt=rendered_prompts[index],
-                        text=text,
-                        metadata=batch[index].metadata,
+                common_stop_strings = _common_stop_strings(batch)
+                if common_stop_strings:
+                    generation_kwargs["stopping_criteria"] = StoppingCriteriaList(
+                        [self._get_stop_criteria(common_stop_strings)]
                     )
-                )
+
+                with torch.inference_mode():
+                    generated = self.model.generate(**encoded, **generation_kwargs)
+
+                # `generate()` returns the full padded prompt plus new tokens. With left padding,
+                # slicing by the unpadded token count leaks prompt-tail tokens into the decode.
+                input_length = encoded["input_ids"].shape[1]
+                for index, token_ids in enumerate(generated):
+                    generated_tokens = token_ids[input_length:]
+                    text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
+                    text = _truncate_at_stop(text, batch[index].stop).strip()
+                    outputs.append(
+                        GenerationOutput(
+                            prompt=rendered_prompts[index],
+                            text=text,
+                            metadata=batch[index].metadata,
+                        )
+                    )
+            finally:
+                if generated is not None:
+                    del generated
+                if encoded is not None:
+                    del encoded
+                del batch
+                if rendered_prompts is not None:
+                    del rendered_prompts
 
         return outputs
 
     def close(self) -> None:
+        self.stop_criteria_cache.clear()
         with suppress(Exception):
             del self.model
         with suppress(Exception):
@@ -198,6 +212,16 @@ class TransformerSession:
         if request.prompt is None:
             raise ValueError("generation requests must define either `prompt` or `messages`")
         return request.prompt
+
+    def _get_stop_criteria(self, stop_strings: list[str]) -> Any:
+        from transformers import StopStringCriteria
+
+        cache_key = tuple(stop_strings)
+        criteria = self.stop_criteria_cache.get(cache_key)
+        if criteria is None:
+            criteria = StopStringCriteria(self.tokenizer, list(cache_key))
+            self.stop_criteria_cache[cache_key] = criteria
+        return criteria
 
 
 def _resolve_dtype(dtype: str | None) -> Any:
