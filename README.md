@@ -28,6 +28,7 @@ result = (
     .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
     .run(eval.gsm8k_platinum())
     .run(eval.boolq())
+    .run(eval.copa())
     .run(eval.arc_easy())
     .run(eval.arc_challenge())
     .run(eval.hellaswag())
@@ -161,6 +162,7 @@ Current built-in coverage:
 - `arc_challenge` suite for `allenai/ai2_arc` `ARC-Challenge`
 - `arc_easy` suite for `allenai/ai2_arc` `ARC-Easy`
 - `boolq` suite for `super_glue` `boolq`
+- `copa` suite for `super_glue` `copa`
 - `gsm8k` suite for `openai/gsm8k`
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `hellaswag` suite for `Rowan/hellaswag`

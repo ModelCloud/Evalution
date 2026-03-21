@@ -39,6 +39,10 @@ BOOLQ_BASELINE = {
     "accuracy,loglikelihood": 0.6796875,
     "accuracy,loglikelihood_norm": 0.6796875,
 }
+COPA_BASELINE = {
+    "accuracy,loglikelihood": 0.74,
+    "accuracy,loglikelihood_norm": 0.68,
+}
 WINOGRANDE_BASELINE = {
     "accuracy,loglikelihood": 0.5625,
     "accuracy,loglikelihood_norm": 0.5703125,
@@ -119,6 +123,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.copa(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=100,
+                )
+            )
+            .run(
                 evalution.arc_easy(
                     batch_size=24,
                     streaming=True,
@@ -181,13 +192,14 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 10
+    assert len(result.tests) == 11
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
         "gsm8k_cot",
         "gsm8k_platinum_cot",
         "boolq",
+        "copa",
         "arc_easy",
         "arc_challenge",
         "hellaswag",
@@ -277,6 +289,41 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert sample.prediction in {"yes", "no"}
         assert "\nQuestion: " in sample.prompt
         assert "\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
+    copa_result = tests_by_name["copa"]
+    assert copa_result.metadata["streaming"] is True
+    assert copa_result.metadata["dataset_path"] == "super_glue"
+    assert copa_result.metadata["dataset_name"] == "copa"
+    assert copa_result.metadata["split"] == "validation"
+    assert copa_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(copa_result.samples) == 100
+    assert set(copa_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    copa_raw_score = copa_result.metrics["accuracy,loglikelihood"]
+    copa_norm_score = copa_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(copa_result.metrics, COPA_BASELINE)
+    assert isinstance(copa_raw_score, float)
+    assert isinstance(copa_norm_score, float)
+
+    for index, sample in enumerate(copa_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target
+        assert sample.prediction
+        assert sample.metadata["question"] in {"cause", "effect"}
         assert set(sample.extracted) == {
             "gold_index",
             "predicted_index",
@@ -546,6 +593,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert set(serialized_tests) == set(tests_by_name)
     assert len(serialized_tests["gsm8k_platinum_cot"]["samples"]) == len(test_result.samples)
     assert serialized_tests["gsm8k_platinum_cot"]["samples"][0]["prediction"]
+    assert len(serialized_tests["copa"]["samples"]) == len(copa_result.samples)
+    assert serialized_tests["copa"]["samples"][0]["prediction"]
     assert len(serialized_tests["arc_challenge"]["samples"]) == len(arc_result.samples)
     assert serialized_tests["arc_challenge"]["samples"][0]["prediction"]
     assert len(serialized_tests["arc_easy"]["samples"]) == len(arc_easy_result.samples)

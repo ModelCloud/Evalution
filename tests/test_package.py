@@ -12,6 +12,8 @@ def test_package_exports_arc_challenge_suite() -> None:
     assert callable(evalution.arc_easy)
     assert evalution.BoolQ is not None
     assert callable(evalution.boolq)
+    assert evalution.COPA is not None
+    assert callable(evalution.copa)
     assert evalution.HellaSwag is not None
     assert callable(evalution.hellaswag)
     assert evalution.MMLU is not None

@@ -2,6 +2,7 @@ from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .base import BaseTestSuite, TestSuite
 from .boolq import BoolQ, boolq
+from .copa import COPA, copa
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hellaswag import HellaSwag, hellaswag
@@ -18,6 +19,7 @@ __all__ = [
     "BaseMultipleChoiceSuite",
     "BaseTestSuite",
     "BoolQ",
+    "COPA",
     "GSM8K",
     "GSM8KPlatinum",
     "HellaSwag",
@@ -30,6 +32,7 @@ __all__ = [
     "arc_easy",
     "arc_challenge",
     "boolq",
+    "copa",
     "choice_index_from_labels",
     "gsm8k",
     "gsm8k_platinum",
