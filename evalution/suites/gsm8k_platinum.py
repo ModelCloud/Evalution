@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import atexit
 import random
 import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from itertools import islice
 from queue import Full, Queue
-from threading import Event
+from threading import Event, Lock
 from time import perf_counter
 from typing import Any, Literal
 
@@ -21,8 +23,11 @@ from evalution.suites.base import TestSuite
 GSM8KPlatinumVariant = Literal["base", "cot", "cot_llama", "cot_zeroshot", "default"]
 
 _AUTO_BATCH_PREVIEW_ROWS = 256
-_BATCH_PREFETCH_QUEUE_SIZE = 2
+_PRETOKENIZED_POOL_MULTIPLIER = 2
 _BATCH_PREFETCH_PUT_TIMEOUT_S = 0.1
+_PRETOKENIZED_REFILL_COALESCE_S = 0.01
+_PREFETCH_EXECUTOR_LOCK = Lock()
+_PREFETCH_EXECUTOR: ThreadPoolExecutor | None = None
 
 _REGEXES_TO_IGNORE = [",", r"\$", r"(?s).*#### ", r"\.$"]
 _FLEXIBLE_EXTRACT_PATTERN = r"(-?[$0-9.,]{2,})|(-?[0-9]+)"
@@ -116,12 +121,6 @@ class _PreparedSample:
     doc: dict[str, Any]
     target: str
     request: GenerationRequest
-
-
-@dataclass(frozen=True, slots=True)
-class _PrefetchedBatch:
-    samples: list[_PreparedSample]
-    prepared_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -368,28 +367,27 @@ class GSM8KPlatinum(TestSuite):
             scoring_wall_s += perf_counter() - scoring_started
 
         try:
-            prefetched_batches = _iter_prefetched_batches(
-                session,
-                preview_samples,
-                prepared_iter,
-                batch_size=effective_batch_size,
-                prepare_bar=prepare_bar,
-            )
             if use_continuous_generation:
                 sample_by_request_key: dict[int, _PreparedSample] = {}
 
                 def iter_request_stream() -> Any:
                     request_key = 0
+                    prefetched_samples = _iter_prefetched_samples(
+                        session,
+                        preview_samples,
+                        prepared_iter,
+                        batch_size=effective_batch_size,
+                        prepare_bar=prepare_bar,
+                    )
                     try:
-                        for prefetched_batch in prefetched_batches:
-                            for prepared_sample in prefetched_batch.samples:
-                                sample_by_request_key[request_key] = prepared_sample
-                                yield request_key, prepared_sample.request
-                                request_key += 1
+                        for prepared_sample in prefetched_samples:
+                            sample_by_request_key[request_key] = prepared_sample
+                            yield request_key, prepared_sample.request
+                            request_key += 1
                     finally:
-                        close_prefetched_batches = getattr(prefetched_batches, "close", None)
-                        if callable(close_prefetched_batches):
-                            close_prefetched_batches()
+                        close_prefetched_samples = getattr(prefetched_samples, "close", None)
+                        if callable(close_prefetched_samples):
+                            close_prefetched_samples()
 
                 generation_started = perf_counter()
                 for request_key, output in generate_continuous(
@@ -401,9 +399,14 @@ class GSM8KPlatinum(TestSuite):
                 generation_wall_s += perf_counter() - generation_started
             else:
                 batch_index = 0
-                for prefetched_batch in prefetched_batches:
+                for prepared_batch in _iter_prefetched_batches(
+                    session,
+                    preview_samples,
+                    prepared_iter,
+                    batch_size=effective_batch_size,
+                    prepare_bar=prepare_bar,
+                ):
                     batch_index += 1
-                    prepared_batch = prefetched_batch.samples
                     batch_requests = [sample.request for sample in prepared_batch]
                     generation_started = perf_counter()
                     batch_outputs = session.generate(batch_requests, batch_size=len(batch_requests))
@@ -631,16 +634,45 @@ def _prepare_batch_for_session(
     ]
 
 
-def _iter_prefetched_batches(
+def _pretokenized_pool_size(batch_size: int) -> int:
+    return max(batch_size, batch_size * _PRETOKENIZED_POOL_MULTIPLIER)
+
+
+def _prefetch_executor() -> ThreadPoolExecutor:
+    global _PREFETCH_EXECUTOR
+    with _PREFETCH_EXECUTOR_LOCK:
+        if _PREFETCH_EXECUTOR is None:
+            _PREFETCH_EXECUTOR = ThreadPoolExecutor(
+                max_workers=1,
+                thread_name_prefix="evalution-prefetch",
+            )
+    return _PREFETCH_EXECUTOR
+
+
+def _shutdown_prefetch_executor() -> None:
+    global _PREFETCH_EXECUTOR
+    with _PREFETCH_EXECUTOR_LOCK:
+        executor = _PREFETCH_EXECUTOR
+        _PREFETCH_EXECUTOR = None
+    if executor is not None:
+        executor.shutdown(wait=False)
+
+
+atexit.register(_shutdown_prefetch_executor)
+
+
+def _iter_prefetched_samples(
     session: InferenceSession,
     preview_samples: list[_PreparedSample],
     prepared_iter: Any,
     *,
     batch_size: int,
     prepare_bar: Any,
+    pool_size: int | None = None,
 ) -> Any:
     sentinel = object()
-    queue: Queue[Any] = Queue(maxsize=_BATCH_PREFETCH_QUEUE_SIZE)
+    queue_maxsize = pool_size or _pretokenized_pool_size(batch_size)
+    queue: Queue[Any] = Queue(maxsize=queue_maxsize)
     cancelled = Event()
 
     def put_prefetched(item: Any) -> bool:
@@ -654,57 +686,75 @@ def _iter_prefetched_batches(
 
     def worker() -> None:
         try:
-            batch: list[_PreparedSample] = []
-            for sample in prepared_iter:
-                batch.append(sample)
-                if len(batch) == batch_size:
-                    if not put_prefetched(
-                        _PrefetchedBatch(
-                            samples=_prepare_batch_for_session(session, batch),
-                            prepared_count=len(batch),
-                        )
-                    ):
+            while not cancelled.is_set():
+                available_slots = max(0, queue_maxsize - queue.qsize())
+                if available_slots <= 0:
+                    cancelled.wait(_BATCH_PREFETCH_PUT_TIMEOUT_S)
+                    continue
+                if 0 < available_slots < batch_size:
+                    cancelled.wait(_PRETOKENIZED_REFILL_COALESCE_S)
+                    available_slots = max(0, queue_maxsize - queue.qsize())
+                    if available_slots <= 0:
+                        continue
+                chunk_size = min(batch_size, available_slots)
+                chunk = list(islice(prepared_iter, chunk_size))
+                if not chunk:
+                    break
+                prepared_chunk = _prepare_batch_for_session(session, chunk)
+                for sample in prepared_chunk:
+                    if not put_prefetched(sample):
                         return
-                    batch = []
-            if batch:
-                put_prefetched(
-                    _PrefetchedBatch(
-                        samples=_prepare_batch_for_session(session, batch),
-                        prepared_count=len(batch),
-                    )
-                )
         except BaseException as exc:
             put_prefetched(_PrefetchFailure(exc))
         finally:
             put_prefetched(sentinel)
 
-    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="evalution-prefetch") as executor:
-        executor.submit(worker)
-        try:
-            batch: list[_PreparedSample] = []
-            for sample in preview_samples:
-                batch.append(sample)
-                if len(batch) == batch_size:
-                    yield _PrefetchedBatch(samples=batch, prepared_count=0)
-                    batch = []
-            if batch:
-                yield _PrefetchedBatch(samples=batch, prepared_count=0)
+    future = _prefetch_executor().submit(worker)
+    try:
+        for sample in preview_samples:
+            yield sample
 
-            while True:
-                prefetched = queue.get()
-                if prefetched is sentinel:
-                    break
-                if isinstance(prefetched, _PrefetchFailure):
-                    raise prefetched.error
-                if prefetched.prepared_count:
-                    for _ in range(prefetched.prepared_count):
-                        prepare_bar.next().draw()
-                yield prefetched
-        finally:
-            cancelled.set()
-            close_prepared_iter = getattr(prepared_iter, "close", None)
-            if callable(close_prepared_iter):
-                close_prepared_iter()
+        while True:
+            prefetched = queue.get()
+            if prefetched is sentinel:
+                break
+            if isinstance(prefetched, _PrefetchFailure):
+                raise prefetched.error
+            yield prefetched
+            prepare_bar.next().draw()
+    finally:
+        cancelled.set()
+        close_prepared_iter = getattr(prepared_iter, "close", None)
+        if callable(close_prepared_iter):
+            close_prepared_iter()
+        with suppress(Exception):
+            future.result(timeout=1.0)
+
+
+def _iter_prefetched_batches(
+    session: InferenceSession,
+    preview_samples: list[_PreparedSample],
+    prepared_iter: Any,
+    *,
+    batch_size: int,
+    prepare_bar: Any,
+    pool_size: int | None = None,
+) -> Any:
+    batch: list[_PreparedSample] = []
+    for sample in _iter_prefetched_samples(
+        session,
+        preview_samples,
+        prepared_iter,
+        batch_size=batch_size,
+        prepare_bar=prepare_bar,
+        pool_size=pool_size,
+    ):
+        batch.append(sample)
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
 
 def _limit_docs(docs: Any, limit: int | None) -> Any:

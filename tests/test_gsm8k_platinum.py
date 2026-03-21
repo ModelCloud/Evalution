@@ -488,9 +488,8 @@ def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> 
 
     first_batch = next(iterator)
 
-    assert len(first_batch.samples) == 1
-    assert first_batch.samples[0].index == 0
-    assert session.third_prepare_started.wait(timeout=1.0)
+    assert len(first_batch) == 1
+    assert first_batch[0].index == 0
 
     close_errors: list[BaseException] = []
 
@@ -506,6 +505,7 @@ def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> 
 
     assert not close_errors
     assert not close_thread.is_alive()
+    assert session.prepare_calls >= 1
 
 
 @pytest.mark.skipif(
@@ -576,7 +576,7 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
     def feed_ready_samples() -> None:
         try:
             for prefetched_batch in iterator:
-                for sample in prefetched_batch.samples:
+                for sample in prefetched_batch:
                     ready_samples.put(sample)
         except BaseException as exc:  # pragma: no cover - asserted below
             feeder_errors.append(exc)
@@ -637,3 +637,66 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
     assert session.prepare_calls == 1
     assert sorted(processed_indexes) == list(range(total_rows))
     assert any(index >= batch_size for index in processed_indexes)
+
+
+def test_iter_prefetched_samples_refills_partial_free_capacity_with_partial_tokenization() -> None:
+    class FakePrepareBar:
+        def next(self) -> FakePrepareBar:
+            return self
+
+        def draw(self) -> FakePrepareBar:
+            return self
+
+    class TrackingSession:
+        def __init__(self) -> None:
+            self.prepare_batch_sizes: list[int] = []
+            self.second_prepare_started = threading.Event()
+
+        def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+            self.prepare_batch_sizes.append(len(requests))
+            if len(self.prepare_batch_sizes) == 2:
+                self.second_prepare_started.set()
+            return [
+                replace(
+                    request,
+                    rendered_prompt=request.prompt,
+                    input_ids=[index + 1, index + 2, index + 3],
+                )
+                for index, request in enumerate(requests)
+            ]
+
+    def make_sample(index: int) -> gsm8k_platinum_module._PreparedSample:
+        prompt = f"Q: {index}\nA:"
+        return gsm8k_platinum_module._PreparedSample(
+            index=index,
+            doc={"question": str(index), "answer": "42\n#### 42", "cleaning_status": "consensus"},
+            target="42",
+            request=GenerationRequest(prompt=prompt),
+        )
+
+    session = TrackingSession()
+    iterator = gsm8k_platinum_module._iter_prefetched_samples(
+        session,
+        [],
+        iter(make_sample(index) for index in range(36)),
+        batch_size=32,
+        prepare_bar=FakePrepareBar(),
+        pool_size=32,
+    )
+
+    consumed = [next(iterator) for _ in range(4)]
+
+    assert [sample.index for sample in consumed] == [0, 1, 2, 3]
+    assert session.second_prepare_started.wait(timeout=1.0)
+    assert session.prepare_batch_sizes[0] == 32
+    assert 0 < session.prepare_batch_sizes[1] < 32
+
+    remainder = list(iterator)
+    assert [sample.index for sample in remainder] == list(range(4, 36))
+
+
+def test_prefetch_executor_is_reused() -> None:
+    first = gsm8k_platinum_module._prefetch_executor()
+    second = gsm8k_platinum_module._prefetch_executor()
+
+    assert first is second
