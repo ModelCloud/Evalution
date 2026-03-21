@@ -29,6 +29,7 @@ result = (
     .run(eval.gsm8k_platinum())
     .run(eval.arc_challenge())
     .run(eval.hellaswag())
+    .run(eval.piqa())
 )
 ```
 
@@ -133,8 +134,8 @@ supported backends with `paged_attention=True`, force plain static generation wi
 `attn_implementation=...`. A suite can override engine batch sizing with
 `gsm8k_platinum(batch_size=...)`.
 
-For multiple-choice suites such as `hellaswag`, Evalution scores every option with token-level
-log-likelihood and reports both raw-choice accuracy and length-normalized accuracy.
+For multiple-choice suites such as `hellaswag` and `piqa`, Evalution scores every option with
+token-level log-likelihood and reports both raw-choice accuracy and length-normalized accuracy.
 
 For `transformers` continuous batching, `Transformer(...)` also exposes the upstream manager knobs
 `manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
@@ -156,12 +157,13 @@ Current built-in coverage:
 - `gsm8k` suite for `openai/gsm8k`
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `hellaswag` suite for `Rowan/hellaswag`
+- `piqa` suite for `baber/piqa`
 - `logbar`-powered runtime logging and evaluation progress bars
 
 ## Citation
 
-If you use Evalution or the built-in `gsm8k`, `gsm8k_platinum`, or `arc_challenge` suites, please
-cite:
+If you use Evalution or the built-in `gsm8k`, `gsm8k_platinum`, `arc_challenge`, or `piqa`
+suites, please cite:
 
 ```bibtex
 # Evalution
@@ -197,5 +199,13 @@ cite:
   author = {Peter Clark and Isaac Cowhey and Oren Etzioni and Tushar Khot and Ashish Sabharwal and Carissa Schoenick and Oyvind Tafjord},
   journal = {arXiv preprint arXiv:1803.05457},
   year = {2018},
+}
+
+# PIQA
+@inproceedings{bisk2020piqa,
+  title = {PIQA: Reasoning about Physical Commonsense in Natural Language},
+  author = {Yonatan Bisk and Rowan Zellers and Ronan Le Bras and Jianfeng Gao and Yejin Choi},
+  booktitle = {AAAI Conference on Artificial Intelligence},
+  year = {2020},
 }
 ```

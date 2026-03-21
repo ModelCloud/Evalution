@@ -12,11 +12,13 @@ from evalution.suites import (
     GSM8KPlatinum,
     HellaSwag,
     MultipleChoiceSample,
+    PIQA,
     TestSuite,
     arc_challenge,
     gsm8k,
     gsm8k_platinum,
     hellaswag,
+    piqa,
 )
 from evalution.yaml import python_from_yaml, run_yaml
 
@@ -31,6 +33,7 @@ __all__ = [
     "HellaSwag",
     "Model",
     "MultipleChoiceSample",
+    "PIQA",
     "RunResult",
     "SampleResult",
     "TestSuite",
@@ -42,6 +45,7 @@ __all__ = [
     "gsm8k",
     "gsm8k_platinum",
     "hellaswag",
+    "piqa",
     "python_from_yaml",
     "run",
     "run_yaml",
