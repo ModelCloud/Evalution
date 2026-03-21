@@ -8,20 +8,18 @@ from datasets import load_dataset
 from evalution.suites.gsm8k_common import BaseGSM8KSuite, GSM8KVariant
 from evalution.suites.gsm8k_common import build_variant_specs as _build_variant_specs
 
-GSM8KPlatinumVariant = GSM8KVariant
-_VARIANTS = _build_variant_specs("gsm8k_platinum")
+_VARIANTS = _build_variant_specs("gsm8k")
 
 
 @dataclass(slots=True)
-class GSM8KPlatinum(BaseGSM8KSuite):
+class GSM8K(BaseGSM8KSuite):
     VARIANTS = _VARIANTS
-    INCLUDE_CLEANING_STATUS = True
-    dataset_path: str = "madrylab/gsm8k-platinum"
+    dataset_path: str = "openai/gsm8k"
     dataset_name: str | None = "main"
 
     def dataset_loader(self) -> Any:
         return load_dataset
 
 
-def gsm8k_platinum(**kwargs: Any) -> GSM8KPlatinum:
-    return GSM8KPlatinum(**kwargs)
+def gsm8k(**kwargs: Any) -> GSM8K:
+    return GSM8K(**kwargs)

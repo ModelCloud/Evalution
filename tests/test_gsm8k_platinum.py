@@ -12,6 +12,14 @@ from datasets import Dataset
 
 import evalution
 from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.suites.execution import AUTO_BATCH_PREVIEW_ROWS
+from evalution.suites.execution import PreparedSample
+from evalution.suites.execution import _prefetch_executor
+from evalution.suites.execution import iter_prefetched_batches
+from evalution.suites.execution import iter_prefetched_samples
+from evalution.suites.gsm8k_common import FLEXIBLE_EXTRACT_REGEX
+from evalution.suites.gsm8k_common import REGEXES_TO_IGNORE
+from evalution.suites.gsm8k_common import extract_match
 
 gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
 
@@ -204,13 +212,13 @@ def test_gsm8k_platinum_scores_strict_and_flexible_extract_separately(monkeypatc
 
 
 def test_gsm8k_platinum_uses_compiled_pcre_patterns_for_extraction() -> None:
-    strict_regex = gsm8k_platinum_module._VARIANTS["cot"].strict_regex
-    flexible_regex = gsm8k_platinum_module._FLEXIBLE_EXTRACT_REGEX
+    strict_regex = gsm8k_platinum_module.GSM8KPlatinum.VARIANTS["cot"].strict_regex
+    flexible_regex = FLEXIBLE_EXTRACT_REGEX
 
     assert hasattr(strict_regex, "findall")
     assert hasattr(flexible_regex, "findall")
-    assert all(hasattr(pattern, "sub") for pattern in gsm8k_platinum_module._REGEXES_TO_IGNORE)
-    assert gsm8k_platinum_module._extract_match(
+    assert all(hasattr(pattern, "sub") for pattern in REGEXES_TO_IGNORE)
+    assert extract_match(
         "Reasoning... The answer is 42.",
         strict_regex,
         group_select=0,
@@ -312,7 +320,7 @@ def test_gsm8k_platinum_uses_bounded_preview_for_auto_batch_size_resolution(monk
     suite.evaluate(session)
 
     assert session.resolve_calls == 1
-    assert session.resolve_request_counts == [gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS]
+    assert session.resolve_request_counts == [AUTO_BATCH_PREVIEW_ROWS]
 
 
 def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> None:
@@ -372,8 +380,8 @@ def test_gsm8k_platinum_prefetches_remaining_streaming_batches_on_background_thr
 
     suite.evaluate(session)
 
-    assert session.resolve_request_counts == [gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS]
-    assert session.prepare_batch_sizes[0] == gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS
+    assert session.resolve_request_counts == [AUTO_BATCH_PREVIEW_ROWS]
+    assert session.prepare_batch_sizes[0] == AUTO_BATCH_PREVIEW_ROWS
     assert session.prepare_thread_names[0] == "MainThread"
     assert any(
         name.startswith("evalution-prefetch")
@@ -413,7 +421,7 @@ def test_gsm8k_platinum_streaming_prefetch_and_generation_respect_resolved_batch
     assert len(result.samples) == 300
     assert session.generate_batch_sizes == [32, 32, 32, 32, 32, 32, 32, 32, 32, 12]
     assert all(size is not None and size <= max_batch_size for size in session.generate_batch_sizes)
-    assert session.prepare_batch_sizes[0] == gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS
+    assert session.prepare_batch_sizes[0] == AUTO_BATCH_PREVIEW_ROWS
     assert session.prepare_batch_sizes[1:] == [32, 12]
     assert all(size <= max_batch_size for size in session.prepare_batch_sizes[1:])
     assert result.metadata["generation_submission_mode"] == "fixed_batches"
@@ -454,7 +462,7 @@ def test_gsm8k_platinum_streaming_uses_continuous_generation_to_refill_slots(
     assert session.max_inflight == 32
     assert session.completion_order[0] == 1
     assert session.completion_order.index(0) > 0
-    assert session.prepare_batch_sizes[0] == gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS
+    assert session.prepare_batch_sizes[0] == AUTO_BATCH_PREVIEW_ROWS
     assert session.prepare_batch_sizes[1:] == [32, 12]
     assert result.metadata["generation_submission_mode"] == "continuous_refill"
 
@@ -487,7 +495,7 @@ def test_gsm8k_platinum_skips_auto_batch_preview_when_suite_batch_size_is_fixed(
     assert len(result.samples) == 300
     assert session.continuous_batch_sizes == [24]
     assert session.prepare_batch_sizes[0] == 24
-    assert gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS not in session.prepare_batch_sizes
+    assert AUTO_BATCH_PREVIEW_ROWS not in session.prepare_batch_sizes
 
 
 def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> None:
@@ -509,9 +517,9 @@ def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> 
                 self.third_prepare_started.set()
             return requests
 
-    def make_sample(index: int) -> gsm8k_platinum_module._PreparedSample:
+    def make_sample(index: int) -> PreparedSample:
         prompt = f"Q: {index}\nA:"
-        return gsm8k_platinum_module._PreparedSample(
+        return PreparedSample(
             index=index,
             doc={"question": str(index), "answer": "42\n#### 42", "cleaning_status": "consensus"},
             target="42",
@@ -523,7 +531,7 @@ def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> 
         )
 
     session = TrackingSession()
-    iterator = gsm8k_platinum_module._iter_prefetched_batches(
+    iterator = iter_prefetched_batches(
         session,
         [make_sample(0)],
         iter([make_sample(1), make_sample(2), make_sample(3), make_sample(4)]),
@@ -588,9 +596,9 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
                 for index, request in enumerate(requests)
             ]
 
-    def make_sample(index: int, *, prepared: bool) -> gsm8k_platinum_module._PreparedSample:
+    def make_sample(index: int, *, prepared: bool) -> PreparedSample:
         prompt = f"Q: {index}\nA:"
-        return gsm8k_platinum_module._PreparedSample(
+        return PreparedSample(
             index=index,
             doc={"question": str(index), "answer": "42\n#### 42", "cleaning_status": "consensus"},
             target="42",
@@ -602,7 +610,7 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
         )
 
     session = BlockingPrepareSession()
-    iterator = gsm8k_platinum_module._iter_prefetched_batches(
+    iterator = iter_prefetched_batches(
         session,
         [make_sample(index, prepared=True) for index in range(batch_size)],
         iter(make_sample(index, prepared=False) for index in range(batch_size, total_rows)),
@@ -610,7 +618,7 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
         prepare_bar=FakePrepareBar(),
     )
 
-    ready_samples: Queue[gsm8k_platinum_module._PreparedSample | None] = Queue()
+    ready_samples: Queue[PreparedSample | None] = Queue()
     feeder_errors: list[BaseException] = []
     worker_errors: list[BaseException] = []
     processed_indexes: list[int] = []
@@ -710,9 +718,9 @@ def test_iter_prefetched_samples_refills_partial_free_capacity_with_partial_toke
                 for index, request in enumerate(requests)
             ]
 
-    def make_sample(index: int) -> gsm8k_platinum_module._PreparedSample:
+    def make_sample(index: int) -> PreparedSample:
         prompt = f"Q: {index}\nA:"
-        return gsm8k_platinum_module._PreparedSample(
+        return PreparedSample(
             index=index,
             doc={"question": str(index), "answer": "42\n#### 42", "cleaning_status": "consensus"},
             target="42",
@@ -720,7 +728,7 @@ def test_iter_prefetched_samples_refills_partial_free_capacity_with_partial_toke
         )
 
     session = TrackingSession()
-    iterator = gsm8k_platinum_module._iter_prefetched_samples(
+    iterator = iter_prefetched_samples(
         session,
         [],
         iter(make_sample(index) for index in range(36)),
@@ -741,7 +749,7 @@ def test_iter_prefetched_samples_refills_partial_free_capacity_with_partial_toke
 
 
 def test_prefetch_executor_is_reused() -> None:
-    first = gsm8k_platinum_module._prefetch_executor()
-    second = gsm8k_platinum_module._prefetch_executor()
+    first = _prefetch_executor()
+    second = _prefetch_executor()
 
     assert first is second
