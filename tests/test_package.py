@@ -12,6 +12,8 @@ def test_package_exports_arc_challenge_suite() -> None:
     assert callable(evalution.arc_easy)
     assert evalution.BoolQ is not None
     assert callable(evalution.boolq)
+    assert evalution.CB is not None
+    assert callable(evalution.cb)
     assert evalution.COPA is not None
     assert callable(evalution.copa)
     assert evalution.HellaSwag is not None
@@ -28,6 +30,8 @@ def test_package_exports_arc_challenge_suite() -> None:
     assert callable(evalution.wic)
     assert evalution.WinoGrande is not None
     assert callable(evalution.winogrande)
+    assert callable(evalution.f1_for_label)
+    assert callable(evalution.macro_f1)
 
 
 def test_package_exports_fluent_runtime_api() -> None:

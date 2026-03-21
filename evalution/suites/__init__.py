@@ -2,6 +2,8 @@ from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .base import BaseTestSuite, TestSuite
 from .boolq import BoolQ, boolq
+from .cb import CB, cb
+from .classification_metrics import f1_for_label, macro_f1
 from .copa import COPA, copa
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
@@ -21,6 +23,7 @@ __all__ = [
     "BaseMultipleChoiceSuite",
     "BaseTestSuite",
     "BoolQ",
+    "CB",
     "COPA",
     "GSM8K",
     "GSM8KPlatinum",
@@ -36,11 +39,14 @@ __all__ = [
     "arc_easy",
     "arc_challenge",
     "boolq",
+    "cb",
     "copa",
     "choice_index_from_labels",
+    "f1_for_label",
     "gsm8k",
     "gsm8k_platinum",
     "hellaswag",
+    "macro_f1",
     "mmlu",
     "openbookqa",
     "piqa",

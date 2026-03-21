@@ -39,6 +39,12 @@ BOOLQ_BASELINE = {
     "accuracy,loglikelihood": 0.6796875,
     "accuracy,loglikelihood_norm": 0.6796875,
 }
+CB_BASELINE = {
+    "accuracy,loglikelihood": 0.5714285714285714,
+    "accuracy,loglikelihood_norm": 0.5714285714285714,
+    "f1,loglikelihood_macro": 0.39345839345839345,
+    "f1,loglikelihood_norm_macro": 0.39345839345839345,
+}
 COPA_BASELINE = {
     "accuracy,loglikelihood": 0.74,
     "accuracy,loglikelihood_norm": 0.68,
@@ -131,6 +137,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.cb(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=56,
+                )
+            )
+            .run(
                 evalution.copa(
                     batch_size=24,
                     streaming=True,
@@ -214,13 +227,14 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 13
+    assert len(result.tests) == 14
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
         "gsm8k_cot",
         "gsm8k_platinum_cot",
         "boolq",
+        "cb",
         "copa",
         "arc_easy",
         "arc_challenge",
@@ -313,6 +327,48 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert sample.prediction in {"yes", "no"}
         assert "\nQuestion: " in sample.prompt
         assert "\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
+    cb_result = tests_by_name["cb"]
+    assert cb_result.metadata["streaming"] is True
+    assert cb_result.metadata["dataset_path"] == "super_glue"
+    assert cb_result.metadata["dataset_name"] == "cb"
+    assert cb_result.metadata["split"] == "validation"
+    assert cb_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(cb_result.samples) == 56
+    assert set(cb_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+        "f1,loglikelihood_macro",
+        "f1,loglikelihood_norm_macro",
+    }
+    cb_raw_score = cb_result.metrics["accuracy,loglikelihood"]
+    cb_norm_score = cb_result.metrics["accuracy,loglikelihood_norm"]
+    cb_macro_f1 = cb_result.metrics["f1,loglikelihood_macro"]
+    cb_norm_macro_f1 = cb_result.metrics["f1,loglikelihood_norm_macro"]
+    assert_metrics_match_baseline(cb_result.metrics, CB_BASELINE)
+    assert isinstance(cb_raw_score, float)
+    assert isinstance(cb_norm_score, float)
+    assert isinstance(cb_macro_f1, float)
+    assert isinstance(cb_norm_macro_f1, float)
+
+    for index, sample in enumerate(cb_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target in {"True", "False", "Neither"}
+        assert sample.prediction in {"True", "False", "Neither"}
+        assert "\nQuestion: " in sample.prompt
+        assert "True, False, or Neither?\nAnswer:" in sample.prompt
         assert set(sample.extracted) == {
             "gold_index",
             "predicted_index",
@@ -690,6 +746,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert set(serialized_tests) == set(tests_by_name)
     assert len(serialized_tests["gsm8k_platinum_cot"]["samples"]) == len(test_result.samples)
     assert serialized_tests["gsm8k_platinum_cot"]["samples"][0]["prediction"]
+    assert len(serialized_tests["cb"]["samples"]) == len(cb_result.samples)
+    assert serialized_tests["cb"]["samples"][0]["prediction"]
     assert len(serialized_tests["copa"]["samples"]) == len(copa_result.samples)
     assert serialized_tests["copa"]["samples"][0]["prediction"]
     assert len(serialized_tests["arc_challenge"]["samples"]) == len(arc_result.samples)

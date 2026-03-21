@@ -62,6 +62,17 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             "scoring_mode": "multiple_choice_loglikelihood",
         }
 
+    # Allow concrete suites to publish extra aggregate metrics without reimplementing the shared scoring loop.
+    def extra_metrics(
+        self,
+        *,
+        samples: list[MultipleChoiceSample],
+        raw_predictions: list[int],
+        normalized_predictions: list[int],
+    ) -> dict[str, float]:
+        del samples, raw_predictions, normalized_predictions
+        return {}
+
     # Execute the shared dataset loading, flattened choice scoring, and accuracy aggregation flow.
     def evaluate(self, session: InferenceSession) -> TestResult:
         task_name = self.task_name()
@@ -118,6 +129,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         sample_results: list[SampleResult] = []
         raw_total = 0.0
         norm_total = 0.0
+        raw_predictions: list[int] = []
+        normalized_predictions: list[int] = []
         for sample in samples:
             choice_scores = sorted(sample_choice_scores[sample.index], key=lambda item: item[2])
             raw_best = max(choice_scores, key=lambda item: item[0])[2]
@@ -126,6 +139,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             norm_score = 1.0 if norm_best == sample.gold_index else 0.0
             raw_total += raw_score
             norm_total += norm_score
+            raw_predictions.append(raw_best)
+            normalized_predictions.append(norm_best)
             sample_results.append(
                 SampleResult(
                     index=sample.index,
@@ -154,6 +169,13 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             "accuracy,loglikelihood": raw_total / denominator,
             "accuracy,loglikelihood_norm": norm_total / denominator,
         }
+        metrics.update(
+            self.extra_metrics(
+                samples=samples,
+                raw_predictions=raw_predictions,
+                normalized_predictions=normalized_predictions,
+            )
+        )
         logger.info("%s: metrics=%s", task_name, metrics)
         return TestResult(
             name=task_name,

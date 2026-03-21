@@ -83,6 +83,8 @@ tests:
     max_rows: 128
   - type: boolq
     max_rows: 48
+  - type: cb
+    max_rows: 56
   - type: copa
     max_rows: 12
   - type: arc_easy
@@ -112,6 +114,7 @@ tests:
     assert ".model(eval.Model(" in script
     assert ".run(eval.gsm8k_platinum(" in script
     assert ".run(eval.boolq(" in script
+    assert ".run(eval.cb(" in script
     assert ".run(eval.copa(" in script
     assert ".run(eval.arc_easy(" in script
     assert ".run(eval.arc_challenge(" in script
