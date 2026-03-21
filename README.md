@@ -48,7 +48,7 @@ result = (
             use_async_batching=None,
             max_new_tokens=256,
         )
-    ),
+    )
     .model(
         eval.Model(
             path="/monster/data/model/Llama-3.2-1B-Instruct",
@@ -108,6 +108,15 @@ import evalution as eval
 result = eval.run_yaml("evalution.yaml")
 
 python_script = eval.python_from_yaml("evalution.yaml")
+```
+
+CLI usage:
+
+```bash
+evalution evalution.yaml
+evalution run evalution.yaml
+evalution run evalution.yaml --output result.json
+evalution emit-python evalution.yaml
 ```
 
 `Transformer()` defaults to auto behavior for batching, paged attention, dtype resolution, and

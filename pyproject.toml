@@ -26,6 +26,9 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 
+[project.scripts]
+evalution = "evalution.cli:main"
+
 [tool.setuptools]
 include-package-data = false
 

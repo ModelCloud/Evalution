@@ -15,3 +15,9 @@ def test_package_exports_fluent_runtime_api() -> None:
     assert evalution.Transformers is evalution.Transformer
     assert callable(evalution.run_yaml)
     assert callable(evalution.python_from_yaml)
+
+
+def test_package_exposes_cli_entrypoint() -> None:
+    from evalution import cli
+
+    assert callable(cli.main)

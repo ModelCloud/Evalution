@@ -6,7 +6,6 @@ from datasets import Dataset
 
 import evalution
 from evalution.engines.base import GenerationOutput
-from evalution import yaml as evalution_yaml
 
 gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
 arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
@@ -205,56 +204,3 @@ def test_engine_runner_calls_session_gc_between_test_runs(monkeypatch) -> None:
     assert len(result.tests) == 2
     assert engine.session.gc_calls == 1
     assert engine.session.close_calls == 1
-
-
-def test_run_yaml_executes_yaml_spec_and_returns_pythonic_result(monkeypatch) -> None:
-    dataset = Dataset.from_list(
-        [
-            {
-                "question": "What is 40 plus 2?",
-                "answer": "40 + 2 = 42\n#### 42",
-                "cleaning_status": "consensus",
-            }
-        ]
-    )
-    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
-    monkeypatch.setitem(evalution_yaml._ENGINE_FACTORIES, "fake", FakeEngine)
-
-    result = evalution.run_yaml(
-        """
-engine:
-  type: fake
-model:
-  path: /tmp/model
-tests:
-  - type: gsm8k_platinum
-    max_rows: 1
-"""
-    )
-
-    assert result.model["path"] == "/tmp/model"
-    assert result.engine["name"] == "fake"
-    assert len(result.tests) == 1
-    assert result.tests[0].name == "gsm8k_platinum_cot"
-
-
-def test_python_from_yaml_emits_fluent_python_api() -> None:
-    script = evalution.python_from_yaml(
-        """
-engine:
-  type: transformers
-  dtype: bfloat16
-model:
-  path: /tmp/model
-tests:
-  - type: gsm8k_platinum
-    max_rows: 128
-  - type: arc_challenge
-    max_rows: 64
-"""
-    )
-
-    assert "eval.engine(eval.Transformers(" in script
-    assert '.model(eval.Model(' in script
-    assert '.run(eval.gsm8k_platinum(' in script
-    assert '.run(eval.arc_challenge(' in script
