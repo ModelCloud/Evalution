@@ -203,6 +203,20 @@ def test_gsm8k_platinum_scores_strict_and_flexible_extract_separately(monkeypatc
     assert result.metrics["exact_match,flexible-extract"] == 1.0
 
 
+def test_gsm8k_platinum_uses_compiled_pcre_patterns_for_extraction() -> None:
+    strict_regex = gsm8k_platinum_module._VARIANTS["cot"].strict_regex
+    flexible_regex = gsm8k_platinum_module._FLEXIBLE_EXTRACT_REGEX
+
+    assert hasattr(strict_regex, "findall")
+    assert hasattr(flexible_regex, "findall")
+    assert all(hasattr(pattern, "sub") for pattern in gsm8k_platinum_module._REGEXES_TO_IGNORE)
+    assert gsm8k_platinum_module._extract_match(
+        "Reasoning... The answer is 42.",
+        strict_regex,
+        group_select=0,
+    ) == "42"
+
+
 def test_gsm8k_platinum_uses_engine_batch_size_by_default(monkeypatch) -> None:
     dataset = Dataset.from_list(
         [

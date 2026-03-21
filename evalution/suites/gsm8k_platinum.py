@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import atexit
 import random
-import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
@@ -14,6 +13,7 @@ from time import perf_counter
 from typing import Any, Literal
 
 from datasets import load_dataset
+import pcre
 
 from evalution.engines.base import GenerationRequest, InferenceSession
 from evalution.logbar import get_logger, manual_progress, spinner
@@ -29,8 +29,16 @@ _PRETOKENIZED_REFILL_COALESCE_S = 0.01
 _PREFETCH_EXECUTOR_LOCK = Lock()
 _PREFETCH_EXECUTOR: ThreadPoolExecutor | None = None
 
-_REGEXES_TO_IGNORE = [",", r"\$", r"(?s).*#### ", r"\.$"]
-_FLEXIBLE_EXTRACT_PATTERN = r"(-?[$0-9.,]{2,})|(-?[0-9]+)"
+
+def _compile_regex(pattern: str) -> Any:
+    return pcre.compile(pattern)
+
+
+_REGEXES_TO_IGNORE = tuple(
+    _compile_regex(pattern)
+    for pattern in (",", r"\$", r"(?s).*#### ", r"\.$")
+)
+_FLEXIBLE_EXTRACT_REGEX = _compile_regex(r"(-?[$0-9.,]{2,})|(-?[0-9]+)")
 
 _COT_FEWSHOTS = (
     {
@@ -106,7 +114,7 @@ _LLAMA_FEWSHOTS = (
 @dataclass(frozen=True, slots=True)
 class _VariantSpec:
     task_name: str
-    strict_pattern: str
+    strict_regex: Any
     strict_group_select: int
     stop_strings: tuple[str, ...]
     prompt_builder: Any
@@ -159,7 +167,7 @@ def _numeric_answer(doc: dict[str, Any]) -> str:
 _VARIANTS: dict[str, _VariantSpec] = {
     "base": _VariantSpec(
         task_name="gsm8k_platinum",
-        strict_pattern=r"#### (\-?[0-9\.\,]+)",
+        strict_regex=_compile_regex(r"#### (\-?[0-9\.\,]+)"),
         strict_group_select=0,
         stop_strings=("Question:", "</s>", "<|im_end|>"),
         prompt_builder=_base_prompt,
@@ -169,7 +177,7 @@ _VARIANTS: dict[str, _VariantSpec] = {
     ),
     "cot": _VariantSpec(
         task_name="gsm8k_platinum_cot",
-        strict_pattern=r"The answer is (\-?[0-9\.\,]+).",
+        strict_regex=_compile_regex(r"The answer is (\-?[0-9\.\,]+)."),
         strict_group_select=0,
         stop_strings=("Q:", "</s>", "<|im_end|>"),
         prompt_builder=_cot_prompt,
@@ -179,7 +187,7 @@ _VARIANTS: dict[str, _VariantSpec] = {
     ),
     "cot_zeroshot": _VariantSpec(
         task_name="gsm8k_platinum_cot_zeroshot",
-        strict_pattern=r"The answer is (\-?[0-9\.\,]+).",
+        strict_regex=_compile_regex(r"The answer is (\-?[0-9\.\,]+)."),
         strict_group_select=0,
         stop_strings=("Q:", "</s>", "<|im_end|>"),
         prompt_builder=_cot_zeroshot_prompt,
@@ -189,7 +197,7 @@ _VARIANTS: dict[str, _VariantSpec] = {
     ),
     "cot_llama": _VariantSpec(
         task_name="gsm8k_platinum_cot_llama",
-        strict_pattern=r"The final answer is ((-?[$0-9.,]{2,})|(-?[0-9]+))",
+        strict_regex=_compile_regex(r"The final answer is ((-?[$0-9.,]{2,})|(-?[0-9]+))"),
         strict_group_select=-1,
         stop_strings=("<|eot_id|>", "<|start_header_id|>user<|end_header_id|>", "Q:", "</s>", "<|im_end|>"),
         prompt_builder=_llama_prompt,
@@ -325,12 +333,12 @@ class GSM8KPlatinum(TestSuite):
             target = prepared_sample.target
             strict_prediction = _extract_match(
                 output.text,
-                spec.strict_pattern,
+                spec.strict_regex,
                 group_select=spec.strict_group_select,
             )
             flexible_prediction = _extract_match(
                 output.text,
-                _FLEXIBLE_EXTRACT_PATTERN,
+                _FLEXIBLE_EXTRACT_REGEX,
                 group_select=-1,
             )
             scores = {
@@ -821,12 +829,12 @@ def _requires_full_doc_materialization(spec: _VariantSpec) -> bool:
 
 def _extract_match(
     text: str,
-    pattern: str,
+    pattern: Any,
     *,
     group_select: int,
     fallback: str = "[invalid]",
 ) -> str:
-    matches = re.findall(pattern, text or "")
+    matches = pattern.findall(text or "")
     if not matches:
         return fallback
     match = matches[group_select]
@@ -842,6 +850,6 @@ def _exact_match(prediction: str, target: str) -> bool:
 def _normalize(text: str) -> str:
     normalized = text
     for pattern in _REGEXES_TO_IGNORE:
-        normalized = re.sub(pattern, "", normalized)
+        normalized = pattern.sub("", normalized)
     normalized = normalized.lower()
     return normalized.strip()

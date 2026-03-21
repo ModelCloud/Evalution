@@ -12,6 +12,7 @@ license = "Apache-2.0"
 dependencies = [
     "datasets>=4.8.3",
     "logbar>=0.3.0",
+    "PyPcre>=0.2.13",
     "transformers>=5.0.0",
 ]
 classifiers = [
