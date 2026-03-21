@@ -36,13 +36,13 @@ def load_suite_dataset(
     return loaded_docs, perf_counter() - dataset_load_started
 
 
-# Apply an optional row limit while preserving streaming datasets.
-def limit_docs(docs: Any, limit: int | None) -> Any:
-    if limit is None:
+# Apply an optional row cap while preserving streaming datasets.
+def limit_docs(docs: Any, max_rows: int | None) -> Any:
+    if max_rows is None:
         return docs
     if hasattr(docs, "select") and hasattr(docs, "__len__"):
-        return docs.select(range(min(limit, len(docs))))
-    return islice(docs, limit)
+        return docs.select(range(min(max_rows, len(docs))))
+    return islice(docs, max_rows)
 
 
 # Resolve the row count for both materialized and streaming datasets.
@@ -50,21 +50,21 @@ def doc_count(
     docs: Any,
     *,
     loaded_docs: Any,
-    limit: int | None,
+    max_rows: int | None,
     split: str,
 ) -> int:
     if hasattr(docs, "__len__"):
         count = len(docs)
-        return min(limit, count) if limit is not None else count
+        return min(max_rows, count) if max_rows is not None else count
 
     split_info = getattr(getattr(loaded_docs, "info", None), "splits", {}).get(split)
     if split_info is not None and getattr(split_info, "num_examples", None) is not None:
         count = int(split_info.num_examples)
-        return min(limit, count) if limit is not None else count
+        return min(max_rows, count) if max_rows is not None else count
 
-    if limit is not None:
-        return int(limit)
+    if max_rows is not None:
+        return int(max_rows)
 
     raise ValueError(
-        "streaming dataset row count is unavailable; set `limit` or use a dataset split with known num_examples"
+        "streaming dataset row count is unavailable; set `max_rows` or use a dataset split with known num_examples"
     )

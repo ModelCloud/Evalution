@@ -21,42 +21,102 @@ Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 Simple usage:
 
 ```python
-import evalution
+import evalution as eval
 
-result = evalution.run(
-    model={"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
-    engine=evalution.Transformer(),
-    tests=[evalution.gsm8k_platinum()],
+result = (
+    eval.engine(eval.Transformers())
+    .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
+    .run(eval.gsm8k_platinum())
+    .run(eval.arc_challenge())
 )
 ```
 
 Advanced usage:
 
 ```python
-import evalution
+import evalution as eval
 
-result = evalution.run(
-    model=evalution.Model(
-        path="/monster/data/model/Llama-3.2-1B-Instruct",
-    ),
-    engine=evalution.Transformer(
-        dtype="bfloat16",
-        attn_implementation="flash_attention_2",
-        device="cuda:0",
-        batch_size="auto",
-        paged_attention="auto",
-        max_new_tokens=256,
-    ),
-    tests=[
-        evalution.gsm8k_platinum(
+result = (
+    eval.engine(
+        eval.Transformers(
+            dtype="bfloat16",
+            attn_implementation="flash_attention_2",
+            device="cuda:0",
+            batch_size="auto",
+            paged_attention="auto",
+            allow_block_sharing=True,
+            use_async_batching=None,
+            max_new_tokens=256,
+        )
+    )
+    .model(
+        eval.Model(
+            path="/monster/data/model/Llama-3.2-1B-Instruct",
+        )
+    )
+    .run(
+        eval.gsm8k_platinum(
             variant="cot",
             apply_chat_template=True,
             max_new_tokens=96,
             batch_size=64,
-            limit=128,
-        ),
-    ],
+            max_rows=128,
+        )
+    )
+    .run(
+        eval.arc_challenge(
+            apply_chat_template=True,
+            max_new_tokens=8,
+            max_rows=128,
+        )
+    )
 )
+```
+
+The chained object is already the completed run handle. Accessing `result.model`, `result.engine`,
+`result.tests`, or `result.to_dict()` finalizes the run and closes the engine session implicitly.
+
+YAML usage:
+
+```yaml
+engine:
+  type: transformers
+  dtype: bfloat16
+  attn_implementation: flash_attention_2
+  device: cuda:0
+  paged_attention: true
+
+model:
+  path: /monster/data/model/Llama-3.2-1B-Instruct
+
+tests:
+  - type: gsm8k_platinum
+    variant: cot
+    apply_chat_template: true
+    max_new_tokens: 96
+    batch_size: 64
+    max_rows: 128
+  - type: arc_challenge
+    apply_chat_template: true
+    max_new_tokens: 8
+    max_rows: 128
+```
+
+```python
+import evalution as eval
+
+result = eval.run_yaml("evalution.yaml")
+
+python_script = eval.python_from_yaml("evalution.yaml")
+```
+
+CLI usage:
+
+```bash
+evalution evalution.yaml
+evalution run evalution.yaml
+evalution run evalution.yaml --output result.json
+evalution emit-python evalution.yaml
 ```
 
 `Transformer()` defaults to auto behavior for batching, paged attention, dtype resolution, and
@@ -72,18 +132,31 @@ supported backends with `paged_attention=True`, force plain static generation wi
 `attn_implementation=...`. A suite can override engine batch sizing with
 `gsm8k_platinum(batch_size=...)`.
 
+For `transformers` continuous batching, `Transformer(...)` also exposes the upstream manager knobs
+`manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
+`kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned continuous
+batching manager alive while stop strings and sampling settings stay compatible, then tears it down
+on `gc()` between suites or on `close()`.
+
 For `gsm8k_platinum`, answer extraction and normalization use precompiled `pcre.compile(...)`
 patterns so regex work stays on the `PyPcre` path and avoids stdlib `re`.
+
+For `arc_challenge`, prompts ask for a single multiple-choice label and scoring first extracts a
+choice label, then falls back to an exact choice-text match when the model returns the option text
+instead of the label.
 
 Current built-in coverage:
 
 - Hugging Face `transformers` inference engine
+- `arc_challenge` suite for `allenai/ai2_arc` `ARC-Challenge`
+- `gsm8k` suite for `openai/gsm8k`
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `logbar`-powered runtime logging and evaluation progress bars
 
 ## Citation
 
-If you use Evalution or the built-in `gsm8k_platinum` suite, please cite:
+If you use Evalution or the built-in `gsm8k`, `gsm8k_platinum`, or `arc_challenge` suites, please
+cite:
 
 ```bibtex
 # Evalution
@@ -111,5 +184,13 @@ If you use Evalution or the built-in `gsm8k_platinum` suite, please cite:
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
   journal = {arXiv preprint arXiv:2110.14168},
   year = {2021},
+}
+
+# ARC
+@article{clark2018arc,
+  title = {Think you have Solved Question Answering? Try {ARC}, the {AI2} Reasoning Challenge},
+  author = {Peter Clark and Isaac Cowhey and Oren Etzioni and Tushar Khot and Ashish Sabharwal and Carissa Schoenick and Oyvind Tafjord},
+  journal = {arXiv preprint arXiv:1803.05457},
+  year = {2018},
 }
 ```

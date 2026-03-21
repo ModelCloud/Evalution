@@ -66,6 +66,12 @@ class Transformer:
     device_map: str | dict[str, Any] | None = None
     batch_size: int | str = _AUTO_BATCH_SIZE
     paged_attention: bool | str = _AUTO_PAGED_ATTENTION
+    manual_eviction: bool = False
+    allow_block_sharing: bool = True
+    use_async_batching: bool | None = None
+    q_padding_interval_size: int = 0
+    kv_padding_interval_size: int = 0
+    max_cached_graphs: int = 0
     max_new_tokens: int = 256
     trust_remote_code: bool | None = None
     padding_side: str = "left"
@@ -95,6 +101,12 @@ class TransformerSession:
     stop_criteria_cache: dict[tuple[str, ...], Any] = field(default_factory=dict, repr=False)
     auto_batch_size_cache: dict[tuple[Any, ...], int] = field(default_factory=dict, repr=False)
     execution_logged: bool = field(default=False, repr=False)
+    # Session-owned continuous batching state is reused while the request signature stays compatible.
+    continuous_batching_manager: Any | None = field(default=None, repr=False)
+    continuous_batching_signature: tuple[Any, ...] | None = field(default=None, repr=False)
+    # Tracks completed request ids whose cache blocks are still retained when manual eviction is enabled.
+    continuous_batching_completed_request_ids: set[str] = field(default_factory=set, repr=False)
+    continuous_batching_request_counter: int = field(default=0, repr=False)
     _generation_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _state_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _tokenizer_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
@@ -266,6 +278,7 @@ class TransformerSession:
 
     def close(self) -> None:
         with self._generation_lock:
+            self._stop_continuous_batching_manager()
             with self._prepare_tokenizer_lock:
                 with self._tokenizer_lock:
                     with self._state_lock:
@@ -277,12 +290,25 @@ class TransformerSession:
                             del self.tokenizer
                         with suppress(Exception):
                             del self.prepare_tokenizer
+        self.gc()
+
+    # Stop session-owned generation state, drop per-suite caches, and return unused allocator memory.
+    def gc(self) -> None:
+        with self._generation_lock:
+            self._stop_continuous_batching_manager()
+            with self._state_lock:
+                self.stop_criteria_cache.clear()
+                self.auto_batch_size_cache.clear()
+                self.execution_logged = False
         gc.collect()
         with suppress(Exception):
             import torch
 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                ipc_collect = getattr(torch.cuda, "ipc_collect", None)
+                if callable(ipc_collect):
+                    ipc_collect()
 
     def _render_request(self, request: GenerationRequest) -> str:
         if request.rendered_prompt is not None:
@@ -611,20 +637,14 @@ class TransformerSession:
         *,
         batch_size: int,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
-        from transformers import ContinuousBatchingManager
-
         request_iter = iter(requests)
-        manager: Any | None = None
         inflight_requests: dict[str, tuple[Any, str, list[str], dict[str, Any]]] = {}
-        request_counter = 0
         source_exhausted = False
-        generation_config: Any | None = None
         expected_signature: tuple[Any, ...] | None = None
+        manager: Any | None = None
 
         def submit_one() -> bool:
-            nonlocal request_counter
             nonlocal source_exhausted
-            nonlocal generation_config
             nonlocal expected_signature
             if source_exhausted:
                 return False
@@ -637,7 +657,6 @@ class TransformerSession:
             request_signature = _continuous_request_signature(request)
             if expected_signature is None:
                 expected_signature = request_signature
-                generation_config = self._build_generation_config([request])
             elif request_signature != expected_signature:
                 raise ValueError(
                     "continuous batching requires shared stop strings and sampling settings "
@@ -648,8 +667,7 @@ class TransformerSession:
                 raise RuntimeError("continuous batching manager was not initialized")
 
             rendered_prompt, input_ids = self._prepare_request_for_generation(request)
-            request_id = f"req_{request_counter}"
-            request_counter += 1
+            request_id = self._next_continuous_batching_request_id()
             manager.add_request(
                 input_ids,
                 request_id=request_id,
@@ -670,58 +688,119 @@ class TransformerSession:
         request_iter = iter(chain(preview_items, request_iter))
 
         first_request = preview_items[0][1]
-        generation_config = self._build_generation_config([first_request])
         expected_signature = _continuous_request_signature(first_request)
-        manager = ContinuousBatchingManager(
-            self.model,
-            generation_config=generation_config,
+        manager = self._ensure_continuous_batching_manager(
+            request_signature=expected_signature,
+            request=first_request,
         )
 
-        try:
-            manager.start()
+        while len(inflight_requests) < batch_size and submit_one():
+            continue
+
+        while inflight_requests:
+            request_output = manager.get_result(timeout=0.1)
+            if request_output is None:
+                if not manager.is_running():
+                    raise RuntimeError(
+                        "continuous batching manager stopped before all requests completed"
+                    )
+                continue
+
+            request_id = request_output.request_id
+            request_state = inflight_requests.get(request_id)
+            if request_state is None:
+                raise RuntimeError(
+                    f"continuous batching returned unknown request_id={request_id!r}"
+                )
+            if request_output.error is not None:
+                raise RuntimeError(
+                    f"continuous batching request {request_id!r} failed: {request_output.error}"
+                )
+            if not request_output.is_finished():
+                continue
+
+            request_key, rendered_prompt, stop_strings, metadata = inflight_requests.pop(request_id)
+            if self.config.manual_eviction:
+                with self._state_lock:
+                    self.continuous_batching_completed_request_ids.add(request_id)
+            with self._tokenizer_lock:
+                text = self.tokenizer.decode(
+                    request_output.generated_tokens,
+                    skip_special_tokens=False,
+                )
+            text = _truncate_at_stop(text, stop_strings).strip()
+            yield request_key, GenerationOutput(
+                prompt=rendered_prompt,
+                text=text,
+                metadata=metadata,
+            )
+
             while len(inflight_requests) < batch_size and submit_one():
                 continue
 
-            while inflight_requests:
-                request_output = manager.get_result(timeout=0.1)
-                if request_output is None:
-                    if not manager.is_running():
-                        raise RuntimeError(
-                            "continuous batching manager stopped before all requests completed"
-                        )
-                    continue
+    def _ensure_continuous_batching_manager(
+        self,
+        *,
+        request_signature: tuple[Any, ...],
+        request: GenerationRequest,
+    ) -> Any:
+        from transformers import ContinuousBatchingManager
 
-                request_id = request_output.request_id
-                request_state = inflight_requests.get(request_id)
-                if request_state is None:
-                    raise RuntimeError(
-                        f"continuous batching returned unknown request_id={request_id!r}"
-                    )
-                if request_output.error is not None:
-                    raise RuntimeError(
-                        f"continuous batching request {request_id!r} failed: {request_output.error}"
-                    )
-                if not request_output.is_finished():
-                    continue
+        generation_config = self._build_generation_config([request])
 
-                request_key, rendered_prompt, stop_strings, metadata = inflight_requests.pop(request_id)
-                with self._tokenizer_lock:
-                    text = self.tokenizer.decode(
-                        request_output.generated_tokens,
-                        skip_special_tokens=False,
-                    )
-                text = _truncate_at_stop(text, stop_strings).strip()
-                yield request_key, GenerationOutput(
-                    prompt=rendered_prompt,
-                    text=text,
-                    metadata=metadata,
-                )
+        with self._state_lock:
+            manager = self.continuous_batching_manager
+            manager_signature = self.continuous_batching_signature
+            if (
+                manager is not None
+                and manager_signature == request_signature
+                and manager.is_running()
+            ):
+                return manager
 
-                while len(inflight_requests) < batch_size and submit_one():
-                    continue
-        finally:
-            if manager is not None:
-                manager.stop(block=True)
+        self._stop_continuous_batching_manager()
+
+        manager = ContinuousBatchingManager(
+            self.model,
+            generation_config=generation_config,
+            manual_eviction=self.config.manual_eviction,
+            q_padding_interval_size=self.config.q_padding_interval_size,
+            kv_padding_interval_size=self.config.kv_padding_interval_size,
+            max_cached_graphs=self.config.max_cached_graphs,
+            allow_block_sharing=self.config.allow_block_sharing,
+            use_async_batching=self.config.use_async_batching,
+        )
+        manager.start()
+
+        with self._state_lock:
+            self.continuous_batching_manager = manager
+            self.continuous_batching_signature = request_signature
+            return manager
+
+    def _next_continuous_batching_request_id(self) -> str:
+        with self._state_lock:
+            request_id = f"req_{self.continuous_batching_request_counter}"
+            self.continuous_batching_request_counter += 1
+            return request_id
+
+    def _stop_continuous_batching_manager(self) -> None:
+        with self._state_lock:
+            manager = self.continuous_batching_manager
+            retained_request_ids = set(self.continuous_batching_completed_request_ids)
+            self.continuous_batching_manager = None
+            self.continuous_batching_signature = None
+            self.continuous_batching_completed_request_ids.clear()
+
+        if manager is None:
+            return
+
+        if self.config.manual_eviction:
+            for request_id in sorted(retained_request_ids):
+                with suppress(Exception):
+                    manager.evict_request_from_cache(request_id)
+
+        with suppress(Exception):
+            manager.stop(block=True)
 
     def _build_generation_kwargs(self, batch: list[GenerationRequest]) -> dict[str, Any]:
         max_new_tokens = max(
@@ -786,6 +865,7 @@ class TransformerSession:
 
     def _disable_paged_attention(self, exc: Exception, *, fallback_batch_size: int) -> None:
         logger = get_logger()
+        self._stop_continuous_batching_manager()
         with self._state_lock:
             previous_attention = self.effective_attn_implementation or self.requested_attn_implementation
             requested_attention = self.requested_attn_implementation

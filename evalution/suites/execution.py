@@ -11,11 +11,22 @@ from typing import Any
 
 from evalution.engines.base import GenerationRequest, InferenceSession
 
+# Number of rows to prepare up front when a session needs a sample window to infer
+# a workable batch size without scanning the full dataset.
 AUTO_BATCH_PREVIEW_ROWS = 256
+# Keep the pretokenized queue larger than a single generation batch so background
+# preparation can stay ahead of consumption without growing unbounded.
 _PRETOKENIZED_POOL_MULTIPLIER = 2
+# Bound queue.put() blocking so the prefetch worker can re-check cancellation and
+# exit promptly instead of hanging on a full queue.
 _BATCH_PREFETCH_PUT_TIMEOUT_S = 0.1
+# Briefly wait for more free slots before preparing a partial refill; this helps
+# the worker produce fuller chunks and reduces tiny pretokenization bursts.
 _PRETOKENIZED_REFILL_COALESCE_S = 0.01
+# Protect shared executor state while threads initialize or clear the singleton.
 _PREFETCH_EXECUTOR_LOCK = Lock()
+# Process-wide single-thread executor used for sample prefetch so suites reuse one
+# background worker instead of repeatedly creating short-lived executors.
 _PREFETCH_EXECUTOR: ThreadPoolExecutor | None = None
 
 

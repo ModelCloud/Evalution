@@ -172,7 +172,7 @@ def test_gsm8k_platinum_cot_llama_uses_multiturn_chat_by_default(monkeypatch) ->
 
     suite = evalution.gsm8k_platinum(
         variant="cot_llama",
-        limit=1,
+        max_rows=1,
         apply_chat_template=True,
     )
     session = FakeSession(["Reasoning. The final answer is 18"])
@@ -201,7 +201,7 @@ def test_gsm8k_platinum_scores_strict_and_flexible_extract_separately(monkeypatc
 
     suite = evalution.gsm8k_platinum(
         variant="cot",
-        limit=1,
+        max_rows=1,
         apply_chat_template=False,
     )
     session = FakeSession(["I think it comes out to 12 in total."])
