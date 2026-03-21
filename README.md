@@ -8,6 +8,14 @@ Install:
 pip install Evalution
 ```
 
+Install from source:
+
+```bash
+git clone https://github.com/modelcloud/Evalution.git
+cd Evalution
+pip install .
+```
+
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 
 Simple usage:
@@ -72,3 +80,36 @@ Current built-in coverage:
 - Hugging Face `transformers` inference engine
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `logbar`-powered runtime logging and evaluation progress bars
+
+## Citation
+
+If you use Evalution or the built-in `gsm8k_platinum` suite, please cite:
+
+```bibtex
+# Evalution
+@misc{modelcloud2026evalution,
+  author = {ModelCloud and @qubitium},
+  title = {Evalution},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/modelcloud/Evalution}},
+  note = {Contact: x.com/qubitium},
+  year = {2026},
+}
+
+# GSM8K-Platinum
+@article{vendrow2025largelanguagemodelbenchmarks,
+  title = {Do Large Language Model Benchmarks Test Reliability?},
+  author = {Joshua Vendrow and Edward Vendrow and Sara Beery and Aleksander Madry},
+  journal = {arXiv preprint arXiv:2502.03461},
+  year = {2025},
+}
+
+# GSM8K
+@article{cobbe2021trainingverifierssolvemath,
+  title = {Training Verifiers to Solve Math Word Problems},
+  author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
+  journal = {arXiv preprint arXiv:2110.14168},
+  year = {2021},
+}
+```
