@@ -34,6 +34,7 @@ result = (
     .run(eval.arc_challenge())
     .run(eval.hellaswag())
     .run(eval.mmlu(subject="abstract_algebra", num_fewshot=5))
+    .run(eval.mrpc())
     .run(eval.openbookqa())
     .run(eval.piqa())
     .run(eval.qnli())
@@ -173,6 +174,7 @@ Current built-in coverage:
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `hellaswag` suite for `Rowan/hellaswag`
 - `mmlu` suite for `cais/mmlu`
+- `mrpc` suite for `nyu-mll/glue` `mrpc`
 - `openbookqa` suite for `allenai/openbookqa` `main`
 - `piqa` suite for `baber/piqa`
 - `qnli` suite for `nyu-mll/glue` `qnli`

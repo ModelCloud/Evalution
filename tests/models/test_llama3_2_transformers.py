@@ -65,6 +65,12 @@ MMLU_BASELINE = {
     "accuracy,loglikelihood": 0.3671875,
     "accuracy,loglikelihood_norm": 0.3671875,
 }
+MRPC_BASELINE = {
+    "accuracy,loglikelihood": 0.6953125,
+    "accuracy,loglikelihood_norm": 0.6953125,
+    "f1,loglikelihood_yes": 0.8186046511627907,
+    "f1,loglikelihood_norm_yes": 0.8186046511627907,
+}
 RTE_BASELINE = {
     "accuracy,loglikelihood": 0.625,
     "accuracy,loglikelihood_norm": 0.625,
@@ -191,6 +197,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.mrpc(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.openbookqa(
                     batch_size=24,
                     streaming=True,
@@ -249,7 +262,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 16
+    assert len(result.tests) == 17
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -262,6 +275,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "arc_challenge",
         "hellaswag",
         "mmlu",
+        "mrpc",
         "openbookqa",
         "piqa",
         "qnli",
@@ -585,6 +599,48 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert "choice_logprobs" in sample.metadata
         assert "choice_logprobs_norm" in sample.metadata
 
+    mrpc_result = tests_by_name["mrpc"]
+    assert mrpc_result.metadata["streaming"] is True
+    assert mrpc_result.metadata["dataset_path"] == "nyu-mll/glue"
+    assert mrpc_result.metadata["dataset_name"] == "mrpc"
+    assert mrpc_result.metadata["split"] == "validation"
+    assert mrpc_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(mrpc_result.samples) == 128
+    assert set(mrpc_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+        "f1,loglikelihood_yes",
+        "f1,loglikelihood_norm_yes",
+    }
+    mrpc_raw_score = mrpc_result.metrics["accuracy,loglikelihood"]
+    mrpc_norm_score = mrpc_result.metrics["accuracy,loglikelihood_norm"]
+    mrpc_f1_score = mrpc_result.metrics["f1,loglikelihood_yes"]
+    mrpc_norm_f1_score = mrpc_result.metrics["f1,loglikelihood_norm_yes"]
+    assert_metrics_match_baseline(mrpc_result.metrics, MRPC_BASELINE)
+    assert isinstance(mrpc_raw_score, float)
+    assert isinstance(mrpc_norm_score, float)
+    assert isinstance(mrpc_f1_score, float)
+    assert isinstance(mrpc_norm_f1_score, float)
+
+    for index, sample in enumerate(mrpc_result.samples):
+        assert sample.index == index
+        assert sample.prompt.startswith("Sentence 1: ")
+        assert "\nSentence 2: " in sample.prompt
+        assert "Do both sentences mean the same thing?" in sample.prompt
+        assert sample.target in {"no", "yes"}
+        assert sample.prediction in {"no", "yes"}
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
     openbookqa_result = tests_by_name["openbookqa"]
     assert openbookqa_result.metadata["streaming"] is True
     assert openbookqa_result.metadata["dataset_path"] == "allenai/openbookqa"
@@ -852,6 +908,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["hellaswag"]["samples"][0]["prediction"]
     assert len(serialized_tests["mmlu"]["samples"]) == len(mmlu_result.samples)
     assert serialized_tests["mmlu"]["samples"][0]["prediction"]
+    assert len(serialized_tests["mrpc"]["samples"]) == len(mrpc_result.samples)
+    assert serialized_tests["mrpc"]["samples"][0]["prediction"]
     assert len(serialized_tests["openbookqa"]["samples"]) == len(openbookqa_result.samples)
     assert serialized_tests["openbookqa"]["samples"][0]["prediction"]
     assert len(serialized_tests["qnli"]["samples"]) == len(qnli_result.samples)
