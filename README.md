@@ -26,7 +26,10 @@ import evalution
 result = evalution.run(
     model={"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
     engine=evalution.Transformer(),
-    tests=[evalution.gsm8k_platinum()],
+    tests=[
+        evalution.gsm8k_platinum(),
+        evalution.arc_challenge(),
+    ],
 )
 ```
 
@@ -55,6 +58,11 @@ result = evalution.run(
             batch_size=64,
             limit=128,
         ),
+        evalution.arc_challenge(
+            apply_chat_template=True,
+            max_new_tokens=8,
+            limit=128,
+        ),
     ],
 )
 ```
@@ -75,15 +83,22 @@ supported backends with `paged_attention=True`, force plain static generation wi
 For `gsm8k_platinum`, answer extraction and normalization use precompiled `pcre.compile(...)`
 patterns so regex work stays on the `PyPcre` path and avoids stdlib `re`.
 
+For `arc_challenge`, prompts ask for a single multiple-choice label and scoring first extracts a
+choice label, then falls back to an exact choice-text match when the model returns the option text
+instead of the label.
+
 Current built-in coverage:
 
 - Hugging Face `transformers` inference engine
+- `arc_challenge` suite for `allenai/ai2_arc` `ARC-Challenge`
+- `gsm8k` suite for `openai/gsm8k`
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `logbar`-powered runtime logging and evaluation progress bars
 
 ## Citation
 
-If you use Evalution or the built-in `gsm8k_platinum` suite, please cite:
+If you use Evalution or the built-in `gsm8k`, `gsm8k_platinum`, or `arc_challenge` suites, please
+cite:
 
 ```bibtex
 # Evalution
@@ -111,5 +126,13 @@ If you use Evalution or the built-in `gsm8k_platinum` suite, please cite:
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
   journal = {arXiv preprint arXiv:2110.14168},
   year = {2021},
+}
+
+# ARC
+@article{clark2018arc,
+  title = {Think you have Solved Question Answering? Try {ARC}, the {AI2} Reasoning Challenge},
+  author = {Peter Clark and Isaac Cowhey and Oren Etzioni and Tushar Khot and Ashish Sabharwal and Carissa Schoenick and Oyvind Tafjord},
+  journal = {arXiv preprint arXiv:1803.05457},
+  year = {2018},
 }
 ```
