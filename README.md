@@ -23,13 +23,11 @@ Simple usage:
 ```python
 import evalution as eval
 
-result = eval.run(
-    model={"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
-    engine=eval.Transformer(),
-    tests=[
-        eval.gsm8k_platinum(),
-        eval.arc_challenge(),
-    ],
+result = (
+    eval.engine(eval.Transformers())
+    .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
+    .run(eval.gsm8k_platinum())
+    .run(eval.arc_challenge())
 )
 ```
 
@@ -38,35 +36,78 @@ Advanced usage:
 ```python
 import evalution as eval
 
-result = eval.run(
-    model=eval.Model(
-        path="/monster/data/model/Llama-3.2-1B-Instruct",
+result = (
+    eval.engine(
+        eval.Transformers(
+            dtype="bfloat16",
+            attn_implementation="flash_attention_2",
+            device="cuda:0",
+            batch_size="auto",
+            paged_attention="auto",
+            allow_block_sharing=True,
+            use_async_batching=None,
+            max_new_tokens=256,
+        )
     ),
-    engine=eval.Transformer(
-        dtype="bfloat16",
-        attn_implementation="flash_attention_2",
-        device="cuda:0",
-        batch_size="auto",
-        paged_attention="auto",
-        allow_block_sharing=True,
-        use_async_batching=None,
-        max_new_tokens=256,
-    ),
-    tests=[
+    .model(
+        eval.Model(
+            path="/monster/data/model/Llama-3.2-1B-Instruct",
+        )
+    )
+    .run(
         eval.gsm8k_platinum(
             variant="cot",
             apply_chat_template=True,
             max_new_tokens=96,
             batch_size=64,
             max_rows=128,
-        ),
+        )
+    )
+    .run(
         eval.arc_challenge(
             apply_chat_template=True,
             max_new_tokens=8,
             max_rows=128,
-        ),
-    ],
+        )
+    )
 )
+```
+
+The chained object is already the completed run handle. Accessing `result.model`, `result.engine`,
+`result.tests`, or `result.to_dict()` finalizes the run and closes the engine session implicitly.
+
+YAML usage:
+
+```yaml
+engine:
+  type: transformers
+  dtype: bfloat16
+  attn_implementation: flash_attention_2
+  device: cuda:0
+  paged_attention: true
+
+model:
+  path: /monster/data/model/Llama-3.2-1B-Instruct
+
+tests:
+  - type: gsm8k_platinum
+    variant: cot
+    apply_chat_template: true
+    max_new_tokens: 96
+    batch_size: 64
+    max_rows: 128
+  - type: arc_challenge
+    apply_chat_template: true
+    max_new_tokens: 8
+    max_rows: 128
+```
+
+```python
+import evalution as eval
+
+result = eval.run_yaml("evalution.yaml")
+
+python_script = eval.python_from_yaml("evalution.yaml")
 ```
 
 `Transformer()` defaults to auto behavior for batching, paged attention, dtype resolution, and

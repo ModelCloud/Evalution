@@ -28,16 +28,18 @@ pytestmark = [pytest.mark.integration, pytest.mark.slow]
 def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture[str]) -> None:
     # Disable pytest capture for the actual eval so LogBar output stays visible.
     with capsys.disabled():
-        result = evalution.run(
-            model=evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
-            engine=evalution.Transformer(
-                dtype="bfloat16",
-                attn_implementation="flash_attention_2",
-                paged_attention=True,
-                device="cuda:0",
-                batch_size="auto",
-            ),
-            tests=[
+        result = (
+            evalution.engine(
+                evalution.Transformers(
+                    dtype="bfloat16",
+                    attn_implementation="flash_attention_2",
+                    paged_attention=True,
+                    device="cuda:0",
+                    batch_size="auto",
+                )
+            )
+            .model(evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)))
+            .run(
                 evalution.gsm8k(
                     variant="cot",
                     apply_chat_template=True,
@@ -45,7 +47,9 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                     max_new_tokens=96,
                     streaming=True,
                     max_rows=128,
-                ),
+                )
+            )
+            .run(
                 evalution.gsm8k_platinum(
                     variant="cot",
                     apply_chat_template=True,
@@ -53,15 +57,17 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                     max_new_tokens=96,
                     streaming=True,
                     max_rows=128,
-                ),
+                )
+            )
+            .run(
                 evalution.arc_challenge(
                     apply_chat_template=True,
                     batch_size=24,
                     max_new_tokens=8,
                     streaming=True,
                     max_rows=128,
-                ),
-            ],
+                )
+            )
         )
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)

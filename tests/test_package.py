@@ -8,3 +8,10 @@ def test_package_import() -> None:
 def test_package_exports_arc_challenge_suite() -> None:
     assert evalution.ARCChallenge is not None
     assert callable(evalution.arc_challenge)
+
+
+def test_package_exports_fluent_runtime_api() -> None:
+    assert callable(evalution.engine)
+    assert evalution.Transformers is evalution.Transformer
+    assert callable(evalution.run_yaml)
+    assert callable(evalution.python_from_yaml)
