@@ -7,6 +7,7 @@ from typing import Any
 from evalution.logbar import get_logger, spinner
 
 
+ # Load the suite dataset and return both the rows object and wall-clock load time.
 def load_suite_dataset(
     loader: Any,
     *,
@@ -35,6 +36,7 @@ def load_suite_dataset(
     return loaded_docs, perf_counter() - dataset_load_started
 
 
+# Apply an optional row limit while preserving streaming datasets.
 def limit_docs(docs: Any, limit: int | None) -> Any:
     if limit is None:
         return docs
@@ -43,6 +45,7 @@ def limit_docs(docs: Any, limit: int | None) -> Any:
     return islice(docs, limit)
 
 
+# Resolve the row count for both materialized and streaming datasets.
 def doc_count(
     docs: Any,
     *,

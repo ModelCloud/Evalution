@@ -32,6 +32,7 @@ class PrefetchFailure:
     error: BaseException
 
 
+# Prefer an explicit session resolver, then fall back to configured batch size hints.
 def session_batch_size(
     session: InferenceSession,
     requests: list[GenerationRequest],
@@ -53,6 +54,7 @@ def session_batch_size(
     return None
 
 
+# Decide whether the suite needs a preview window to auto-resolve batch size.
 def needs_batch_size_preview(
     suite_batch_size: int | None,
     session: InferenceSession,
@@ -72,6 +74,7 @@ def needs_batch_size_preview(
     return True
 
 
+# Pull a bounded preview window from the prepared iterator for batch-size probing.
 def collect_preview_samples(
     prepared_iter: Any,
     *,
@@ -85,6 +88,7 @@ def collect_preview_samples(
     return preview_samples
 
 
+# Let the session pre-tokenize or otherwise transform a batch before generation.
 def prepare_batch_for_session(
     session: InferenceSession,
     batch: list[PreparedSample],
@@ -103,10 +107,12 @@ def prepare_batch_for_session(
     ]
 
 
+# Size the pretokenized queue so the worker can stay ahead of generation.
 def _pretokenized_pool_size(batch_size: int) -> int:
     return max(batch_size, batch_size * _PRETOKENIZED_POOL_MULTIPLIER)
 
 
+# Reuse a single prefetch thread across suites to avoid executor churn.
 def _prefetch_executor() -> ThreadPoolExecutor:
     global _PREFETCH_EXECUTOR
     with _PREFETCH_EXECUTOR_LOCK:
@@ -118,6 +124,7 @@ def _prefetch_executor() -> ThreadPoolExecutor:
     return _PREFETCH_EXECUTOR
 
 
+# Tear down the shared prefetch executor when the process exits.
 def _shutdown_prefetch_executor() -> None:
     global _PREFETCH_EXECUTOR
     with _PREFETCH_EXECUTOR_LOCK:
@@ -130,6 +137,7 @@ def _shutdown_prefetch_executor() -> None:
 atexit.register(_shutdown_prefetch_executor)
 
 
+# Stream prepared samples while a background worker keeps the queue filled.
 def iter_prefetched_samples(
     session: InferenceSession,
     preview_samples: list[PreparedSample],
@@ -144,6 +152,7 @@ def iter_prefetched_samples(
     queue: Queue[Any] = Queue(maxsize=queue_maxsize)
     cancelled = Event()
 
+    # Retry bounded queue puts so the worker can stop promptly on cancellation.
     def put_prefetched(item: Any) -> bool:
         while not cancelled.is_set():
             try:
@@ -153,6 +162,7 @@ def iter_prefetched_samples(
                 continue
         return False
 
+    # Tokenize future work in chunks sized to the available queue capacity.
     def worker() -> None:
         try:
             while not cancelled.is_set():
@@ -200,6 +210,7 @@ def iter_prefetched_samples(
             future.result(timeout=1.0)
 
 
+# Group prefetched samples into fixed-size batches for standard `generate()` sessions.
 def iter_prefetched_batches(
     session: InferenceSession,
     preview_samples: list[PreparedSample],

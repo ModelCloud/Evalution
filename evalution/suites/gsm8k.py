@@ -17,9 +17,11 @@ class GSM8K(BaseGSM8KSuite):
     dataset_path: str = "openai/gsm8k"
     dataset_name: str | None = "main"
 
+    # Use the Hugging Face datasets loader for the standard GSM8K benchmark.
     def dataset_loader(self) -> Any:
         return load_dataset
 
 
+# Convenience constructor mirroring the public suite factory style.
 def gsm8k(**kwargs: Any) -> GSM8K:
     return GSM8K(**kwargs)

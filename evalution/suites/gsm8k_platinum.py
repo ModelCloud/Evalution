@@ -19,9 +19,11 @@ class GSM8KPlatinum(BaseGSM8KSuite):
     dataset_path: str = "madrylab/gsm8k-platinum"
     dataset_name: str | None = "main"
 
+    # Use the Hugging Face datasets loader for the GSM8K-Platinum benchmark.
     def dataset_loader(self) -> Any:
         return load_dataset
 
 
+# Convenience constructor mirroring the public suite factory style.
 def gsm8k_platinum(**kwargs: Any) -> GSM8KPlatinum:
     return GSM8KPlatinum(**kwargs)

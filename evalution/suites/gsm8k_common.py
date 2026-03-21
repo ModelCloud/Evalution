@@ -14,6 +14,7 @@ from evalution.suites.execution import PreparedSample
 GSM8KVariant = Literal["base", "cot", "cot_llama", "cot_zeroshot", "default"]
 
 
+# Compile regexes through PyPcre so extraction stays on the faster backend.
 def compile_regex(pattern: str) -> Any:
     return pcre.compile(pattern)
 
@@ -108,18 +109,22 @@ class VariantSpec:
     fewshots: tuple[dict[str, str], ...]
 
 
+    # Render the plain base prompt used by the non-CoT variant.
 def base_prompt(doc: dict[str, Any]) -> str:
     return f"Question: {doc['question']}\nAnswer:"
 
 
+# Render the short chain-of-thought prompt used by the default variant.
 def cot_prompt(doc: dict[str, Any]) -> str:
     return f"Q: {doc['question']}\nA:"
 
 
+# Render the zero-shot chain-of-thought prompt.
 def cot_zeroshot_prompt(doc: dict[str, Any]) -> str:
     return f"Q: {doc['question']}\nA: Let's think step by step."
 
 
+# Render the Llama-style instruction prompt ending in a final-answer marker.
 def llama_prompt(doc: dict[str, Any]) -> str:
     return (
         "Given the following problem, reason and give a final answer to the problem.\n"
@@ -128,14 +133,17 @@ def llama_prompt(doc: dict[str, Any]) -> str:
     )
 
 
+# Preserve the full reference answer for variants that score on the complete string.
 def full_answer(doc: dict[str, Any]) -> str:
     return str(doc["answer"])
 
 
+# Extract just the numeric answer from GSM8K-style `####` targets.
 def numeric_answer(doc: dict[str, Any]) -> str:
     return str(doc["answer"]).split("####")[-1].strip()
 
 
+# Build the variant table for a concrete suite name prefix.
 def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
     return {
         "base": VariantSpec(
@@ -181,10 +189,12 @@ def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
     }
 
 
+# Determine whether random fewshot sampling requires materialized docs.
 def requires_full_doc_materialization(spec: VariantSpec) -> bool:
     return not spec.fewshots and spec.num_fewshot > 0
 
 
+# Extract a regex match and normalize tuple captures into a single string.
 def extract_match(
     text: str,
     pattern: Any,
@@ -201,10 +211,12 @@ def extract_match(
     return str(match).strip() or fallback
 
 
+# Compare answers after suite-specific normalization.
 def exact_match(prediction: str, target: str) -> bool:
     return normalize(prediction) == normalize(target)
 
 
+# Strip formatting noise and case differences before exact-match scoring.
 def normalize(text: str) -> str:
     normalized = text
     for pattern in REGEXES_TO_IGNORE:
@@ -226,10 +238,12 @@ class BaseGSM8KSuite(BaseTestSuite):
     VARIANTS: ClassVar[dict[str, VariantSpec]]
     INCLUDE_CLEANING_STATUS: ClassVar[bool] = False
 
+    # Resolve `default` to the concrete variant used by the suite.
     def _resolved_variant(self) -> tuple[str, VariantSpec]:
         variant_name = "base" if self.variant == "default" else self.variant
         return variant_name, self.VARIANTS[variant_name]
 
+    # Default multiturn fewshot behavior to the chat-template setting.
     def _resolved_fewshot_as_multiturn(self) -> bool:
         return (
             self.fewshot_as_multiturn
@@ -237,12 +251,15 @@ class BaseGSM8KSuite(BaseTestSuite):
             else self.apply_chat_template
         )
 
+    # Expose the resolved task name through the shared base pipeline.
     def task_name(self) -> str:
         return self._resolved_variant()[1].task_name
 
+    # Materialize docs only for variants that sample fewshots from the dataset itself.
     def requires_full_doc_materialization(self) -> bool:
         return requires_full_doc_materialization(self._resolved_variant()[1])
 
+    # Render the live GSM8K scoring summary shown in the progress bar.
     def score_progress_title(
         self,
         *,
@@ -265,6 +282,7 @@ class BaseGSM8KSuite(BaseTestSuite):
             f"invalid={invalid_predictions}"
         )
 
+    # Return result metadata common to all GSM8K-family suites.
     def result_metadata(
         self,
         *,
@@ -281,6 +299,7 @@ class BaseGSM8KSuite(BaseTestSuite):
             "fewshot_as_multiturn": self._resolved_fewshot_as_multiturn(),
         }
 
+    # Build generation requests and scoring targets for each dataset row.
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
         _, spec = self._resolved_variant()
         fewshot_docs = docs if requires_full_doc_materialization(spec) else list(spec.fewshots)
@@ -304,6 +323,7 @@ class BaseGSM8KSuite(BaseTestSuite):
                 ),
             )
 
+    # Score a single model output using strict and flexible extraction rules.
     def score_sample(
         self,
         prepared_sample: PreparedSample,
@@ -337,9 +357,11 @@ class BaseGSM8KSuite(BaseTestSuite):
             metadata=self._sample_metadata(prepared_sample.doc),
         )
 
+    # Count flexible-extract misses as invalid predictions in progress reporting.
     def invalid_prediction_count(self, sample: SampleResult) -> int:
         return int(sample.extracted["flexible-extract"] == "[invalid]")
 
+    # Attach suite-specific row metadata to the per-sample result.
     def _sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
         if self.INCLUDE_CLEANING_STATUS:
             return {
@@ -347,6 +369,7 @@ class BaseGSM8KSuite(BaseTestSuite):
             }
         return {}
 
+    # Build either plain or chat-formatted requests for the selected variant.
     def _build_request(
         self,
         *,
@@ -380,6 +403,7 @@ class BaseGSM8KSuite(BaseTestSuite):
             temperature=self.temperature,
         )
 
+    # Concatenate fewshots and the current prompt into the plain-text request body.
     def _build_plain_prompt(
         self,
         spec: VariantSpec,
@@ -395,6 +419,7 @@ class BaseGSM8KSuite(BaseTestSuite):
         parts.append(spec.prompt_builder(doc))
         return "".join(parts)
 
+    # Choose static fewshots or sample deterministic in-dataset fewshots per row.
     def _select_fewshots(
         self,
         *,

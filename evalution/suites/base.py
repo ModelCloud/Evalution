@@ -23,6 +23,7 @@ from evalution.suites.execution import (
 
 
 class TestSuite(ABC):
+    # Run the suite against an initialized inference session.
     @abstractmethod
     def evaluate(self, session: InferenceSession) -> TestResult:
         raise NotImplementedError
@@ -38,21 +39,26 @@ class BaseTestSuite(TestSuite):
     cache_dir: str | None = None
     streaming: bool = False
 
+    # Return the callable used to fetch the underlying dataset rows.
     @abstractmethod
     def dataset_loader(self) -> Any:
         raise NotImplementedError
 
+    # Return the stable result name for the concrete suite instance.
     @abstractmethod
     def task_name(self) -> str:
         raise NotImplementedError
 
+    # Tell the pipeline whether the suite needs all rows materialized up front.
     def requires_full_doc_materialization(self) -> bool:
         return False
 
+    # Convert dataset rows into generation requests and scoring targets.
     @abstractmethod
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
         raise NotImplementedError
 
+    # Turn a model output into the per-sample result object.
     @abstractmethod
     def score_sample(
         self,
@@ -61,10 +67,12 @@ class BaseTestSuite(TestSuite):
     ) -> SampleResult:
         raise NotImplementedError
 
+    # Report how many invalid predictions a sample contributes to progress stats.
     def invalid_prediction_count(self, sample: SampleResult) -> int:
         del sample
         return 0
 
+    # Format the live scoring progress title shown during evaluation.
     def score_progress_title(
         self,
         *,
@@ -75,6 +83,7 @@ class BaseTestSuite(TestSuite):
         del processed, aggregate_scores, invalid_predictions
         return f"{self.task_name()}: scoring"
 
+    # Allow suites to append suite-specific metadata to the final result.
     def result_metadata(
         self,
         *,
@@ -84,6 +93,7 @@ class BaseTestSuite(TestSuite):
             generation_submission_mode=generation_submission_mode,
         )
 
+    # Populate dataset-level metadata that every dataset-backed suite exposes.
     def base_result_metadata(
         self,
         *,
@@ -97,6 +107,7 @@ class BaseTestSuite(TestSuite):
             "generation_submission_mode": generation_submission_mode,
         }
 
+    # Execute the shared dataset, batching, generation, and scoring pipeline.
     def evaluate(self, session: InferenceSession) -> TestResult:
         task_name = self.task_name()
         logger = get_logger()
@@ -179,6 +190,7 @@ class BaseTestSuite(TestSuite):
             subtitle=f"batch_size={effective_batch_size}",
         )
 
+        # Keep scoring side effects centralized so both generation modes share them.
         def score_output(prepared_sample: PreparedSample, output: GenerationOutput) -> None:
             nonlocal invalid_predictions
             nonlocal processed_count
@@ -205,6 +217,7 @@ class BaseTestSuite(TestSuite):
             if use_continuous_generation:
                 sample_by_request_key: dict[int, PreparedSample] = {}
 
+                # Feed requests lazily so continuous generation can refill slots as outputs finish.
                 def iter_request_stream() -> Any:
                     request_key = 0
                     prefetched_samples = iter_prefetched_samples(
