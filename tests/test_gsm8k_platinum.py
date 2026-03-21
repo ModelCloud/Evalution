@@ -341,3 +341,66 @@ def test_gsm8k_platinum_streaming_prefetch_and_generation_respect_resolved_batch
     assert session.prepare_batch_sizes[0] == gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS
     assert session.prepare_batch_sizes[1:] == [32, 12]
     assert all(size <= max_batch_size for size in session.prepare_batch_sizes[1:])
+
+
+def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> None:
+    class FakePrepareBar:
+        def next(self) -> FakePrepareBar:
+            return self
+
+        def draw(self) -> FakePrepareBar:
+            return self
+
+    class TrackingSession:
+        def __init__(self) -> None:
+            self.prepare_calls = 0
+            self.third_prepare_started = threading.Event()
+
+        def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+            self.prepare_calls += 1
+            if self.prepare_calls >= 3:
+                self.third_prepare_started.set()
+            return requests
+
+    def make_sample(index: int) -> gsm8k_platinum_module._PreparedSample:
+        prompt = f"Q: {index}\nA:"
+        return gsm8k_platinum_module._PreparedSample(
+            index=index,
+            doc={"question": str(index), "answer": "42\n#### 42", "cleaning_status": "consensus"},
+            target="42",
+            request=GenerationRequest(
+                prompt=prompt,
+                rendered_prompt=prompt,
+                input_ids=[1, 2, 3],
+            ),
+        )
+
+    session = TrackingSession()
+    iterator = gsm8k_platinum_module._iter_prefetched_batches(
+        session,
+        [make_sample(0)],
+        iter([make_sample(1), make_sample(2), make_sample(3), make_sample(4)]),
+        batch_size=1,
+        prepare_bar=FakePrepareBar(),
+    )
+
+    first_batch = next(iterator)
+
+    assert len(first_batch.samples) == 1
+    assert first_batch.samples[0].index == 0
+    assert session.third_prepare_started.wait(timeout=1.0)
+
+    close_errors: list[BaseException] = []
+
+    def close_iterator() -> None:
+        try:
+            iterator.close()
+        except BaseException as exc:  # pragma: no cover - asserted below
+            close_errors.append(exc)
+
+    close_thread = threading.Thread(target=close_iterator)
+    close_thread.start()
+    close_thread.join(timeout=1.0)
+
+    assert not close_errors
+    assert not close_thread.is_alive()

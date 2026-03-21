@@ -35,7 +35,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 evalution.gsm8k_platinum(
                     variant="cot",
                     apply_chat_template=True,
-                    batch_size=64,
+                    batch_size=24,
                     max_new_tokens=96,
                     streaming=True,
                 )

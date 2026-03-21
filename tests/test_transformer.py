@@ -90,6 +90,62 @@ def test_transformer_session_describes_auto_paged_attention_on_cuda_like_session
     }
 
 
+def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        pad_token = "<pad>"
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+            self.eval_called = False
+            self.requires_grad_value: bool | None = None
+            self.moved_to: str | None = None
+
+        def requires_grad_(self, value: bool):
+            self.requires_grad_value = value
+            return self
+
+        def eval(self):
+            self.eval_called = True
+            return self
+
+        def to(self, device):
+            self.moved_to = str(device)
+            return self
+
+    fake_model = FakeModel()
+    monkeypatch.setattr(
+        transformers.AutoTokenizer,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeTokenizer(),
+    )
+    monkeypatch.setattr(
+        transformers.AutoModelForCausalLM,
+        "from_pretrained",
+        lambda *args, **kwargs: fake_model,
+    )
+    monkeypatch.setattr(
+        "evalution.engines.transformer._clone_prepare_tokenizer",
+        lambda **kwargs: None,
+    )
+
+    session = TransformerSession.from_config(
+        Transformer(device="cpu", paged_attention=False),
+        Model(path="/tmp/model"),
+    )
+
+    assert fake_model.requires_grad_value is False
+    assert fake_model.eval_called is True
+    assert fake_model.moved_to == "cpu"
+    assert session.model is fake_model
+
+
 def test_transformer_session_prepare_requests_batches_tokenization() -> None:
     class FakePrepareTokenizer:
         def __init__(self) -> None:
@@ -233,6 +289,8 @@ def test_transformer_session_generate_uses_generate_batch_when_paged_attention_i
                     "inputs": inputs,
                     "generation_config": generation_config,
                     "progress_bar": progress_bar,
+                    "grad_enabled": torch.is_grad_enabled(),
+                    "inference_mode_enabled": torch.is_inference_mode_enabled(),
                 }
             )
             return {"req_0": FakeGenerateBatchOutput([101, 102, 103])}
@@ -264,6 +322,8 @@ def test_transformer_session_generate_uses_generate_batch_when_paged_attention_i
     call = model.calls[0]
     assert call["inputs"] == [[11, 12, 13]]
     assert call["progress_bar"] is False
+    assert call["grad_enabled"] is False
+    assert call["inference_mode_enabled"] is True
     assert call["generation_config"].stop_strings == ["Q:"]
 
 

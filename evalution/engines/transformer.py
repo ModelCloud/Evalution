@@ -144,6 +144,9 @@ class TransformerSession:
             load_kwargs["device_map"] = config.device_map
 
         model = AutoModelForCausalLM.from_pretrained(model_config.path, **load_kwargs)
+        freeze = getattr(model, "requires_grad_", None)
+        if callable(freeze):
+            freeze(False)
         model.eval()
 
         if config.device_map is None:
@@ -528,6 +531,8 @@ class TransformerSession:
         *,
         batch_size: int,
     ) -> list[GenerationOutput]:
+        import torch
+
         outputs: list[GenerationOutput] = []
         for start in range(0, len(requests), batch_size):
             batch = requests[start : start + batch_size]
@@ -548,11 +553,12 @@ class TransformerSession:
                         for index, request in enumerate(batch)
                     ]
                 generation_config = self._build_generation_config(batch)
-                generated = self.model.generate_batch(
-                    encoded,
-                    generation_config=generation_config,
-                    progress_bar=False,
-                )
+                with torch.inference_mode():
+                    generated = self.model.generate_batch(
+                        encoded,
+                        generation_config=generation_config,
+                        progress_bar=False,
+                    )
                 missing_keys = [
                     f"req_{index}"
                     for index in range(len(batch))
