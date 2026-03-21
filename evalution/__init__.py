@@ -5,6 +5,7 @@ from evalution.engines import Transformer
 from evalution.results import RunResult, SampleResult, TestResult
 from evalution.runtime import EngineBuilder, EvaluationRun, engine, run
 from evalution.suites import (
+    ARCEasy,
     ARCChallenge,
     BaseMultipleChoiceSuite,
     BaseTestSuite,
@@ -17,6 +18,7 @@ from evalution.suites import (
     PIQA,
     TestSuite,
     WinoGrande,
+    arc_easy,
     arc_challenge,
     boolq,
     choice_index_from_labels,
@@ -31,6 +33,7 @@ from evalution.suites import (
 from evalution.yaml import python_from_yaml, run_yaml
 
 __all__ = [
+    "ARCEasy",
     "ARCChallenge",
     "BaseMultipleChoiceSuite",
     "BaseTestSuite",
@@ -50,6 +53,7 @@ __all__ = [
     "TestResult",
     "Transformer",
     "Transformers",
+    "arc_easy",
     "arc_challenge",
     "boolq",
     "choice_index_from_labels",

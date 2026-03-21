@@ -83,6 +83,8 @@ tests:
     max_rows: 128
   - type: boolq
     max_rows: 48
+  - type: arc_easy
+    max_rows: 40
   - type: arc_challenge
     max_rows: 64
   - type: hellaswag
@@ -101,6 +103,7 @@ tests:
     assert ".model(eval.Model(" in script
     assert ".run(eval.gsm8k_platinum(" in script
     assert ".run(eval.boolq(" in script
+    assert ".run(eval.arc_easy(" in script
     assert ".run(eval.arc_challenge(" in script
     assert ".run(eval.hellaswag(" in script
     assert ".run(eval.openbookqa(" in script

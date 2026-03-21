@@ -11,6 +11,7 @@ from evalution.engines import Transformer
 from evalution.runtime import EvaluationRun, engine as build_engine
 from evalution.suites import (
     arc_challenge,
+    arc_easy,
     boolq,
     gsm8k,
     gsm8k_platinum,
@@ -26,6 +27,7 @@ _ENGINE_FACTORIES: dict[str, Any] = {
 }
 _TEST_FACTORIES: dict[str, Any] = {
     "arc_challenge": arc_challenge,
+    "arc_easy": arc_easy,
     "boolq": boolq,
     "gsm8k": gsm8k,
     "gsm8k_platinum": gsm8k_platinum,

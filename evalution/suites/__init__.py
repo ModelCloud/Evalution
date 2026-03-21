@@ -1,3 +1,4 @@
+from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .base import BaseTestSuite, TestSuite
 from .boolq import BoolQ, boolq
@@ -11,6 +12,7 @@ from .piqa import PIQA, piqa
 from .winogrande import WinoGrande, winogrande
 
 __all__ = [
+    "ARCEasy",
     "ARCChallenge",
     "BaseMultipleChoiceSuite",
     "BaseTestSuite",
@@ -23,6 +25,7 @@ __all__ = [
     "PIQA",
     "TestSuite",
     "WinoGrande",
+    "arc_easy",
     "arc_challenge",
     "boolq",
     "choice_index_from_labels",

@@ -23,6 +23,10 @@ ARC_CHALLENGE_BASELINE = {
     "exact_match,choice-label": 0.4609375,
     "exact_match,choice-text": 0.4609375,
 }
+ARC_EASY_BASELINE = {
+    "accuracy,loglikelihood": 0.6640625,
+    "accuracy,loglikelihood_norm": 0.6484375,
+}
 HELLASWAG_BASELINE = {
     "accuracy,loglikelihood": 0.4375,
     "accuracy,loglikelihood_norm": 0.5390625,
@@ -111,6 +115,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.arc_easy(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.arc_challenge(
                     apply_chat_template=True,
                     batch_size=24,
@@ -157,13 +168,14 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 8
+    assert len(result.tests) == 9
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
         "gsm8k_cot",
         "gsm8k_platinum_cot",
         "boolq",
+        "arc_easy",
         "arc_challenge",
         "hellaswag",
         "openbookqa",
@@ -251,6 +263,42 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert sample.prediction in {"yes", "no"}
         assert "\nQuestion: " in sample.prompt
         assert "\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
+    arc_easy_result = tests_by_name["arc_easy"]
+    assert arc_easy_result.metadata["streaming"] is True
+    assert arc_easy_result.metadata["dataset_path"] == "allenai/ai2_arc"
+    assert arc_easy_result.metadata["dataset_name"] == "ARC-Easy"
+    assert arc_easy_result.metadata["split"] == "validation"
+    assert arc_easy_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(arc_easy_result.samples) == 128
+    assert set(arc_easy_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    arc_easy_raw_score = arc_easy_result.metrics["accuracy,loglikelihood"]
+    arc_easy_norm_score = arc_easy_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(arc_easy_result.metrics, ARC_EASY_BASELINE)
+    assert isinstance(arc_easy_raw_score, float)
+    assert isinstance(arc_easy_norm_score, float)
+
+    for index, sample in enumerate(arc_easy_result.samples):
+        assert sample.index == index
+        assert sample.prompt.startswith("Question: ")
+        assert sample.prompt.endswith("\nAnswer:")
+        assert sample.target
+        assert sample.prediction
+        assert len(sample.metadata["choice_labels"]) >= 2
         assert set(sample.extracted) == {
             "gold_index",
             "predicted_index",
@@ -448,6 +496,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["gsm8k_platinum_cot"]["samples"][0]["prediction"]
     assert len(serialized_tests["arc_challenge"]["samples"]) == len(arc_result.samples)
     assert serialized_tests["arc_challenge"]["samples"][0]["prediction"]
+    assert len(serialized_tests["arc_easy"]["samples"]) == len(arc_easy_result.samples)
+    assert serialized_tests["arc_easy"]["samples"][0]["prediction"]
     assert len(serialized_tests["hellaswag"]["samples"]) == len(hellaswag_result.samples)
     assert serialized_tests["hellaswag"]["samples"][0]["prediction"]
     assert len(serialized_tests["openbookqa"]["samples"]) == len(openbookqa_result.samples)

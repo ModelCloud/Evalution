@@ -8,6 +8,8 @@ def test_package_import() -> None:
 def test_package_exports_arc_challenge_suite() -> None:
     assert evalution.ARCChallenge is not None
     assert callable(evalution.arc_challenge)
+    assert evalution.ARCEasy is not None
+    assert callable(evalution.arc_easy)
     assert evalution.BoolQ is not None
     assert callable(evalution.boolq)
     assert evalution.HellaSwag is not None
