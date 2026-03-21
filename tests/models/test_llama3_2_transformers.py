@@ -39,11 +39,15 @@ WINOGRANDE_BASELINE = {
     "accuracy,loglikelihood": 0.5625,
     "accuracy,loglikelihood_norm": 0.5703125,
 }
+OPENBOOKQA_BASELINE = {
+    "accuracy,loglikelihood": 0.25,
+    "accuracy,loglikelihood_norm": 0.328125,
+}
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
-# Compare score maps against the stored regression baseline while allowing one-sample drift.
+# Compare score maps against the stored regression baseline while allowing small continuous-batching drift.
 def assert_metrics_match_baseline(
     actual: dict[str, float],
     expected: dict[str, float],
@@ -123,6 +127,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.openbookqa(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.piqa(
                     batch_size=24,
                     streaming=True,
@@ -146,7 +157,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 7
+    assert len(result.tests) == 8
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -155,6 +166,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "boolq",
         "arc_challenge",
         "hellaswag",
+        "openbookqa",
         "piqa",
         "winogrande",
     }
@@ -322,6 +334,42 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert "choice_logprobs" in sample.metadata
         assert "choice_logprobs_norm" in sample.metadata
 
+    openbookqa_result = tests_by_name["openbookqa"]
+    assert openbookqa_result.metadata["streaming"] is True
+    assert openbookqa_result.metadata["dataset_path"] == "allenai/openbookqa"
+    assert openbookqa_result.metadata["dataset_name"] == "main"
+    assert openbookqa_result.metadata["split"] == "validation"
+    assert openbookqa_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(openbookqa_result.samples) == 128
+    assert set(openbookqa_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    openbookqa_raw_score = openbookqa_result.metrics["accuracy,loglikelihood"]
+    openbookqa_norm_score = openbookqa_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(openbookqa_result.metrics, OPENBOOKQA_BASELINE)
+    assert isinstance(openbookqa_raw_score, float)
+    assert isinstance(openbookqa_norm_score, float)
+
+    for index, sample in enumerate(openbookqa_result.samples):
+        assert sample.index == index
+        assert sample.prompt.startswith("Question: ")
+        assert sample.prompt.endswith("\nAnswer:")
+        assert sample.target
+        assert sample.prediction
+        assert len(sample.metadata["choice_labels"]) == 4
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
     piqa_result = tests_by_name["piqa"]
     assert piqa_result.metadata["streaming"] is True
     assert piqa_result.metadata["dataset_path"] == "baber/piqa"
@@ -402,3 +450,5 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["arc_challenge"]["samples"][0]["prediction"]
     assert len(serialized_tests["hellaswag"]["samples"]) == len(hellaswag_result.samples)
     assert serialized_tests["hellaswag"]["samples"][0]["prediction"]
+    assert len(serialized_tests["openbookqa"]["samples"]) == len(openbookqa_result.samples)
+    assert serialized_tests["openbookqa"]["samples"][0]["prediction"]

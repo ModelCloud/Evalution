@@ -5,6 +5,8 @@ from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hellaswag import HellaSwag, hellaswag
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
+from .openbookqa import OpenBookQA, openbookqa
 from .piqa import PIQA, piqa
 from .winogrande import WinoGrande, winogrande
 
@@ -17,14 +19,18 @@ __all__ = [
     "GSM8KPlatinum",
     "HellaSwag",
     "MultipleChoiceSample",
+    "OpenBookQA",
     "PIQA",
     "TestSuite",
     "WinoGrande",
     "arc_challenge",
     "boolq",
+    "choice_index_from_labels",
     "gsm8k",
     "gsm8k_platinum",
     "hellaswag",
+    "openbookqa",
     "piqa",
+    "question_answer_prompt",
     "winogrande",
 ]

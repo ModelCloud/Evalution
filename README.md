@@ -30,6 +30,7 @@ result = (
     .run(eval.boolq())
     .run(eval.arc_challenge())
     .run(eval.hellaswag())
+    .run(eval.openbookqa())
     .run(eval.piqa())
     .run(eval.winogrande())
 )
@@ -160,6 +161,7 @@ Current built-in coverage:
 - `gsm8k` suite for `openai/gsm8k`
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `hellaswag` suite for `Rowan/hellaswag`
+- `openbookqa` suite for `allenai/openbookqa` `main`
 - `piqa` suite for `baber/piqa`
 - `winogrande` suite for `winogrande` `winogrande_xl`
 - `logbar`-powered runtime logging and evaluation progress bars
