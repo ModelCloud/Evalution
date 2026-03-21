@@ -21,6 +21,7 @@ from evalution.suites import (
     openbookqa,
     piqa,
     rte,
+    wic,
     winogrande,
 )
 
@@ -40,6 +41,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "openbookqa": openbookqa,
     "piqa": piqa,
     "rte": rte,
+    "wic": wic,
     "winogrande": winogrande,
 }
 

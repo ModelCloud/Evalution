@@ -59,6 +59,10 @@ RTE_BASELINE = {
     "accuracy,loglikelihood": 0.625,
     "accuracy,loglikelihood_norm": 0.625,
 }
+WIC_BASELINE = {
+    "accuracy,loglikelihood": 0.5,
+    "accuracy,loglikelihood_norm": 0.5,
+}
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
@@ -187,6 +191,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.wic(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.winogrande(
                     batch_size=24,
                     streaming=True,
@@ -203,7 +214,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 12
+    assert len(result.tests) == 13
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -218,6 +229,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "openbookqa",
         "piqa",
         "rte",
+        "wic",
         "winogrande",
     }
 
@@ -601,6 +613,43 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert "choice_logprobs" in sample.metadata
         assert "choice_logprobs_norm" in sample.metadata
 
+    wic_result = tests_by_name["wic"]
+    assert wic_result.metadata["streaming"] is True
+    assert wic_result.metadata["dataset_path"] == "super_glue"
+    assert wic_result.metadata["dataset_name"] == "wic"
+    assert wic_result.metadata["split"] == "validation"
+    assert wic_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(wic_result.samples) == 128
+    assert set(wic_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    wic_raw_score = wic_result.metrics["accuracy,loglikelihood"]
+    wic_norm_score = wic_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(wic_result.metrics, WIC_BASELINE)
+    assert isinstance(wic_raw_score, float)
+    assert isinstance(wic_norm_score, float)
+
+    for index, sample in enumerate(wic_result.samples):
+        assert sample.index == index
+        assert sample.prompt.startswith("Sentence 1: ")
+        assert "\nSentence 2: " in sample.prompt
+        assert "used in the same way" in sample.prompt
+        assert sample.target in {"yes", "no"}
+        assert sample.prediction in {"yes", "no"}
+        assert sample.metadata["word"]
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
     winogrande_result = tests_by_name["winogrande"]
     assert winogrande_result.metadata["streaming"] is True
     assert winogrande_result.metadata["dataset_path"] == "winogrande"
@@ -655,3 +704,5 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["openbookqa"]["samples"][0]["prediction"]
     assert len(serialized_tests["rte"]["samples"]) == len(rte_result.samples)
     assert serialized_tests["rte"]["samples"][0]["prediction"]
+    assert len(serialized_tests["wic"]["samples"]) == len(wic_result.samples)
+    assert serialized_tests["wic"]["samples"][0]["prediction"]

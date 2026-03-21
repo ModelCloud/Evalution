@@ -36,6 +36,7 @@ result = (
     .run(eval.openbookqa())
     .run(eval.piqa())
     .run(eval.rte())
+    .run(eval.wic())
     .run(eval.winogrande())
 )
 ```
@@ -171,6 +172,7 @@ Current built-in coverage:
 - `openbookqa` suite for `allenai/openbookqa` `main`
 - `piqa` suite for `baber/piqa`
 - `rte` suite for `super_glue` `rte`
+- `wic` suite for `super_glue` `wic`
 - `winogrande` suite for `winogrande` `winogrande_xl`
 - `logbar`-powered runtime logging and evaluation progress bars
 

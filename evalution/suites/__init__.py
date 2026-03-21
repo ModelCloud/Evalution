@@ -12,6 +12,7 @@ from .multiple_choice_utils import choice_index_from_labels, question_answer_pro
 from .openbookqa import OpenBookQA, openbookqa
 from .piqa import PIQA, piqa
 from .rte import RTE, rte
+from .wic import WiC, wic
 from .winogrande import WinoGrande, winogrande
 
 __all__ = [
@@ -30,6 +31,7 @@ __all__ = [
     "PIQA",
     "RTE",
     "TestSuite",
+    "WiC",
     "WinoGrande",
     "arc_easy",
     "arc_challenge",
@@ -44,5 +46,6 @@ __all__ = [
     "piqa",
     "rte",
     "question_answer_prompt",
+    "wic",
     "winogrande",
 ]

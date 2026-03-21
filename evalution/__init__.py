@@ -20,6 +20,7 @@ from evalution.suites import (
     PIQA,
     RTE,
     TestSuite,
+    WiC,
     WinoGrande,
     arc_easy,
     arc_challenge,
@@ -34,6 +35,7 @@ from evalution.suites import (
     piqa,
     rte,
     question_answer_prompt,
+    wic,
     winogrande,
 )
 from evalution.yaml import python_from_yaml, run_yaml
@@ -79,6 +81,7 @@ __all__ = [
     "question_answer_prompt",
     "run",
     "run_yaml",
+    "wic",
     "winogrande",
 ]
 
