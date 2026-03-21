@@ -2,6 +2,14 @@
 
 Modern LLM evaluation with a small, explicit runtime API.
 
+Install:
+
+```bash
+pip install Evalution
+```
+
+Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
+
 Simple usage:
 
 ```python
@@ -55,6 +63,9 @@ supported backends with `paged_attention=True`, force plain static generation wi
 `paged_attention=False`, or pin an explicit attention implementation with
 `attn_implementation=...`. A suite can override engine batch sizing with
 `gsm8k_platinum(batch_size=...)`.
+
+For `gsm8k_platinum`, answer extraction and normalization use precompiled `pcre.compile(...)`
+patterns so regex work stays on the `PyPcre` path and avoids stdlib `re`.
 
 Current built-in coverage:
 
