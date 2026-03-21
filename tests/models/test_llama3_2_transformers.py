@@ -9,6 +9,22 @@ import torch
 import evalution
 
 LLAMA3_2_1B_INSTRUCT = Path("/monster/data/model/Llama-3.2-1B-Instruct")
+GSM8K_BASELINE = {
+    "exact_match,strict-match": 0.3828125,
+    "exact_match,flexible-extract": 0.4296875,
+}
+GSM8K_PLATINUM_BASELINE = {
+    "exact_match,strict-match": 0.3828125,
+    "exact_match,flexible-extract": 0.4375,
+}
+ARC_CHALLENGE_BASELINE = {
+    "exact_match,choice-label": 0.46875,
+    "exact_match,choice-text": 0.46875,
+}
+HELLASWAG_BASELINE = {
+    "accuracy,loglikelihood": 0.4375,
+    "accuracy,loglikelihood_norm": 0.5390625,
+}
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
@@ -68,6 +84,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                     max_rows=128,
                 )
             )
+            .run(
+                evalution.hellaswag(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
         )
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
@@ -78,13 +101,14 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 3
+    assert len(result.tests) == 4
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
         "gsm8k_cot",
         "gsm8k_platinum_cot",
         "arc_challenge",
+        "hellaswag",
     }
 
     gsm8k_result = tests_by_name["gsm8k_cot"]
@@ -100,6 +124,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "exact_match,strict-match",
         "exact_match,flexible-extract",
     }
+    assert gsm8k_result.metrics == GSM8K_BASELINE
 
     test_result = tests_by_name["gsm8k_platinum_cot"]
     assert test_result.metadata["variant"] == "cot"
@@ -115,12 +140,9 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     }
     flexible_score = test_result.metrics["exact_match,flexible-extract"]
     strict_score = test_result.metrics["exact_match,strict-match"]
+    assert test_result.metrics == GSM8K_PLATINUM_BASELINE
     assert isinstance(flexible_score, float)
     assert isinstance(strict_score, float)
-    assert 0.0 <= flexible_score <= 1.0
-    assert 0.0 <= strict_score <= 1.0
-    assert flexible_score >= 0.10
-    assert strict_score >= 0.05
 
     invalid_predictions = 0
     exact_matches = 0
@@ -158,11 +180,9 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     }
     choice_label_score = arc_result.metrics["exact_match,choice-label"]
     choice_text_score = arc_result.metrics["exact_match,choice-text"]
+    assert arc_result.metrics == ARC_CHALLENGE_BASELINE
     assert isinstance(choice_label_score, float)
     assert isinstance(choice_text_score, float)
-    assert 0.0 <= choice_label_score <= 1.0
-    assert 0.0 <= choice_text_score <= 1.0
-    assert choice_text_score >= choice_label_score
 
     arc_invalid_predictions = 0
     for index, sample in enumerate(arc_result.samples):
@@ -183,6 +203,41 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
 
     assert arc_invalid_predictions / len(arc_result.samples) < 0.75
 
+    hellaswag_result = tests_by_name["hellaswag"]
+    assert hellaswag_result.metadata["streaming"] is True
+    assert hellaswag_result.metadata["dataset_path"] == "Rowan/hellaswag"
+    assert hellaswag_result.metadata["dataset_name"] is None
+    assert hellaswag_result.metadata["split"] == "validation"
+    assert hellaswag_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(hellaswag_result.samples) == 128
+    assert set(hellaswag_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    hellaswag_raw_score = hellaswag_result.metrics["accuracy,loglikelihood"]
+    hellaswag_norm_score = hellaswag_result.metrics["accuracy,loglikelihood_norm"]
+    assert hellaswag_result.metrics == HELLASWAG_BASELINE
+    assert isinstance(hellaswag_raw_score, float)
+    assert isinstance(hellaswag_norm_score, float)
+
+    for index, sample in enumerate(hellaswag_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target
+        assert sample.prediction
+        assert ":" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
     serialized = result.to_dict()
     serialized_tests = {test["name"]: test for test in serialized["tests"]}
     assert set(serialized_tests) == set(tests_by_name)
@@ -190,3 +245,5 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["gsm8k_platinum_cot"]["samples"][0]["prediction"]
     assert len(serialized_tests["arc_challenge"]["samples"]) == len(arc_result.samples)
     assert serialized_tests["arc_challenge"]["samples"][0]["prediction"]
+    assert len(serialized_tests["hellaswag"]["samples"]) == len(hellaswag_result.samples)
+    assert serialized_tests["hellaswag"]["samples"][0]["prediction"]

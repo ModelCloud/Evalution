@@ -83,6 +83,8 @@ tests:
     max_rows: 128
   - type: arc_challenge
     max_rows: 64
+  - type: hellaswag
+    max_rows: 32
 """
     )
 
@@ -91,6 +93,7 @@ tests:
     assert ".model(eval.Model(" in script
     assert ".run(eval.gsm8k_platinum(" in script
     assert ".run(eval.arc_challenge(" in script
+    assert ".run(eval.hellaswag(" in script
 
 
 def test_run_yaml_requires_tests_section() -> None:

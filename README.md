@@ -28,6 +28,7 @@ result = (
     .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
     .run(eval.gsm8k_platinum())
     .run(eval.arc_challenge())
+    .run(eval.hellaswag())
 )
 ```
 
@@ -132,6 +133,9 @@ supported backends with `paged_attention=True`, force plain static generation wi
 `attn_implementation=...`. A suite can override engine batch sizing with
 `gsm8k_platinum(batch_size=...)`.
 
+For multiple-choice suites such as `hellaswag`, Evalution scores every option with token-level
+log-likelihood and reports both raw-choice accuracy and length-normalized accuracy.
+
 For `transformers` continuous batching, `Transformer(...)` also exposes the upstream manager knobs
 `manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
 `kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned continuous
@@ -151,6 +155,7 @@ Current built-in coverage:
 - `arc_challenge` suite for `allenai/ai2_arc` `ARC-Challenge`
 - `gsm8k` suite for `openai/gsm8k`
 - `gsm8k_platinum` suite ported from `lm-eval`
+- `hellaswag` suite for `Rowan/hellaswag`
 - `logbar`-powered runtime logging and evaluation progress bars
 
 ## Citation
