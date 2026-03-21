@@ -13,6 +13,7 @@ from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
 from .piqa import PIQA, piqa
+from .qnli import QNLI, qnli
 from .rte import RTE, rte
 from .sst2 import SST2, sst2
 from .wic import WiC, wic
@@ -33,6 +34,7 @@ __all__ = [
     "MultipleChoiceSample",
     "OpenBookQA",
     "PIQA",
+    "QNLI",
     "RTE",
     "SST2",
     "TestSuite",
@@ -52,6 +54,7 @@ __all__ = [
     "mmlu",
     "openbookqa",
     "piqa",
+    "qnli",
     "rte",
     "question_answer_prompt",
     "sst2",

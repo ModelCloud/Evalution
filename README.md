@@ -36,6 +36,7 @@ result = (
     .run(eval.mmlu(subject="abstract_algebra", num_fewshot=5))
     .run(eval.openbookqa())
     .run(eval.piqa())
+    .run(eval.qnli())
     .run(eval.rte())
     .run(eval.sst2())
     .run(eval.wic())
@@ -174,6 +175,7 @@ Current built-in coverage:
 - `mmlu` suite for `cais/mmlu`
 - `openbookqa` suite for `allenai/openbookqa` `main`
 - `piqa` suite for `baber/piqa`
+- `qnli` suite for `nyu-mll/glue` `qnli`
 - `rte` suite for `super_glue` `rte`
 - `sst2` suite for `nyu-mll/glue` `sst2`
 - `wic` suite for `super_glue` `wic`

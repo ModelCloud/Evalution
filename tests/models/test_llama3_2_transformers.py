@@ -35,6 +35,10 @@ PIQA_BASELINE = {
     "accuracy,loglikelihood": 0.71875,
     "accuracy,loglikelihood_norm": 0.7890625,
 }
+QNLI_BASELINE = {
+    "accuracy,loglikelihood": 0.4609375,
+    "accuracy,loglikelihood_norm": 0.4609375,
+}
 BOOLQ_BASELINE = {
     "accuracy,loglikelihood": 0.6796875,
     "accuracy,loglikelihood_norm": 0.6796875,
@@ -201,6 +205,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.qnli(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.rte(
                     batch_size=24,
                     streaming=True,
@@ -238,7 +249,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 15
+    assert len(result.tests) == 16
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -253,6 +264,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "mmlu",
         "openbookqa",
         "piqa",
+        "qnli",
         "rte",
         "sst2",
         "wic",
@@ -645,6 +657,41 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert "choice_logprobs" in sample.metadata
         assert "choice_logprobs_norm" in sample.metadata
 
+    qnli_result = tests_by_name["qnli"]
+    assert qnli_result.metadata["streaming"] is True
+    assert qnli_result.metadata["dataset_path"] == "nyu-mll/glue"
+    assert qnli_result.metadata["dataset_name"] == "qnli"
+    assert qnli_result.metadata["split"] == "validation"
+    assert qnli_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(qnli_result.samples) == 128
+    assert set(qnli_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    qnli_raw_score = qnli_result.metrics["accuracy,loglikelihood"]
+    qnli_norm_score = qnli_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(qnli_result.metrics, QNLI_BASELINE)
+    assert isinstance(qnli_raw_score, float)
+    assert isinstance(qnli_norm_score, float)
+
+    for index, sample in enumerate(qnli_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target in {"yes", "no"}
+        assert sample.prediction in {"yes", "no"}
+        assert "Question: Does this response answer the question?\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
     rte_result = tests_by_name["rte"]
     assert rte_result.metadata["streaming"] is True
     assert rte_result.metadata["dataset_path"] == "super_glue"
@@ -807,6 +854,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["mmlu"]["samples"][0]["prediction"]
     assert len(serialized_tests["openbookqa"]["samples"]) == len(openbookqa_result.samples)
     assert serialized_tests["openbookqa"]["samples"][0]["prediction"]
+    assert len(serialized_tests["qnli"]["samples"]) == len(qnli_result.samples)
+    assert serialized_tests["qnli"]["samples"][0]["prediction"]
     assert len(serialized_tests["rte"]["samples"]) == len(rte_result.samples)
     assert serialized_tests["rte"]["samples"][0]["prediction"]
     assert len(serialized_tests["sst2"]["samples"]) == len(sst2_result.samples)

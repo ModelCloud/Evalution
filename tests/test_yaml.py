@@ -100,6 +100,8 @@ tests:
     max_rows: 20
   - type: piqa
     max_rows: 16
+  - type: qnli
+    max_rows: 26
   - type: rte
     max_rows: 18
   - type: sst2
@@ -124,6 +126,7 @@ tests:
     assert ".run(eval.mmlu(" in script
     assert ".run(eval.openbookqa(" in script
     assert ".run(eval.piqa(" in script
+    assert ".run(eval.qnli(" in script
     assert ".run(eval.rte(" in script
     assert ".run(eval.sst2(" in script
     assert ".run(eval.wic(" in script
