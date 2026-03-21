@@ -23,8 +23,10 @@ def run(
     with spinner(f"Loading {type(engine).__name__} engine"):
         session = engine.build(model_config)
     describe_execution = getattr(session, "describe_execution", None)
+    execution = None
     if callable(describe_execution):
-        logger.info("engine execution=%s", describe_execution())
+        execution = describe_execution()
+        logger.info("engine execution=%s", execution)
     try:
         results = []
         for test in tests:
@@ -37,6 +39,8 @@ def run(
         session.close()
 
     engine_config = engine.to_dict() if hasattr(engine, "to_dict") else {}
+    if execution is not None:
+        engine_config = {**engine_config, "execution": execution}
     logger.info("finished evaluation run with %d test suite(s)", len(results))
     return RunResult(
         model=model_config.to_dict(),

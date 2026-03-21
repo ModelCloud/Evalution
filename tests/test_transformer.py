@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import sys
 import threading
 from types import SimpleNamespace
 
+import pytest
 import torch
 from transformers import PretrainedConfig
 
@@ -257,7 +259,11 @@ def test_transformer_session_generate_reuses_pretokenized_requests() -> None:
     assert tokenizer.encode_calls == 0
 
 
-def test_transformer_session_generate_uses_generate_batch_when_paged_attention_is_enabled() -> None:
+def test_transformer_session_generate_uses_continuous_batching_manager_when_paged_attention_is_enabled(
+    monkeypatch,
+) -> None:
+    import transformers
+
     class FakeTokenizer:
         pad_token_id = 0
         eos_token_id = 1
@@ -273,30 +279,80 @@ def test_transformer_session_generate_uses_generate_batch_when_paged_attention_i
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
-    class FakeGenerateBatchOutput:
-        def __init__(self, tokens):
+    class FakeContinuousOutput:
+        def __init__(self, request_id, tokens):
+            self.request_id = request_id
             self.generated_tokens = tokens
+            self.error = None
+
+        def is_finished(self) -> bool:
+            return True
 
     class FakeModel:
         def __init__(self) -> None:
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
-            self.calls: list[dict[str, object]] = []
-
-        def generate_batch(self, inputs, *, generation_config=None, progress_bar=False):
-            self.calls.append(
-                {
-                    "inputs": inputs,
-                    "generation_config": generation_config,
-                    "progress_bar": progress_bar,
-                    "grad_enabled": torch.is_grad_enabled(),
-                    "inference_mode_enabled": torch.is_inference_mode_enabled(),
-                }
-            )
-            return {"req_0": FakeGenerateBatchOutput([101, 102, 103])}
 
         def set_attn_implementation(self, value: str) -> None:
             self.config._attn_implementation = value
+
+    class FakeContinuousBatchingManager:
+        last_instance: FakeContinuousBatchingManager | None = None
+
+        def __init__(self, model, generation_config):
+            self.model = model
+            self.generation_config = generation_config
+            self.event_log: list[str] = []
+            self.result_queue: list[FakeContinuousOutput] = []
+            self.active_requests = 0
+            self.max_active_requests = 0
+            self.started = False
+            self.stopped = False
+            self.added_request_ids: list[str] = []
+            FakeContinuousBatchingManager.last_instance = self
+
+        def start(self) -> None:
+            self.started = True
+
+        def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            del max_new_tokens, streaming
+            assert input_ids == [11, 12, 13]
+            assert request_id is not None
+            self.added_request_ids.append(request_id)
+            self.event_log.append(f"add:{request_id}")
+            self.active_requests += 1
+            self.max_active_requests = max(self.max_active_requests, self.active_requests)
+            if len(self.added_request_ids) == 2:
+                self.result_queue.extend(
+                    [
+                        FakeContinuousOutput(self.added_request_ids[1], [201, 202]),
+                        FakeContinuousOutput(self.added_request_ids[0], [101, 102, 103]),
+                    ]
+                )
+            elif len(self.added_request_ids) == 3:
+                self.result_queue.append(FakeContinuousOutput(request_id, [301, 302, 303]))
+
+        def get_result(self, timeout=None):
+            del timeout
+            if not self.result_queue:
+                return None
+            result = self.result_queue.pop(0)
+            self.event_log.append(f"result:{result.request_id}")
+            self.active_requests -= 1
+            return result
+
+        def is_running(self) -> bool:
+            return self.started and not self.stopped
+
+        def stop(self, block=True):
+            del block
+            self.stopped = True
+
+    monkeypatch.setattr(
+        transformers,
+        "ContinuousBatchingManager",
+        FakeContinuousBatchingManager,
+    )
 
     model = FakeModel()
     session = TransformerSession(
@@ -312,19 +368,30 @@ def test_transformer_session_generate_uses_generate_batch_when_paged_attention_i
     )
 
     outputs = session.generate(
-        [GenerationRequest(prompt="Q: 40 + 2\nA:", stop=["Q:"])],
-        batch_size=1,
+        [
+            GenerationRequest(prompt="Q: 40 + 2\nA:", stop=["Q:"]),
+            GenerationRequest(prompt="Q: 41 + 2\nA:", stop=["Q:"]),
+            GenerationRequest(prompt="Q: 42 + 2\nA:", stop=["Q:"]),
+        ],
+        batch_size=2,
     )
 
-    assert len(outputs) == 1
-    assert outputs[0].text == "The answer is 42."
-    assert model.calls
-    call = model.calls[0]
-    assert call["inputs"] == [[11, 12, 13]]
-    assert call["progress_bar"] is False
-    assert call["grad_enabled"] is False
-    assert call["inference_mode_enabled"] is True
-    assert call["generation_config"].stop_strings == ["Q:"]
+    assert len(outputs) == 3
+    assert [output.text for output in outputs] == ["The answer is 42."] * 3
+    manager = FakeContinuousBatchingManager.last_instance
+    assert manager is not None
+    assert manager.started is True
+    assert manager.stopped is True
+    assert manager.generation_config.stop_strings == ["Q:"]
+    assert manager.max_active_requests == 2
+    assert manager.event_log == [
+        "add:req_0",
+        "add:req_1",
+        "result:req_1",
+        "add:req_2",
+        "result:req_0",
+        "result:req_2",
+    ]
 
 
 def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_and_generate() -> None:
@@ -523,6 +590,159 @@ def test_transformer_session_serializes_generate_calls() -> None:
 
     assert not errors
     assert model.overlap_detected is False
+
+
+@pytest.mark.skipif(
+    not hasattr(sys, "_is_gil_enabled") or sys._is_gil_enabled(),
+    reason="requires Python free-threading with GIL disabled",
+)
+def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batching(
+    monkeypatch,
+) -> None:
+    import transformers
+
+    class PrepareTokenizer:
+        def __init__(self) -> None:
+            self.prepare_started = threading.Event()
+            self.allow_prepare_finish = threading.Event()
+
+        def __call__(self, prompts, *, add_special_tokens=False, padding=False, **kwargs):
+            del kwargs
+            assert add_special_tokens is False
+            assert padding is False
+            assert isinstance(prompts, list)
+            self.prepare_started.set()
+            assert self.allow_prepare_finish.wait(timeout=1.0)
+            return {"input_ids": [[1, 2, 3] for _ in prompts]}
+
+        def apply_chat_template(self, messages, *, tokenize=False, add_generation_prompt=True):
+            assert tokenize is False
+            assert add_generation_prompt is True
+            return f"chat::{messages[0]['content']}"
+
+    class GenerateTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class FakeContinuousOutput:
+        def __init__(self, request_id, tokens):
+            self.request_id = request_id
+            self.generated_tokens = tokens
+            self.error = None
+
+        def is_finished(self) -> bool:
+            return True
+
+    class BlockingContinuousBatchingManager:
+        def __init__(self, model, generation_config):
+            del model, generation_config
+            self.generate_started = threading.Event()
+            self.allow_generate_finish = threading.Event()
+            self.request_id: str | None = None
+            self.result_returned = False
+
+        def start(self) -> None:
+            return None
+
+        def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            del max_new_tokens, streaming
+            assert input_ids == [1, 2, 3]
+            assert request_id is not None
+            self.request_id = request_id
+            self.generate_started.set()
+
+        def get_result(self, timeout=None):
+            del timeout
+            assert self.allow_generate_finish.wait(timeout=1.0)
+            if self.result_returned:
+                return None
+            self.result_returned = True
+            assert self.request_id is not None
+            return FakeContinuousOutput(self.request_id, [101, 102, 103])
+
+        def is_running(self) -> bool:
+            return True
+
+        def stop(self, block=True):
+            del block
+            return None
+
+    class BlockingPagedModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+            self.config._attn_implementation = "flash_attention_2"
+
+        def set_attn_implementation(self, value: str) -> None:
+            self.config._attn_implementation = value
+
+    manager = BlockingContinuousBatchingManager(None, None)
+    monkeypatch.setattr(
+        transformers,
+        "ContinuousBatchingManager",
+        lambda model, generation_config: manager,
+    )
+
+    prepare_tokenizer = PrepareTokenizer()
+    model = BlockingPagedModel()
+    session = TransformerSession(
+        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=GenerateTokenizer(),
+        prepare_tokenizer=prepare_tokenizer,
+        input_device=SimpleNamespace(type="cuda"),
+        requested_attn_implementation="flash_attention_2",
+        effective_attn_implementation="paged|flash_attention_2",
+        paged_attention_enabled=True,
+        generation_backend="continuous_batching",
+    )
+
+    prepare_errors: list[BaseException] = []
+    generate_errors: list[BaseException] = []
+
+    def run_prepare() -> None:
+        try:
+            session.prepare_requests([GenerationRequest(prompt="Q: 1 + 1\nA:")])
+        except BaseException as exc:  # pragma: no cover - asserted below
+            prepare_errors.append(exc)
+
+    def run_generate() -> None:
+        try:
+            session.generate(
+                [
+                    GenerationRequest(
+                        prompt="Q: 40 + 2\nA:",
+                        rendered_prompt="Q: 40 + 2\nA:",
+                        input_ids=[1, 2, 3],
+                    )
+                ],
+                batch_size=1,
+            )
+        except BaseException as exc:  # pragma: no cover - asserted below
+            generate_errors.append(exc)
+
+    prepare_thread = threading.Thread(target=run_prepare)
+    generate_thread = threading.Thread(target=run_generate)
+
+    prepare_thread.start()
+    assert prepare_tokenizer.prepare_started.wait(timeout=1.0)
+
+    generate_thread.start()
+    assert manager.generate_started.wait(timeout=1.0)
+
+    manager.allow_generate_finish.set()
+    prepare_tokenizer.allow_prepare_finish.set()
+    prepare_thread.join(timeout=1.0)
+    generate_thread.join(timeout=1.0)
+
+    assert not prepare_errors
+    assert not generate_errors
+    assert not prepare_thread.is_alive()
+    assert not generate_thread.is_alive()
 
 
 def test_transformer_session_falls_back_to_standard_generate_when_paged_generation_fails(monkeypatch) -> None:

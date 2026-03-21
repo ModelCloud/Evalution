@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import gc
 import threading
+from collections.abc import Iterable, Iterator
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field, replace
+from itertools import chain, islice
 from statistics import mean
 from typing import Any
 
@@ -225,6 +227,42 @@ class TransformerSession:
                     self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
                     return self._generate_standard(requests, batch_size=fallback_batch_size)
             return self._generate_standard(requests, batch_size=effective_batch_size)
+
+    def generate_continuous(
+        self,
+        requests: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        batch_size: int | None = None,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
+            request_iter = iter(requests)
+            preview_items = list(islice(request_iter, 64))
+            if not preview_items:
+                return
+
+            effective_batch_size = batch_size or self.resolve_batch_size(
+                [request for _, request in preview_items]
+            )
+            items = chain(preview_items, request_iter)
+
+            with self._generation_lock:
+                with self._state_lock:
+                    paged_attention_enabled = self.paged_attention_enabled
+                    standard_batch_size_cap = self.standard_batch_size_cap
+                if not paged_attention_enabled and standard_batch_size_cap is not None:
+                    effective_batch_size = min(effective_batch_size, standard_batch_size_cap)
+                self._log_generation_execution()
+                if paged_attention_enabled:
+                    try:
+                        yield from self._generate_paged_continuous(items, batch_size=effective_batch_size)
+                        return
+                    except Exception as exc:
+                        fallback_batch_size = _fallback_batch_size(effective_batch_size)
+                        self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
+                        effective_batch_size = fallback_batch_size
+                yield from self._generate_standard_continuous(items, batch_size=effective_batch_size)
+
+        return iterator()
 
     def close(self) -> None:
         with self._generation_lock:
@@ -531,72 +569,159 @@ class TransformerSession:
         *,
         batch_size: int,
     ) -> list[GenerationOutput]:
-        import torch
-
-        outputs: list[GenerationOutput] = []
-        for start in range(0, len(requests), batch_size):
-            batch = requests[start : start + batch_size]
-            rendered_prompts = None
-            encoded = None
-            generated = None
-            generation_config = None
-            try:
-                with self._tokenizer_lock:
-                    rendered_prompts = [self._render_request(request) for request in batch]
-                    encoded = [
-                        list(request.input_ids)
-                        if request.input_ids is not None
-                        else self.tokenizer(
-                            rendered_prompts[index],
-                            add_special_tokens=False,
-                        )["input_ids"]
-                        for index, request in enumerate(batch)
-                    ]
-                generation_config = self._build_generation_config(batch)
-                with torch.inference_mode():
-                    generated = self.model.generate_batch(
-                        encoded,
-                        generation_config=generation_config,
-                        progress_bar=False,
-                    )
-                missing_keys = [
-                    f"req_{index}"
-                    for index in range(len(batch))
-                    if f"req_{index}" not in generated
-                ]
-                if missing_keys:
-                    raise RuntimeError(
-                        "continuous batching returned incomplete results: "
-                        f"missing {len(missing_keys)}/{len(batch)} request(s); "
-                        f"first_missing={missing_keys[0]}"
-                    )
-
-                with self._tokenizer_lock:
-                    for index in range(len(batch)):
-                        request_output = generated[f"req_{index}"]
-                        generated_tokens = request_output.generated_tokens
-                        text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
-                        text = _truncate_at_stop(text, batch[index].stop).strip()
-                        outputs.append(
-                            GenerationOutput(
-                                prompt=rendered_prompts[index],
-                                text=text,
-                                metadata=batch[index].metadata,
-                            )
-                        )
-                        del generated_tokens
-                        del request_output
-            finally:
-                if generated is not None:
-                    del generated
-                if generation_config is not None:
-                    del generation_config
-                if encoded is not None:
-                    del encoded
-                del batch
-                if rendered_prompts is not None:
-                    del rendered_prompts
+        outputs_by_position: list[GenerationOutput | None] = [None] * len(requests)
+        for position, output in self._generate_paged_continuous(
+            enumerate(requests),
+            batch_size=batch_size,
+        ):
+            outputs_by_position[int(position)] = output
+        if any(output is None for output in outputs_by_position):
+            raise RuntimeError("continuous batching returned incomplete results")
+        outputs = [output for output in outputs_by_position if output is not None]
         return outputs
+
+    def _generate_standard_continuous(
+        self,
+        requests: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        batch_size: int,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        batch: list[tuple[Any, GenerationRequest]] = []
+        for item in requests:
+            batch.append(item)
+            if len(batch) == batch_size:
+                outputs = self._generate_standard(
+                    [request for _, request in batch],
+                    batch_size=len(batch),
+                )
+                for (request_key, _request), output in zip(batch, outputs, strict=True):
+                    yield request_key, output
+                batch = []
+        if batch:
+            outputs = self._generate_standard(
+                [request for _, request in batch],
+                batch_size=len(batch),
+            )
+            for (request_key, _request), output in zip(batch, outputs, strict=True):
+                yield request_key, output
+
+    def _generate_paged_continuous(
+        self,
+        requests: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        batch_size: int,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        from transformers import ContinuousBatchingManager
+
+        request_iter = iter(requests)
+        manager: Any | None = None
+        inflight_requests: dict[str, tuple[Any, str, list[str], dict[str, Any]]] = {}
+        request_counter = 0
+        source_exhausted = False
+        generation_config: Any | None = None
+        expected_signature: tuple[Any, ...] | None = None
+
+        def submit_one() -> bool:
+            nonlocal request_counter
+            nonlocal source_exhausted
+            nonlocal generation_config
+            nonlocal expected_signature
+            if source_exhausted:
+                return False
+            try:
+                request_key, request = next(request_iter)
+            except StopIteration:
+                source_exhausted = True
+                return False
+
+            request_signature = _continuous_request_signature(request)
+            if expected_signature is None:
+                expected_signature = request_signature
+                generation_config = self._build_generation_config([request])
+            elif request_signature != expected_signature:
+                raise ValueError(
+                    "continuous batching requires shared stop strings and sampling settings "
+                    "within a generation stream"
+                )
+
+            if manager is None:
+                raise RuntimeError("continuous batching manager was not initialized")
+
+            rendered_prompt, input_ids = self._prepare_request_for_generation(request)
+            request_id = f"req_{request_counter}"
+            request_counter += 1
+            manager.add_request(
+                input_ids,
+                request_id=request_id,
+                max_new_tokens=request.max_new_tokens,
+                streaming=False,
+            )
+            inflight_requests[request_id] = (
+                request_key,
+                rendered_prompt,
+                list(request.stop),
+                dict(request.metadata),
+            )
+            return True
+
+        preview_items = list(islice(request_iter, max(1, batch_size)))
+        if not preview_items:
+            return
+        request_iter = iter(chain(preview_items, request_iter))
+
+        first_request = preview_items[0][1]
+        generation_config = self._build_generation_config([first_request])
+        expected_signature = _continuous_request_signature(first_request)
+        manager = ContinuousBatchingManager(
+            self.model,
+            generation_config=generation_config,
+        )
+
+        try:
+            manager.start()
+            while len(inflight_requests) < batch_size and submit_one():
+                continue
+
+            while inflight_requests:
+                request_output = manager.get_result(timeout=0.1)
+                if request_output is None:
+                    if not manager.is_running():
+                        raise RuntimeError(
+                            "continuous batching manager stopped before all requests completed"
+                        )
+                    continue
+
+                request_id = request_output.request_id
+                request_state = inflight_requests.get(request_id)
+                if request_state is None:
+                    raise RuntimeError(
+                        f"continuous batching returned unknown request_id={request_id!r}"
+                    )
+                if request_output.error is not None:
+                    raise RuntimeError(
+                        f"continuous batching request {request_id!r} failed: {request_output.error}"
+                    )
+                if not request_output.is_finished():
+                    continue
+
+                request_key, rendered_prompt, stop_strings, metadata = inflight_requests.pop(request_id)
+                with self._tokenizer_lock:
+                    text = self.tokenizer.decode(
+                        request_output.generated_tokens,
+                        skip_special_tokens=False,
+                    )
+                text = _truncate_at_stop(text, stop_strings).strip()
+                yield request_key, GenerationOutput(
+                    prompt=rendered_prompt,
+                    text=text,
+                    metadata=metadata,
+                )
+
+                while len(inflight_requests) < batch_size and submit_one():
+                    continue
+        finally:
+            if manager is not None:
+                manager.stop(block=True)
 
     def _build_generation_kwargs(self, batch: list[GenerationRequest]) -> dict[str, Any]:
         max_new_tokens = max(
@@ -692,6 +817,19 @@ class TransformerSession:
             return self._prepare_tokenizer_lock
         return self._tokenizer_lock
 
+    def _prepare_request_for_generation(self, request: GenerationRequest) -> tuple[str, list[int]]:
+        with self._tokenizer_lock:
+            rendered_prompt = self._render_request(request)
+            input_ids = (
+                list(request.input_ids)
+                if request.input_ids is not None
+                else self.tokenizer(
+                    rendered_prompt,
+                    add_special_tokens=False,
+                )["input_ids"]
+            )
+        return rendered_prompt, input_ids
+
 
 def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:
     import torch
@@ -745,6 +883,14 @@ def _common_stop_strings(batch: list[GenerationRequest]) -> list[str] | None:
     if all(request.stop == first for request in batch):
         return first
     return None
+
+
+def _continuous_request_signature(request: GenerationRequest) -> tuple[Any, ...]:
+    return (
+        tuple(request.stop),
+        request.do_sample,
+        request.temperature if request.do_sample else None,
+    )
 
 
 def _base_attn_implementation(attn_implementation: str | None) -> str | None:

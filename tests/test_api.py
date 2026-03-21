@@ -33,6 +33,15 @@ class FakeSession:
             for request in requests
         ]
 
+    def describe_execution(self):
+        return {
+            "requested_attn_implementation": "flash_attention_2",
+            "effective_attn_implementation": "paged|flash_attention_2",
+            "paged_attention": True,
+            "generation_backend": "continuous_batching",
+            "standard_batch_size_cap": None,
+        }
+
     def close(self) -> None:
         return None
 
@@ -57,6 +66,7 @@ def test_run_accepts_dict_model_and_returns_structured_results(monkeypatch) -> N
 
     assert result.model["path"] == "/tmp/model"
     assert result.engine["name"] == "fake"
+    assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert len(result.tests) == 1
     assert result.tests[0].name == "gsm8k_platinum_cot"
     assert result.tests[0].metrics["exact_match,strict-match"] == 1.0

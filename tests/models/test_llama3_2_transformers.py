@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,10 @@ pytestmark = [pytest.mark.integration, pytest.mark.slow]
     not torch.cuda.is_available(),
     reason="CUDA is required for the llama 3.2 integration test",
 )
+@pytest.mark.skipif(
+    not hasattr(sys, "_is_gil_enabled") or sys._is_gil_enabled(),
+    reason="the full-model continuous batching integration test requires Python free-threading with GIL disabled",
+)
 def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture[str]) -> None:
     # Disable pytest capture for the actual eval so LogBar output stays visible.
     with capsys.disabled():
@@ -28,6 +33,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
             engine=evalution.Transformer(
                 dtype="bfloat16",
                 attn_implementation="flash_attention_2",
+                paged_attention=True,
                 device="cuda:0",
                 batch_size="auto",
             ),
@@ -46,7 +52,10 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["dtype"] == "bfloat16"
     assert result.engine["attn_implementation"] == "flash_attention_2"
     assert result.engine["batch_size"] == "auto"
-    assert result.engine["paged_attention"] == "auto"
+    assert result.engine["paged_attention"] is True
+    assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
+    assert result.engine["execution"]["generation_backend"] == "continuous_batching"
+    assert result.engine["execution"]["paged_attention"] is True
     assert len(result.tests) == 1
 
     test_result = result.tests[0]
@@ -55,6 +64,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert test_result.metadata["apply_chat_template"] is True
     assert test_result.metadata["fewshot_as_multiturn"] is True
     assert test_result.metadata["streaming"] is True
+    assert test_result.metadata["generation_submission_mode"] == "continuous_refill"
     assert test_result.metadata["num_fewshot"] == 8
     assert len(test_result.samples) > 1000
     assert set(test_result.metrics) == {

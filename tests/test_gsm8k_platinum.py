@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import importlib
+import sys
 import threading
+import time
+from dataclasses import replace
+from queue import Queue
 
+import pytest
 from datasets import Dataset
 
 import evalution
@@ -87,6 +92,62 @@ class PreparingFakeSession(FakeSession):
                 )
             )
         return prepared
+
+
+class ContinuousPreparingFakeSession(PreparingFakeSession):
+    def __init__(
+        self,
+        responses: list[str],
+        *,
+        batch_size: int | None = None,
+        resolved_batch_size: int | None = None,
+    ) -> None:
+        super().__init__(
+            responses,
+            batch_size=batch_size,
+            resolved_batch_size=resolved_batch_size,
+        )
+        self.continuous_batch_sizes: list[int | None] = []
+        self.max_inflight = 0
+        self.completion_order: list[int] = []
+
+    def generate(self, requests, *, batch_size=None):
+        del requests, batch_size
+        raise AssertionError("continuous sessions should not fall back to generate()")
+
+    def generate_continuous(self, requests, *, batch_size=None):
+        self.continuous_batch_sizes.append(batch_size)
+        request_iter = iter(requests)
+        active: list[tuple[int, GenerationRequest, str]] = []
+
+        def submit_one() -> bool:
+            try:
+                request_key, request = next(request_iter)
+            except StopIteration:
+                return False
+            response = self.responses[self._response_index]
+            self._response_index += 1
+            active.append((request_key, request, response))
+            self.max_inflight = max(self.max_inflight, len(active))
+            return True
+
+        while batch_size is not None and len(active) < batch_size and submit_one():
+            continue
+        if batch_size is None and not active:
+            submit_one()
+
+        while active:
+            active_index = 1 if len(active) > 1 else 0
+            request_key, request, response = active.pop(active_index)
+            self.completion_order.append(request_key)
+            yield request_key, GenerationOutput(
+                prompt=request.prompt if request.prompt is not None else str(request.messages),
+                text=response,
+            )
+            while batch_size is not None and len(active) < batch_size and submit_one():
+                continue
+            if batch_size is None and not active:
+                submit_one()
 
 
 def test_gsm8k_platinum_cot_llama_uses_multiturn_chat_by_default(monkeypatch) -> None:
@@ -341,6 +402,47 @@ def test_gsm8k_platinum_streaming_prefetch_and_generation_respect_resolved_batch
     assert session.prepare_batch_sizes[0] == gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS
     assert session.prepare_batch_sizes[1:] == [32, 12]
     assert all(size <= max_batch_size for size in session.prepare_batch_sizes[1:])
+    assert result.metadata["generation_submission_mode"] == "fixed_batches"
+
+
+def test_gsm8k_platinum_streaming_uses_continuous_generation_to_refill_slots(
+    monkeypatch,
+) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+            for _ in range(300)
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    suite = evalution.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+        streaming=True,
+    )
+    max_batch_size = 32
+    session = ContinuousPreparingFakeSession(
+        ["The answer is 42."] * 300,
+        resolved_batch_size=max_batch_size,
+    )
+
+    result = suite.evaluate(session)
+
+    assert len(result.samples) == 300
+    assert [sample.index for sample in result.samples] == list(range(300))
+    assert session.generate_batch_sizes == []
+    assert session.continuous_batch_sizes == [32]
+    assert session.max_inflight == 32
+    assert session.completion_order[0] == 1
+    assert session.completion_order.index(0) > 0
+    assert session.prepare_batch_sizes[0] == gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS
+    assert session.prepare_batch_sizes[1:] == [32, 12]
+    assert result.metadata["generation_submission_mode"] == "continuous_refill"
 
 
 def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> None:
@@ -404,3 +506,134 @@ def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> 
 
     assert not close_errors
     assert not close_thread.is_alive()
+
+
+@pytest.mark.skipif(
+    not hasattr(sys, "_is_gil_enabled") or sys._is_gil_enabled(),
+    reason="requires Python free-threading with GIL disabled",
+)
+def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_prepares() -> None:
+    batch_size = 32
+    total_rows = 64
+
+    class FakePrepareBar:
+        def next(self) -> FakePrepareBar:
+            return self
+
+        def draw(self) -> FakePrepareBar:
+            return self
+
+    class BlockingPrepareSession:
+        def __init__(self) -> None:
+            self.prepare_calls = 0
+            self.next_batch_prepare_started = threading.Event()
+            self.allow_next_batch_prepare_finish = threading.Event()
+
+        def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+            self.prepare_calls += 1
+            if self.prepare_calls == 1:
+                self.next_batch_prepare_started.set()
+                assert self.allow_next_batch_prepare_finish.wait(timeout=1.0)
+            return [
+                replace(
+                    request,
+                    rendered_prompt=request.prompt,
+                    input_ids=[index + 1, index + 2, index + 3],
+                )
+                for index, request in enumerate(requests)
+            ]
+
+    def make_sample(index: int, *, prepared: bool) -> gsm8k_platinum_module._PreparedSample:
+        prompt = f"Q: {index}\nA:"
+        return gsm8k_platinum_module._PreparedSample(
+            index=index,
+            doc={"question": str(index), "answer": "42\n#### 42", "cleaning_status": "consensus"},
+            target="42",
+            request=GenerationRequest(
+                prompt=prompt,
+                rendered_prompt=prompt if prepared else None,
+                input_ids=[index + 1, index + 2, index + 3] if prepared else None,
+            ),
+        )
+
+    session = BlockingPrepareSession()
+    iterator = gsm8k_platinum_module._iter_prefetched_batches(
+        session,
+        [make_sample(index, prepared=True) for index in range(batch_size)],
+        iter(make_sample(index, prepared=False) for index in range(batch_size, total_rows)),
+        batch_size=batch_size,
+        prepare_bar=FakePrepareBar(),
+    )
+
+    ready_samples: Queue[gsm8k_platinum_module._PreparedSample | None] = Queue()
+    feeder_errors: list[BaseException] = []
+    worker_errors: list[BaseException] = []
+    processed_indexes: list[int] = []
+    initial_progress_reached = threading.Event()
+    state_lock = threading.Lock()
+    completed_initial = 0
+
+    def feed_ready_samples() -> None:
+        try:
+            for prefetched_batch in iterator:
+                for sample in prefetched_batch.samples:
+                    ready_samples.put(sample)
+        except BaseException as exc:  # pragma: no cover - asserted below
+            feeder_errors.append(exc)
+        finally:
+            for _ in range(batch_size):
+                ready_samples.put(None)
+
+    def run_slot_worker() -> None:
+        nonlocal completed_initial
+        try:
+            while True:
+                sample = ready_samples.get()
+                if sample is None:
+                    return
+
+                if sample.index < 8:
+                    duration_s = 0.003
+                elif sample.index < batch_size:
+                    duration_s = 0.03 + ((sample.index - 8) % 4) * 0.003
+                else:
+                    duration_s = 0.004 + ((sample.index - batch_size) % 4) * 0.001
+
+                deadline = time.perf_counter() + duration_s
+                spin = 0
+                while time.perf_counter() < deadline:
+                    spin += 1
+
+                with state_lock:
+                    processed_indexes.append(sample.index)
+                    if sample.index < batch_size:
+                        completed_initial += 1
+                        if completed_initial >= 8:
+                            initial_progress_reached.set()
+                del spin
+        except BaseException as exc:  # pragma: no cover - asserted below
+            worker_errors.append(exc)
+
+    feeder_thread = threading.Thread(target=feed_ready_samples)
+    workers = [threading.Thread(target=run_slot_worker) for _ in range(batch_size)]
+
+    feeder_thread.start()
+    for worker in workers:
+        worker.start()
+
+    assert session.next_batch_prepare_started.wait(timeout=1.0)
+    assert initial_progress_reached.wait(timeout=1.0)
+
+    session.allow_next_batch_prepare_finish.set()
+
+    feeder_thread.join(timeout=2.0)
+    for worker in workers:
+        worker.join(timeout=2.0)
+
+    assert not feeder_errors
+    assert not worker_errors
+    assert not feeder_thread.is_alive()
+    assert all(not worker.is_alive() for worker in workers)
+    assert session.prepare_calls == 1
+    assert sorted(processed_indexes) == list(range(total_rows))
+    assert any(index >= batch_size for index in processed_indexes)

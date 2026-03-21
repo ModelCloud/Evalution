@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -32,5 +33,12 @@ class InferenceSession(Protocol):
         *,
         batch_size: int | None = None,
     ) -> list[GenerationOutput]: ...
+
+    def generate_continuous(
+        self,
+        requests: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        batch_size: int | None = None,
+    ) -> Iterator[tuple[Any, GenerationOutput]]: ...
 
     def close(self) -> None: ...

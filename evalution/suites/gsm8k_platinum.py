@@ -275,7 +275,7 @@ class GSM8KPlatinum(TestSuite):
         preview_samples = _prepare_batch_for_session(session, preview_samples)
 
         aggregate_scores: defaultdict[str, float] = defaultdict(float)
-        samples: list[SampleResult] = []
+        samples_by_index: list[SampleResult | None] = [None] * total
         effective_batch_size = (
             self.batch_size
             or _session_batch_size(session, [sample.request for sample in preview_samples])
@@ -289,9 +289,17 @@ class GSM8KPlatinum(TestSuite):
             if callable(getattr(session, "prepare_requests", None))
             else "inline",
         )
+        generate_continuous = getattr(session, "generate_continuous", None)
+        use_continuous_generation = callable(generate_continuous)
+        logger.info(
+            "%s: generation submission mode=%s",
+            spec.task_name,
+            "continuous_refill" if use_continuous_generation else "fixed_batches",
+        )
         invalid_predictions = 0
         generation_wall_s = 0.0
         scoring_wall_s = 0.0
+        processed_count = 0
         score_bar = manual_progress(
             total,
             title=self._score_progress_title(
@@ -303,78 +311,108 @@ class GSM8KPlatinum(TestSuite):
             ),
             subtitle=f"batch_size={effective_batch_size}",
         )
+
+        def score_output(prepared_sample: _PreparedSample, output: GenerationOutput) -> None:
+            nonlocal invalid_predictions
+            nonlocal scoring_wall_s
+            nonlocal processed_count
+            scoring_started = perf_counter()
+            index = prepared_sample.index
+            doc = prepared_sample.doc
+            target = prepared_sample.target
+            strict_prediction = _extract_match(
+                output.text,
+                spec.strict_pattern,
+                group_select=spec.strict_group_select,
+            )
+            flexible_prediction = _extract_match(
+                output.text,
+                _FLEXIBLE_EXTRACT_PATTERN,
+                group_select=-1,
+            )
+            scores = {
+                "exact_match,strict-match": float(_exact_match(strict_prediction, target)),
+                "exact_match,flexible-extract": float(_exact_match(flexible_prediction, target)),
+            }
+            for metric_name, score in scores.items():
+                aggregate_scores[metric_name] += score
+            if flexible_prediction == "[invalid]":
+                invalid_predictions += 1
+
+            samples_by_index[index] = SampleResult(
+                index=index,
+                prompt=output.prompt,
+                target=target,
+                prediction=output.text,
+                extracted={
+                    "strict-match": strict_prediction,
+                    "flexible-extract": flexible_prediction,
+                },
+                scores=scores,
+                metadata={
+                    "cleaning_status": doc.get("cleaning_status"),
+                },
+            )
+
+            processed_count += 1
+            score_bar.title(
+                self._score_progress_title(
+                    task_name=spec.task_name,
+                    processed=processed_count,
+                    strict_total=aggregate_scores["exact_match,strict-match"],
+                    flexible_total=aggregate_scores["exact_match,flexible-extract"],
+                    invalid_predictions=invalid_predictions,
+                )
+            )
+            score_bar.next().draw()
+            scoring_wall_s += perf_counter() - scoring_started
+
         try:
-            batch_index = 0
-            for prefetched_batch in _iter_prefetched_batches(
+            prefetched_batches = _iter_prefetched_batches(
                 session,
                 preview_samples,
                 prepared_iter,
                 batch_size=effective_batch_size,
                 prepare_bar=prepare_bar,
-            ):
-                batch_index += 1
-                prepared_batch = prefetched_batch.samples
-                batch_requests = [sample.request for sample in prepared_batch]
+            )
+            if use_continuous_generation:
+                sample_by_request_key: dict[int, _PreparedSample] = {}
+
+                def iter_request_stream() -> Any:
+                    request_key = 0
+                    try:
+                        for prefetched_batch in prefetched_batches:
+                            for prepared_sample in prefetched_batch.samples:
+                                sample_by_request_key[request_key] = prepared_sample
+                                yield request_key, prepared_sample.request
+                                request_key += 1
+                    finally:
+                        close_prefetched_batches = getattr(prefetched_batches, "close", None)
+                        if callable(close_prefetched_batches):
+                            close_prefetched_batches()
+
                 generation_started = perf_counter()
-                batch_outputs = session.generate(batch_requests, batch_size=len(batch_requests))
+                for request_key, output in generate_continuous(
+                    iter_request_stream(),
+                    batch_size=effective_batch_size,
+                ):
+                    prepared_sample = sample_by_request_key.pop(request_key)
+                    score_output(prepared_sample, output)
                 generation_wall_s += perf_counter() - generation_started
-                scoring_started = perf_counter()
-                for batch_offset, output in enumerate(batch_outputs):
-                    prepared_sample = prepared_batch[batch_offset]
-                    index = prepared_sample.index
-                    doc = prepared_sample.doc
-                    target = prepared_sample.target
-                    strict_prediction = _extract_match(
-                        output.text,
-                        spec.strict_pattern,
-                        group_select=spec.strict_group_select,
-                    )
-                    flexible_prediction = _extract_match(
-                        output.text,
-                        _FLEXIBLE_EXTRACT_PATTERN,
-                        group_select=-1,
-                    )
-                    scores = {
-                        "exact_match,strict-match": float(_exact_match(strict_prediction, target)),
-                        "exact_match,flexible-extract": float(_exact_match(flexible_prediction, target)),
-                    }
-                    for metric_name, score in scores.items():
-                        aggregate_scores[metric_name] += score
-                    if flexible_prediction == "[invalid]":
-                        invalid_predictions += 1
-
-                    samples.append(
-                        SampleResult(
-                            index=index,
-                            prompt=output.prompt,
-                            target=target,
-                            prediction=output.text,
-                            extracted={
-                                "strict-match": strict_prediction,
-                                "flexible-extract": flexible_prediction,
-                            },
-                            scores=scores,
-                            metadata={
-                                "cleaning_status": doc.get("cleaning_status"),
-                            },
-                        )
-                    )
-
-                    processed = len(samples)
-                    score_bar.title(
-                        self._score_progress_title(
-                            task_name=spec.task_name,
-                            processed=processed,
-                            strict_total=aggregate_scores["exact_match,strict-match"],
-                            flexible_total=aggregate_scores["exact_match,flexible-extract"],
-                            invalid_predictions=invalid_predictions,
-                        )
-                    )
+            else:
+                batch_index = 0
+                for prefetched_batch in prefetched_batches:
+                    batch_index += 1
+                    prepared_batch = prefetched_batch.samples
+                    batch_requests = [sample.request for sample in prepared_batch]
+                    generation_started = perf_counter()
+                    batch_outputs = session.generate(batch_requests, batch_size=len(batch_requests))
+                    generation_wall_s += perf_counter() - generation_started
                     score_bar.subtitle(
                         f"batch={batch_index}/{(total + effective_batch_size - 1) // effective_batch_size}"
                     )
-                    score_bar.next().draw()
-                scoring_wall_s += perf_counter() - scoring_started
+                    for batch_offset, output in enumerate(batch_outputs):
+                        score_output(prepared_batch[batch_offset], output)
         finally:
             close_prepared_iter = getattr(prepared_iter, "close", None)
             if callable(close_prepared_iter):
@@ -384,6 +422,7 @@ class GSM8KPlatinum(TestSuite):
             prepare_bar.close()
             score_bar.close()
 
+        samples = [sample for sample in samples_by_index if sample is not None]
         denominator = len(samples) or 1
         metrics = {
             metric_name: total / denominator
@@ -410,6 +449,9 @@ class GSM8KPlatinum(TestSuite):
                 "apply_chat_template": self.apply_chat_template,
                 "fewshot_as_multiturn": fewshot_as_multiturn,
                 "streaming": self.streaming,
+                "generation_submission_mode": (
+                    "continuous_refill" if use_continuous_generation else "fixed_batches"
+                ),
             },
         )
 
