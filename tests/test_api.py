@@ -62,7 +62,7 @@ def test_run_accepts_dict_model_and_returns_structured_results(monkeypatch) -> N
     result = evalution.run(
         model={"path": "/tmp/model"},
         engine=FakeEngine(),
-        tests=[evalution.gsm8k_platinum(limit=1)],
+        tests=[evalution.gsm8k_platinum(max_rows=1)],
     )
 
     assert result.model["path"] == "/tmp/model"
@@ -108,7 +108,7 @@ def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
     result = evalution.run(
         model={"path": "/tmp/model"},
         engine=engine,
-        tests=[evalution.arc_challenge(limit=1)],
+        tests=[evalution.arc_challenge(max_rows=1)],
     )
 
     assert len(result.tests) == 1

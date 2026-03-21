@@ -61,7 +61,7 @@ def test_arc_challenge_suite_scores_choice_labels_and_records_metadata(monkeypat
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(limit=1)
+    suite = evalution.arc_challenge(max_rows=1)
     session = FakeSession(["The answer is C."])
     result = suite.evaluate(session)
 
@@ -86,7 +86,7 @@ def test_arc_challenge_chat_template_uses_single_user_message(monkeypatch) -> No
     )
 
     suite = evalution.arc_challenge(
-        limit=1,
+        max_rows=1,
         apply_chat_template=True,
     )
     session = FakeSession(["C"])
@@ -119,7 +119,7 @@ def test_arc_challenge_falls_back_to_choice_text_matching(monkeypatch) -> None:
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(limit=1)
+    suite = evalution.arc_challenge(max_rows=1)
     session = FakeSession(["Planetary days will become shorter."])
     result = suite.evaluate(session)
 
@@ -140,7 +140,7 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
     monkeypatch.setattr(arc_challenge_module, "load_dataset", fake_load_dataset)
 
     suite = evalution.arc_challenge(
-        limit=1,
+        max_rows=1,
         streaming=True,
     )
     session = FakeSession(["C"])
@@ -158,7 +158,7 @@ def test_arc_challenge_marks_unparseable_predictions_invalid(monkeypatch) -> Non
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(limit=1)
+    suite = evalution.arc_challenge(max_rows=1)
     session = FakeSession(["I am not sure."])
     result = suite.evaluate(session)
 

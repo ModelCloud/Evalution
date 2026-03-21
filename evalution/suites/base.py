@@ -34,7 +34,7 @@ class BaseTestSuite(TestSuite):
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
-    limit: int | None = None
+    max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
     streaming: bool = False
@@ -121,14 +121,14 @@ class BaseTestSuite(TestSuite):
             streaming=self.streaming,
         )
 
-        docs = limit_docs(loaded_docs, self.limit)
+        docs = limit_docs(loaded_docs, self.max_rows)
         if self.requires_full_doc_materialization():
             docs = list(docs)
 
         total = doc_count(
             docs,
             loaded_docs=loaded_docs,
-            limit=self.limit,
+            max_rows=self.max_rows,
             split=self.split,
         )
         logger.info("%s: evaluating %d sample(s)", task_name, total)
@@ -277,6 +277,14 @@ class BaseTestSuite(TestSuite):
             score_bar.close()
 
         samples = [sample for sample in samples_by_index if sample is not None]
+        logger.info("%s: executed %d/%d sample(s)", task_name, processed_count, total)
+        if processed_count != total:
+            logger.warning(
+                "%s: only executed %d/%d sample(s); generation returned fewer outputs than expected",
+                task_name,
+                processed_count,
+                total,
+            )
         denominator = len(samples) or 1
         metrics = {
             metric_name: total_score / denominator

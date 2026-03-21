@@ -21,14 +21,14 @@ Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 Simple usage:
 
 ```python
-import evalution
+import evalution as eval
 
-result = evalution.run(
+result = eval.run(
     model={"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
-    engine=evalution.Transformer(),
+    engine=eval.Transformer(),
     tests=[
-        evalution.gsm8k_platinum(),
-        evalution.arc_challenge(),
+        eval.gsm8k_platinum(),
+        eval.arc_challenge(),
     ],
 )
 ```
@@ -36,13 +36,13 @@ result = evalution.run(
 Advanced usage:
 
 ```python
-import evalution
+import evalution as eval
 
-result = evalution.run(
-    model=evalution.Model(
+result = eval.run(
+    model=eval.Model(
         path="/monster/data/model/Llama-3.2-1B-Instruct",
     ),
-    engine=evalution.Transformer(
+    engine=eval.Transformer(
         dtype="bfloat16",
         attn_implementation="flash_attention_2",
         device="cuda:0",
@@ -51,17 +51,17 @@ result = evalution.run(
         max_new_tokens=256,
     ),
     tests=[
-        evalution.gsm8k_platinum(
+        eval.gsm8k_platinum(
             variant="cot",
             apply_chat_template=True,
             max_new_tokens=96,
             batch_size=64,
-            limit=128,
+            max_rows=128,
         ),
-        evalution.arc_challenge(
+        eval.arc_challenge(
             apply_chat_template=True,
             max_new_tokens=8,
-            limit=128,
+            max_rows=128,
         ),
     ],
 )
