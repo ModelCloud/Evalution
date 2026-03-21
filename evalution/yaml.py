@@ -9,7 +9,7 @@ import yaml
 from evalution.config import Model
 from evalution.engines import Transformer
 from evalution.runtime import EvaluationRun, engine as build_engine
-from evalution.suites import arc_challenge, boolq, gsm8k, gsm8k_platinum, hellaswag, piqa
+from evalution.suites import arc_challenge, boolq, gsm8k, gsm8k_platinum, hellaswag, piqa, winogrande
 
 _ENGINE_FACTORIES: dict[str, Any] = {
     "transformer": Transformer,
@@ -22,6 +22,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "gsm8k_platinum": gsm8k_platinum,
     "hellaswag": hellaswag,
     "piqa": piqa,
+    "winogrande": winogrande,
 }
 
 

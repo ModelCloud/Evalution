@@ -15,12 +15,14 @@ from evalution.suites import (
     MultipleChoiceSample,
     PIQA,
     TestSuite,
+    WinoGrande,
     arc_challenge,
     boolq,
     gsm8k,
     gsm8k_platinum,
     hellaswag,
     piqa,
+    winogrande,
 )
 from evalution.yaml import python_from_yaml, run_yaml
 
@@ -53,6 +55,7 @@ __all__ = [
     "python_from_yaml",
     "run",
     "run_yaml",
+    "winogrande",
 ]
 
 Transformers = Transformer

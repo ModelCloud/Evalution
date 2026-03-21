@@ -6,6 +6,7 @@ from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hellaswag import HellaSwag, hellaswag
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .piqa import PIQA, piqa
+from .winogrande import WinoGrande, winogrande
 
 __all__ = [
     "ARCChallenge",
@@ -18,10 +19,12 @@ __all__ = [
     "MultipleChoiceSample",
     "PIQA",
     "TestSuite",
+    "WinoGrande",
     "arc_challenge",
     "boolq",
     "gsm8k",
     "gsm8k_platinum",
     "hellaswag",
     "piqa",
+    "winogrande",
 ]

@@ -89,6 +89,8 @@ tests:
     max_rows: 32
   - type: piqa
     max_rows: 16
+  - type: winogrande
+    max_rows: 24
 """
     )
 
@@ -100,6 +102,7 @@ tests:
     assert ".run(eval.arc_challenge(" in script
     assert ".run(eval.hellaswag(" in script
     assert ".run(eval.piqa(" in script
+    assert ".run(eval.winogrande(" in script
 
 
 def test_run_yaml_requires_tests_section() -> None:

@@ -35,6 +35,10 @@ BOOLQ_BASELINE = {
     "accuracy,loglikelihood": 0.6796875,
     "accuracy,loglikelihood_norm": 0.6796875,
 }
+WINOGRANDE_BASELINE = {
+    "accuracy,loglikelihood": 0.5625,
+    "accuracy,loglikelihood_norm": 0.5703125,
+}
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
@@ -125,6 +129,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                     max_rows=128,
                 )
             )
+            .run(
+                evalution.winogrande(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
         )
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
@@ -135,7 +146,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 6
+    assert len(result.tests) == 7
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -145,6 +156,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "arc_challenge",
         "hellaswag",
         "piqa",
+        "winogrande",
     }
 
     gsm8k_result = tests_by_name["gsm8k_cot"]
@@ -334,6 +346,41 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert sample.prediction
         assert sample.prompt.startswith("Question: ")
         assert "\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
+    winogrande_result = tests_by_name["winogrande"]
+    assert winogrande_result.metadata["streaming"] is True
+    assert winogrande_result.metadata["dataset_path"] == "winogrande"
+    assert winogrande_result.metadata["dataset_name"] == "winogrande_xl"
+    assert winogrande_result.metadata["split"] == "validation"
+    assert winogrande_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(winogrande_result.samples) == 128
+    assert set(winogrande_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    winogrande_raw_score = winogrande_result.metrics["accuracy,loglikelihood"]
+    winogrande_norm_score = winogrande_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(winogrande_result.metrics, WINOGRANDE_BASELINE)
+    assert isinstance(winogrande_raw_score, float)
+    assert isinstance(winogrande_norm_score, float)
+
+    for index, sample in enumerate(winogrande_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target
+        assert sample.prediction
+        assert " _ " in sample.metadata["sentence"]
         assert set(sample.extracted) == {
             "gold_index",
             "predicted_index",
