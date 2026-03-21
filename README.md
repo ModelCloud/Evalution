@@ -27,6 +27,7 @@ result = (
     eval.engine(eval.Transformers())
     .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
     .run(eval.gsm8k_platinum())
+    .run(eval.boolq())
     .run(eval.arc_challenge())
     .run(eval.hellaswag())
     .run(eval.piqa())
@@ -154,6 +155,7 @@ Current built-in coverage:
 
 - Hugging Face `transformers` inference engine
 - `arc_challenge` suite for `allenai/ai2_arc` `ARC-Challenge`
+- `boolq` suite for `super_glue` `boolq`
 - `gsm8k` suite for `openai/gsm8k`
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `hellaswag` suite for `Rowan/hellaswag`

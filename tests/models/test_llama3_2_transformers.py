@@ -31,6 +31,10 @@ PIQA_BASELINE = {
     "accuracy,loglikelihood": 0.71875,
     "accuracy,loglikelihood_norm": 0.7890625,
 }
+BOOLQ_BASELINE = {
+    "accuracy,loglikelihood": 0.6796875,
+    "accuracy,loglikelihood_norm": 0.6796875,
+}
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
@@ -92,6 +96,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.boolq(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.arc_challenge(
                     apply_chat_template=True,
                     batch_size=24,
@@ -124,12 +135,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 5
+    assert len(result.tests) == 6
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
         "gsm8k_cot",
         "gsm8k_platinum_cot",
+        "boolq",
         "arc_challenge",
         "hellaswag",
         "piqa",
@@ -190,6 +202,42 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
 
     assert exact_matches > 0
     assert invalid_predictions / len(test_result.samples) < 0.40
+
+    boolq_result = tests_by_name["boolq"]
+    assert boolq_result.metadata["streaming"] is True
+    assert boolq_result.metadata["dataset_path"] == "super_glue"
+    assert boolq_result.metadata["dataset_name"] == "boolq"
+    assert boolq_result.metadata["split"] == "validation"
+    assert boolq_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(boolq_result.samples) == 128
+    assert set(boolq_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    boolq_raw_score = boolq_result.metrics["accuracy,loglikelihood"]
+    boolq_norm_score = boolq_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(boolq_result.metrics, BOOLQ_BASELINE)
+    assert isinstance(boolq_raw_score, float)
+    assert isinstance(boolq_norm_score, float)
+
+    for index, sample in enumerate(boolq_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target in {"yes", "no"}
+        assert sample.prediction in {"yes", "no"}
+        assert "\nQuestion: " in sample.prompt
+        assert "\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
 
     arc_result = tests_by_name["arc_challenge"]
     assert arc_result.metadata["apply_chat_template"] is True
