@@ -20,6 +20,7 @@ from evalution.suites import (
     mmlu,
     openbookqa,
     piqa,
+    rte,
     winogrande,
 )
 
@@ -38,6 +39,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "mmlu": mmlu,
     "openbookqa": openbookqa,
     "piqa": piqa,
+    "rte": rte,
     "winogrande": winogrande,
 }
 

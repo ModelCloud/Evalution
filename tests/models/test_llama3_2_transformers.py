@@ -55,6 +55,10 @@ MMLU_BASELINE = {
     "accuracy,loglikelihood": 0.3671875,
     "accuracy,loglikelihood_norm": 0.3671875,
 }
+RTE_BASELINE = {
+    "accuracy,loglikelihood": 0.625,
+    "accuracy,loglikelihood_norm": 0.625,
+}
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
@@ -176,6 +180,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.rte(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.winogrande(
                     batch_size=24,
                     streaming=True,
@@ -192,7 +203,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 11
+    assert len(result.tests) == 12
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -206,6 +217,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "mmlu",
         "openbookqa",
         "piqa",
+        "rte",
         "winogrande",
     }
 
@@ -553,6 +565,42 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert "choice_logprobs" in sample.metadata
         assert "choice_logprobs_norm" in sample.metadata
 
+    rte_result = tests_by_name["rte"]
+    assert rte_result.metadata["streaming"] is True
+    assert rte_result.metadata["dataset_path"] == "super_glue"
+    assert rte_result.metadata["dataset_name"] == "rte"
+    assert rte_result.metadata["split"] == "validation"
+    assert rte_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(rte_result.samples) == 128
+    assert set(rte_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    rte_raw_score = rte_result.metrics["accuracy,loglikelihood"]
+    rte_norm_score = rte_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(rte_result.metrics, RTE_BASELINE)
+    assert isinstance(rte_raw_score, float)
+    assert isinstance(rte_norm_score, float)
+
+    for index, sample in enumerate(rte_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target in {"True", "False"}
+        assert sample.prediction in {"True", "False"}
+        assert "\nQuestion: " in sample.prompt
+        assert " True or False?\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
     winogrande_result = tests_by_name["winogrande"]
     assert winogrande_result.metadata["streaming"] is True
     assert winogrande_result.metadata["dataset_path"] == "winogrande"
@@ -605,3 +653,5 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["mmlu"]["samples"][0]["prediction"]
     assert len(serialized_tests["openbookqa"]["samples"]) == len(openbookqa_result.samples)
     assert serialized_tests["openbookqa"]["samples"][0]["prediction"]
+    assert len(serialized_tests["rte"]["samples"]) == len(rte_result.samples)
+    assert serialized_tests["rte"]["samples"][0]["prediction"]

@@ -11,6 +11,7 @@ from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
 from .piqa import PIQA, piqa
+from .rte import RTE, rte
 from .winogrande import WinoGrande, winogrande
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "MultipleChoiceSample",
     "OpenBookQA",
     "PIQA",
+    "RTE",
     "TestSuite",
     "WinoGrande",
     "arc_easy",
@@ -40,6 +42,7 @@ __all__ = [
     "mmlu",
     "openbookqa",
     "piqa",
+    "rte",
     "question_answer_prompt",
     "winogrande",
 ]

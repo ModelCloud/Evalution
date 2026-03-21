@@ -98,6 +98,8 @@ tests:
     max_rows: 20
   - type: piqa
     max_rows: 16
+  - type: rte
+    max_rows: 18
   - type: winogrande
     max_rows: 24
 """
@@ -115,6 +117,7 @@ tests:
     assert ".run(eval.mmlu(" in script
     assert ".run(eval.openbookqa(" in script
     assert ".run(eval.piqa(" in script
+    assert ".run(eval.rte(" in script
     assert ".run(eval.winogrande(" in script
 
 
