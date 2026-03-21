@@ -6,7 +6,8 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from itertools import islice
-from queue import Queue
+from queue import Full, Queue
+from threading import Event
 from time import perf_counter
 from typing import Any, Literal
 
@@ -21,6 +22,7 @@ GSM8KPlatinumVariant = Literal["base", "cot", "cot_llama", "cot_zeroshot", "defa
 
 _AUTO_BATCH_PREVIEW_ROWS = 256
 _BATCH_PREFETCH_QUEUE_SIZE = 2
+_BATCH_PREFETCH_PUT_TIMEOUT_S = 0.1
 
 _REGEXES_TO_IGNORE = [",", r"\$", r"(?s).*#### ", r"\.$"]
 _FLEXIBLE_EXTRACT_PATTERN = r"(-?[$0-9.,]{2,})|(-?[0-9]+)"
@@ -597,6 +599,16 @@ def _iter_prefetched_batches(
 ) -> Any:
     sentinel = object()
     queue: Queue[Any] = Queue(maxsize=_BATCH_PREFETCH_QUEUE_SIZE)
+    cancelled = Event()
+
+    def put_prefetched(item: Any) -> bool:
+        while not cancelled.is_set():
+            try:
+                queue.put(item, timeout=_BATCH_PREFETCH_PUT_TIMEOUT_S)
+                return True
+            except Full:
+                continue
+        return False
 
     def worker() -> None:
         try:
@@ -604,47 +616,53 @@ def _iter_prefetched_batches(
             for sample in prepared_iter:
                 batch.append(sample)
                 if len(batch) == batch_size:
-                    queue.put(
+                    if not put_prefetched(
                         _PrefetchedBatch(
                             samples=_prepare_batch_for_session(session, batch),
                             prepared_count=len(batch),
                         )
-                    )
+                    ):
+                        return
                     batch = []
             if batch:
-                queue.put(
+                put_prefetched(
                     _PrefetchedBatch(
                         samples=_prepare_batch_for_session(session, batch),
                         prepared_count=len(batch),
                     )
                 )
         except BaseException as exc:
-            queue.put(_PrefetchFailure(exc))
+            put_prefetched(_PrefetchFailure(exc))
         finally:
-            queue.put(sentinel)
+            put_prefetched(sentinel)
 
     with ThreadPoolExecutor(max_workers=1, thread_name_prefix="evalution-prefetch") as executor:
         executor.submit(worker)
-
-        batch: list[_PreparedSample] = []
-        for sample in preview_samples:
-            batch.append(sample)
-            if len(batch) == batch_size:
+        try:
+            batch: list[_PreparedSample] = []
+            for sample in preview_samples:
+                batch.append(sample)
+                if len(batch) == batch_size:
+                    yield _PrefetchedBatch(samples=batch, prepared_count=0)
+                    batch = []
+            if batch:
                 yield _PrefetchedBatch(samples=batch, prepared_count=0)
-                batch = []
-        if batch:
-            yield _PrefetchedBatch(samples=batch, prepared_count=0)
 
-        while True:
-            prefetched = queue.get()
-            if prefetched is sentinel:
-                break
-            if isinstance(prefetched, _PrefetchFailure):
-                raise prefetched.error
-            if prefetched.prepared_count:
-                for _ in range(prefetched.prepared_count):
-                    prepare_bar.next().draw()
-            yield prefetched
+            while True:
+                prefetched = queue.get()
+                if prefetched is sentinel:
+                    break
+                if isinstance(prefetched, _PrefetchFailure):
+                    raise prefetched.error
+                if prefetched.prepared_count:
+                    for _ in range(prefetched.prepared_count):
+                        prepare_bar.next().draw()
+                yield prefetched
+        finally:
+            cancelled.set()
+            close_prepared_iter = getattr(prepared_iter, "close", None)
+            if callable(close_prepared_iter):
+                close_prepared_iter()
 
 
 def _limit_docs(docs: Any, limit: int | None) -> Any:
