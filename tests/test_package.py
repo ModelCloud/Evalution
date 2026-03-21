@@ -26,6 +26,8 @@ def test_package_exports_arc_challenge_suite() -> None:
     assert callable(evalution.piqa)
     assert evalution.RTE is not None
     assert callable(evalution.rte)
+    assert evalution.SST2 is not None
+    assert callable(evalution.sst2)
     assert evalution.WiC is not None
     assert callable(evalution.wic)
     assert evalution.WinoGrande is not None
