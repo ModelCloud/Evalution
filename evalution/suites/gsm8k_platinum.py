@@ -265,7 +265,11 @@ class GSM8KPlatinum(TestSuite):
             fewshot_docs=fewshot_docs,
             fewshot_as_multiturn=fewshot_as_multiturn,
         )
-        preview_size = min(total, _AUTO_BATCH_PREVIEW_ROWS)
+        preview_size = (
+            min(total, _AUTO_BATCH_PREVIEW_ROWS)
+            if _needs_batch_size_preview(self.batch_size, session)
+            else 0
+        )
         preview_samples = _collect_preview_samples(
             prepared_iter,
             preview_size=preview_size,
@@ -606,6 +610,25 @@ def _session_batch_size(
     return None
 
 
+def _needs_batch_size_preview(
+    suite_batch_size: int | None,
+    session: InferenceSession,
+) -> bool:
+    if suite_batch_size is not None:
+        return False
+
+    batch_size = getattr(session, "batch_size", None)
+    if isinstance(batch_size, int):
+        return False
+
+    config = getattr(session, "config", None)
+    config_batch_size = getattr(config, "batch_size", None)
+    if isinstance(config_batch_size, int):
+        return False
+
+    return True
+
+
 def _collect_preview_samples(
     prepared_iter: Any,
     *,
@@ -623,6 +646,9 @@ def _prepare_batch_for_session(
     session: InferenceSession,
     batch: list[_PreparedSample],
 ) -> list[_PreparedSample]:
+    if not batch:
+        return batch
+
     prepare_requests = getattr(session, "prepare_requests", None)
     if not callable(prepare_requests):
         return batch

@@ -445,6 +445,37 @@ def test_gsm8k_platinum_streaming_uses_continuous_generation_to_refill_slots(
     assert result.metadata["generation_submission_mode"] == "continuous_refill"
 
 
+def test_gsm8k_platinum_skips_auto_batch_preview_when_suite_batch_size_is_fixed(
+    monkeypatch,
+) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+            for _ in range(300)
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    suite = evalution.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+        streaming=True,
+        batch_size=24,
+    )
+    session = ContinuousPreparingFakeSession(["The answer is 42."] * 300)
+
+    result = suite.evaluate(session)
+
+    assert len(result.samples) == 300
+    assert session.continuous_batch_sizes == [24]
+    assert session.prepare_batch_sizes[0] == 24
+    assert gsm8k_platinum_module._AUTO_BATCH_PREVIEW_ROWS not in session.prepare_batch_sizes
+
+
 def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> None:
     class FakePrepareBar:
         def next(self) -> FakePrepareBar:
