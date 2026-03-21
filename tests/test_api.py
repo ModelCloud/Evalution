@@ -24,6 +24,9 @@ class FakeEngine:
 
 
 class FakeSession:
+    def __init__(self) -> None:
+        self.gc_calls = 0
+
     def generate(self, requests, *, batch_size=None):
         del batch_size
         return [
@@ -42,6 +45,9 @@ class FakeSession:
             "generation_backend": "continuous_batching",
             "standard_batch_size_cap": None,
         }
+
+    def gc(self) -> None:
+        self.gc_calls += 1
 
     def close(self) -> None:
         return None
@@ -114,3 +120,29 @@ def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
     assert len(result.tests) == 1
     assert result.tests[0].name == "arc_challenge"
     assert result.tests[0].metrics["exact_match,choice-label"] == 1.0
+
+
+def test_run_calls_session_gc_between_test_suites(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    engine = FakeEngine()
+    result = evalution.run(
+        model={"path": "/tmp/model"},
+        engine=engine,
+        tests=[
+            evalution.gsm8k_platinum(max_rows=1),
+            evalution.gsm8k_platinum(max_rows=1),
+        ],
+    )
+
+    assert len(result.tests) == 2
+    assert engine.session.gc_calls == 1

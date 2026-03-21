@@ -29,11 +29,16 @@ def run(
         logger.info("engine execution=%s", execution)
     try:
         results = []
-        for test in tests:
+        total_tests = len(tests)
+        for index, test in enumerate(tests):
             logger.info("running test suite %s", type(test).__name__)
             result = test.evaluate(session)
             logger.info("completed test %s", result.name)
             results.append(result)
+            gc_session = getattr(session, "gc", None)
+            if index + 1 < total_tests and callable(gc_session):
+                logger.info("running engine gc before next test suite")
+                gc_session()
     finally:
         logger.info("closing engine session")
         session.close()

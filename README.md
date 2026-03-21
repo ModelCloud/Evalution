@@ -48,6 +48,8 @@ result = eval.run(
         device="cuda:0",
         batch_size="auto",
         paged_attention="auto",
+        allow_block_sharing=True,
+        use_async_batching=None,
         max_new_tokens=256,
     ),
     tests=[
@@ -79,6 +81,12 @@ supported backends with `paged_attention=True`, force plain static generation wi
 `paged_attention=False`, or pin an explicit attention implementation with
 `attn_implementation=...`. A suite can override engine batch sizing with
 `gsm8k_platinum(batch_size=...)`.
+
+For `transformers` continuous batching, `Transformer(...)` also exposes the upstream manager knobs
+`manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
+`kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned continuous
+batching manager alive while stop strings and sampling settings stay compatible, then tears it down
+on `gc()` between suites or on `close()`.
 
 For `gsm8k_platinum`, answer extraction and normalization use precompiled `pcre.compile(...)`
 patterns so regex work stays on the `PyPcre` path and avoids stdlib `re`.
