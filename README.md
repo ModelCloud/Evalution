@@ -31,6 +31,7 @@ result = (
     .run(eval.arc_easy())
     .run(eval.arc_challenge())
     .run(eval.hellaswag())
+    .run(eval.mmlu(subject="abstract_algebra", num_fewshot=5))
     .run(eval.openbookqa())
     .run(eval.piqa())
     .run(eval.winogrande())
@@ -163,6 +164,7 @@ Current built-in coverage:
 - `gsm8k` suite for `openai/gsm8k`
 - `gsm8k_platinum` suite ported from `lm-eval`
 - `hellaswag` suite for `Rowan/hellaswag`
+- `mmlu` suite for `cais/mmlu`
 - `openbookqa` suite for `allenai/openbookqa` `main`
 - `piqa` suite for `baber/piqa`
 - `winogrande` suite for `winogrande` `winogrande_xl`
@@ -170,7 +172,7 @@ Current built-in coverage:
 
 ## Citation
 
-If you use Evalution or the built-in `gsm8k`, `gsm8k_platinum`, `arc_challenge`, or `piqa`
+If you use Evalution or the built-in `gsm8k`, `gsm8k_platinum`, `arc_challenge`, `mmlu`, or `piqa`
 suites, please cite:
 
 ```bibtex
@@ -215,5 +217,13 @@ suites, please cite:
   author = {Yonatan Bisk and Rowan Zellers and Ronan Le Bras and Jianfeng Gao and Yejin Choi},
   booktitle = {AAAI Conference on Artificial Intelligence},
   year = {2020},
+}
+
+# MMLU
+@article{hendryckstest2021,
+  title = {Measuring Massive Multitask Language Understanding},
+  author = {Dan Hendrycks and Collin Burns and Steven Basart and Andy Zou and Mantas Mazeika and Dawn Song and Jacob Steinhardt},
+  journal = {International Conference on Learning Representations},
+  year = {2021},
 }
 ```

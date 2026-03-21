@@ -47,6 +47,10 @@ OPENBOOKQA_BASELINE = {
     "accuracy,loglikelihood": 0.25,
     "accuracy,loglikelihood_norm": 0.328125,
 }
+MMLU_BASELINE = {
+    "accuracy,loglikelihood": 0.3671875,
+    "accuracy,loglikelihood_norm": 0.3671875,
+}
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
@@ -138,6 +142,15 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.mmlu(
+                    subject="all",
+                    num_fewshot=5,
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.openbookqa(
                     batch_size=24,
                     streaming=True,
@@ -168,7 +181,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 9
+    assert len(result.tests) == 10
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -178,6 +191,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "arc_easy",
         "arc_challenge",
         "hellaswag",
+        "mmlu",
         "openbookqa",
         "piqa",
         "winogrande",
@@ -382,6 +396,44 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert "choice_logprobs" in sample.metadata
         assert "choice_logprobs_norm" in sample.metadata
 
+    mmlu_result = tests_by_name["mmlu"]
+    assert mmlu_result.metadata["streaming"] is True
+    assert mmlu_result.metadata["dataset_path"] == "cais/mmlu"
+    assert mmlu_result.metadata["dataset_name"] == "all"
+    assert mmlu_result.metadata["split"] == "validation"
+    assert mmlu_result.metadata["fewshot_split"] == "dev"
+    assert mmlu_result.metadata["num_fewshot"] == 5
+    assert mmlu_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(mmlu_result.samples) == 128
+    assert set(mmlu_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    mmlu_raw_score = mmlu_result.metrics["accuracy,loglikelihood"]
+    mmlu_norm_score = mmlu_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(mmlu_result.metrics, MMLU_BASELINE)
+    assert isinstance(mmlu_raw_score, float)
+    assert isinstance(mmlu_norm_score, float)
+
+    for index, sample in enumerate(mmlu_result.samples):
+        assert sample.index == index
+        assert sample.prompt.startswith("The following are multiple choice questions")
+        assert sample.target in {"A", "B", "C", "D"}
+        assert sample.prediction in {"A", "B", "C", "D"}
+        assert sample.metadata["subject"]
+        assert len(sample.metadata["choice_texts"]) == 4
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
     openbookqa_result = tests_by_name["openbookqa"]
     assert openbookqa_result.metadata["streaming"] is True
     assert openbookqa_result.metadata["dataset_path"] == "allenai/openbookqa"
@@ -500,5 +552,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["arc_easy"]["samples"][0]["prediction"]
     assert len(serialized_tests["hellaswag"]["samples"]) == len(hellaswag_result.samples)
     assert serialized_tests["hellaswag"]["samples"][0]["prediction"]
+    assert len(serialized_tests["mmlu"]["samples"]) == len(mmlu_result.samples)
+    assert serialized_tests["mmlu"]["samples"][0]["prediction"]
     assert len(serialized_tests["openbookqa"]["samples"]) == len(openbookqa_result.samples)
     assert serialized_tests["openbookqa"]["samples"][0]["prediction"]
