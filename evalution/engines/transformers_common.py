@@ -17,6 +17,8 @@ from packaging.version import Version
 
 from evalution.config import Model
 from evalution.engines.base import (
+    BaseEngine,
+    BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
     LoglikelihoodOutput,
@@ -82,7 +84,7 @@ class _LoadedTransformerRuntime:
 
 
 @dataclass(slots=True)
-class _TransformersCommonConfig:
+class _TransformersCommonConfig(BaseEngine):
     # Hold the load and generation controls shared by both transformer engine variants.
     dtype: str | None = "auto"
     attn_implementation: str | None = None
@@ -103,7 +105,7 @@ class _TransformersCommonConfig:
 
 
 @dataclass(slots=True)
-class BaseTransformerSession:
+class BaseTransformerSession(BaseInferenceSession):
     # Share standard generation, scoring, and resource-management behavior across transformer engines.
     config: Any
     model_config: Model

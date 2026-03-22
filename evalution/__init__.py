@@ -6,7 +6,7 @@
 """Evalution package."""
 
 from evalution.config import Model
-from evalution.engines import Transformer, TransformerCompat
+from evalution.engines import BaseEngine, BaseInferenceSession, Transformer, TransformerCompat
 from evalution.results import RunResult, SampleResult, TestResult
 from evalution.runtime import EngineBuilder, EvaluationRun, engine, run
 from evalution.suites import (
@@ -70,6 +70,8 @@ __all__ = [
     "BaseMultipleChoiceSuite",
     "BaseTestSuite",
     "BoolQ",
+    "BaseEngine",
+    "BaseInferenceSession",
     "CB",
     "CoLA",
     "COPA",

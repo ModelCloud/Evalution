@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from evalution.config import Model, coerce_model
+from evalution.engines.base import BaseEngine, BaseInferenceSession
 from evalution.logbar import get_logger, spinner
 from evalution.results import RunResult
 from evalution.suites.base import TestSuite
@@ -17,9 +18,9 @@ from evalution.suites.base import TestSuite
 
 @dataclass(slots=True)
 class EvaluationRun:
-    _engine_impl: object
+    _engine_impl: BaseEngine
     _model_config: Model
-    _session: Any | None = field(default=None, init=False, repr=False)
+    _session: BaseInferenceSession | None = field(default=None, init=False, repr=False)
     _execution: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _test_results: list[Any] = field(default_factory=list, init=False, repr=False)
     _closed: bool = field(default=False, init=False, repr=False)
@@ -94,7 +95,7 @@ class EvaluationRun:
 
 @dataclass(slots=True)
 class EngineBuilder:
-    _engine_impl: object
+    _engine_impl: BaseEngine
 
     def model(self, model: Model | dict) -> EvaluationRun:
         return EvaluationRun(
@@ -103,20 +104,20 @@ class EngineBuilder:
         )
 
 
-def engine(engine: object) -> EngineBuilder:
-    if not hasattr(engine, "build"):
-        raise TypeError("engine must provide a `build(model)` method")
+def engine(engine: BaseEngine) -> EngineBuilder:
+    if not isinstance(engine, BaseEngine):
+        raise TypeError("engine must inherit BaseEngine")
     return EngineBuilder(_engine_impl=engine)
 
 
 def run(
     *,
     model: Model | dict,
-    engine: object,
+    engine: BaseEngine,
     tests: Sequence[TestSuite],
 ) -> RunResult:
-    if not hasattr(engine, "build"):
-        raise TypeError("engine must provide a `build(model)` method")
+    if not isinstance(engine, BaseEngine):
+        raise TypeError("engine must inherit BaseEngine")
 
     evaluation = EngineBuilder(_engine_impl=engine).model(model)
     try:
@@ -128,24 +129,22 @@ def run(
         raise
 
 
-def _build_session(engine: object, model_config: Model) -> Any:
+def _build_session(engine: BaseEngine, model_config: Model) -> BaseInferenceSession:
     logger = get_logger()
     logger.info("building engine %s for model %s", type(engine).__name__, model_config.path)
     with spinner(f"Loading {type(engine).__name__} engine"):
-        return engine.build(model_config)
+        session = engine.build(model_config)
+    if not isinstance(session, BaseInferenceSession):
+        raise TypeError("engine.build(model) must return a BaseInferenceSession")
+    return session
 
 
-def _describe_execution(session: Any) -> dict[str, Any] | None:
-    describe_execution = getattr(session, "describe_execution", None)
-    if not callable(describe_execution):
-        return None
-    execution = describe_execution()
+def _describe_execution(session: BaseInferenceSession) -> dict[str, Any] | None:
+    execution = session.describe_execution()
     get_logger().info("engine execution=%s", execution)
     return execution
 
 
-def _gc_session(session: Any) -> None:
-    gc_session = getattr(session, "gc", None)
-    if callable(gc_session):
-        get_logger().info("running engine gc before next test suite")
-        gc_session()
+def _gc_session(session: BaseInferenceSession) -> None:
+    get_logger().info("running engine gc before next test suite")
+    session.gc()

@@ -11,12 +11,12 @@ from datasets import Dataset
 
 import evalution
 from evalution import yaml as evalution_yaml
-from evalution.engines.base import GenerationOutput
+from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
 
 
-class FakeEngine:
+class FakeEngine(BaseEngine):
     def build(self, model):
         self.model = model
         return FakeSession()
@@ -25,7 +25,7 @@ class FakeEngine:
         return {"name": "fake"}
 
 
-class FakeSession:
+class FakeSession(BaseInferenceSession):
     def generate(self, requests, *, batch_size=None):
         del batch_size
         return [
@@ -38,6 +38,23 @@ class FakeSession:
 
     def describe_execution(self):
         return {"generation_backend": "fake"}
+
+    def loglikelihood(self, requests, *, batch_size=None):
+        del requests, batch_size
+        raise NotImplementedError
+
+    def loglikelihood_rolling(self, requests, *, batch_size=None):
+        del requests, batch_size
+        raise NotImplementedError
+
+    def generate_continuous(self, requests, *, batch_size=None):
+        request_items = list(requests)
+        outputs = self.generate([request for _, request in request_items], batch_size=batch_size)
+        for (item_id, _request), output in zip(request_items, outputs, strict=True):
+            yield item_id, output
+
+    def gc(self) -> None:
+        return None
 
     def close(self) -> None:
         return None

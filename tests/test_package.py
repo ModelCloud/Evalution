@@ -8,6 +8,8 @@ import evalution
 
 def test_package_import() -> None:
     assert evalution is not None
+    assert evalution.BaseEngine is not None
+    assert evalution.BaseInferenceSession is not None
     assert evalution.TransformerCompat is not None
 
 

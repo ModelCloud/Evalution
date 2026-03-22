@@ -10,13 +10,13 @@ import importlib
 from datasets import Dataset
 
 import evalution
-from evalution.engines.base import GenerationOutput
+from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
 arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
 
 
-class FakeEngine:
+class FakeEngine(BaseEngine):
     def __init__(self) -> None:
         self.session = FakeSession()
 
@@ -28,7 +28,7 @@ class FakeEngine:
         return {"name": "fake"}
 
 
-class FakeSession:
+class FakeSession(BaseInferenceSession):
     def __init__(self) -> None:
         self.gc_calls = 0
         self.close_calls = 0
@@ -51,6 +51,20 @@ class FakeSession:
             "generation_backend": "continuous_batching",
             "standard_batch_size_cap": None,
         }
+
+    def loglikelihood(self, requests, *, batch_size=None):
+        del requests, batch_size
+        raise NotImplementedError
+
+    def loglikelihood_rolling(self, requests, *, batch_size=None):
+        del requests, batch_size
+        raise NotImplementedError
+
+    def generate_continuous(self, requests, *, batch_size=None):
+        request_items = list(requests)
+        outputs = self.generate([request for _, request in request_items], batch_size=batch_size)
+        for (item_id, _request), output in zip(request_items, outputs, strict=True):
+            yield item_id, output
 
     def gc(self) -> None:
         self.gc_calls += 1
@@ -114,6 +128,49 @@ def test_engine_builder_requires_model_before_run() -> None:
     builder = evalution.engine(FakeEngine())
 
     assert not hasattr(builder, "run")
+
+
+def test_engine_rejects_objects_that_do_not_inherit_base_engine() -> None:
+    class InvalidEngine:
+        def build(self, model):
+            del model
+            return FakeSession()
+
+    try:
+        evalution.engine(InvalidEngine())
+    except TypeError as exc:
+        assert str(exc) == "engine must inherit BaseEngine"
+    else:
+        raise AssertionError("expected invalid engine to raise TypeError")
+
+
+def test_run_rejects_engines_that_return_non_session_objects(monkeypatch) -> None:
+    class InvalidEngine(BaseEngine):
+        def build(self, model):
+            del model
+            return object()
+
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    try:
+        evalution.run(
+            model={"path": "/tmp/model"},
+            engine=InvalidEngine(),
+            tests=[evalution.gsm8k_platinum(max_rows=1)],
+        )
+    except TypeError as exc:
+        assert str(exc) == "engine.build(model) must return a BaseInferenceSession"
+    else:
+        raise AssertionError("expected invalid session to raise TypeError")
 
 
 def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
