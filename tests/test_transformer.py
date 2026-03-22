@@ -21,6 +21,7 @@ from evalution.engines.base import (
     RollingLoglikelihoodRequest,
 )
 from evalution.engines.transformer import Transformer, TransformerSession
+from evalution.engines.transformer_compat import TransformerCompat
 
 
 def test_transformer_defaults_batch_size_to_auto() -> None:
@@ -243,7 +244,7 @@ def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatc
         lambda *args, **kwargs: fake_model,
     )
     monkeypatch.setattr(
-        "evalution.engines.transformer._clone_prepare_tokenizer",
+        "evalution.engines.transformers_common._clone_prepare_tokenizer",
         lambda **kwargs: None,
     )
 
@@ -256,6 +257,35 @@ def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatc
     assert fake_model.eval_called is True
     assert fake_model.moved_to == "cpu"
     assert session.model is fake_model
+
+
+def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_is_unavailable(
+    monkeypatch,
+) -> None:
+    fake_session = object()
+
+    class FakeCompatEngine:
+        def build(self, model):
+            assert model.path == "/tmp/model"
+            return fake_session
+
+    compat_engine = FakeCompatEngine()
+
+    monkeypatch.setattr(
+        "evalution.engines.transformer.transformers_continuous_batching_support",
+        lambda: (False, "transformers 4.55.4 is older than 4.56.0"),
+    )
+    monkeypatch.setattr(
+        TransformerCompat,
+        "from_transformer",
+        classmethod(lambda cls, engine: compat_engine),
+    )
+
+    engine = Transformer(device="cpu", paged_attention=True)
+    session = engine.build(Model(path="/tmp/model"))
+
+    assert session is fake_session
+    assert engine.resolved_engine == "TransformerCompat"
 
 
 def test_transformer_session_prepare_requests_batches_tokenization() -> None:

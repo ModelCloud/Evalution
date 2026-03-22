@@ -12,7 +12,7 @@ from typing import Any
 import yaml
 
 from evalution.config import Model
-from evalution.engines import Transformer
+from evalution.engines import Transformer, TransformerCompat
 from evalution.runtime import EvaluationRun, engine as build_engine
 from evalution.suites import (
     arc_challenge,
@@ -41,6 +41,8 @@ from evalution.suites import (
 _ENGINE_FACTORIES: dict[str, Any] = {
     "transformer": Transformer,
     "transformers": Transformer,
+    "transformer_compat": TransformerCompat,
+    "transformers_compat": TransformerCompat,
 }
 _TEST_FACTORIES: dict[str, Any] = {
     "arc_challenge": arc_challenge,
@@ -84,7 +86,12 @@ def python_from_yaml(source: str | Path) -> str:
     if not isinstance(test_specs, list) or not test_specs:
         raise TypeError("tests must be a non-empty list of test suite mappings")
 
-    engine_alias = "Transformers" if engine_name in {"transformer", "transformers"} else engine_name
+    if engine_name in {"transformer", "transformers"}:
+        engine_alias = "Transformers"
+    elif engine_name in {"transformer_compat", "transformers_compat"}:
+        engine_alias = "TransformersCompat"
+    else:
+        engine_alias = engine_name
     lines = [
         "import evalution as eval",
         "",

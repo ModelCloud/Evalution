@@ -5,9 +5,13 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, field
-from typing import Any, Protocol
+from dataclasses import asdict, dataclass, field, is_dataclass
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from evalution.config import Model
 
 
 @dataclass(slots=True)
@@ -66,7 +70,11 @@ class RollingLoglikelihoodOutput:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-class InferenceSession(Protocol):
+class BaseInferenceSession(ABC):
+    # Define the reusable model-session contract that every engine runtime must satisfy.
+    # Runtime code and test suites talk to this interface instead of branching on engine type.
+
+    @abstractmethod
     def generate(
         self,
         requests: list[GenerationRequest],
@@ -74,6 +82,7 @@ class InferenceSession(Protocol):
         batch_size: int | None = None,
     ) -> list[GenerationOutput]: ...
 
+    @abstractmethod
     def loglikelihood(
         self,
         requests: list[LoglikelihoodRequest],
@@ -81,6 +90,7 @@ class InferenceSession(Protocol):
         batch_size: int | None = None,
     ) -> list[LoglikelihoodOutput]: ...
 
+    @abstractmethod
     def loglikelihood_rolling(
         self,
         requests: list[RollingLoglikelihoodRequest],
@@ -88,6 +98,7 @@ class InferenceSession(Protocol):
         batch_size: int | None = None,
     ) -> list[RollingLoglikelihoodOutput]: ...
 
+    @abstractmethod
     def generate_continuous(
         self,
         requests: Iterable[tuple[Any, GenerationRequest]],
@@ -95,6 +106,36 @@ class InferenceSession(Protocol):
         batch_size: int | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]: ...
 
+    # Let engines release reusable caches between suites without fully unloading model state.
+    @abstractmethod
     def gc(self) -> None: ...
 
+    # Tear down the full session state and release heavyweight runtime objects.
+    @abstractmethod
     def close(self) -> None: ...
+
+    # Return engine-specific execution metadata for logs and result payloads.
+    def describe_execution(self) -> dict[str, Any] | None:
+        return None
+
+
+class BaseEngine(ABC):
+    # Define the engine-level contract shared by transformers, vLLM, SGLang, and vendor runtimes.
+    # A BaseEngine owns configuration and builds a reusable BaseInferenceSession for one model.
+
+    @abstractmethod
+    def build(self, model: Model) -> BaseInferenceSession:
+        # Construct a reusable inference session for one model configuration.
+        # The returned object must inherit BaseInferenceSession because runtime orchestration,
+        # suite execution, and result materialization depend on the common inference APIs.
+        raise NotImplementedError
+
+    # Serialize engine controls into the public run result payload.
+    def to_dict(self) -> dict[str, Any]:
+        if is_dataclass(self):
+            return asdict(self)
+        return {}
+
+
+# Keep the older type name available inside suite modules while the concrete base class stays explicit.
+InferenceSession = BaseInferenceSession
