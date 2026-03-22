@@ -126,6 +126,44 @@ evalution emit-python evalution.yaml
 Per-suite options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, and `max_rows`
 can be set directly on each suite call or in each YAML `tests` entry.
 
+## Subset Selection
+
+Subset-aware suites use a `subsets` selector instead of suite-specific selector names.
+Currently this applies to `mmlu` and `mmlu_pro`.
+
+- `subsets: all` runs the full suite.
+- `subsets: stem` runs the full `stem` subtree.
+- `subsets: stem.math` or `subsets: stem.abstract_algebra` runs a single leaf path.
+- `subsets: [stem, humanities]` runs the union of multiple selections.
+- Deeper paths are supported by the same syntax when a suite defines them.
+
+Python:
+
+```python
+import evalution as eval
+
+result = (
+    eval.engine(eval.Transformers())
+    .model(eval.Model(path="/monster/data/model/Llama-3.2-1B-Instruct"))
+    .run(eval.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
+    .run(eval.mmlu_pro(subsets="stem.math"))
+)
+```
+
+YAML:
+
+```yaml
+tests:
+  - type: mmlu
+    subsets:
+      - stem.abstract_algebra
+      - humanities.philosophy
+    num_fewshot: 5
+  - type: mmlu_pro
+    subsets: stem.math
+    num_fewshot: 5
+```
+
 Use `TransformersCompat()` in Python or `engine.type: transformer_compat` in YAML when you want
 the compatibility engine explicitly.
 
@@ -144,8 +182,8 @@ Evalution currently ships the following built-in suites:
 | `gsm8k` | `openai/gsm8k` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
 | `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
-| `mmlu` | `cais/mmlu` / `<subject>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
-| `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<category>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
+| `mmlu` | `cais/mmlu` / `<subsets>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
+| `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<subsets>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | `nyu-mll/glue` / `mnli` | `validation_matched` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | `nyu-mll/glue` / `mrpc` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `openbookqa` | `allenai/openbookqa` / `main` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |

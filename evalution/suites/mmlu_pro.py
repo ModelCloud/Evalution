@@ -28,25 +28,43 @@ from evalution.suites.execution import (
     prepare_batch_for_session,
     session_batch_size,
 )
+from evalution.suites.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
 
 _INVALID_CHOICE = "[invalid]"
 _OPTION_LABELS = tuple("ABCDEFGHIJKLMNOP")
 _STOP_STRINGS = ("Question:", "</s>", "<|im_end|>", "<|eot_id|>")
 _NON_ALNUM_PATTERN = pcre.compile(r"[^a-z0-9]+")
+_MMLU_PRO_SUBSET_TREE = {
+    "stem": {
+        "biology": "biology",
+        "chemistry": "chemistry",
+        "computer_science": "computer science",
+        "engineering": "engineering",
+        "math": "math",
+        "physics": "physics",
+    },
+    "humanities": {
+        "history": "history",
+        "law": "law",
+        "philosophy": "philosophy",
+    },
+    "social_sciences": {
+        "business": "business",
+        "economics": "economics",
+        "psychology": "psychology",
+    },
+    "other": {
+        "health": "health",
+        "other": "other",
+    },
+}
+_MMLU_PRO_SUBSETS = SubsetTree(_MMLU_PRO_SUBSET_TREE)
 _EXPLICIT_ANSWER_PATTERNS = (
     pcre.compile(r"(?i)\bthe answer is\s*\(?([A-Z])\)?"),
     pcre.compile(r"(?i)\banswer is\s*\(?([A-Z])\)?"),
     pcre.compile(r"(?i)\banswer\s*[:\-]\s*\(?([A-Z])\)?"),
 )
 _CHOICE_TOKEN_PATTERN = pcre.compile(r"\b([A-Z])\b")
-
-
-def _normalize_category_key(category: Any) -> str:
-    return " ".join(str(category).replace("_", " ").strip().lower().split())
-
-
-def _task_suffix(category: str) -> str:
-    return _normalize_category_key(category).replace(" ", "_")
 
 
 def _choice_labels(option_count: int) -> list[str]:
@@ -98,13 +116,13 @@ def _format_cot_example(doc: dict[str, Any], *, include_answer: bool) -> str:
 
 def _build_prompt(
     *,
-    category: str,
+    subset_value: str,
     fewshot_docs: list[dict[str, Any]],
     doc: dict[str, Any],
 ) -> str:
     header = (
         "The following are multiple choice questions (with answers) about "
-        f"{category}. Think step by step and then finish your answer with "
+        f"{subset_value}. Think step by step and then finish your answer with "
         "'the answer is (X)' where X is the correct letter choice."
     )
     sections = [header, *(_format_cot_example(example, include_answer=True) for example in fewshot_docs)]
@@ -250,7 +268,7 @@ class MMLUPro(TestSuite):
     dataset_path: str = "TIGER-Lab/MMLU-Pro"
     split: str = "test"
     fewshot_split: str = "validation"
-    category: str = "all"
+    subsets: str | list[str] = "all"
     num_fewshot: int = 5
     max_rows: int | None = None
     batch_size: int | None = None
@@ -260,7 +278,7 @@ class MMLUPro(TestSuite):
     max_new_tokens: int = 1024
     do_sample: bool = False
     temperature: float = 0.0
-    _fewshot_by_category: dict[str, list[dict[str, Any]]] = field(
+    _fewshot_by_subset_value: dict[str, list[dict[str, Any]]] = field(
         default_factory=dict,
         init=False,
         repr=False,
@@ -270,21 +288,27 @@ class MMLUPro(TestSuite):
         return load_dataset
 
     def task_name(self) -> str:
-        if _normalize_category_key(self.category) == "all":
+        resolved_subsets = self._resolved_subsets()
+        if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return "mmlu_pro"
-        return f"mmlu_pro_{_task_suffix(self.category)}"
+        suffix = "__".join(canonical.replace(".", "_") for canonical in resolved_subsets.canonicals)
+        return f"mmlu_pro_{suffix}"
 
     def result_metadata(
         self,
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        resolved_subsets = self._resolved_subsets()
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": None,
             "split": self.split,
             "fewshot_split": self.fewshot_split,
-            "category": _normalize_category_key(self.category),
+            "subsets": list(resolved_subsets.canonicals),
+            "subset_paths": [list(path) for path in resolved_subsets.paths],
+            "subset_kinds": list(resolved_subsets.kinds),
+            "selection_mode": resolved_subsets.selection_mode,
             "num_fewshot": self.num_fewshot,
             "streaming": self.streaming,
             "apply_chat_template": self.apply_chat_template,
@@ -339,9 +363,9 @@ class MMLUPro(TestSuite):
             cache_dir=self.cache_dir,
             streaming=self.streaming,
         )
-        self._fewshot_by_category = defaultdict(list)
+        self._fewshot_by_subset_value = defaultdict(list)
         for doc in self._select_docs([_preprocess_doc(doc) for doc in fewshot_loaded_docs]):
-            self._fewshot_by_category[_normalize_category_key(doc["category"])].append(doc)
+            self._fewshot_by_subset_value[normalize_subset_token(doc["category"])].append(doc)
 
         prepare_bar = manual_progress(
             total,
@@ -516,18 +540,21 @@ class MMLUPro(TestSuite):
         )
 
     def _select_docs(self, docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        selected_category = _normalize_category_key(self.category)
-        if selected_category == "all":
+        resolved_subsets = self._resolved_subsets()
+        if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return docs
-
+        selected_subset_values = {
+            normalize_subset_token(subset_value)
+            for subset_value in resolved_subsets.leaf_values
+        }
         selected_docs = [
             doc
             for doc in docs
-            if _normalize_category_key(doc.get("category")) == selected_category
+            if normalize_subset_token(doc.get("category")) in selected_subset_values
         ]
         if selected_docs:
             return selected_docs
-        raise ValueError(f"MMLU-Pro category {self.category!r} is not present in the dataset")
+        raise ValueError(f"MMLU-Pro subsets {self.subsets!r} are not present in the dataset")
 
     def _iter_prepared_samples(
         self,
@@ -535,10 +562,10 @@ class MMLUPro(TestSuite):
         docs: list[dict[str, Any]],
     ) -> Any:
         for index, doc in enumerate(docs):
-            category = _normalize_category_key(doc["category"])
+            subset_value = str(doc["category"]).strip()
             request, fewshot_count = self._build_request_with_backoff(
                 session=session,
-                category=category,
+                subset_value=subset_value,
                 doc=doc,
             )
             yield PreparedSample(
@@ -552,17 +579,18 @@ class MMLUPro(TestSuite):
         self,
         *,
         session: InferenceSession,
-        category: str,
+        subset_value: str,
         doc: dict[str, Any],
     ) -> tuple[GenerationRequest, int]:
-        category_fewshots = self._fewshot_by_category.get(category, [])
-        max_fewshots = min(self.num_fewshot, len(category_fewshots))
+        subset_token = normalize_subset_token(subset_value)
+        subset_fewshots = self._fewshot_by_subset_value.get(subset_token, [])
+        max_fewshots = min(self.num_fewshot, len(subset_fewshots))
         fallback_request: GenerationRequest | None = None
 
         for fewshot_count in range(max_fewshots, -1, -1):
             request = self._build_request(
-                category=category,
-                fewshot_docs=category_fewshots[:fewshot_count],
+                subset_value=subset_value,
+                fewshot_docs=subset_fewshots[:fewshot_count],
                 doc=doc,
             )
             fits_context, prepared_request = _request_fits_context(session, request)
@@ -572,7 +600,7 @@ class MMLUPro(TestSuite):
 
         if fallback_request is None:
             fallback_request = self._build_request(
-                category=category,
+                subset_value=subset_value,
                 fewshot_docs=[],
                 doc=doc,
             )
@@ -581,12 +609,12 @@ class MMLUPro(TestSuite):
     def _build_request(
         self,
         *,
-        category: str,
+        subset_value: str,
         fewshot_docs: list[dict[str, Any]],
         doc: dict[str, Any],
     ) -> GenerationRequest:
         prompt = _build_prompt(
-            category=category,
+            subset_value=subset_value,
             fewshot_docs=fewshot_docs,
             doc=doc,
         )
@@ -627,6 +655,7 @@ class MMLUPro(TestSuite):
             if predicted_label in valid_labels
             else _INVALID_CHOICE
         )
+        leaf_subset = _MMLU_PRO_SUBSETS.leaf_subset(prepared_sample.doc.get("category"))
         return SampleResult(
             index=prepared_sample.index,
             prompt=output.prompt,
@@ -641,7 +670,10 @@ class MMLUPro(TestSuite):
             },
             metadata={
                 "question_id": prepared_sample.doc.get("question_id"),
-                "category": _normalize_category_key(prepared_sample.doc.get("category")),
+                "subset": leaf_subset,
+                "subset_path": leaf_subset.split("."),
+                "subset_kind": "leaf",
+                "subset_value": str(prepared_sample.doc.get("category")).strip(),
                 "src": prepared_sample.doc.get("src"),
                 "answer_index": prepared_sample.doc.get("answer_index"),
                 "choice_texts": options,
@@ -651,6 +683,9 @@ class MMLUPro(TestSuite):
 
     def _invalid_prediction_count(self, sample: SampleResult) -> int:
         return int(sample.extracted["choice-label"] == _INVALID_CHOICE)
+
+    def _resolved_subsets(self) -> ResolvedSubsets:
+        return _MMLU_PRO_SUBSETS.resolve_many(self.subsets)
 
 
 def mmlu_pro(**kwargs: Any) -> MMLUPro:

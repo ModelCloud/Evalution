@@ -8,9 +8,9 @@ from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, run_suite_spe
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
 
 
-def test_llama3_2_transformers_mmlu_pro_full_model_eval(capsys):
-    run_suite_spec(capsys, "mmlu_pro_all")
+def test_llama3_2_transformers_mmlu_full_model_eval(capsys):
+    run_suite_spec(capsys, "mmlu_all")
 
 
-def test_llama3_2_transformers_mmlu_pro_stem_full_model_eval(capsys):
-    run_suite_spec(capsys, "mmlu_pro_stem")
+def test_llama3_2_transformers_mmlu_stem_full_model_eval(capsys):
+    run_suite_spec(capsys, "mmlu_stem")
