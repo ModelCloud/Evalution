@@ -183,6 +183,7 @@ Evalution currently ships the following built-in suites:
 | `openbookqa` | `allenai/openbookqa` / `main` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
 | `piqa` | `baber/piqa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `qnli` | `nyu-mll/glue` / `qnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `qqp` | `nyu-mll/glue` / `qqp` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `rte` | `super_glue` / `rte` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `sst2` | `nyu-mll/glue` / `sst2` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `wic` | `super_glue` / `wic` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
@@ -217,7 +218,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `mmlu`: MMLU `hendryckstest2021`
-- `mrpc`, `qnli`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
+- `cola`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
 - `piqa`: PIQA `bisk2020piqa`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
