@@ -6,18 +6,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from re import sub
 from typing import Any
 
+import pcre
 from datasets import load_dataset
 
 from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+
+_BRACKET_ARTIFACT_PATTERN = pcre.compile(r"\[.*?\]")
 
 
 def _clean_hellaswag_text(text: str) -> str:
     # Strip WikiHow artifacts and collapse spacing so scored prompts stay comparable across rows.
     cleaned = text.strip().replace(" [title]", ". ")
-    cleaned = sub(r"\[.*?\]", "", cleaned)
+    cleaned = _BRACKET_ARTIFACT_PATTERN.sub("", cleaned)
     return " ".join(cleaned.split())
 
 

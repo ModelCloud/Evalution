@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +18,7 @@ from evalution.suites.execution import PreparedSample
 
 _INVALID_CHOICE = "[invalid]"
 _STOP_STRINGS = ("</s>", "<|im_end|>", "<|eot_id|>")
+_NON_ALNUM_PATTERN = pcre.compile(r"[^a-z0-9]+")
 _CHOICE_LABEL_PATTERNS = (
     pcre.compile(r"(?i)\banswer(?:\s+is)?\s*[:\-]?\s*\(?([A-Z0-9])\)?\b"),
     pcre.compile(r"(?i)\b(?:option|choice)\s*\(?([A-Z0-9])\)?\b"),
@@ -37,7 +37,7 @@ def _normalize_choice_label(label: Any) -> str:
 
 
 def _normalize_choice_text(text: Any) -> str:
-    normalized = re.sub(r"[^a-z0-9]+", " ", str(text).lower())
+    normalized = _NON_ALNUM_PATTERN.sub(" ", str(text).lower())
     return normalized.strip()
 
 

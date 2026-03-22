@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import re
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from time import perf_counter
@@ -33,6 +32,7 @@ from evalution.suites.execution import (
 _INVALID_CHOICE = "[invalid]"
 _OPTION_LABELS = tuple("ABCDEFGHIJKLMNOP")
 _STOP_STRINGS = ("Question:", "</s>", "<|im_end|>", "<|eot_id|>")
+_NON_ALNUM_PATTERN = pcre.compile(r"[^a-z0-9]+")
 _EXPLICIT_ANSWER_PATTERNS = (
     pcre.compile(r"(?i)\bthe answer is\s*\(?([A-Z])\)?"),
     pcre.compile(r"(?i)\banswer is\s*\(?([A-Z])\)?"),
@@ -112,7 +112,7 @@ def _build_prompt(
 
 
 def _normalize_choice_text(text: Any) -> str:
-    normalized = re.sub(r"[^a-z0-9]+", " ", str(text).lower())
+    normalized = _NON_ALNUM_PATTERN.sub(" ", str(text).lower())
     return normalized.strip()
 
 

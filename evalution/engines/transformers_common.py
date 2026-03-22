@@ -7,13 +7,13 @@ from __future__ import annotations
 
 import gc
 import inspect
-import re
 import threading
 from contextlib import contextmanager, suppress
 from dataclasses import asdict, dataclass, field, replace
 from statistics import mean
 from typing import Any
 
+import pcre
 from packaging.version import Version
 
 from evalution.config import Model
@@ -33,6 +33,7 @@ from evalution.logbar import get_logger
 _AUTO_BATCH_SIZE = "auto"
 # PyPI source distributions first ship `generation/continuous_batching` in transformers 4.56.0.
 _CONTINUOUS_BATCHING_MIN_TRANSFORMERS_VERSION = Version("4.56.0")
+_UNEXPECTED_LOADER_KWARG_PATTERN = pcre.compile(r"unexpected keyword argument '([^']+)'")
 _AUTO_BATCH_LADDER = (
     1,
     2,
@@ -996,7 +997,7 @@ def _load_model_with_compat_fallback(
 
 # Detect specific loader kwargs that older transformers builds report as unexpected.
 def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
-    return set(re.findall(r"unexpected keyword argument '([^']+)'", str(exc)))
+    return set(_UNEXPECTED_LOADER_KWARG_PATTERN.findall(str(exc)))
 
 
 def _loader_kwargs_compat_fallback(
