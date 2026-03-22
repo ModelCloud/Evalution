@@ -373,6 +373,76 @@ def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypat
     assert "dtype" not in loader_calls[1]
 
 
+def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_error(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        pad_token = "<pad>"
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self, *, fail_on_to: bool) -> None:
+            self.config = PretrainedConfig()
+            self.fail_on_to = fail_on_to
+            self.eval_called = False
+            self.requires_grad_value: bool | None = None
+            self.moved_to: str | None = None
+
+        def requires_grad_(self, value: bool):
+            self.requires_grad_value = value
+            return self
+
+        def eval(self):
+            self.eval_called = True
+            return self
+
+        def to(self, device):
+            if self.fail_on_to:
+                raise NotImplementedError("Cannot copy out of meta tensor; no data!")
+            self.moved_to = str(device)
+            return self
+
+    loader_calls: list[dict[str, object]] = []
+    models = [
+        FakeModel(fail_on_to=True),
+        FakeModel(fail_on_to=False),
+    ]
+
+    monkeypatch.setattr(
+        transformers.AutoTokenizer,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeTokenizer(),
+    )
+
+    def fake_from_pretrained(*args, **kwargs):
+        loader_calls.append(kwargs)
+        return models.pop(0)
+
+    monkeypatch.setattr(
+        transformers.AutoModelForCausalLM,
+        "from_pretrained",
+        fake_from_pretrained,
+    )
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._clone_prepare_tokenizer",
+        lambda **kwargs: None,
+    )
+
+    session = TransformerSession.from_config(
+        Transformer(device="cpu", paged_attention=False),
+        Model(path="/tmp/model"),
+    )
+
+    assert len(loader_calls) == 2
+    assert "device_map" not in loader_calls[0]
+    assert loader_calls[1]["device_map"] == "cpu"
+    assert session.model.moved_to is None
+    assert session.input_device.type == "cpu"
+
+
 def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_is_unavailable(
     monkeypatch,
 ) -> None:
@@ -400,6 +470,67 @@ def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_
 
     assert session is fake_session
     assert engine.resolved_engine == "TransformerCompat"
+
+
+def test_transformer_build_warns_once_about_pending_nogil_transformers_pr(monkeypatch) -> None:
+    import evalution.engines.transformer as transformer_module
+
+    warnings: list[tuple[str, tuple[object, ...]]] = []
+
+    class FakeLogger:
+        def warning(self, message, *args):
+            warnings.append((message, args))
+
+    fake_session = object()
+
+    monkeypatch.setattr(
+        "evalution.engines.transformer.transformers_continuous_batching_support",
+        lambda: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        TransformerSession,
+        "from_config",
+        classmethod(lambda cls, engine, model_config: fake_session),
+    )
+    monkeypatch.setattr("evalution.engines.transformer.get_logger", lambda: FakeLogger())
+    monkeypatch.setattr(transformer_module, "_PENDING_NOGIL_TRANSFORMERS_PR_WARNED", False)
+    monkeypatch.setattr(sys, "_is_gil_enabled", lambda: False, raising=False)
+
+    engine = Transformer(device="cpu")
+
+    assert engine.build(Model(path="/tmp/model")) is fake_session
+    assert engine.build(Model(path="/tmp/model")) is fake_session
+    assert len(warnings) == 1
+    assert "PR #44924" in warnings[0][0]
+    assert warnings[0][1] == (transformer_module._PENDING_NOGIL_TRANSFORMERS_PR_URL,)
+
+
+def test_transformer_build_skips_pending_nogil_pr_warning_when_gil_is_enabled(monkeypatch) -> None:
+    import evalution.engines.transformer as transformer_module
+
+    warnings: list[tuple[str, tuple[object, ...]]] = []
+
+    class FakeLogger:
+        def warning(self, message, *args):
+            warnings.append((message, args))
+
+    fake_session = object()
+
+    monkeypatch.setattr(
+        "evalution.engines.transformer.transformers_continuous_batching_support",
+        lambda: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        TransformerSession,
+        "from_config",
+        classmethod(lambda cls, engine, model_config: fake_session),
+    )
+    monkeypatch.setattr("evalution.engines.transformer.get_logger", lambda: FakeLogger())
+    monkeypatch.setattr(transformer_module, "_PENDING_NOGIL_TRANSFORMERS_PR_WARNED", False)
+    monkeypatch.setattr(sys, "_is_gil_enabled", lambda: True, raising=False)
+
+    assert Transformer(device="cpu").build(Model(path="/tmp/model")) is fake_session
+    assert warnings == []
 
 
 def test_transformer_session_prepare_requests_batches_tokenization() -> None:
@@ -672,6 +803,129 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
     assert manager.kv_padding_interval_size == 4096
     assert manager.max_cached_graphs == 8
     assert manager.generation_config.stop_strings == ["Q:"]
+
+
+def test_transformer_session_generate_supports_config_object_continuous_batching_manager_api(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+
+        def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            assert add_special_tokens is False
+            del kwargs
+            if isinstance(prompts, str):
+                return {"input_ids": [11, 12, 13]}
+            return {"input_ids": [[11, 12, 13] for _ in prompts]}
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class FakeContinuousOutput:
+        def __init__(self, request_id, tokens):
+            self.request_id = request_id
+            self.generated_tokens = tokens
+            self.error = None
+
+        def is_finished(self) -> bool:
+            return True
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+            self.config._attn_implementation = "flash_attention_2"
+
+        def set_attn_implementation(self, value: str) -> None:
+            self.config._attn_implementation = value
+
+    class FakeContinuousBatchingConfig:
+        def __init__(
+            self,
+            *,
+            allow_block_sharing=True,
+            use_async_batching=None,
+            q_padding_interval_size=0,
+            kv_padding_interval_size=0,
+            max_cached_graphs=0,
+        ):
+            self.allow_block_sharing = allow_block_sharing
+            self.use_async_batching = use_async_batching
+            self.q_padding_interval_size = q_padding_interval_size
+            self.kv_padding_interval_size = kv_padding_interval_size
+            self.max_cached_graphs = max_cached_graphs
+
+    class FakeContinuousBatchingManager:
+        last_instance: FakeContinuousBatchingManager | None = None
+
+        def __init__(self, model, generation_config, continuous_batching_config):
+            self.model = model
+            self.generation_config = generation_config
+            self.continuous_batching_config = continuous_batching_config
+            self.result_queue = [FakeContinuousOutput("req_0", [101, 102, 103])]
+            self.started = False
+            self.stopped = False
+            self.added_request_ids: list[str] = []
+            FakeContinuousBatchingManager.last_instance = self
+
+        def start(self) -> None:
+            self.started = True
+
+        def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            del input_ids, max_new_tokens, streaming
+            assert request_id is not None
+            self.added_request_ids.append(request_id)
+
+        def get_result(self, timeout=None):
+            del timeout
+            if not self.result_queue:
+                return None
+            return self.result_queue.pop(0)
+
+        def is_running(self) -> bool:
+            return self.started and not self.stopped
+
+        def stop(self, block=True):
+            assert block is True
+            self.stopped = True
+
+    monkeypatch.setattr(transformers, "ContinuousBatchingConfig", FakeContinuousBatchingConfig)
+    monkeypatch.setattr(transformers, "ContinuousBatchingManager", FakeContinuousBatchingManager)
+
+    session = TransformerSession(
+        config=Transformer(
+            attn_implementation="flash_attention_2",
+            paged_attention="auto",
+            manual_eviction=True,
+            allow_block_sharing=False,
+            use_async_batching=False,
+            q_padding_interval_size=128,
+            kv_padding_interval_size=4096,
+            max_cached_graphs=8,
+        ),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=SimpleNamespace(type="cuda"),
+        requested_attn_implementation="flash_attention_2",
+        effective_attn_implementation="paged|flash_attention_2",
+        paged_attention_enabled=True,
+        generation_backend="continuous_batching",
+    )
+
+    outputs = session.generate([GenerationRequest(prompt="Q: 40 + 2\nA:", stop=["Q:"])], batch_size=1)
+
+    assert [output.text for output in outputs] == ["The answer is 42."]
+    manager = FakeContinuousBatchingManager.last_instance
+    assert manager is not None
+    assert manager.started is True
+    assert manager.generation_config.stop_strings == ["Q:"]
+    assert manager.continuous_batching_config.allow_block_sharing is False
+    assert manager.continuous_batching_config.use_async_batching is False
+    assert manager.continuous_batching_config.q_padding_interval_size == 128
+    assert manager.continuous_batching_config.kv_padding_interval_size == 4096
+    assert manager.continuous_batching_config.max_cached_graphs == 8
 
 
 def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> None:
@@ -1124,6 +1378,127 @@ def test_transformer_session_rebuilds_continuous_batching_manager_when_signature
     assert FakeContinuousBatchingManager.instances[1].stopped is False
     assert FakeContinuousBatchingManager.instances[0].generation_config.stop_strings == ["Q:"]
     assert FakeContinuousBatchingManager.instances[1].generation_config.stop_strings == ["A:"]
+
+
+def test_transformer_sessions_do_not_share_continuous_batching_managers(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+
+        def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            assert add_special_tokens is False
+            del kwargs
+            if isinstance(prompts, str):
+                return {"input_ids": [11, 12, 13]}
+            return {"input_ids": [[11, 12, 13] for _ in prompts]}
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class FakeContinuousOutput:
+        def __init__(self, request_id, tokens):
+            self.request_id = request_id
+            self.generated_tokens = tokens
+            self.error = None
+
+        def is_finished(self) -> bool:
+            return True
+
+    class FakeModel:
+        def __init__(self, *, tag: str) -> None:
+            self.tag = tag
+            self.config = PretrainedConfig()
+            self.config._attn_implementation = "flash_attention_2"
+
+        def set_attn_implementation(self, value: str) -> None:
+            self.config._attn_implementation = value
+
+    class FakeContinuousBatchingManager:
+        instances: list[FakeContinuousBatchingManager] = []
+
+        def __init__(self, model, generation_config, **kwargs):
+            del generation_config, kwargs
+            self.model = model
+            self.started = False
+            self.stopped = False
+            self.result_queue: list[FakeContinuousOutput] = []
+            self.added_request_ids: list[str] = []
+            FakeContinuousBatchingManager.instances.append(self)
+
+        def start(self) -> None:
+            self.started = True
+
+        def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            del input_ids, max_new_tokens, streaming
+            assert request_id is not None
+            self.added_request_ids.append(request_id)
+            self.result_queue.append(FakeContinuousOutput(request_id, [101, 102, 103]))
+
+        def get_result(self, timeout=None):
+            del timeout
+            if not self.result_queue:
+                return None
+            return self.result_queue.pop(0)
+
+        def is_running(self) -> bool:
+            return self.started and not self.stopped
+
+        def stop(self, block=True):
+            assert block is True
+            self.stopped = True
+
+    monkeypatch.setattr(
+        transformers,
+        "ContinuousBatchingManager",
+        FakeContinuousBatchingManager,
+    )
+
+    left_session = TransformerSession(
+        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+        model_config=Model(path="/tmp/model-left"),
+        model=FakeModel(tag="left"),
+        tokenizer=FakeTokenizer(),
+        input_device=SimpleNamespace(type="cuda"),
+        requested_attn_implementation="flash_attention_2",
+        effective_attn_implementation="paged|flash_attention_2",
+        paged_attention_enabled=True,
+        generation_backend="continuous_batching",
+    )
+    right_session = TransformerSession(
+        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+        model_config=Model(path="/tmp/model-right"),
+        model=FakeModel(tag="right"),
+        tokenizer=FakeTokenizer(),
+        input_device=SimpleNamespace(type="cuda"),
+        requested_attn_implementation="flash_attention_2",
+        effective_attn_implementation="paged|flash_attention_2",
+        paged_attention_enabled=True,
+        generation_backend="continuous_batching",
+    )
+
+    left_outputs = left_session.generate(
+        [GenerationRequest(prompt="Q: left\nA:", stop=["Q:"])],
+        batch_size=1,
+    )
+    right_outputs = right_session.generate(
+        [GenerationRequest(prompt="Q: right\nA:", stop=["Q:"])],
+        batch_size=1,
+    )
+
+    assert [output.text for output in left_outputs] == ["The answer is 42."]
+    assert [output.text for output in right_outputs] == ["The answer is 42."]
+    assert len(FakeContinuousBatchingManager.instances) == 2
+    left_manager, right_manager = FakeContinuousBatchingManager.instances
+    assert left_manager is left_session.continuous_batching_manager
+    assert right_manager is right_session.continuous_batching_manager
+    assert left_manager is not right_manager
+    assert left_manager.model is left_session.model
+    assert right_manager.model is right_session.model
+    assert left_manager.added_request_ids == ["req_0"]
+    assert right_manager.added_request_ids == ["req_0"]
 
 
 def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_and_generate() -> None:

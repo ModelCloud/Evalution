@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import inspect
+import sys
 import threading
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
@@ -27,6 +29,9 @@ from evalution.engines.transformers_common import (
 from evalution.logbar import get_logger
 
 _AUTO_PAGED_ATTENTION = "auto"
+_PENDING_NOGIL_TRANSFORMERS_PR_URL = "https://github.com/huggingface/transformers/pull/44924"
+_PENDING_NOGIL_TRANSFORMERS_PR_WARNED = False
+_PENDING_NOGIL_TRANSFORMERS_PR_WARN_LOCK = threading.Lock()
 
 
 @dataclass(slots=True)
@@ -58,8 +63,28 @@ class Transformer(_TransformersCommonConfig):
 
             return TransformerCompat.from_transformer(self).build(model)
 
+        _warn_pending_nogil_transformers_pr_once()
         self.resolved_engine = "Transformer"
         return TransformerSession.from_config(self, model)
+
+
+def _warn_pending_nogil_transformers_pr_once() -> None:
+    is_gil_enabled = getattr(sys, "_is_gil_enabled", None)
+    if not callable(is_gil_enabled) or is_gil_enabled():
+        return
+
+    global _PENDING_NOGIL_TRANSFORMERS_PR_WARNED
+    with _PENDING_NOGIL_TRANSFORMERS_PR_WARN_LOCK:
+        if _PENDING_NOGIL_TRANSFORMERS_PR_WARNED:
+            return
+        _PENDING_NOGIL_TRANSFORMERS_PR_WARNED = True
+
+    get_logger().warning(
+        "Python free-threading is enabled; upstream transformers PR #44924 is still pending for no-GIL "
+        "continuous batching fixes. Released transformers builds may affect paged attention, compare, "
+        "and concurrent model loading until that PR ships: %s",
+        _PENDING_NOGIL_TRANSFORMERS_PR_URL,
+    )
 
 
 @dataclass(slots=True)
@@ -345,7 +370,42 @@ class TransformerSession(BaseTransformerSession):
 
         self._stop_continuous_batching_manager()
 
-        manager = ContinuousBatchingManager(
+        manager = self._build_continuous_batching_manager(
+            ContinuousBatchingManager=ContinuousBatchingManager,
+            generation_config=generation_config,
+        )
+        manager.start()
+
+        with self._state_lock:
+            self.continuous_batching_manager = manager
+            self.continuous_batching_signature = request_signature
+            return manager
+
+    # Support both legacy kwarg-style and latest config-object continuous batching constructors.
+    def _build_continuous_batching_manager(
+        self,
+        *,
+        ContinuousBatchingManager: Any,
+        generation_config: Any,
+    ) -> Any:
+        manager_init = inspect.signature(ContinuousBatchingManager.__init__)
+        if "continuous_batching_config" in manager_init.parameters:
+            from transformers import ContinuousBatchingConfig
+
+            continuous_batching_config = ContinuousBatchingConfig(
+                allow_block_sharing=self.config.allow_block_sharing,
+                use_async_batching=self.config.use_async_batching,
+                q_padding_interval_size=self.config.q_padding_interval_size,
+                kv_padding_interval_size=self.config.kv_padding_interval_size,
+                max_cached_graphs=self.config.max_cached_graphs,
+            )
+            return ContinuousBatchingManager(
+                self.model,
+                generation_config=generation_config,
+                continuous_batching_config=continuous_batching_config,
+            )
+
+        return ContinuousBatchingManager(
             self.model,
             generation_config=generation_config,
             manual_eviction=self.config.manual_eviction,
@@ -355,12 +415,6 @@ class TransformerSession(BaseTransformerSession):
             allow_block_sharing=self.config.allow_block_sharing,
             use_async_batching=self.config.use_async_batching,
         )
-        manager.start()
-
-        with self._state_lock:
-            self.continuous_batching_manager = manager
-            self.continuous_batching_signature = request_signature
-            return manager
 
     # Allocate stable monotonic request ids for the paged manager.
     def _next_continuous_batching_request_id(self) -> str:
