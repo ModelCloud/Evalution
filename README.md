@@ -18,6 +18,8 @@ pip install .
 
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 
+Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
+
 Simple usage:
 
 ```python

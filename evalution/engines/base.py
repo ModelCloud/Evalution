@@ -71,7 +71,8 @@ class RollingLoglikelihoodOutput:
 
 
 class BaseInferenceSession(ABC):
-    # Define the common inference surface every concrete engine session must implement.
+    # Define the reusable model-session contract that every engine runtime must satisfy.
+    # Runtime code and test suites talk to this interface instead of branching on engine type.
 
     @abstractmethod
     def generate(
@@ -119,11 +120,14 @@ class BaseInferenceSession(ABC):
 
 
 class BaseEngine(ABC):
-    # Define the engine construction contract shared by transformer, vLLM, SGLang, and vendor runtimes.
+    # Define the engine-level contract shared by transformers, vLLM, SGLang, and vendor runtimes.
+    # A BaseEngine owns configuration and builds a reusable BaseInferenceSession for one model.
 
     @abstractmethod
     def build(self, model: Model) -> BaseInferenceSession:
         # Construct a reusable inference session for one model configuration.
+        # The returned object must inherit BaseInferenceSession because runtime orchestration,
+        # suite execution, and result materialization depend on the common inference APIs.
         raise NotImplementedError
 
     # Serialize engine controls into the public run result payload.
