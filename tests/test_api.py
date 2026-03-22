@@ -124,6 +124,28 @@ def test_engine_runner_chains_model_and_test_runs(monkeypatch) -> None:
     assert engine.session.close_calls == 1
 
 
+def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    result = (
+        evalution.engine(FakeEngine())
+        .model({"path": "/tmp/model"}, label="llama")
+        .run(evalution.gsm8k_platinum(max_rows=1))
+        .result()
+    )
+
+    assert result.model["label"] == "llama"
+
+
 def test_engine_builder_requires_model_before_run() -> None:
     builder = evalution.engine(FakeEngine())
 

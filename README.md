@@ -77,6 +77,34 @@ result = (
 The chained object is already the completed run handle. Accessing `result.model`, `result.engine`,
 `result.tests`, or `result.to_dict()` finalizes the run and closes the engine session implicitly.
 
+Compare usage:
+
+```python
+import evalution as eval
+
+result = (
+    eval.compare(
+        eval.engine(eval.Transformers(dtype="bfloat16", device="cuda:0")).model(
+            {"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
+            label="llama",
+        ),
+        eval.engine(eval.TransformersCompat(device="cuda:1")).model(
+            {"path": "/monster/data/model/Qwen2.5-1.5B-Instruct"},
+            label="qwen",
+        ),
+    )
+    .run(eval.gsm8k_platinum(max_rows=128))
+    .run(eval.arc_challenge(max_rows=128))
+)
+```
+
+`compare(...)` takes the same `eval.engine(...).model(...)` handles used for single-model runs, so
+single and compare flows share one fluent entry shape. Compare lane labels come from
+`.model(..., label="...")`; when omitted, Evalution falls back to the model path. It runs the same
+suite list on both lanes while allowing different engines and model configs on the left and right.
+When the terminal supports LogBar split panes, Evalution binds each lane to its own pane and
+renders a consolidated compare summary when the run closes.
+
 YAML usage:
 
 ```yaml

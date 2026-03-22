@@ -9,10 +9,18 @@ from contextlib import redirect_stdout
 import sys
 
 from evalution._banner import ASCII_LOGO, get_startup_banner
+from evalution.compare import CompareRun, compare, run_compare
 from evalution.config import Model
 from evalution.engines import BaseEngine, BaseInferenceSession, Transformer, TransformerCompat
 from evalution.logbar import get_logger
-from evalution.results import RunResult, SampleResult, TestResult
+from evalution.results import (
+    CompareMetricResult,
+    CompareRunResult,
+    CompareTestResult,
+    RunResult,
+    SampleResult,
+    TestResult,
+)
 from evalution.runtime import EngineBuilder, EvaluationRun, engine, run
 from evalution.suites import (
     ARCEasy,
@@ -81,6 +89,10 @@ __all__ = [
     "BaseEngine",
     "BaseInferenceSession",
     "CB",
+    "CompareMetricResult",
+    "CompareRun",
+    "CompareRunResult",
+    "CompareTestResult",
     "CoLA",
     "COPA",
     "EngineBuilder",
@@ -116,6 +128,7 @@ __all__ = [
     "cola",
     "copa",
     "choice_index_from_labels",
+    "compare",
     "engine",
     "f1_for_label",
     "gsm8k",
@@ -134,6 +147,7 @@ __all__ = [
     "rte",
     "python_from_yaml",
     "question_answer_prompt",
+    "run_compare",
     "sst2",
     "run",
     "run_yaml",

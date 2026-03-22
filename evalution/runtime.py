@@ -6,16 +6,19 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Any
 
-from evalution.config import Model, coerce_model
+from evalution.config import Model, coerce_model, model_with_label
 from evalution.engines.base import BaseEngine, BaseInferenceSession
 from evalution.logbar import (
+    LoggingContext,
     get_logger,
     render_test_result_table,
     render_test_summary_table,
     spinner,
+    use_logging_context,
 )
 from evalution.results import RunResult
 from evalution.suites.base import TestSuite
@@ -29,22 +32,24 @@ class EvaluationRun:
     _execution: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _test_results: list[Any] = field(default_factory=list, init=False, repr=False)
     _closed: bool = field(default=False, init=False, repr=False)
+    _logging_context: LoggingContext | None = field(default=None, init=False, repr=False)
 
     def run(self, test: TestSuite) -> EvaluationRun:
-        if self._closed:
-            raise RuntimeError("run is already closed")
-        if self._session is None:
-            self._session = _build_session(self._engine_impl, self._model_config)
-            self._execution = _describe_execution(self._session)
-        elif self._test_results:
-            _gc_session(self._session)
+        with self._logging_scope():
+            if self._closed:
+                raise RuntimeError("run is already closed")
+            if self._session is None:
+                self._session = _build_session(self._engine_impl, self._model_config)
+                self._execution = _describe_execution(self._session)
+            elif self._test_results:
+                _gc_session(self._session)
 
-        logger = get_logger()
-        logger.info("running test suite %s", type(test).__name__)
-        result = test.evaluate(self._session)
-        self._test_results.append(result)
-        logger.info("completed test %s", result.name)
-        render_test_result_table(result, logger=logger)
+            logger = get_logger()
+            logger.info("running test suite %s", type(test).__name__)
+            result = test.evaluate(self._session)
+            self._test_results.append(result)
+            logger.info("completed test %s", result.name)
+            render_test_result_table(result, logger=logger)
         return self
 
     @property
@@ -66,17 +71,18 @@ class EvaluationRun:
         return self._materialize_result(close=True).to_dict()
 
     def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        if self._session is not None:
+        with self._logging_scope():
+            if self._closed:
+                return
+            self._closed = True
+            if self._session is not None:
+                logger = get_logger()
+                logger.info("closing engine session")
+                self._session.close()
+                self._session = None
             logger = get_logger()
-            logger.info("closing engine session")
-            self._session.close()
-            self._session = None
-        logger = get_logger()
-        render_test_summary_table(self._test_results, logger=logger)
-        logger.info("finished evaluation run with %d test suite(s)", len(self._test_results))
+            render_test_summary_table(self._test_results, logger=logger)
+            logger.info("finished evaluation run with %d test suite(s)", len(self._test_results))
 
     def __enter__(self) -> EvaluationRun:
         return self
@@ -99,15 +105,24 @@ class EvaluationRun:
             tests=list(self._test_results),
         )
 
+    def bind_logging_context(self, context: LoggingContext | None) -> EvaluationRun:
+        self._logging_context = context
+        return self
+
+    def _logging_scope(self):
+        if self._logging_context is None:
+            return nullcontext()
+        return use_logging_context(self._logging_context)
+
 
 @dataclass(slots=True)
 class EngineBuilder:
     _engine_impl: BaseEngine
 
-    def model(self, model: Model | dict) -> EvaluationRun:
+    def model(self, model: Model | dict, *, label: str | None = None) -> EvaluationRun:
         return EvaluationRun(
             _engine_impl=self._engine_impl,
-            _model_config=coerce_model(model),
+            _model_config=model_with_label(coerce_model(model), label=label),
         )
 
 
