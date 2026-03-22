@@ -126,9 +126,40 @@ evalution emit-python evalution.yaml
 Per-suite options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, and `max_rows`
 can be set directly on each suite call or in each YAML `tests` entry.
 
-Hierarchical suites such as `mmlu` and `mmlu_pro` use `subset` selectors. `subset: stem`
-selects the full STEM subtree, while `subset: stem.biology` or
-`subset: stem.abstract_algebra` selects a single leaf path.
+## Subset Selection
+
+Subset-aware suites use a single `subset` path selector instead of suite-specific selector names.
+Currently this applies to `mmlu` and `mmlu_pro`.
+
+- `subset: all` runs the full suite.
+- `subset: stem` runs the full `stem` subtree.
+- `subset: stem.math` or `subset: stem.abstract_algebra` runs a single leaf path.
+- Deeper paths are supported by the same syntax when a suite defines them.
+
+Python:
+
+```python
+import evalution as eval
+
+result = (
+    eval.engine(eval.Transformers())
+    .model(eval.Model(path="/monster/data/model/Llama-3.2-1B-Instruct"))
+    .run(eval.mmlu(subset="stem.abstract_algebra"))
+    .run(eval.mmlu_pro(subset="stem.math"))
+)
+```
+
+YAML:
+
+```yaml
+tests:
+  - type: mmlu
+    subset: stem.abstract_algebra
+    num_fewshot: 5
+  - type: mmlu_pro
+    subset: stem.math
+    num_fewshot: 5
+```
 
 Use `TransformersCompat()` in Python or `engine.type: transformer_compat` in YAML when you want
 the compatibility engine explicitly.
