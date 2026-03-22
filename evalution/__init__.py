@@ -5,8 +5,13 @@
 
 """Evalution package."""
 
+from contextlib import redirect_stdout
+import sys
+
+from evalution._banner import ASCII_LOGO, get_startup_banner
 from evalution.config import Model
 from evalution.engines import BaseEngine, BaseInferenceSession, Transformer, TransformerCompat
+from evalution.logbar import get_logger
 from evalution.results import RunResult, SampleResult, TestResult
 from evalution.runtime import EngineBuilder, EvaluationRun, engine, run
 from evalution.suites import (
@@ -62,6 +67,7 @@ from evalution.suites import (
     wnli,
     winogrande,
 )
+from evalution.version import __version__
 from evalution.yaml import python_from_yaml, run_yaml
 
 __all__ = [
@@ -130,7 +136,17 @@ __all__ = [
     "wic",
     "wnli",
     "winogrande",
+    "__version__",
 ]
 
 Transformers = Transformer
 TransformersCompat = TransformerCompat
+
+with redirect_stdout(sys.stderr):
+    get_logger().info(
+        "\n%s",
+        get_startup_banner(
+            ASCII_LOGO,
+            evalution_version=__version__,
+        ),
+    )

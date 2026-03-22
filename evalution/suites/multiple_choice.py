@@ -181,7 +181,6 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
                 normalized_predictions=normalized_predictions,
             )
         )
-        logger.info("%s: metrics=%s", task_name, metrics)
         return TestResult(
             name=task_name,
             metrics=metrics,
