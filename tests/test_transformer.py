@@ -259,6 +259,120 @@ def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatc
     assert session.model is fake_model
 
 
+def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        pad_token = "<pad>"
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+
+        def requires_grad_(self, value: bool):
+            return self
+
+        def eval(self):
+            return self
+
+        def to(self, device):
+            return self
+
+    loader_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        transformers.AutoTokenizer,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeTokenizer(),
+    )
+
+    def fake_from_pretrained(*args, **kwargs):
+        loader_calls.append(kwargs)
+        return FakeModel()
+
+    monkeypatch.setattr(
+        transformers.AutoModelForCausalLM,
+        "from_pretrained",
+        fake_from_pretrained,
+    )
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._clone_prepare_tokenizer",
+        lambda **kwargs: None,
+    )
+
+    TransformerSession.from_config(
+        Transformer(device="cpu", paged_attention=False, dtype="bfloat16"),
+        Model(path="/tmp/model"),
+    )
+
+    assert len(loader_calls) == 1
+    assert loader_calls[0]["dtype"] == torch.bfloat16
+    assert "torch_dtype" not in loader_calls[0]
+
+
+def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        pad_token = "<pad>"
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+
+        def requires_grad_(self, value: bool):
+            return self
+
+        def eval(self):
+            return self
+
+        def to(self, device):
+            return self
+
+    loader_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        transformers.AutoTokenizer,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeTokenizer(),
+    )
+
+    def fake_from_pretrained(*args, **kwargs):
+        loader_calls.append(kwargs)
+        if "dtype" in kwargs:
+            raise TypeError("from_pretrained() got an unexpected keyword argument 'dtype'")
+        return FakeModel()
+
+    monkeypatch.setattr(
+        transformers.AutoModelForCausalLM,
+        "from_pretrained",
+        fake_from_pretrained,
+    )
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._clone_prepare_tokenizer",
+        lambda **kwargs: None,
+    )
+
+    TransformerSession.from_config(
+        Transformer(device="cpu", paged_attention=False, dtype="bfloat16"),
+        Model(path="/tmp/model"),
+    )
+
+    assert len(loader_calls) == 2
+    assert loader_calls[0]["dtype"] == torch.bfloat16
+    assert "torch_dtype" not in loader_calls[0]
+    assert loader_calls[1]["torch_dtype"] == torch.bfloat16
+    assert "dtype" not in loader_calls[1]
+
+
 def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_is_unavailable(
     monkeypatch,
 ) -> None:

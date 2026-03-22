@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass, field, replace
 from statistics import mean
 from typing import Any
 
+import pcre
 from packaging.version import Version
 
 from evalution.config import Model
@@ -32,6 +33,7 @@ from evalution.logbar import get_logger
 _AUTO_BATCH_SIZE = "auto"
 # PyPI source distributions first ship `generation/continuous_batching` in transformers 4.56.0.
 _CONTINUOUS_BATCHING_MIN_TRANSFORMERS_VERSION = Version("4.56.0")
+_UNEXPECTED_LOADER_KWARG_PATTERN = pcre.compile(r"unexpected keyword argument '([^']+)'")
 _AUTO_BATCH_LADDER = (
     1,
     2,
@@ -898,9 +900,13 @@ def load_transformer_runtime(
         "revision": model_config.revision,
         "trust_remote_code": trust_remote_code,
     }
+    if "dtype" not in load_kwargs and "torch_dtype" in load_kwargs:
+        load_kwargs["dtype"] = load_kwargs["torch_dtype"]
     resolved_dtype = resolve_dtype(config.dtype)
     if resolved_dtype is not None:
-        load_kwargs["torch_dtype"] = resolved_dtype
+        load_kwargs["dtype"] = resolved_dtype
+    if "dtype" in load_kwargs:
+        load_kwargs.pop("torch_dtype", None)
     raw_attn_implementation = config.attention_impl or config.attn_implementation
     attn_implementation = _base_attn_implementation(raw_attn_implementation)
     if attn_implementation is not None:
@@ -973,31 +979,52 @@ def _load_model_with_compat_fallback(
     model_path: str,
     load_kwargs: dict[str, Any],
 ) -> Any:
-    try:
-        return loader.from_pretrained(model_path, **load_kwargs)
-    except TypeError as exc:
-        unsupported_keys = _unsupported_loader_kwargs(load_kwargs, exc)
-        if not unsupported_keys:
-            raise
-        fallback_kwargs = {key: value for key, value in load_kwargs.items() if key not in unsupported_keys}
-        get_logger().warning(
-            "transformers model loader rejected %s; retrying without those kwargs",
-            sorted(unsupported_keys),
-        )
-        return loader.from_pretrained(model_path, **fallback_kwargs)
+    attempt_kwargs = dict(load_kwargs)
+    while True:
+        try:
+            return loader.from_pretrained(model_path, **attempt_kwargs)
+        except TypeError as exc:
+            fallback_kwargs, retry_action = _loader_kwargs_compat_fallback(attempt_kwargs, exc)
+            if fallback_kwargs is None or retry_action is None:
+                raise
+            get_logger().warning(
+                "transformers model loader rejected %s; retrying %s",
+                sorted(_unexpected_loader_kwargs(exc)),
+                retry_action,
+            )
+            attempt_kwargs = fallback_kwargs
 
 
 # Detect specific loader kwargs that older transformers builds report as unexpected.
-def _unsupported_loader_kwargs(load_kwargs: dict[str, Any], exc: TypeError) -> set[str]:
-    message = str(exc)
-    if "unexpected keyword argument" not in message:
-        return set()
+def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
+    return set(_UNEXPECTED_LOADER_KWARG_PATTERN.findall(str(exc)))
 
-    unsupported: set[str] = set()
+
+def _loader_kwargs_compat_fallback(
+    load_kwargs: dict[str, Any],
+    exc: TypeError,
+) -> tuple[dict[str, Any] | None, str | None]:
+    unexpected_kwargs = _unexpected_loader_kwargs(exc)
+    if not unexpected_kwargs:
+        return None, None
+
+    fallback_kwargs = dict(load_kwargs)
+    actions: list[str] = []
+
+    if "dtype" in unexpected_kwargs and "dtype" in fallback_kwargs:
+        dtype_value = fallback_kwargs.pop("dtype")
+        fallback_kwargs.setdefault("torch_dtype", dtype_value)
+        actions.append("with torch_dtype compatibility alias")
+
     for key in ("attn_implementation", "torch_dtype"):
-        if key in load_kwargs and key in message:
-            unsupported.add(key)
-    return unsupported
+        if key in unexpected_kwargs and key in fallback_kwargs:
+            fallback_kwargs.pop(key)
+            actions.append(f"without {key}")
+
+    if fallback_kwargs == load_kwargs or not actions:
+        return None, None
+
+    return fallback_kwargs, ", then ".join(actions)
 
 
 def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:

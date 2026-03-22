@@ -30,6 +30,8 @@ def test_package_exports_arc_challenge_suite() -> None:
     assert callable(evalution.hellaswag)
     assert evalution.MMLU is not None
     assert callable(evalution.mmlu)
+    assert evalution.MMLUPro is not None
+    assert callable(evalution.mmlu_pro)
     assert evalution.MNLI is not None
     assert callable(evalution.mnli)
     assert evalution.MRPC is not None
