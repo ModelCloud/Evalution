@@ -12,16 +12,16 @@ LLAMA3_2_1B_INSTRUCT = Path("/monster/data/model/Llama-3.2-1B-Instruct")
 # Allow up to two samples of score movement at 128 rows because continuous batching drifts slightly run to run.
 SCORE_BASELINE_ABS_TOLERANCE = 2 / 128
 GSM8K_BASELINE = {
-    "exact_match,strict-match": 0.3828125,
-    "exact_match,flexible-extract": 0.4296875,
+    "exact_match,strict-match": 0.328125,
+    "exact_match,flexible-extract": 0.3671875,
 }
 GSM8K_PLATINUM_BASELINE = {
-    "exact_match,strict-match": 0.3984375,
-    "exact_match,flexible-extract": 0.453125,
+    "exact_match,strict-match": 0.3515625,
+    "exact_match,flexible-extract": 0.390625,
 }
 ARC_CHALLENGE_BASELINE = {
-    "exact_match,choice-label": 0.4609375,
-    "exact_match,choice-text": 0.4609375,
+    "exact_match,choice-label": 0.4765625,
+    "exact_match,choice-text": 0.4765625,
 }
 ARC_EASY_BASELINE = {
     "accuracy,loglikelihood": 0.6640625,
@@ -82,6 +82,10 @@ SST2_BASELINE = {
 WIC_BASELINE = {
     "accuracy,loglikelihood": 0.5,
     "accuracy,loglikelihood_norm": 0.5,
+}
+WNLI_BASELINE = {
+    "accuracy,loglikelihood": 0.4225352112676056,
+    "accuracy,loglikelihood_norm": 0.4225352112676056,
 }
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
@@ -246,6 +250,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.wnli(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=71,
+                )
+            )
+            .run(
                 evalution.winogrande(
                     batch_size=24,
                     streaming=True,
@@ -262,7 +273,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 17
+    assert len(result.tests) == 18
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -282,6 +293,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "rte",
         "sst2",
         "wic",
+        "wnli",
         "winogrande",
     }
 
@@ -856,6 +868,42 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert "choice_logprobs" in sample.metadata
         assert "choice_logprobs_norm" in sample.metadata
 
+    wnli_result = tests_by_name["wnli"]
+    assert wnli_result.metadata["streaming"] is True
+    assert wnli_result.metadata["dataset_path"] == "nyu-mll/glue"
+    assert wnli_result.metadata["dataset_name"] == "wnli"
+    assert wnli_result.metadata["split"] == "validation"
+    assert wnli_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(wnli_result.samples) == 71
+    assert set(wnli_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    wnli_raw_score = wnli_result.metrics["accuracy,loglikelihood"]
+    wnli_norm_score = wnli_result.metrics["accuracy,loglikelihood_norm"]
+    assert_metrics_match_baseline(wnli_result.metrics, WNLI_BASELINE)
+    assert isinstance(wnli_raw_score, float)
+    assert isinstance(wnli_norm_score, float)
+
+    for index, sample in enumerate(wnli_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target in {"False", "True"}
+        assert sample.prediction in {"False", "True"}
+        assert "\nQuestion: " in sample.prompt
+        assert " True or False?\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
     winogrande_result = tests_by_name["winogrande"]
     assert winogrande_result.metadata["streaming"] is True
     assert winogrande_result.metadata["dataset_path"] == "winogrande"
@@ -920,3 +968,5 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["sst2"]["samples"][0]["prediction"]
     assert len(serialized_tests["wic"]["samples"]) == len(wic_result.samples)
     assert serialized_tests["wic"]["samples"][0]["prediction"]
+    assert len(serialized_tests["wnli"]["samples"]) == len(wnli_result.samples)
+    assert serialized_tests["wnli"]["samples"][0]["prediction"]

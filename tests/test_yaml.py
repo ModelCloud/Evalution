@@ -110,6 +110,8 @@ tests:
     max_rows: 22
   - type: wic
     max_rows: 14
+  - type: wnli
+    max_rows: 12
   - type: winogrande
     max_rows: 24
 """
@@ -133,6 +135,7 @@ tests:
     assert ".run(eval.rte(" in script
     assert ".run(eval.sst2(" in script
     assert ".run(eval.wic(" in script
+    assert ".run(eval.wnli(" in script
     assert ".run(eval.winogrande(" in script
 
 

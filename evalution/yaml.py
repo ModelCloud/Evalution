@@ -26,6 +26,7 @@ from evalution.suites import (
     rte,
     sst2,
     wic,
+    wnli,
     winogrande,
 )
 
@@ -50,6 +51,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "rte": rte,
     "sst2": sst2,
     "wic": wic,
+    "wnli": wnli,
     "winogrande": winogrande,
 }
 

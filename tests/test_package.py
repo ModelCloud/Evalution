@@ -34,6 +34,8 @@ def test_package_exports_arc_challenge_suite() -> None:
     assert callable(evalution.sst2)
     assert evalution.WiC is not None
     assert callable(evalution.wic)
+    assert evalution.WNLI is not None
+    assert callable(evalution.wnli)
     assert evalution.WinoGrande is not None
     assert callable(evalution.winogrande)
     assert callable(evalution.f1_for_label)

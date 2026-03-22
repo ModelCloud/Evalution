@@ -41,6 +41,7 @@ result = (
     .run(eval.rte())
     .run(eval.sst2())
     .run(eval.wic())
+    .run(eval.wnli())
     .run(eval.winogrande())
 )
 ```
@@ -181,6 +182,7 @@ Current built-in coverage:
 - `rte` suite for `super_glue` `rte`
 - `sst2` suite for `nyu-mll/glue` `sst2`
 - `wic` suite for `super_glue` `wic`
+- `wnli` suite for `nyu-mll/glue` `wnli`
 - `winogrande` suite for `winogrande` `winogrande_xl`
 - `logbar`-powered runtime logging and evaluation progress bars
 

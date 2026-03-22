@@ -18,6 +18,7 @@ from .qnli import QNLI, qnli
 from .rte import RTE, rte
 from .sst2 import SST2, sst2
 from .wic import WiC, wic
+from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
 
 __all__ = [
@@ -41,6 +42,7 @@ __all__ = [
     "SST2",
     "TestSuite",
     "WiC",
+    "WNLI",
     "WinoGrande",
     "arc_easy",
     "arc_challenge",
@@ -62,5 +64,6 @@ __all__ = [
     "question_answer_prompt",
     "sst2",
     "wic",
+    "wnli",
     "winogrande",
 ]

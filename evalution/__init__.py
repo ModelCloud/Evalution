@@ -25,6 +25,7 @@ from evalution.suites import (
     SST2,
     TestSuite,
     WiC,
+    WNLI,
     WinoGrande,
     arc_easy,
     arc_challenge,
@@ -46,6 +47,7 @@ from evalution.suites import (
     question_answer_prompt,
     sst2,
     wic,
+    wnli,
     winogrande,
 )
 from evalution.yaml import python_from_yaml, run_yaml
@@ -78,6 +80,7 @@ __all__ = [
     "TestResult",
     "Transformer",
     "Transformers",
+    "WNLI",
     "arc_easy",
     "arc_challenge",
     "boolq",
@@ -102,6 +105,7 @@ __all__ = [
     "run",
     "run_yaml",
     "wic",
+    "wnli",
     "winogrande",
 ]
 
