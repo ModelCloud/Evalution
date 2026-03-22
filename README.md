@@ -169,32 +169,32 @@ Evalution currently ships the following built-in suites:
 
 | Suite | Hugging Face dataset | Default split | Scoring | Original benchmark |
 | --- | --- | --- | --- | --- |
-| `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Generated label exact match, choice-text fallback | ARC [^arc] |
-| `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ARC [^arc] |
-| `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE [^superglue] |
-| `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE [^superglue] |
-| `copa` | `super_glue` / `copa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE [^superglue] |
-| `gsm8k` | `openai/gsm8k` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K [^gsm8k] |
-| `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K-Platinum [^gsm8k_platinum] |
-| `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag [^hellaswag] |
-| `mmlu` | `cais/mmlu` / `<subject>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU [^mmlu] |
-| `mrpc` | `nyu-mll/glue` / `mrpc` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE [^glue] |
-| `openbookqa` | `allenai/openbookqa` / `main` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA [^openbookqa] |
-| `piqa` | `baber/piqa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA [^piqa] |
-| `qnli` | `nyu-mll/glue` / `qnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE [^glue] |
-| `rte` | `super_glue` / `rte` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE [^superglue] |
-| `sst2` | `nyu-mll/glue` / `sst2` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE [^glue] |
-| `wic` | `super_glue` / `wic` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE [^superglue] |
-| `wnli` | `nyu-mll/glue` / `wnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE [^glue] |
-| `winogrande` | `winogrande` / `winogrande_xl` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande [^winogrande] |
+| `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Generated label exact match, choice-text fallback | ARC `clark2018arc` |
+| `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ARC `clark2018arc` |
+| `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
+| `cola` | `nyu-mll/glue` / `cola` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
+| `copa` | `super_glue` / `copa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `gsm8k` | `openai/gsm8k` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K `cobbe2021trainingverifierssolvemath` |
+| `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
+| `mmlu` | `cais/mmlu` / `<subject>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
+| `mrpc` | `nyu-mll/glue` / `mrpc` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `openbookqa` | `allenai/openbookqa` / `main` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
+| `piqa` | `baber/piqa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
+| `qnli` | `nyu-mll/glue` / `qnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `rte` | `super_glue` / `rte` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `sst2` | `nyu-mll/glue` / `sst2` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `wic` | `super_glue` / `wic` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `wnli` | `nyu-mll/glue` / `wnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `winogrande` | `winogrande` / `winogrande_xl` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
 
 Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
 
 ## Citation
 
 If you use Evalution, cite the project itself. If you use one or more built-in suites, also cite the
-original benchmark papers below. These citations refer to the benchmark authors and original suite
-papers, not the later `lm-evaluation-harness` ports.
+original benchmark papers below.
 
 ```bibtex
 # Evalution
@@ -211,16 +211,16 @@ papers, not the later `lm-evaluation-harness` ports.
 
 The current built-in suite coverage maps to these benchmark citations:
 
-- `arc_challenge`, `arc_easy`: ARC [^arc]
-- `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE [^superglue]
-- `gsm8k`: GSM8K [^gsm8k]
-- `gsm8k_platinum`: GSM8K-Platinum [^gsm8k_platinum]
-- `hellaswag`: HellaSwag [^hellaswag]
-- `mmlu`: MMLU [^mmlu]
-- `mrpc`, `qnli`, `sst2`, `wnli`: GLUE [^glue]
-- `openbookqa`: OpenBookQA [^openbookqa]
-- `piqa`: PIQA [^piqa]
-- `winogrande`: WinoGrande [^winogrande]
+- `arc_challenge`, `arc_easy`: ARC `clark2018arc`
+- `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
+- `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
+- `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
+- `hellaswag`: HellaSwag `zellers2019hellaswag`
+- `mmlu`: MMLU `hendryckstest2021`
+- `mrpc`, `qnli`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
+- `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
+- `piqa`: PIQA `bisk2020piqa`
+- `winogrande`: WinoGrande `sakaguchi2019winogrande`
 
 ```bibtex
 
@@ -304,14 +304,3 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 ```
-
-[^arc]: Peter Clark, Isaac Cowhey, Oren Etzioni, Tushar Khot, Ashish Sabharwal, Carissa Schoenick, and Oyvind Tafjord. "Think you have Solved Question Answering? Try ARC, the AI2 Reasoning Challenge." 2018.
-[^glue]: Alex Wang, Amanpreet Singh, Julian Michael, Felix Hill, Omer Levy, and Samuel Bowman. "GLUE: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding." 2018.
-[^gsm8k]: Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Jacob Hilton, Reiichiro Nakano, Christopher Hesse, and John Schulman. "Training Verifiers to Solve Math Word Problems." 2021.
-[^gsm8k_platinum]: Joshua Vendrow, Edward Vendrow, Sara Beery, and Aleksander Madry. "Do Large Language Model Benchmarks Test Reliability?" 2025.
-[^hellaswag]: Rowan Zellers, Ari Holtzman, Yonatan Bisk, Ali Farhadi, and Yejin Choi. "HellaSwag: Can a Machine Really Finish Your Sentence?" 2019.
-[^mmlu]: Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn Song, and Jacob Steinhardt. "Measuring Massive Multitask Language Understanding." 2021.
-[^openbookqa]: Todor Mihaylov, Peter Clark, Tushar Khot, and Ashish Sabharwal. "Can a Suit of Armor Conduct Electricity? A New Dataset for Open Book Question Answering." 2018.
-[^piqa]: Yonatan Bisk, Rowan Zellers, Ronan Le Bras, Jianfeng Gao, and Yejin Choi. "PIQA: Reasoning about Physical Commonsense in Natural Language." 2020.
-[^superglue]: Alex Wang, Yada Pruksachatkun, Nikita Nangia, Amanpreet Singh, Julian Michael, Felix Hill, Omer Levy, and Samuel Bowman. "SuperGLUE: A Stickier Benchmark for General-Purpose Language Understanding Systems." 2019.
-[^winogrande]: Keisuke Sakaguchi, Ronan Le Bras, Chandra Bhagavatula, and Yejin Choi. "WinoGrande: An Adversarial Winograd Schema Challenge at Scale." 2019.

@@ -54,6 +54,12 @@ CB_BASELINE = {
     "f1,loglikelihood_macro": 0.39345839345839345,
     "f1,loglikelihood_norm_macro": 0.39345839345839345,
 }
+COLA_BASELINE = {
+    "accuracy,loglikelihood": 0.6484375,
+    "accuracy,loglikelihood_norm": 0.6484375,
+    "mcc,loglikelihood": 0.0,
+    "mcc,loglikelihood_norm": 0.0,
+}
 COPA_BASELINE = {
     "accuracy,loglikelihood": 0.74,
     "accuracy,loglikelihood_norm": 0.68,
@@ -164,6 +170,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                     batch_size=24,
                     streaming=True,
                     max_rows=56,
+                )
+            )
+            .run(
+                evalution.cola(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
                 )
             )
             .run(
@@ -278,7 +291,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 18
+    assert len(result.tests) == 19
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -286,6 +299,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "gsm8k_platinum_cot",
         "boolq",
         "cb",
+        "cola",
         "copa",
         "arc_easy",
         "arc_challenge",
@@ -424,6 +438,39 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert sample.prediction in {"True", "False", "Neither"}
         assert "\nQuestion: " in sample.prompt
         assert "True, False, or Neither?\nAnswer:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
+    cola_result = tests_by_name["cola"]
+    assert cola_result.metadata["streaming"] is True
+    assert cola_result.metadata["dataset_path"] == "nyu-mll/glue"
+    assert cola_result.metadata["dataset_name"] == "cola"
+    assert cola_result.metadata["split"] == "validation"
+    assert cola_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(cola_result.samples) == 128
+    assert set(cola_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+        "mcc,loglikelihood",
+        "mcc,loglikelihood_norm",
+    }
+    assert_metrics_match_baseline(cola_result.metrics, COLA_BASELINE)
+
+    for index, sample in enumerate(cola_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target in {"yes", "no"}
+        assert sample.prediction in {"yes", "no"}
+        assert "\nQuestion: Does this sentence make sense?\nAnswer:" in sample.prompt
         assert set(sample.extracted) == {
             "gold_index",
             "predicted_index",
@@ -951,6 +998,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["gsm8k_platinum_cot"]["samples"][0]["prediction"]
     assert len(serialized_tests["cb"]["samples"]) == len(cb_result.samples)
     assert serialized_tests["cb"]["samples"][0]["prediction"]
+    assert len(serialized_tests["cola"]["samples"]) == len(cola_result.samples)
+    assert serialized_tests["cola"]["samples"][0]["prediction"]
     assert len(serialized_tests["copa"]["samples"]) == len(copa_result.samples)
     assert serialized_tests["copa"]["samples"][0]["prediction"]
     assert len(serialized_tests["arc_challenge"]["samples"]) == len(arc_result.samples)
