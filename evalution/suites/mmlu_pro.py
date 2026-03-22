@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from time import perf_counter
 from typing import Any
 
@@ -160,6 +160,91 @@ def _extract_choice_label_from_text(text: str, options: list[str]) -> str:
     return contained_matches[0][0]
 
 
+def _session_tokenizer(session: InferenceSession) -> Any | None:
+    return getattr(session, "prepare_tokenizer", None) or getattr(session, "tokenizer", None)
+
+
+def _session_context_limit(session: InferenceSession) -> int | None:
+    tokenizer = _session_tokenizer(session)
+    model_length = getattr(getattr(getattr(session, "model", None), "config", None), "max_position_embeddings", None)
+    tokenizer_length = getattr(tokenizer, "model_max_length", None)
+    candidate_lengths = [
+        int(length)
+        for length in (
+            model_length,
+            tokenizer_length,
+            getattr(session, "max_input_length", None),
+            getattr(session, "context_window", None),
+            getattr(session, "max_model_length", None),
+            getattr(session, "max_sequence_length", None),
+            getattr(session, "max_seq_len", None),
+        )
+        if isinstance(length, int) and 1 < length < 1_000_000
+    ]
+    if candidate_lengths:
+        return min(candidate_lengths)
+    return None
+
+
+def _prepare_request_for_context_fit(
+    session: InferenceSession,
+    request: GenerationRequest,
+) -> GenerationRequest:
+    prepare_requests = getattr(session, "prepare_requests", None)
+    if callable(prepare_requests):
+        return prepare_requests([request])[0]
+
+    tokenizer = _session_tokenizer(session)
+    if tokenizer is None:
+        return request
+
+    rendered_prompt = request.rendered_prompt
+    if rendered_prompt is None:
+        if request.messages is not None:
+            apply_chat_template = getattr(tokenizer, "apply_chat_template", None)
+            if not callable(apply_chat_template):
+                return request
+            rendered_prompt = apply_chat_template(
+                request.messages,
+                tokenize=False,
+                add_generation_prompt=request.add_generation_prompt,
+            )
+        elif request.prompt is not None:
+            rendered_prompt = request.prompt
+        else:
+            return request
+
+    encoded = tokenizer(
+        rendered_prompt,
+        add_special_tokens=False,
+        padding=False,
+    )
+    input_ids = encoded.get("input_ids")
+    if input_ids is None:
+        return replace(request, rendered_prompt=rendered_prompt)
+    return replace(
+        request,
+        rendered_prompt=rendered_prompt,
+        input_ids=list(input_ids),
+    )
+
+
+def _request_fits_context(
+    session: InferenceSession,
+    request: GenerationRequest,
+) -> tuple[bool, GenerationRequest]:
+    prepared_request = _prepare_request_for_context_fit(session, request)
+    context_limit = _session_context_limit(session)
+    if context_limit is None or prepared_request.input_ids is None:
+        return True, prepared_request
+
+    prompt_token_count = len(prepared_request.input_ids)
+    return (
+        prompt_token_count + prepared_request.max_new_tokens < context_limit,
+        prepared_request,
+    )
+
+
 @dataclass(slots=True)
 class MMLUPro(TestSuite):
     dataset_path: str = "TIGER-Lab/MMLU-Pro"
@@ -262,7 +347,7 @@ class MMLUPro(TestSuite):
             total,
             title=f"{task_name}: preparing requests",
         )
-        prepared_iter = self._iter_prepared_samples(docs)
+        prepared_iter = self._iter_prepared_samples(session, docs)
         preview_size = (
             min(total, AUTO_BATCH_PREVIEW_ROWS)
             if needs_batch_size_preview(self.batch_size, session)
@@ -444,20 +529,54 @@ class MMLUPro(TestSuite):
             return selected_docs
         raise ValueError(f"MMLU-Pro category {self.category!r} is not present in the dataset")
 
-    def _iter_prepared_samples(self, docs: list[dict[str, Any]]) -> Any:
+    def _iter_prepared_samples(
+        self,
+        session: InferenceSession,
+        docs: list[dict[str, Any]],
+    ) -> Any:
         for index, doc in enumerate(docs):
             category = _normalize_category_key(doc["category"])
-            fewshot_docs = self._fewshot_by_category.get(category, [])[: self.num_fewshot]
+            request, fewshot_count = self._build_request_with_backoff(
+                session=session,
+                category=category,
+                doc=doc,
+            )
             yield PreparedSample(
                 index=index,
                 doc=doc,
                 target=str(doc["answer"]).strip().upper(),
-                request=self._build_request(
-                    category=category,
-                    fewshot_docs=fewshot_docs,
-                    doc=doc,
-                ),
+                request=request,
             )
+
+    def _build_request_with_backoff(
+        self,
+        *,
+        session: InferenceSession,
+        category: str,
+        doc: dict[str, Any],
+    ) -> tuple[GenerationRequest, int]:
+        category_fewshots = self._fewshot_by_category.get(category, [])
+        max_fewshots = min(self.num_fewshot, len(category_fewshots))
+        fallback_request: GenerationRequest | None = None
+
+        for fewshot_count in range(max_fewshots, -1, -1):
+            request = self._build_request(
+                category=category,
+                fewshot_docs=category_fewshots[:fewshot_count],
+                doc=doc,
+            )
+            fits_context, prepared_request = _request_fits_context(session, request)
+            fallback_request = prepared_request
+            if fits_context:
+                return prepared_request, fewshot_count
+
+        if fallback_request is None:
+            fallback_request = self._build_request(
+                category=category,
+                fewshot_docs=[],
+                doc=doc,
+            )
+        return fallback_request, 0
 
     def _build_request(
         self,
