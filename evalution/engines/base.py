@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 ModelCloud.ai
+# SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
+# SPDX-License-Identifier: Apache-2.0
+# Contact: qubitium@modelcloud.ai, x.com/qubitium
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
@@ -26,6 +31,41 @@ class GenerationOutput:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(slots=True)
+class LoglikelihoodRequest:
+    # Score `continuation` conditioned on `context`, optionally reusing pretokenized ids.
+    context: str = ""
+    continuation: str = ""
+    context_input_ids: list[int] | None = None
+    continuation_input_ids: list[int] | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class LoglikelihoodOutput:
+    # Report the summed continuation log-probability plus whether greedy decoding agrees.
+    logprob: float
+    is_greedy: bool
+    token_count: int
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class RollingLoglikelihoodRequest:
+    # Score a full text span token-by-token for perplexity-style evaluations.
+    text: str
+    input_ids: list[int] | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class RollingLoglikelihoodOutput:
+    # Report the total rolling log-probability across every scored token.
+    logprob: float
+    token_count: int
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
 class InferenceSession(Protocol):
     def generate(
         self,
@@ -33,6 +73,20 @@ class InferenceSession(Protocol):
         *,
         batch_size: int | None = None,
     ) -> list[GenerationOutput]: ...
+
+    def loglikelihood(
+        self,
+        requests: list[LoglikelihoodRequest],
+        *,
+        batch_size: int | None = None,
+    ) -> list[LoglikelihoodOutput]: ...
+
+    def loglikelihood_rolling(
+        self,
+        requests: list[RollingLoglikelihoodRequest],
+        *,
+        batch_size: int | None = None,
+    ) -> list[RollingLoglikelihoodOutput]: ...
 
     def generate_continuous(
         self,

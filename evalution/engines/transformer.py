@@ -1,16 +1,28 @@
+# SPDX-FileCopyrightText: 2026 ModelCloud.ai
+# SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
+# SPDX-License-Identifier: Apache-2.0
+# Contact: qubitium@modelcloud.ai, x.com/qubitium
+
 from __future__ import annotations
 
 import gc
 import threading
 from collections.abc import Iterable, Iterator
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from dataclasses import asdict, dataclass, field, replace
 from itertools import chain, islice
 from statistics import mean
 from typing import Any
 
 from evalution.config import Model
-from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.engines.base import (
+    GenerationOutput,
+    GenerationRequest,
+    LoglikelihoodOutput,
+    LoglikelihoodRequest,
+    RollingLoglikelihoodOutput,
+    RollingLoglikelihoodRequest,
+)
 from evalution.engines.memory import build_memory_profile, gib_to_bytes, resolve_dtype
 from evalution.logbar import get_logger
 
@@ -45,6 +57,16 @@ _AUTO_BATCH_LADDER = (
     1536,
     2048,
 )
+
+
+@dataclass(slots=True)
+class _ScoringChunk:
+    # Track one model forward slice plus which token span contributes to the score.
+    request_index: int
+    input_ids: list[int]
+    score_start: int
+    score_count: int
+    metadata: dict[str, Any]
 
 
 def _truncate_at_stop(text: str, stop_strings: list[str]) -> str:
@@ -239,6 +261,79 @@ class TransformerSession:
                     self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
                     return self._generate_standard(requests, batch_size=fallback_batch_size)
             return self._generate_standard(requests, batch_size=effective_batch_size)
+
+    def loglikelihood(
+        self,
+        requests: list[LoglikelihoodRequest],
+        *,
+        batch_size: int | None = None,
+    ) -> list[LoglikelihoodOutput]:
+        # Score short continuation spans with direct causal-LM forwards and token log-prob gathers.
+        if not requests:
+            return []
+
+        with self._generation_lock:
+            prepared_requests = [self._prepare_loglikelihood_request(request) for request in requests]
+            effective_batch_size = batch_size or self._resolve_scoring_batch_size(prepared_requests)
+            chunks: list[_ScoringChunk] = []
+            for request_index, (prefix_ids, target_ids, metadata) in enumerate(prepared_requests):
+                chunks.extend(
+                    self._build_loglikelihood_chunks(
+                        request_index=request_index,
+                        prefix_ids=prefix_ids,
+                        target_ids=target_ids,
+                        metadata=metadata,
+                    )
+                )
+
+            chunk_scores = self._score_chunks(chunks, batch_size=effective_batch_size)
+            totals = [
+                LoglikelihoodOutput(
+                    logprob=0.0,
+                    is_greedy=True,
+                    token_count=0,
+                    metadata=dict(request.metadata),
+                )
+                for request in requests
+            ]
+            for chunk, chunk_output in zip(chunks, chunk_scores, strict=True):
+                current = totals[chunk.request_index]
+                totals[chunk.request_index] = LoglikelihoodOutput(
+                    logprob=current.logprob + chunk_output.logprob,
+                    is_greedy=current.is_greedy and chunk_output.is_greedy,
+                    token_count=current.token_count + chunk_output.token_count,
+                    metadata=current.metadata,
+                )
+            return totals
+
+    def loglikelihood_rolling(
+        self,
+        requests: list[RollingLoglikelihoodRequest],
+        *,
+        batch_size: int | None = None,
+    ) -> list[RollingLoglikelihoodOutput]:
+        # Reuse the continuation scorer by treating the whole text as the continuation from BOS/prefix.
+        if not requests:
+            return []
+
+        scoring_requests = [
+            LoglikelihoodRequest(
+                context="",
+                continuation=request.text,
+                continuation_input_ids=list(request.input_ids) if request.input_ids is not None else None,
+                metadata=dict(request.metadata),
+            )
+            for request in requests
+        ]
+        scored = self.loglikelihood(scoring_requests, batch_size=batch_size)
+        return [
+            RollingLoglikelihoodOutput(
+                logprob=output.logprob,
+                token_count=output.token_count,
+                metadata=output.metadata,
+            )
+            for output in scored
+        ]
 
     def generate_continuous(
         self,
@@ -847,6 +942,192 @@ class TransformerSession:
         common_stop_strings = _common_stop_strings(batch)
         generation_config.stop_strings = list(common_stop_strings) if common_stop_strings else None
         return generation_config
+
+    def _prepare_loglikelihood_request(
+        self,
+        request: LoglikelihoodRequest,
+    ) -> tuple[list[int], list[int], dict[str, Any]]:
+        # Tokenize or reuse the context/continuation ids needed for token-level scoring.
+        with self._tokenizer_lock:
+            if request.context_input_ids is not None:
+                prefix_ids = list(request.context_input_ids)
+            elif request.context:
+                prefix_ids = self.tokenizer(
+                    request.context,
+                    add_special_tokens=False,
+                )["input_ids"]
+            else:
+                prefix_ids = []
+
+            if request.continuation_input_ids is not None:
+                target_ids = list(request.continuation_input_ids)
+            elif request.continuation:
+                target_ids = self.tokenizer(
+                    request.continuation,
+                    add_special_tokens=False,
+                )["input_ids"]
+            else:
+                target_ids = []
+
+        if not target_ids:
+            raise ValueError("loglikelihood requests must provide a non-empty continuation")
+        return list(prefix_ids), list(target_ids), dict(request.metadata)
+
+    def _resolve_scoring_batch_size(
+        self,
+        requests: list[tuple[list[int], list[int], dict[str, Any]]],
+    ) -> int:
+        # Reuse the auto batch-size heuristic by mapping scored tokens onto zero-generation requests.
+        batch_requests = [
+            GenerationRequest(
+                rendered_prompt="",
+                input_ids=prefix_ids + target_ids,
+                max_new_tokens=0,
+            )
+            for prefix_ids, target_ids, _metadata in requests
+        ]
+        return self.resolve_batch_size(batch_requests)
+
+    def _build_loglikelihood_chunks(
+        self,
+        *,
+        request_index: int,
+        prefix_ids: list[int],
+        target_ids: list[int],
+        metadata: dict[str, Any],
+    ) -> list[_ScoringChunk]:
+        # Split long scored continuations into model-sized windows while preserving trailing context.
+        max_input_length = self._max_scoring_input_length()
+        history_ids = list(prefix_ids)
+        if not history_ids:
+            history_ids = [self._prefix_token_id()]
+
+        chunks: list[_ScoringChunk] = []
+        cursor = 0
+        while cursor < len(target_ids):
+            remaining = len(target_ids) - cursor
+            target_count = min(remaining, max_input_length - 1)
+            context_count = min(len(history_ids), max_input_length - target_count)
+            if context_count <= 0:
+                raise ValueError("model context window is too small to score continuation tokens")
+
+            context_ids = history_ids[-context_count:]
+            continuation_slice = target_ids[cursor : cursor + target_count]
+            chunks.append(
+                _ScoringChunk(
+                    request_index=request_index,
+                    input_ids=context_ids + continuation_slice,
+                    score_start=len(context_ids),
+                    score_count=len(continuation_slice),
+                    metadata=dict(metadata),
+                )
+            )
+            history_ids.extend(continuation_slice)
+            cursor += target_count
+        return chunks
+
+    def _score_chunks(
+        self,
+        chunks: list[_ScoringChunk],
+        *,
+        batch_size: int,
+    ) -> list[LoglikelihoodOutput]:
+        # Run padded forwards over chunk batches and gather the exact token log-probs being evaluated.
+        import torch
+
+        scored_chunks: list[LoglikelihoodOutput] = []
+        for start in range(0, len(chunks), batch_size):
+            batch = chunks[start : start + batch_size]
+            encoded = None
+            logits = None
+            try:
+                with self._tokenizer_lock:
+                    encoded = self.tokenizer.pad(
+                        {"input_ids": [list(chunk.input_ids) for chunk in batch]},
+                        return_tensors="pt",
+                        padding=True,
+                    )
+                encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
+
+                with self._scoring_attention_context():
+                    with torch.inference_mode():
+                        outputs = self.model(**encoded)
+                logits = outputs.logits
+                shift_log_probs = torch.log_softmax(logits[:, :-1, :], dim=-1)
+                shift_labels = encoded["input_ids"][:, 1:]
+                padded_length = int(encoded["input_ids"].shape[1])
+                padding_side = getattr(self.tokenizer, "padding_side", "right")
+
+                for row_index, chunk in enumerate(batch):
+                    sample_length = len(chunk.input_ids)
+                    pad_offset = padded_length - sample_length if padding_side == "left" else 0
+                    target_start = pad_offset + chunk.score_start
+                    shift_start = target_start - 1
+                    shift_end = shift_start + chunk.score_count
+                    sample_log_probs = shift_log_probs[row_index, shift_start:shift_end, :]
+                    sample_targets = shift_labels[row_index, shift_start:shift_end]
+                    gathered = sample_log_probs.gather(-1, sample_targets.unsqueeze(-1)).squeeze(-1)
+                    greedy_tokens = sample_log_probs.argmax(dim=-1)
+                    scored_chunks.append(
+                        LoglikelihoodOutput(
+                            logprob=float(gathered.sum().item()),
+                            is_greedy=bool(torch.equal(greedy_tokens, sample_targets)),
+                            token_count=chunk.score_count,
+                            metadata=dict(chunk.metadata),
+                        )
+                    )
+            finally:
+                if logits is not None:
+                    del logits
+                if encoded is not None:
+                    del encoded
+        return scored_chunks
+
+    def _prefix_token_id(self) -> int:
+        # Pick the model's scoring prefix token used when a request has no explicit context tokens.
+        for token_id in (
+            getattr(self.tokenizer, "bos_token_id", None),
+            getattr(self.tokenizer, "eos_token_id", None),
+            getattr(self.tokenizer, "pad_token_id", None),
+        ):
+            if token_id is not None:
+                return int(token_id)
+        raise ValueError(
+            "token-level scoring requires tokenizer.bos_token_id, eos_token_id, or pad_token_id"
+        )
+
+    def _max_scoring_input_length(self) -> int:
+        # Resolve the finite scoring window the model/tokenizer expose, with a conservative fallback.
+        model_length = getattr(getattr(self.model, "config", None), "max_position_embeddings", None)
+        tokenizer_length = getattr(self.tokenizer, "model_max_length", None)
+        candidate_lengths = [
+            int(length)
+            for length in (model_length, tokenizer_length)
+            if isinstance(length, int) and 1 < length < 1_000_000
+        ]
+        if candidate_lengths:
+            return min(candidate_lengths)
+        return 2048
+
+    @contextmanager
+    def _scoring_attention_context(self) -> Iterator[None]:
+        # Temporarily restore the base attention kernel when token-level scoring runs on a paged-attention session.
+        active_attention = self.effective_attn_implementation or self.requested_attn_implementation
+        if not isinstance(active_attention, str) or not active_attention.startswith("paged|"):
+            yield
+            return
+
+        setter = getattr(self.model, "set_attn_implementation", None)
+        base_attention = _base_attn_implementation(active_attention)
+        if not callable(setter) or base_attention is None:
+            yield
+            return
+
+        setter(base_attention)
+        try:
+            yield
+        finally:
+            setter(active_attention)
 
     def _log_generation_execution(self) -> None:
         with self._state_lock:

@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 ModelCloud.ai
+# SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
+# SPDX-License-Identifier: Apache-2.0
+# Contact: qubitium@modelcloud.ai, x.com/qubitium
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,7 +14,29 @@ import yaml
 from evalution.config import Model
 from evalution.engines import Transformer
 from evalution.runtime import EvaluationRun, engine as build_engine
-from evalution.suites import arc_challenge, gsm8k, gsm8k_platinum
+from evalution.suites import (
+    arc_challenge,
+    arc_easy,
+    boolq,
+    cb,
+    cola,
+    copa,
+    gsm8k,
+    gsm8k_platinum,
+    hellaswag,
+    mmlu,
+    mnli,
+    mrpc,
+    openbookqa,
+    piqa,
+    qnli,
+    qqp,
+    rte,
+    sst2,
+    wic,
+    wnli,
+    winogrande,
+)
 
 _ENGINE_FACTORIES: dict[str, Any] = {
     "transformer": Transformer,
@@ -17,8 +44,26 @@ _ENGINE_FACTORIES: dict[str, Any] = {
 }
 _TEST_FACTORIES: dict[str, Any] = {
     "arc_challenge": arc_challenge,
+    "arc_easy": arc_easy,
+    "boolq": boolq,
+    "cb": cb,
+    "cola": cola,
+    "copa": copa,
     "gsm8k": gsm8k,
     "gsm8k_platinum": gsm8k_platinum,
+    "hellaswag": hellaswag,
+    "mmlu": mmlu,
+    "mnli": mnli,
+    "mrpc": mrpc,
+    "openbookqa": openbookqa,
+    "piqa": piqa,
+    "qnli": qnli,
+    "qqp": qqp,
+    "rte": rte,
+    "sst2": sst2,
+    "wic": wic,
+    "wnli": wnli,
+    "winogrande": winogrande,
 }
 
 

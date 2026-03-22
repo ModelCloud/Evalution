@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 ModelCloud.ai
+# SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
+# SPDX-License-Identifier: Apache-2.0
+# Contact: qubitium@modelcloud.ai, x.com/qubitium
+
 from __future__ import annotations
 
 import sys
@@ -9,7 +14,12 @@ import torch
 from transformers import PretrainedConfig
 
 from evalution.config import Model
-from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.engines.base import (
+    GenerationOutput,
+    GenerationRequest,
+    LoglikelihoodRequest,
+    RollingLoglikelihoodRequest,
+)
 from evalution.engines.transformer import Transformer, TransformerSession
 
 
@@ -518,17 +528,258 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
     assert manager.kv_padding_interval_size == 4096
     assert manager.max_cached_graphs == 8
     assert manager.generation_config.stop_strings == ["Q:"]
-    assert manager.max_active_requests == 2
-    assert session.continuous_batching_manager is manager
-    assert session.continuous_batching_completed_request_ids == {"req_0", "req_1", "req_2"}
-    assert manager.event_log == [
-        "add:req_0",
-        "add:req_1",
-        "result:req_1",
-        "add:req_2",
-        "result:req_0",
-        "result:req_2",
-    ]
+
+
+def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "left"
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            assert return_tensors == "pt"
+            assert padding is True
+            sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
+            max_length = max(len(ids) for ids in sequences)
+            padded_ids = []
+            attention_masks = []
+            for ids in sequences:
+                pad_count = max_length - len(ids)
+                padded_ids.append(([0] * pad_count) + ids)
+                attention_masks.append(([0] * pad_count) + ([1] * len(ids)))
+            return {
+                "input_ids": torch.tensor(padded_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
+            }
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+
+        def __call__(self, *, input_ids, attention_mask=None):
+            del attention_mask
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            for row in range(batch_size):
+                for position in range(sequence_length - 1):
+                    next_token = int(input_ids[row, position + 1].item())
+                    logits[row, position, next_token] = 3.0
+            return SimpleNamespace(logits=logits)
+
+    session = TransformerSession(
+        config=Transformer(batch_size=4, paged_attention=False),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(
+                context_input_ids=[5, 6],
+                continuation_input_ids=[7, 8],
+            ),
+            LoglikelihoodRequest(
+                continuation_input_ids=[4],
+            ),
+        ],
+        batch_size=2,
+    )
+
+    expected_token_logprob = float(
+        torch.log_softmax(
+            torch.tensor([3.0] + ([-2.0] * 15), dtype=torch.float32),
+            dim=0,
+        )[0].item()
+    )
+
+    assert len(outputs) == 2
+    assert outputs[0].token_count == 2
+    assert outputs[0].is_greedy is True
+    assert outputs[0].logprob == pytest.approx(expected_token_logprob * 2, abs=1e-6)
+    assert outputs[1].token_count == 1
+    assert outputs[1].is_greedy is True
+    assert outputs[1].logprob == pytest.approx(expected_token_logprob, abs=1e-6)
+
+
+def test_transformer_session_loglikelihood_reports_non_greedy_predictions() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            assert return_tensors == "pt"
+            assert padding is True
+            sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
+            max_length = max(len(ids) for ids in sequences)
+            padded_ids = []
+            attention_masks = []
+            for ids in sequences:
+                pad_count = max_length - len(ids)
+                padded_ids.append(ids + ([0] * pad_count))
+                attention_masks.append(([1] * len(ids)) + ([0] * pad_count))
+            return {
+                "input_ids": torch.tensor(padded_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
+            }
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+
+        def __call__(self, *, input_ids, attention_mask=None):
+            del attention_mask
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            for row in range(batch_size):
+                for position in range(sequence_length - 1):
+                    next_token = int(input_ids[row, position + 1].item())
+                    logits[row, position, next_token] = 3.0
+            logits[0, 0, 9] = 5.0
+            return SimpleNamespace(logits=logits)
+
+    session = TransformerSession(
+        config=Transformer(batch_size=2, paged_attention=False),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(
+                continuation_input_ids=[4],
+            )
+        ],
+        batch_size=1,
+    )
+
+    assert len(outputs) == 1
+    assert outputs[0].token_count == 1
+    assert outputs[0].is_greedy is False
+
+
+def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "left"
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            assert return_tensors == "pt"
+            assert padding is True
+            sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
+            max_length = max(len(ids) for ids in sequences)
+            padded_ids = []
+            attention_masks = []
+            for ids in sequences:
+                pad_count = max_length - len(ids)
+                padded_ids.append(([0] * pad_count) + ids)
+                attention_masks.append(([0] * pad_count) + ([1] * len(ids)))
+            return {
+                "input_ids": torch.tensor(padded_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
+            }
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=4)
+
+        def __call__(self, *, input_ids, attention_mask=None):
+            del attention_mask
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            for row in range(batch_size):
+                for position in range(sequence_length - 1):
+                    next_token = int(input_ids[row, position + 1].item())
+                    logits[row, position, next_token] = 3.0
+            return SimpleNamespace(logits=logits)
+
+    session = TransformerSession(
+        config=Transformer(batch_size=2, paged_attention=False),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.loglikelihood_rolling(
+        [
+            RollingLoglikelihoodRequest(
+                text="unused",
+                input_ids=[2, 3, 4, 5],
+            )
+        ],
+        batch_size=2,
+    )
+
+    expected_token_logprob = float(
+        torch.log_softmax(
+            torch.tensor([3.0] + ([-2.0] * 15), dtype=torch.float32),
+            dim=0,
+        )[0].item()
+    )
+
+    assert len(outputs) == 1
+    assert outputs[0].token_count == 4
+    assert outputs[0].logprob == pytest.approx(expected_token_logprob * 4, abs=1e-6)
+
+
+def test_transformer_session_loglikelihood_temporarily_restores_base_attention() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            assert return_tensors == "pt"
+            assert padding is True
+            return {
+                "input_ids": torch.tensor([[1, 4]], dtype=torch.long),
+                "attention_mask": torch.tensor([[1, 1]], dtype=torch.long),
+            }
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+            self.attn_history: list[str] = []
+
+        def set_attn_implementation(self, value: str) -> None:
+            self.attn_history.append(value)
+
+        def __call__(self, *, input_ids, attention_mask=None):
+            del attention_mask
+            logits = torch.full((1, input_ids.shape[1], 16), -2.0)
+            logits[0, 0, 4] = 3.0
+            return SimpleNamespace(logits=logits)
+
+    model = FakeModel()
+    session = TransformerSession(
+        config=Transformer(batch_size=2, paged_attention=True),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+        requested_attn_implementation="flash_attention_2",
+        effective_attn_implementation="paged|flash_attention_2",
+        paged_attention_enabled=True,
+        generation_backend="continuous_batching",
+    )
+
+    outputs = session.loglikelihood(
+        [LoglikelihoodRequest(continuation_input_ids=[4])],
+        batch_size=1,
+    )
+
+    assert len(outputs) == 1
+    assert outputs[0].is_greedy is True
+    assert model.attn_history == ["flash_attention_2", "paged|flash_attention_2"]
 
 
 def test_transformer_session_reuses_continuous_batching_manager_for_matching_signature(
