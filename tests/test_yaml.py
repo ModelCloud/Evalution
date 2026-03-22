@@ -118,10 +118,10 @@ tests:
   - type: hellaswag
     max_rows: 32
   - type: mmlu
-    subset: stem.abstract_algebra
+    subsets: stem.abstract_algebra
     num_fewshot: 3
   - type: mmlu_pro
-    subset: stem.math
+    subsets: stem.math
     num_fewshot: 2
   - type: mnli
     max_rows: 44

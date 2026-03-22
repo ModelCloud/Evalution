@@ -103,9 +103,10 @@ def test_mmlu_pro_uses_subset_matched_cot_fewshots(monkeypatch) -> None:
     assert result.metadata["dataset_path"] == "TIGER-Lab/MMLU-Pro"
     assert result.metadata["fewshot_split"] == "validation"
     assert result.metadata["num_fewshot"] == 1
-    assert result.metadata["subset"] == "all"
-    assert result.metadata["subset_path"] == ["all"]
-    assert result.metadata["subset_kind"] == "all"
+    assert result.metadata["subsets"] == ["all"]
+    assert result.metadata["subset_paths"] == [["all"]]
+    assert result.metadata["subset_kinds"] == ["all"]
+    assert result.metadata["selection_mode"] == "single"
     assert result.metadata["scoring_mode"] == "generated_choice_label_exact_match"
     assert len(result.samples) == 2
 
@@ -187,15 +188,16 @@ def test_mmlu_pro_subset_leaf_filter_uses_canonical_path_name(monkeypatch) -> No
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
 
     result = evalution.mmlu_pro(
-        subset="stem.computer_science",
+        subsets="stem.computer_science",
         num_fewshot=1,
         batch_size=1,
     ).evaluate(LeafSession())
 
     assert result.name == "mmlu_pro_stem_computer_science"
-    assert result.metadata["subset"] == "stem.computer_science"
-    assert result.metadata["subset_path"] == ["stem", "computer_science"]
-    assert result.metadata["subset_kind"] == "leaf"
+    assert result.metadata["subsets"] == ["stem.computer_science"]
+    assert result.metadata["subset_paths"] == [["stem", "computer_science"]]
+    assert result.metadata["subset_kinds"] == ["leaf"]
+    assert result.metadata["selection_mode"] == "single"
     assert len(result.samples) == 1
     assert result.samples[0].metadata["subset"] == "stem.computer_science"
     assert result.samples[0].metadata["subset_value"] == "computer science"
@@ -294,12 +296,13 @@ def test_mmlu_pro_subset_node_filter_uses_distinct_result_name(monkeypatch) -> N
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu_pro(subset="stem", num_fewshot=1, batch_size=2).evaluate(StemSession())
+    result = evalution.mmlu_pro(subsets="stem", num_fewshot=1, batch_size=2).evaluate(StemSession())
 
     assert result.name == "mmlu_pro_stem"
-    assert result.metadata["subset"] == "stem"
-    assert result.metadata["subset_path"] == ["stem"]
-    assert result.metadata["subset_kind"] == "node"
+    assert result.metadata["subsets"] == ["stem"]
+    assert result.metadata["subset_paths"] == [["stem"]]
+    assert result.metadata["subset_kinds"] == ["node"]
+    assert result.metadata["selection_mode"] == "single"
     assert len(result.samples) == 2
     assert {sample.metadata["subset"] for sample in result.samples} == {
         "stem.computer_science",
@@ -421,7 +424,7 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
 
     result = evalution.mmlu_pro(
-        subset="stem.math",
+        subsets="stem.math",
         num_fewshot=2,
         batch_size=1,
         max_new_tokens=20,
@@ -430,3 +433,119 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
     assert result.metrics == {"exact_match,choice-label": 1.0}
     assert result.samples[0].metadata["fewshot_count"] == 0
     assert result.samples[0].metadata["subset"] == "stem.math"
+
+
+def test_mmlu_pro_subsets_list_combines_multiple_paths(monkeypatch) -> None:
+    validation = Dataset.from_list(
+        [
+            {
+                "question_id": 0,
+                "question": "A hash table is a",
+                "options": ["tree", "array-backed map", "compiler", "N/A"],
+                "answer": "B",
+                "answer_index": 1,
+                "cot_content": "A: Let's think step by step. A hash table is a map. The answer is (B).",
+                "category": "computer science",
+                "src": "val-cs",
+            },
+            {
+                "question_id": 1,
+                "question": "Justice is discussed in",
+                "options": ["law", "enzymes", "quarks", "N/A"],
+                "answer": "A",
+                "answer_index": 0,
+                "cot_content": "A: Let's think step by step. Justice is a law topic. The answer is (A).",
+                "category": "law",
+                "src": "val-law",
+            },
+            {
+                "question_id": 2,
+                "question": "Atoms have electrons",
+                "options": ["True", "False", "N/A"],
+                "answer": "A",
+                "answer_index": 0,
+                "cot_content": "A: Let's think step by step. Atoms have electrons. The answer is (A).",
+                "category": "physics",
+                "src": "val-physics",
+            },
+        ]
+    )
+    test = Dataset.from_list(
+        [
+            {
+                "question_id": 10,
+                "question": "A queue is typically",
+                "options": ["LIFO", "FIFO", "sorted", "N/A"],
+                "answer": "B",
+                "answer_index": 1,
+                "cot_content": "",
+                "category": "computer science",
+                "src": "test-cs",
+            },
+            {
+                "question_id": 11,
+                "question": "A plaintiff appears in",
+                "options": ["chemistry", "law", "astronomy", "N/A"],
+                "answer": "B",
+                "answer_index": 1,
+                "cot_content": "",
+                "category": "law",
+                "src": "test-law",
+            },
+            {
+                "question_id": 12,
+                "question": "An atom contains",
+                "options": ["planets", "electrons", "N/A"],
+                "answer": "B",
+                "answer_index": 1,
+                "cot_content": "",
+                "category": "physics",
+                "src": "test-physics",
+            },
+        ]
+    )
+
+    def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        del path, name, kwargs
+        if split == "validation":
+            return validation
+        if split == "test":
+            return test
+        raise AssertionError(f"unexpected split: {split}")
+
+    class MultiSession:
+        def generate(self, requests, *, batch_size=None):
+            assert batch_size == 2
+            assert len(requests) == 2
+            prompts = [request.prompt or "" for request in requests]
+            assert any("about computer science." in prompt for prompt in prompts)
+            assert any("about law." in prompt for prompt in prompts)
+            assert all("about physics." not in prompt for prompt in prompts)
+            return [
+                GenerationOutput(prompt=prompts[0], text="the answer is (B)"),
+                GenerationOutput(prompt=prompts[1], text="the answer is (B)"),
+            ]
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
+
+    result = evalution.mmlu_pro(
+        subsets=["stem.computer_science", "humanities.law"],
+        num_fewshot=1,
+        batch_size=2,
+    ).evaluate(MultiSession())
+
+    assert result.name == "mmlu_pro_stem_computer_science__humanities_law"
+    assert result.metadata["subsets"] == ["stem.computer_science", "humanities.law"]
+    assert result.metadata["subset_paths"] == [
+        ["stem", "computer_science"],
+        ["humanities", "law"],
+    ]
+    assert result.metadata["subset_kinds"] == ["leaf", "leaf"]
+    assert result.metadata["selection_mode"] == "multiple"
+    assert {sample.metadata["subset"] for sample in result.samples} == {
+        "stem.computer_science",
+        "humanities.law",
+    }

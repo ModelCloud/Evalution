@@ -28,7 +28,7 @@ from evalution.suites.execution import (
     prepare_batch_for_session,
     session_batch_size,
 )
-from evalution.suites.subsets import ResolvedSubset, SubsetTree, normalize_subset_token
+from evalution.suites.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
 
 _INVALID_CHOICE = "[invalid]"
 _OPTION_LABELS = tuple("ABCDEFGHIJKLMNOP")
@@ -268,7 +268,7 @@ class MMLUPro(TestSuite):
     dataset_path: str = "TIGER-Lab/MMLU-Pro"
     split: str = "test"
     fewshot_split: str = "validation"
-    subset: str = "all"
+    subsets: str | list[str] = "all"
     num_fewshot: int = 5
     max_rows: int | None = None
     batch_size: int | None = None
@@ -288,25 +288,27 @@ class MMLUPro(TestSuite):
         return load_dataset
 
     def task_name(self) -> str:
-        resolved_subset = self._resolved_subset()
-        if resolved_subset.kind == "all":
+        resolved_subsets = self._resolved_subsets()
+        if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return "mmlu_pro"
-        return f"mmlu_pro_{resolved_subset.canonical.replace('.', '_')}"
+        suffix = "__".join(canonical.replace(".", "_") for canonical in resolved_subsets.canonicals)
+        return f"mmlu_pro_{suffix}"
 
     def result_metadata(
         self,
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
-        resolved_subset = self._resolved_subset()
+        resolved_subsets = self._resolved_subsets()
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": None,
             "split": self.split,
             "fewshot_split": self.fewshot_split,
-            "subset": resolved_subset.canonical,
-            "subset_path": list(resolved_subset.path),
-            "subset_kind": resolved_subset.kind,
+            "subsets": list(resolved_subsets.canonicals),
+            "subset_paths": [list(path) for path in resolved_subsets.paths],
+            "subset_kinds": list(resolved_subsets.kinds),
+            "selection_mode": resolved_subsets.selection_mode,
             "num_fewshot": self.num_fewshot,
             "streaming": self.streaming,
             "apply_chat_template": self.apply_chat_template,
@@ -538,12 +540,12 @@ class MMLUPro(TestSuite):
         )
 
     def _select_docs(self, docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        resolved_subset = self._resolved_subset()
-        if resolved_subset.kind == "all":
+        resolved_subsets = self._resolved_subsets()
+        if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return docs
         selected_subset_values = {
             normalize_subset_token(subset_value)
-            for subset_value in resolved_subset.leaf_values
+            for subset_value in resolved_subsets.leaf_values
         }
         selected_docs = [
             doc
@@ -552,7 +554,7 @@ class MMLUPro(TestSuite):
         ]
         if selected_docs:
             return selected_docs
-        raise ValueError(f"MMLU-Pro subset {self.subset!r} is not present in the dataset")
+        raise ValueError(f"MMLU-Pro subsets {self.subsets!r} are not present in the dataset")
 
     def _iter_prepared_samples(
         self,
@@ -682,8 +684,8 @@ class MMLUPro(TestSuite):
     def _invalid_prediction_count(self, sample: SampleResult) -> int:
         return int(sample.extracted["choice-label"] == _INVALID_CHOICE)
 
-    def _resolved_subset(self) -> ResolvedSubset:
-        return _MMLU_PRO_SUBSETS.resolve(self.subset)
+    def _resolved_subsets(self) -> ResolvedSubsets:
+        return _MMLU_PRO_SUBSETS.resolve_many(self.subsets)
 
 
 def mmlu_pro(**kwargs: Any) -> MMLUPro:

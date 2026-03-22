@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Mapping
 
@@ -34,6 +35,17 @@ class ResolvedSubset:
     kind: str
     leaf_values: tuple[str, ...]
     leaf_paths: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedSubsets:
+    canonicals: tuple[str, ...]
+    paths: tuple[tuple[str, ...], ...]
+    kinds: tuple[str, ...]
+    selection_mode: str
+    leaf_values: tuple[str, ...]
+    leaf_paths: tuple[str, ...]
+    items: tuple[ResolvedSubset, ...]
 
 
 @dataclass(slots=True)
@@ -80,6 +92,53 @@ class SubsetTree:
             kind="leaf" if node.leaf_value is not None else "node",
             leaf_values=leaf_values,
             leaf_paths=leaf_paths,
+        )
+
+    def resolve_many(self, subsets: Any) -> ResolvedSubsets:
+        raw_values = _coerce_subset_values(subsets)
+        if not raw_values:
+            raise ValueError("subsets must contain at least one value")
+
+        resolved_items: list[ResolvedSubset] = []
+        seen_canonicals: set[str] = set()
+        leaf_values: list[str] = []
+        leaf_paths: list[str] = []
+        seen_leaf_paths: set[str] = set()
+
+        for raw_value in raw_values:
+            resolved = self.resolve(raw_value)
+            if resolved.canonical == "all":
+                return ResolvedSubsets(
+                    canonicals=("all",),
+                    paths=(("all",),),
+                    kinds=("all",),
+                    selection_mode="single",
+                    leaf_values=resolved.leaf_values,
+                    leaf_paths=resolved.leaf_paths,
+                    items=(resolved,),
+                )
+            if resolved.canonical in seen_canonicals:
+                continue
+            seen_canonicals.add(resolved.canonical)
+            resolved_items.append(resolved)
+            for leaf_path, leaf_value in zip(resolved.leaf_paths, resolved.leaf_values, strict=True):
+                if leaf_path in seen_leaf_paths:
+                    continue
+                seen_leaf_paths.add(leaf_path)
+                leaf_paths.append(leaf_path)
+                leaf_values.append(leaf_value)
+
+        if not resolved_items:
+            raise ValueError("subsets must contain at least one value")
+
+        return ResolvedSubsets(
+            canonicals=tuple(item.canonical for item in resolved_items),
+            paths=tuple(item.path for item in resolved_items),
+            kinds=tuple(item.kind for item in resolved_items),
+            selection_mode="single" if len(resolved_items) == 1 else "multiple",
+            leaf_values=tuple(leaf_values),
+            leaf_paths=tuple(leaf_paths),
+            items=tuple(resolved_items),
         )
 
     def leaf_subset(self, value: Any) -> str:
@@ -137,3 +196,14 @@ class SubsetTree:
 
         for token, child in node.children.items():
             self._index_leaf_paths(child, prefix + (token,))
+
+
+def _coerce_subset_values(subsets: Any) -> tuple[Any, ...]:
+    if isinstance(subsets, str):
+        return (subsets,)
+    if isinstance(subsets, Sequence):
+        values = tuple(subsets)
+        if any(not isinstance(value, str) for value in values):
+            raise TypeError("subsets must be a string or a sequence of strings")
+        return values
+    raise TypeError("subsets must be a string or a sequence of strings")

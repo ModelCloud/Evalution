@@ -16,7 +16,7 @@ from evalution.logbar import get_logger
 from evalution.results import SampleResult, TestResult
 from evalution.suites.base import TestSuite
 from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
-from evalution.suites.subsets import ResolvedSubset, SubsetTree, normalize_subset_token
+from evalution.suites.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
 
 _MMLU_LABELS = ["A", "B", "C", "D"]
 _MMLU_SUBSET_TREE = {
@@ -113,7 +113,7 @@ def _fewshot_prompt(subject: str, fewshot_docs: list[dict[str, Any]]) -> str:
 @dataclass(slots=True)
 class MMLU(TestSuite):
     dataset_path: str = "cais/mmlu"
-    subset: str = "all"
+    subsets: str | list[str] = "all"
     split: str = "validation"
     fewshot_split: str = "dev"
     num_fewshot: int = 5
@@ -123,28 +123,30 @@ class MMLU(TestSuite):
     streaming: bool = False
 
     def dataset_name(self) -> str:
-        resolved_subset = self._resolved_subset()
-        if resolved_subset.kind == "leaf":
-            return resolved_subset.leaf_values[0]
+        resolved_subsets = self._resolved_subsets()
+        if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "leaf":
+            return resolved_subsets.leaf_values[0]
         return "all"
 
     def dataset_loader(self) -> Any:
         return load_dataset
 
     def task_name(self) -> str:
-        resolved_subset = self._resolved_subset()
-        if resolved_subset.kind == "all":
+        resolved_subsets = self._resolved_subsets()
+        if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return "mmlu"
-        return f"mmlu_{resolved_subset.canonical.replace('.', '_')}"
+        suffix = "__".join(canonical.replace(".", "_") for canonical in resolved_subsets.canonicals)
+        return f"mmlu_{suffix}"
 
     def result_metadata(self) -> dict[str, Any]:
-        resolved_subset = self._resolved_subset()
+        resolved_subsets = self._resolved_subsets()
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name(),
-            "subset": resolved_subset.canonical,
-            "subset_path": list(resolved_subset.path),
-            "subset_kind": resolved_subset.kind,
+            "subsets": list(resolved_subsets.canonicals),
+            "subset_paths": [list(path) for path in resolved_subsets.paths],
+            "subset_kinds": list(resolved_subsets.kinds),
+            "selection_mode": resolved_subsets.selection_mode,
             "split": self.split,
             "fewshot_split": self.fewshot_split,
             "num_fewshot": self.num_fewshot,
@@ -265,14 +267,14 @@ class MMLU(TestSuite):
             metadata=self.result_metadata(),
         )
 
-    def _resolved_subset(self) -> ResolvedSubset:
-        return _MMLU_SUBSETS.resolve(self.subset)
+    def _resolved_subsets(self) -> ResolvedSubsets:
+        return _MMLU_SUBSETS.resolve_many(self.subsets)
 
     def _selected_subjects(self) -> set[str] | None:
-        resolved_subset = self._resolved_subset()
-        if resolved_subset.kind == "all":
+        resolved_subsets = self._resolved_subsets()
+        if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return None
-        return {normalize_subset_token(subject) for subject in resolved_subset.leaf_values}
+        return {normalize_subset_token(subject) for subject in resolved_subsets.leaf_values}
 
     def _select_docs(self, docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         selected_subjects = self._selected_subjects()
@@ -285,7 +287,7 @@ class MMLU(TestSuite):
         ]
         if selected_docs:
             return selected_docs
-        raise ValueError(f"MMLU subset {self.subset!r} is not present in the dataset")
+        raise ValueError(f"MMLU subsets {self.subsets!r} are not present in the dataset")
 
 
 def mmlu(**kwargs: Any) -> MMLU:
