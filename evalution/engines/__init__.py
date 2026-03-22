@@ -4,5 +4,6 @@
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
 from .transformer import Transformer
+from .transformer_compat import TransformerCompat
 
-__all__ = ["Transformer"]
+__all__ = ["Transformer", "TransformerCompat"]

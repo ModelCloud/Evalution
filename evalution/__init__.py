@@ -6,7 +6,7 @@
 """Evalution package."""
 
 from evalution.config import Model
-from evalution.engines import Transformer
+from evalution.engines import Transformer, TransformerCompat
 from evalution.results import RunResult, SampleResult, TestResult
 from evalution.runtime import EngineBuilder, EvaluationRun, engine, run
 from evalution.suites import (
@@ -94,7 +94,9 @@ __all__ = [
     "TestSuite",
     "TestResult",
     "Transformer",
+    "TransformerCompat",
     "Transformers",
+    "TransformersCompat",
     "WNLI",
     "arc_easy",
     "arc_challenge",
@@ -129,3 +131,4 @@ __all__ = [
 ]
 
 Transformers = Transformer
+TransformersCompat = TransformerCompat

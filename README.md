@@ -134,7 +134,7 @@ evalution run evalution.yaml --output result.json
 evalution emit-python evalution.yaml
 ```
 
-`Transformer()` defaults to auto behavior for batching, paged attention, dtype resolution, and
+`Transformers()` defaults to auto behavior for batching, paged attention, dtype resolution, and
 attention selection. If you do not set `attn_implementation`, the backend leaves attention
 selection on its default auto behavior.
 
@@ -147,14 +147,21 @@ supported backends with `paged_attention=True`, force plain static generation wi
 `attn_implementation=...`. A suite can override engine batch sizing with
 `gsm8k_platinum(batch_size=...)`.
 
+`Transformers()` automatically falls back to `TransformersCompat()` when the installed
+`transformers` build predates the first release that ships
+`generation/continuous_batching` (`4.56.0`). `TransformersCompat()` also remains available as an
+explicit engine choice when you want the older fixed-batch execution path.
+
 For multiple-choice suites such as `hellaswag` and `piqa`, Evalution scores every option with
 token-level log-likelihood and reports both raw-choice accuracy and length-normalized accuracy.
 
-For `transformers` continuous batching, `Transformer(...)` also exposes the upstream manager knobs
+For `transformers` continuous batching, `Transformers(...)` also exposes the upstream manager knobs
 `manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
 `kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned continuous
 batching manager alive while stop strings and sampling settings stay compatible, then tears it down
 on `gc()` between suites or on `close()`.
+
+YAML `engine.type` accepts both `transformers` and `transformer_compat`.
 
 For `gsm8k_platinum`, answer extraction and normalization use precompiled `pcre.compile(...)`
 patterns so regex work stays on the `PyPcre` path and avoids stdlib `re`.

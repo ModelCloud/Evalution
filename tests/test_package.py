@@ -8,6 +8,7 @@ import evalution
 
 def test_package_import() -> None:
     assert evalution is not None
+    assert evalution.TransformerCompat is not None
 
 
 def test_package_exports_arc_challenge_suite() -> None:
@@ -57,6 +58,7 @@ def test_package_exports_arc_challenge_suite() -> None:
 def test_package_exports_fluent_runtime_api() -> None:
     assert callable(evalution.engine)
     assert evalution.Transformers is evalution.Transformer
+    assert evalution.TransformersCompat is evalution.TransformerCompat
     assert callable(evalution.run_yaml)
     assert callable(evalution.python_from_yaml)
 
