@@ -15,6 +15,7 @@ from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hellaswag import HellaSwag, hellaswag
 from .mmlu import MMLU, mmlu
+from .mnli import MNLI, mnli
 from .mrpc import MRPC, mrpc
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
@@ -41,6 +42,7 @@ __all__ = [
     "GSM8KPlatinum",
     "HellaSwag",
     "MMLU",
+    "MNLI",
     "MRPC",
     "MultipleChoiceSample",
     "OpenBookQA",
@@ -67,6 +69,7 @@ __all__ = [
     "macro_f1",
     "matthews_corrcoef",
     "mmlu",
+    "mnli",
     "mrpc",
     "openbookqa",
     "piqa",

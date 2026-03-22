@@ -103,6 +103,8 @@ tests:
   - type: mmlu
     subject: abstract_algebra
     num_fewshot: 3
+  - type: mnli
+    max_rows: 44
   - type: mrpc
     max_rows: 28
   - type: openbookqa
@@ -138,6 +140,7 @@ tests:
     assert ".run(eval.arc_challenge(" in script
     assert ".run(eval.hellaswag(" in script
     assert ".run(eval.mmlu(" in script
+    assert ".run(eval.mnli(" in script
     assert ".run(eval.mrpc(" in script
     assert ".run(eval.openbookqa(" in script
     assert ".run(eval.piqa(" in script

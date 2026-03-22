@@ -82,6 +82,10 @@ MMLU_BASELINE = {
     "accuracy,loglikelihood": 0.3671875,
     "accuracy,loglikelihood_norm": 0.3671875,
 }
+MNLI_BASELINE = {
+    "accuracy,loglikelihood": 0.5078125,
+    "accuracy,loglikelihood_norm": 0.5078125,
+}
 MRPC_BASELINE = {
     "accuracy,loglikelihood": 0.6953125,
     "accuracy,loglikelihood_norm": 0.6953125,
@@ -225,6 +229,13 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
                 )
             )
             .run(
+                evalution.mnli(
+                    batch_size=24,
+                    streaming=True,
+                    max_rows=128,
+                )
+            )
+            .run(
                 evalution.mrpc(
                     batch_size=24,
                     streaming=True,
@@ -304,7 +315,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
-    assert len(result.tests) == 20
+    assert len(result.tests) == 21
 
     tests_by_name = {test_result.name: test_result for test_result in result.tests}
     assert set(tests_by_name) == {
@@ -318,6 +329,7 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         "arc_challenge",
         "hellaswag",
         "mmlu",
+        "mnli",
         "mrpc",
         "openbookqa",
         "piqa",
@@ -665,6 +677,37 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
         assert sample.prediction in {"A", "B", "C", "D"}
         assert sample.metadata["subject"]
         assert len(sample.metadata["choice_texts"]) == 4
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "accuracy,loglikelihood",
+            "accuracy,loglikelihood_norm",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+
+    mnli_result = tests_by_name["mnli"]
+    assert mnli_result.metadata["streaming"] is True
+    assert mnli_result.metadata["dataset_path"] == "nyu-mll/glue"
+    assert mnli_result.metadata["dataset_name"] == "mnli"
+    assert mnli_result.metadata["split"] == "validation_matched"
+    assert mnli_result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
+    assert len(mnli_result.samples) == 128
+    assert set(mnli_result.metrics) == {
+        "accuracy,loglikelihood",
+        "accuracy,loglikelihood_norm",
+    }
+    assert_metrics_match_baseline(mnli_result.metrics, MNLI_BASELINE)
+
+    for index, sample in enumerate(mnli_result.samples):
+        assert sample.index == index
+        assert sample.prompt
+        assert sample.target in {"True", "Neither", "False"}
+        assert sample.prediction in {"True", "Neither", "False"}
+        assert " True, False or Neither?\nAnswer:" in sample.prompt
         assert set(sample.extracted) == {
             "gold_index",
             "predicted_index",
@@ -1059,6 +1102,8 @@ def test_llama3_2_transformers_full_model_eval_run(capsys: pytest.CaptureFixture
     assert serialized_tests["hellaswag"]["samples"][0]["prediction"]
     assert len(serialized_tests["mmlu"]["samples"]) == len(mmlu_result.samples)
     assert serialized_tests["mmlu"]["samples"][0]["prediction"]
+    assert len(serialized_tests["mnli"]["samples"]) == len(mnli_result.samples)
+    assert serialized_tests["mnli"]["samples"][0]["prediction"]
     assert len(serialized_tests["mrpc"]["samples"]) == len(mrpc_result.samples)
     assert serialized_tests["mrpc"]["samples"][0]["prediction"]
     assert len(serialized_tests["openbookqa"]["samples"]) == len(openbookqa_result.samples)
