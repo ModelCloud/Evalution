@@ -182,7 +182,6 @@ class MMLU(TestSuite):
             "accuracy,loglikelihood": raw_total / denominator,
             "accuracy,loglikelihood_norm": norm_total / denominator,
         }
-        logger.info("%s: metrics=%s", task_name, metrics)
         return TestResult(
             name=task_name,
             metrics=metrics,

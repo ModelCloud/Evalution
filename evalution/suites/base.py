@@ -302,7 +302,6 @@ class BaseTestSuite(TestSuite):
             generation_wall_s,
             scoring_wall_s,
         )
-        logger.info("%s: metrics=%s", task_name, metrics)
         return TestResult(
             name=task_name,
             metrics=metrics,

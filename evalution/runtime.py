@@ -11,7 +11,12 @@ from typing import Any
 
 from evalution.config import Model, coerce_model
 from evalution.engines.base import BaseEngine, BaseInferenceSession
-from evalution.logbar import get_logger, spinner
+from evalution.logbar import (
+    get_logger,
+    render_test_result_table,
+    render_test_summary_table,
+    spinner,
+)
 from evalution.results import RunResult
 from evalution.suites.base import TestSuite
 
@@ -37,8 +42,9 @@ class EvaluationRun:
         logger = get_logger()
         logger.info("running test suite %s", type(test).__name__)
         result = test.evaluate(self._session)
-        logger.info("completed test %s", result.name)
         self._test_results.append(result)
+        logger.info("completed test %s", result.name)
+        render_test_result_table(result, logger=logger)
         return self
 
     @property
@@ -69,6 +75,7 @@ class EvaluationRun:
             self._session.close()
             self._session = None
         logger = get_logger()
+        render_test_summary_table(self._test_results, logger=logger)
         logger.info("finished evaluation run with %d test suite(s)", len(self._test_results))
 
     def __enter__(self) -> EvaluationRun:
