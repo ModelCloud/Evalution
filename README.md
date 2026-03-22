@@ -163,33 +163,38 @@ For `arc_challenge`, prompts ask for a single multiple-choice label and scoring 
 choice label, then falls back to an exact choice-text match when the model returns the option text
 instead of the label.
 
-Current built-in coverage:
+## Supported Suites
 
-- Hugging Face `transformers` inference engine
-- `arc_challenge` suite for `allenai/ai2_arc` `ARC-Challenge`
-- `arc_easy` suite for `allenai/ai2_arc` `ARC-Easy`
-- `boolq` suite for `super_glue` `boolq`
-- `cb` suite for `super_glue` `cb`
-- `copa` suite for `super_glue` `copa`
-- `gsm8k` suite for `openai/gsm8k`
-- `gsm8k_platinum` suite ported from `lm-eval`
-- `hellaswag` suite for `Rowan/hellaswag`
-- `mmlu` suite for `cais/mmlu`
-- `mrpc` suite for `nyu-mll/glue` `mrpc`
-- `openbookqa` suite for `allenai/openbookqa` `main`
-- `piqa` suite for `baber/piqa`
-- `qnli` suite for `nyu-mll/glue` `qnli`
-- `rte` suite for `super_glue` `rte`
-- `sst2` suite for `nyu-mll/glue` `sst2`
-- `wic` suite for `super_glue` `wic`
-- `wnli` suite for `nyu-mll/glue` `wnli`
-- `winogrande` suite for `winogrande` `winogrande_xl`
-- `logbar`-powered runtime logging and evaluation progress bars
+Evalution currently ships the following built-in suites:
+
+| Suite | Hugging Face dataset | Default split | Scoring | Original benchmark |
+| --- | --- | --- | --- | --- |
+| `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Generated label exact match, choice-text fallback | ARC [^arc] |
+| `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ARC [^arc] |
+| `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE [^superglue] |
+| `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE [^superglue] |
+| `copa` | `super_glue` / `copa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE [^superglue] |
+| `gsm8k` | `openai/gsm8k` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K [^gsm8k] |
+| `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K-Platinum [^gsm8k_platinum] |
+| `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag [^hellaswag] |
+| `mmlu` | `cais/mmlu` / `<subject>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU [^mmlu] |
+| `mrpc` | `nyu-mll/glue` / `mrpc` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE [^glue] |
+| `openbookqa` | `allenai/openbookqa` / `main` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA [^openbookqa] |
+| `piqa` | `baber/piqa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA [^piqa] |
+| `qnli` | `nyu-mll/glue` / `qnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE [^glue] |
+| `rte` | `super_glue` / `rte` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE [^superglue] |
+| `sst2` | `nyu-mll/glue` / `sst2` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE [^glue] |
+| `wic` | `super_glue` / `wic` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE [^superglue] |
+| `wnli` | `nyu-mll/glue` / `wnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE [^glue] |
+| `winogrande` | `winogrande` / `winogrande_xl` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande [^winogrande] |
+
+Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
 
 ## Citation
 
-If you use Evalution or the built-in `gsm8k`, `gsm8k_platinum`, `arc_challenge`, `mmlu`, or `piqa`
-suites, please cite:
+If you use Evalution, cite the project itself. If you use one or more built-in suites, also cite the
+original benchmark papers below. These citations refer to the benchmark authors and original suite
+papers, not the later `lm-evaluation-harness` ports.
 
 ```bibtex
 # Evalution
@@ -202,6 +207,22 @@ suites, please cite:
   note = {Contact: x.com/qubitium},
   year = {2026},
 }
+```
+
+The current built-in suite coverage maps to these benchmark citations:
+
+- `arc_challenge`, `arc_easy`: ARC [^arc]
+- `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE [^superglue]
+- `gsm8k`: GSM8K [^gsm8k]
+- `gsm8k_platinum`: GSM8K-Platinum [^gsm8k_platinum]
+- `hellaswag`: HellaSwag [^hellaswag]
+- `mmlu`: MMLU [^mmlu]
+- `mrpc`, `qnli`, `sst2`, `wnli`: GLUE [^glue]
+- `openbookqa`: OpenBookQA [^openbookqa]
+- `piqa`: PIQA [^piqa]
+- `winogrande`: WinoGrande [^winogrande]
+
+```bibtex
 
 # GSM8K-Platinum
 @article{vendrow2025largelanguagemodelbenchmarks,
@@ -242,4 +263,55 @@ suites, please cite:
   journal = {International Conference on Learning Representations},
   year = {2021},
 }
+
+# GLUE
+@inproceedings{wang-etal-2018-glue,
+  title = {{GLUE}: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding},
+  author = {Alex Wang and Amanpreet Singh and Julian Michael and Felix Hill and Omer Levy and Samuel Bowman},
+  booktitle = {Proceedings of the 2018 EMNLP Workshop BlackboxNLP},
+  year = {2018},
+}
+
+# SuperGLUE
+@inproceedings{wang2019superglue,
+  title = {SuperGLUE: A Stickier Benchmark for General-Purpose Language Understanding Systems},
+  author = {Alex Wang and Yada Pruksachatkun and Nikita Nangia and Amanpreet Singh and Julian Michael and Felix Hill and Omer Levy and Samuel Bowman},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year = {2019},
+}
+
+# HellaSwag
+@inproceedings{zellers2019hellaswag,
+  title = {HellaSwag: Can a Machine Really Finish Your Sentence?},
+  author = {Rowan Zellers and Ari Holtzman and Yonatan Bisk and Ali Farhadi and Yejin Choi},
+  booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
+  year = {2019},
+}
+
+# OpenBookQA
+@inproceedings{mihaylov2018openbookqa,
+  title = {Can a Suit of Armor Conduct Electricity? A New Dataset for Open Book Question Answering},
+  author = {Todor Mihaylov and Peter Clark and Tushar Khot and Ashish Sabharwal},
+  booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
+  year = {2018},
+}
+
+# WinoGrande
+@article{sakaguchi2019winogrande,
+  title = {WinoGrande: An Adversarial Winograd Schema Challenge at Scale},
+  author = {Keisuke Sakaguchi and Ronan Le Bras and Chandra Bhagavatula and Yejin Choi},
+  journal = {arXiv preprint arXiv:1907.10641},
+  year = {2019},
+}
 ```
+
+[^arc]: Peter Clark, Isaac Cowhey, Oren Etzioni, Tushar Khot, Ashish Sabharwal, Carissa Schoenick, and Oyvind Tafjord. "Think you have Solved Question Answering? Try ARC, the AI2 Reasoning Challenge." 2018.
+[^glue]: Alex Wang, Amanpreet Singh, Julian Michael, Felix Hill, Omer Levy, and Samuel Bowman. "GLUE: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding." 2018.
+[^gsm8k]: Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Jacob Hilton, Reiichiro Nakano, Christopher Hesse, and John Schulman. "Training Verifiers to Solve Math Word Problems." 2021.
+[^gsm8k_platinum]: Joshua Vendrow, Edward Vendrow, Sara Beery, and Aleksander Madry. "Do Large Language Model Benchmarks Test Reliability?" 2025.
+[^hellaswag]: Rowan Zellers, Ari Holtzman, Yonatan Bisk, Ali Farhadi, and Yejin Choi. "HellaSwag: Can a Machine Really Finish Your Sentence?" 2019.
+[^mmlu]: Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn Song, and Jacob Steinhardt. "Measuring Massive Multitask Language Understanding." 2021.
+[^openbookqa]: Todor Mihaylov, Peter Clark, Tushar Khot, and Ashish Sabharwal. "Can a Suit of Armor Conduct Electricity? A New Dataset for Open Book Question Answering." 2018.
+[^piqa]: Yonatan Bisk, Rowan Zellers, Ronan Le Bras, Jianfeng Gao, and Yejin Choi. "PIQA: Reasoning about Physical Commonsense in Natural Language." 2020.
+[^superglue]: Alex Wang, Yada Pruksachatkun, Nikita Nangia, Amanpreet Singh, Julian Michael, Felix Hill, Omer Levy, and Samuel Bowman. "SuperGLUE: A Stickier Benchmark for General-Purpose Language Understanding Systems." 2019.
+[^winogrande]: Keisuke Sakaguchi, Ronan Le Bras, Chandra Bhagavatula, and Yejin Choi. "WinoGrande: An Adversarial Winograd Schema Challenge at Scale." 2019.
