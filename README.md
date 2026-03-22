@@ -126,6 +126,10 @@ evalution emit-python evalution.yaml
 Per-suite options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, and `max_rows`
 can be set directly on each suite call or in each YAML `tests` entry.
 
+Hierarchical suites such as `mmlu` and `mmlu_pro` use `subset` selectors. `subset: stem`
+selects the full STEM subtree, while `subset: stem.biology` or
+`subset: stem.abstract_algebra` selects a single leaf path.
+
 Use `TransformersCompat()` in Python or `engine.type: transformer_compat` in YAML when you want
 the compatibility engine explicitly.
 
@@ -144,8 +148,8 @@ Evalution currently ships the following built-in suites:
 | `gsm8k` | `openai/gsm8k` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
 | `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
-| `mmlu` | `cais/mmlu` / `<subject>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
-| `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<category>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
+| `mmlu` | `cais/mmlu` / `<subset>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
+| `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<subset>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | `nyu-mll/glue` / `mnli` | `validation_matched` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | `nyu-mll/glue` / `mrpc` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `openbookqa` | `allenai/openbookqa` / `main` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |

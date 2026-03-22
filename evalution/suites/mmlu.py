@@ -16,17 +16,84 @@ from evalution.logbar import get_logger
 from evalution.results import SampleResult, TestResult
 from evalution.suites.base import TestSuite
 from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
+from evalution.suites.subsets import ResolvedSubset, SubsetTree, normalize_subset_token
 
 _MMLU_LABELS = ["A", "B", "C", "D"]
+_MMLU_SUBSET_TREE = {
+    "stem": {
+        "abstract_algebra": "abstract_algebra",
+        "anatomy": "anatomy",
+        "astronomy": "astronomy",
+        "college_biology": "college_biology",
+        "college_chemistry": "college_chemistry",
+        "college_computer_science": "college_computer_science",
+        "college_mathematics": "college_mathematics",
+        "college_physics": "college_physics",
+        "computer_security": "computer_security",
+        "conceptual_physics": "conceptual_physics",
+        "electrical_engineering": "electrical_engineering",
+        "elementary_mathematics": "elementary_mathematics",
+        "high_school_biology": "high_school_biology",
+        "high_school_chemistry": "high_school_chemistry",
+        "high_school_computer_science": "high_school_computer_science",
+        "high_school_mathematics": "high_school_mathematics",
+        "high_school_physics": "high_school_physics",
+        "high_school_statistics": "high_school_statistics",
+        "machine_learning": "machine_learning",
+    },
+    "humanities": {
+        "formal_logic": "formal_logic",
+        "high_school_european_history": "high_school_european_history",
+        "high_school_us_history": "high_school_us_history",
+        "high_school_world_history": "high_school_world_history",
+        "international_law": "international_law",
+        "jurisprudence": "jurisprudence",
+        "logical_fallacies": "logical_fallacies",
+        "moral_disputes": "moral_disputes",
+        "moral_scenarios": "moral_scenarios",
+        "philosophy": "philosophy",
+        "prehistory": "prehistory",
+        "professional_law": "professional_law",
+        "world_religions": "world_religions",
+    },
+    "social_sciences": {
+        "econometrics": "econometrics",
+        "high_school_geography": "high_school_geography",
+        "high_school_government_and_politics": "high_school_government_and_politics",
+        "high_school_macroeconomics": "high_school_macroeconomics",
+        "high_school_microeconomics": "high_school_microeconomics",
+        "high_school_psychology": "high_school_psychology",
+        "human_sexuality": "human_sexuality",
+        "professional_psychology": "professional_psychology",
+        "public_relations": "public_relations",
+        "security_studies": "security_studies",
+        "sociology": "sociology",
+        "us_foreign_policy": "us_foreign_policy",
+    },
+    "other": {
+        "business_ethics": "business_ethics",
+        "clinical_knowledge": "clinical_knowledge",
+        "college_medicine": "college_medicine",
+        "global_facts": "global_facts",
+        "human_aging": "human_aging",
+        "management": "management",
+        "marketing": "marketing",
+        "medical_genetics": "medical_genetics",
+        "miscellaneous": "miscellaneous",
+        "nutrition": "nutrition",
+        "professional_accounting": "professional_accounting",
+        "professional_medicine": "professional_medicine",
+        "virology": "virology",
+    },
+}
+_MMLU_SUBSETS = SubsetTree(_MMLU_SUBSET_TREE)
 
 
 def _format_subject_title(subject: str) -> str:
-    # Convert the dataset subject key into the human-readable title used in the benchmark prompt preamble.
     return " ".join(subject.split("_"))
 
 
 def _format_mmlu_question(doc: dict[str, Any], *, include_answer: bool) -> str:
-    # Render one MMLU question block with the canonical lettered options and either an empty or filled answer line.
     lines = [doc["question"].strip()]
     for label, choice in zip(_MMLU_LABELS, doc["choices"], strict=True):
         lines.append(f"{label}. {choice}")
@@ -36,7 +103,6 @@ def _format_mmlu_question(doc: dict[str, Any], *, include_answer: bool) -> str:
 
 
 def _fewshot_prompt(subject: str, fewshot_docs: list[dict[str, Any]]) -> str:
-    # Build the per-subject prompt prefix with the upstream description line and any selected dev examples.
     subject_title = _format_subject_title(subject)
     sections = [f"The following are multiple choice questions (with answers) about {subject_title}."]
     if fewshot_docs:
@@ -46,9 +112,8 @@ def _fewshot_prompt(subject: str, fewshot_docs: list[dict[str, Any]]) -> str:
 
 @dataclass(slots=True)
 class MMLU(TestSuite):
-    # Evaluate the original MMLU multiple-choice setup with subject-aware few-shot examples from the dev split.
     dataset_path: str = "cais/mmlu"
-    subject: str = "all"
+    subset: str = "all"
     split: str = "validation"
     fewshot_split: str = "dev"
     num_fewshot: int = 5
@@ -57,23 +122,29 @@ class MMLU(TestSuite):
     cache_dir: str | None = None
     streaming: bool = False
 
-    # Return the dataset config name to load for the current subject selection.
     def dataset_name(self) -> str:
-        return self.subject
+        resolved_subset = self._resolved_subset()
+        if resolved_subset.kind == "leaf":
+            return resolved_subset.leaf_values[0]
+        return "all"
 
-    # Use the Hugging Face datasets loader for the maintained CAIS MMLU mirror.
     def dataset_loader(self) -> Any:
         return load_dataset
 
-    # Return the stable suite name used by logs, YAML specs, and result payloads.
     def task_name(self) -> str:
-        return "mmlu"
+        resolved_subset = self._resolved_subset()
+        if resolved_subset.kind == "all":
+            return "mmlu"
+        return f"mmlu_{resolved_subset.canonical.replace('.', '_')}"
 
-    # Report suite-level metadata that is stable across all evaluated rows.
     def result_metadata(self) -> dict[str, Any]:
+        resolved_subset = self._resolved_subset()
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name(),
+            "subset": resolved_subset.canonical,
+            "subset_path": list(resolved_subset.path),
+            "subset_kind": resolved_subset.kind,
             "split": self.split,
             "fewshot_split": self.fewshot_split,
             "num_fewshot": self.num_fewshot,
@@ -81,7 +152,6 @@ class MMLU(TestSuite):
             "scoring_mode": "multiple_choice_loglikelihood",
         }
 
-    # Execute MMLU with subject-matched few-shot prompts and label-only answer scoring.
     def evaluate(self, session: InferenceSession) -> TestResult:
         task_name = self.task_name()
         logger = get_logger()
@@ -94,7 +164,8 @@ class MMLU(TestSuite):
             cache_dir=self.cache_dir,
             streaming=self.streaming,
         )
-        docs = limit_docs(loaded_docs, self.max_rows)
+        docs = self._select_docs(list(loaded_docs))
+        docs = limit_docs(docs, self.max_rows)
         if not isinstance(docs, list):
             docs = list(docs)
 
@@ -115,17 +186,18 @@ class MMLU(TestSuite):
             cache_dir=self.cache_dir,
             streaming=self.streaming,
         )
-        fewshot_docs = list(fewshot_loaded_docs)
+        fewshot_docs = self._select_docs(list(fewshot_loaded_docs))
         fewshot_by_subject: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for doc in fewshot_docs:
-            fewshot_by_subject[str(doc["subject"])].append(doc)
+            fewshot_by_subject[normalize_subset_token(doc["subject"])].append(doc)
 
         prompts: list[str] = []
         requests: list[LoglikelihoodRequest] = []
         sample_docs: list[dict[str, Any]] = []
         for doc in docs:
             subject = str(doc["subject"])
-            prompt = _fewshot_prompt(subject, fewshot_by_subject[subject][: self.num_fewshot])
+            subject_key = normalize_subset_token(subject)
+            prompt = _fewshot_prompt(subject, fewshot_by_subject[subject_key][: self.num_fewshot])
             prompt += _format_mmlu_question(doc, include_answer=False)
             prompts.append(prompt)
             sample_docs.append(doc)
@@ -153,6 +225,7 @@ class MMLU(TestSuite):
             norm_score = 1.0 if norm_best == gold_index else 0.0
             raw_total += raw_score
             norm_total += norm_score
+            leaf_subset = _MMLU_SUBSETS.leaf_subset(doc["subject"])
             sample_results.append(
                 SampleResult(
                     index=index,
@@ -169,7 +242,10 @@ class MMLU(TestSuite):
                         "accuracy,loglikelihood_norm": norm_score,
                     },
                     metadata={
-                        "subject": str(doc["subject"]),
+                        "subset": leaf_subset,
+                        "subset_path": leaf_subset.split("."),
+                        "subset_kind": "leaf",
+                        "subset_value": str(doc["subject"]),
                         "choice_texts": list(doc["choices"]),
                         "choice_logprobs": choice_logprobs,
                         "choice_logprobs_norm": choice_logprobs_norm,
@@ -189,7 +265,28 @@ class MMLU(TestSuite):
             metadata=self.result_metadata(),
         )
 
+    def _resolved_subset(self) -> ResolvedSubset:
+        return _MMLU_SUBSETS.resolve(self.subset)
 
-# Mirror the public suite factory style used by the rest of the package.
+    def _selected_subjects(self) -> set[str] | None:
+        resolved_subset = self._resolved_subset()
+        if resolved_subset.kind == "all":
+            return None
+        return {normalize_subset_token(subject) for subject in resolved_subset.leaf_values}
+
+    def _select_docs(self, docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        selected_subjects = self._selected_subjects()
+        if selected_subjects is None:
+            return docs
+        selected_docs = [
+            doc
+            for doc in docs
+            if normalize_subset_token(doc.get("subject", "")) in selected_subjects
+        ]
+        if selected_docs:
+            return selected_docs
+        raise ValueError(f"MMLU subset {self.subset!r} is not present in the dataset")
+
+
 def mmlu(**kwargs: Any) -> MMLU:
     return MMLU(**kwargs)
