@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, xeon5 ]
     container:
       image: 10.0.13.31:5000/nvidia/cuda:131-ubuntu22.04_0206
       volumes:
