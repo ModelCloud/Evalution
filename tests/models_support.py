@@ -70,6 +70,10 @@ ARITHMETIC_TASKS = (
     "arithmetic_5da",
     "arithmetic_5ds",
 )
+BEAR_TASKS = (
+    "bear",
+    "bear_big",
+)
 PAWS_X_TASKS = (
     "paws_x_de",
     "paws_x_en",
@@ -412,6 +416,39 @@ def _assert_blimp_sample(sample: Any, index: int, *, subset: str) -> None:
     assert isinstance(sample.metadata["two_prefix_method"], bool)
     assert isinstance(sample.metadata["lexically_identical"], bool)
     assert sample.metadata["pair_id"] >= 0
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_bear_sample(
+    sample: Any,
+    index: int,
+    *,
+    variant: str,
+    min_choice_count: int,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["composite_id"]
+    assert sample.metadata["relation"]
+    assert sample.metadata["template"]
+    assert sample.metadata["subject"]
+    assert sample.metadata["item"] >= 0
+    assert sample.metadata["template_index"] >= 0
+    assert sample.metadata["choice_count"] >= min_choice_count
+    assert len(sample.metadata["answer_options"]) == sample.metadata["choice_count"]
     assert "choice_logprobs" in sample.metadata
     assert "choice_logprobs_norm" in sample.metadata
 
@@ -1235,6 +1272,64 @@ SUITE_SPECS = {
             prompt_substrings=("Question: ",),
             metadata_validator=_metadata_field_truthy("task"),
         ),
+    ),
+    "bear": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.bear(
+            batch_size=8,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name="bear",
+        baseline={
+            "acc,ll": 0.40625,
+            "acc,ll_avg": 0.28125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "lm-pub-quiz/BEAR",
+            "dataset_name": "BEAR",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "empty_context_full_statement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_bear_sample(
+            sample,
+            index,
+            variant="bear",
+            min_choice_count=50,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "bear_big": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.bear_big(
+            batch_size=8,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name="bear_big",
+        baseline={
+            "acc,ll": 0.34375,
+            "acc,ll_avg": 0.03125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "lm-pub-quiz/BEAR",
+            "dataset_name": "BEAR_big",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "empty_context_full_statement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_bear_sample(
+            sample,
+            index,
+            variant="bear_big",
+            min_choice_count=150,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "gsm8k": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.gsm8k(

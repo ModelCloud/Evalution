@@ -236,6 +236,8 @@ logic, those implementation details can shift results.
 | `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
 | `babi` | Generated exact match | bAbI `weston2015towards` |
+| `bear` | Full-statement multiple-choice log-likelihood over balanced relational distractors, raw + length-normalized accuracy | BEAR `wiland2024bear` |
+| `bear_big` | Full-statement multiple-choice log-likelihood over the larger BEAR probe, raw + length-normalized accuracy | BEAR `wiland2024bear` |
 | `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
 | `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
@@ -372,6 +374,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
+- `bear`, `bear_big`: BEAR `wiland2024bear`
 - `blimp`: BLiMP `warstadt2020blimp`
 - `c4`: C4 `raffel2020exploring`
 - `ceval`: C-Eval `huang2023ceval`
@@ -455,6 +458,15 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Jason Weston and Antoine Bordes and Sumit Chopra and Alexander M. Rush and Bart van Merri{\"e}nboer and Armand Joulin and Tomas Mikolov},
   journal = {arXiv preprint arXiv:1502.05698},
   year = {2015},
+}
+
+# BEAR
+@article{wiland2024bear,
+  title = {BEAR: A Unified Framework for Evaluating Relational Knowledge in Causal and Masked Language Models},
+  author = {Jacek Wiland and Max Ploner and Alan Akbik},
+  journal = {arXiv preprint arXiv:2404.04113},
+  year = {2024},
+  url = {https://arxiv.org/abs/2404.04113},
 }
 
 # BLiMP

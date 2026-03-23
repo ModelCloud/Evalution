@@ -23,6 +23,7 @@ from .arithmetic import (
 )
 from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
+from .bear import BEAR, bear, bear_big
 from .base import BaseTestSuite, TestSuite
 from .blimp import BLiMP, BLIMP_SUBSETS, blimp
 from .c4 import C4, c4
@@ -97,6 +98,7 @@ __all__ = [
     "ASDiv",
     "ASDivCoTLlama",
     "BABI",
+    "BEAR",
     "BLiMP",
     "BLIMP_SUBSETS",
     "BaseRollingPerplexitySuite",
@@ -180,6 +182,8 @@ __all__ = [
     "asdiv",
     "asdiv_cot_llama",
     "babi",
+    "bear",
+    "bear_big",
     "blimp",
     "c4",
     "ceval",

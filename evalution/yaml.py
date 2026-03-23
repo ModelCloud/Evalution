@@ -43,6 +43,8 @@ _TEST_FACTORIES: dict[str, Any] = {
     "asdiv": benchmarks.asdiv,
     "asdiv_cot_llama": benchmarks.asdiv_cot_llama,
     "babi": benchmarks.babi,
+    "bear": benchmarks.bear,
+    "bear_big": benchmarks.bear_big,
     "blimp": benchmarks.blimp,
     "c4": benchmarks.c4,
     "ceval": benchmarks.ceval,

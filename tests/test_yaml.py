@@ -126,6 +126,10 @@ tests:
     max_rows: 18
   - type: babi
     max_rows: 18
+  - type: bear
+    max_rows: 18
+  - type: bear_big
+    max_rows: 18
   - type: blimp
     subset: adjunct_island
     max_rows: 18
@@ -299,6 +303,8 @@ tests:
     assert ".run(benchmarks.asdiv(" in script
     assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script
+    assert ".run(benchmarks.bear(" in script
+    assert ".run(benchmarks.bear_big(" in script
     assert ".run(benchmarks.blimp(" in script
     assert ".run(benchmarks.c4(" in script
     assert ".run(benchmarks.ceval(" in script
