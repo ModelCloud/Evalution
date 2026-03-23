@@ -278,6 +278,7 @@ logic, those implementation details can shift results.
 | `siqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | Social IQA `sap2019social` |
 | `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
 | `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `squadv2` | Generated QA exact match and token-overlap F1 with explicit no-answer handling | SQuAD 2.0 `rajpurkar2018know` |
 | `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
 | `wikitext` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | WikiText-2 `merity2016pointer` |
@@ -366,6 +367,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `pile_10k`: The Pile `gao2020pile`
 - `prost`: PROST `aroca-ouellette-etal-2021-prost`
 - `pubmedqa`: PubMedQA `jin2019pubmedqa`
+- `squadv2`: SQuAD 2.0 `rajpurkar2018know`
 - `race`: RACE `lai-etal-2017-race`
 - `sciq`: SciQ `welbl2017crowdsourcing`
 - `siqa`: Social IQA `sap2019social`
@@ -494,6 +496,14 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2021},
   pages = {4597--4608},
   url = {https://aclanthology.org/2021.findings-acl.404},
+}
+
+# SQuAD 2.0
+@article{rajpurkar2018know,
+  title = {Know What You Don’t Know: Unanswerable Questions for SQuAD},
+  author = {Pranav Rajpurkar and Robin Jia and Percy Liang},
+  journal = {arXiv preprint arXiv:1806.03822},
+  year = {2018},
 }
 
 # PubMedQA

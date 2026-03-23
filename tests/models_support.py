@@ -544,6 +544,23 @@ def _assert_pile_10k_sample(sample: Any, index: int) -> None:
     assert sample.metadata["token_count"] >= 1
 
 
+def _assert_squadv2_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Title: ")
+    assert "\nContext: " in sample.prompt
+    assert "\nQuestion: " in sample.prompt
+    assert "unanswerable" in sample.prompt
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["id"]
+    assert sample.metadata["title"] is not None
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_texts"]
+    assert "has_answer" in sample.metadata
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -2143,6 +2160,27 @@ SUITE_SPECS = {
             prediction_values={"negative", "positive"},
             prompt_substrings=("\nQuestion: Is this sentence positive or negative?\nAnswer:",),
         ),
+    ),
+    "squadv2": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.squadv2(batch_size=16, max_rows=32),
+        expected_name="squadv2",
+        baseline={
+            "em": 0.375,
+            "f1": 0.3819444444444444,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "squad_v2",
+            "dataset_name": "squad_v2",
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+            "no_answer_token": "unanswerable",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_squadv2_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "wic": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wic(batch_size=24, streaming=True, max_rows=128),

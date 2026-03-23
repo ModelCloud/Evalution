@@ -70,6 +70,7 @@ from .siqa import SIQA, siqa
 from .single_continuation import BaseSingleContinuationSuite, SingleContinuationSample
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
+from .squadv2 import SQuADV2, squadv2
 from .wic import WiC, wic
 from .webqs import WebQS, webqs
 from .wikitext import WikiText, wikitext
@@ -127,6 +128,7 @@ __all__ = [
     "SIQA",
     "SingleContinuationSample",
     "SWAG",
+    "SQuADV2",
     "SST2",
     "TestSuite",
     "WiC",
@@ -201,6 +203,7 @@ __all__ = [
     "sciq",
     "siqa",
     "swag",
+    "squadv2",
     "question_answer_prompt",
     "sst2",
     "wic",

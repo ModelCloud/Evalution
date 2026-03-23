@@ -139,7 +139,6 @@ simple_cooccurrence_bias,2,simple_cooccurrence_bias/simple_cooccurrence_bias.yam
 slr_bench,6,slr_bench/slr_bench_all.yaml,slr_bench/slr_bench_basic.yaml
 spanish_bench,29,spanish_bench/cocoteros_es.yaml,spanish_bench/copa_es.yaml
 squad_completion,1,squad_completion/squad_completion.yaml,
-squadv2,1,squadv2/squadv2.yaml,
 storycloze,2,storycloze/storycloze_2016.yaml,storycloze/storycloze_2018.yaml
 swde,1,swde/swde.yaml,
 tmlu,32,tmlu/default/tmlu_AST_biology.yaml,tmlu/default/tmlu_AST_chemistry.yaml
