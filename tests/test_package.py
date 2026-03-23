@@ -158,6 +158,19 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.wsc273)
     assert evalution.benchmarks.WNLI is not None
     assert callable(evalution.benchmarks.wnli)
+    assert evalution.benchmarks.XCOPA is not None
+    assert callable(evalution.benchmarks.xcopa)
+    assert callable(evalution.benchmarks.xcopa_et)
+    assert callable(evalution.benchmarks.xcopa_ht)
+    assert callable(evalution.benchmarks.xcopa_id)
+    assert callable(evalution.benchmarks.xcopa_it)
+    assert callable(evalution.benchmarks.xcopa_qu)
+    assert callable(evalution.benchmarks.xcopa_sw)
+    assert callable(evalution.benchmarks.xcopa_ta)
+    assert callable(evalution.benchmarks.xcopa_th)
+    assert callable(evalution.benchmarks.xcopa_tr)
+    assert callable(evalution.benchmarks.xcopa_vi)
+    assert callable(evalution.benchmarks.xcopa_zh)
     assert evalution.benchmarks.WinoGrande is not None
     assert callable(evalution.benchmarks.winogrande)
     assert callable(evalution.benchmarks.f1_for_label)

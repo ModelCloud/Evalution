@@ -103,6 +103,17 @@ _TEST_FACTORIES: dict[str, Any] = {
     "wsc273": benchmarks.wsc273,
     "wnli": benchmarks.wnli,
     "winogrande": benchmarks.winogrande,
+    "xcopa_et": benchmarks.xcopa_et,
+    "xcopa_ht": benchmarks.xcopa_ht,
+    "xcopa_id": benchmarks.xcopa_id,
+    "xcopa_it": benchmarks.xcopa_it,
+    "xcopa_qu": benchmarks.xcopa_qu,
+    "xcopa_sw": benchmarks.xcopa_sw,
+    "xcopa_ta": benchmarks.xcopa_ta,
+    "xcopa_th": benchmarks.xcopa_th,
+    "xcopa_tr": benchmarks.xcopa_tr,
+    "xcopa_vi": benchmarks.xcopa_vi,
+    "xcopa_zh": benchmarks.xcopa_zh,
 }
 
 

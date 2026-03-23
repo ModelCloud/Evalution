@@ -79,6 +79,19 @@ PAWS_X_TASKS = (
     "paws_x_ko",
     "paws_x_zh",
 )
+XCOPA_TASKS = (
+    "xcopa_et",
+    "xcopa_ht",
+    "xcopa_id",
+    "xcopa_it",
+    "xcopa_qu",
+    "xcopa_sw",
+    "xcopa_ta",
+    "xcopa_th",
+    "xcopa_tr",
+    "xcopa_vi",
+    "xcopa_zh",
+)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -783,6 +796,16 @@ def _metadata_language_and_id(language: str) -> Callable[[dict[str, Any]], None]
     return validate
 
 
+def _metadata_language_and_idx(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["idx"] is not None
+        assert metadata["question"] in {"cause", "effect"}
+        assert len(metadata["raw_choices"]) == 2
+
+    return validate
+
+
 def _paws_x_suite_spec(
     task_name: str,
     *,
@@ -824,6 +847,46 @@ def _paws_x_suite_spec(
                 "\nQuestion: Do both sentences mean the same thing?\nAnswer:",
             ),
             metadata_validator=_metadata_language_and_id(language),
+        ),
+    )
+
+
+def _xcopa_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.xcopa(
+            language=language,
+            batch_size=24,
+            max_rows=100,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "xcopa",
+            "dataset_name": language,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=100,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B"},
+            prediction_values={"A", "B"},
+            prompt_substrings=(
+                "Premise: ",
+                "\nQuestion: Which option is the more likely ",
+                "\nA. ",
+                "\nB. ",
+                "\nAnswer:",
+            ),
+            metadata_validator=_metadata_language_and_idx(language),
         ),
     )
 
@@ -2681,6 +2744,70 @@ for _task_name, _language in (
                 "acc,ll_avg": 0.453125,
                 "f1,ll_yes": 0.6195652173913043,
                 "f1,ll_avg_yes": 0.6195652173913043,
+            },
+        }[_task_name],
+    )
+
+for _task_name, _language in (
+    ("xcopa_et", "et"),
+    ("xcopa_ht", "ht"),
+    ("xcopa_id", "id"),
+    ("xcopa_it", "it"),
+    ("xcopa_qu", "qu"),
+    ("xcopa_sw", "sw"),
+    ("xcopa_ta", "ta"),
+    ("xcopa_th", "th"),
+    ("xcopa_tr", "tr"),
+    ("xcopa_vi", "vi"),
+    ("xcopa_zh", "zh"),
+):
+    SUITE_SPECS[_task_name] = _xcopa_suite_spec(
+        _task_name,
+        language=_language,
+        baseline={
+            "xcopa_et": {
+                "acc,ll": 0.52,
+                "acc,ll_avg": 0.52,
+            },
+            "xcopa_ht": {
+                "acc,ll": 0.56,
+                "acc,ll_avg": 0.56,
+            },
+            "xcopa_id": {
+                "acc,ll": 0.62,
+                "acc,ll_avg": 0.62,
+            },
+            "xcopa_it": {
+                "acc,ll": 0.57,
+                "acc,ll_avg": 0.57,
+            },
+            "xcopa_qu": {
+                "acc,ll": 0.61,
+                "acc,ll_avg": 0.61,
+            },
+            "xcopa_sw": {
+                "acc,ll": 0.51,
+                "acc,ll_avg": 0.51,
+            },
+            "xcopa_ta": {
+                "acc,ll": 0.52,
+                "acc,ll_avg": 0.52,
+            },
+            "xcopa_th": {
+                "acc,ll": 0.54,
+                "acc,ll_avg": 0.54,
+            },
+            "xcopa_tr": {
+                "acc,ll": 0.6,
+                "acc,ll_avg": 0.6,
+            },
+            "xcopa_vi": {
+                "acc,ll": 0.61,
+                "acc,ll_avg": 0.61,
+            },
+            "xcopa_zh": {
+                "acc,ll": 0.67,
+                "acc,ll_avg": 0.67,
             },
         }[_task_name],
     )

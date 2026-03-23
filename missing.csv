@@ -151,7 +151,6 @@ unscramble,5,unscramble/anagrams1.yaml,unscramble/anagrams2.yaml
 winogender,7,winogender/winogender.yaml,winogender/winogender_female.yaml
 wmdp,4,wmdp/wmdp_bio.yaml,wmdp/wmdp_chem.yaml
 wmt2016,1,wmt2016/ro_en-t5_prompt.yaml,
-xcopa,12,xcopa/default_et.yaml,xcopa/default_ht.yaml
 xnli,16,xnli/xnli_ar.yaml,xnli/xnli_bg.yaml
 xnli_eu,3,xnli_eu/xnli_eu.yaml,xnli_eu/xnli_eu_mt.yaml
 xquad,12,xquad/xquad_ar.yaml,xquad/xquad_de.yaml

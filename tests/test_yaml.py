@@ -210,6 +210,28 @@ tests:
     max_rows: 16
   - type: paws_x_zh
     max_rows: 16
+  - type: xcopa_et
+    max_rows: 16
+  - type: xcopa_ht
+    max_rows: 16
+  - type: xcopa_id
+    max_rows: 16
+  - type: xcopa_it
+    max_rows: 16
+  - type: xcopa_qu
+    max_rows: 16
+  - type: xcopa_sw
+    max_rows: 16
+  - type: xcopa_ta
+    max_rows: 16
+  - type: xcopa_th
+    max_rows: 16
+  - type: xcopa_tr
+    max_rows: 16
+  - type: xcopa_vi
+    max_rows: 16
+  - type: xcopa_zh
+    max_rows: 16
   - type: piqa
     max_rows: 16
   - type: pile_10k
@@ -306,6 +328,17 @@ tests:
     assert ".run(benchmarks.paws_x_ja(" in script
     assert ".run(benchmarks.paws_x_ko(" in script
     assert ".run(benchmarks.paws_x_zh(" in script
+    assert ".run(benchmarks.xcopa_et(" in script
+    assert ".run(benchmarks.xcopa_ht(" in script
+    assert ".run(benchmarks.xcopa_id(" in script
+    assert ".run(benchmarks.xcopa_it(" in script
+    assert ".run(benchmarks.xcopa_qu(" in script
+    assert ".run(benchmarks.xcopa_sw(" in script
+    assert ".run(benchmarks.xcopa_ta(" in script
+    assert ".run(benchmarks.xcopa_th(" in script
+    assert ".run(benchmarks.xcopa_tr(" in script
+    assert ".run(benchmarks.xcopa_vi(" in script
+    assert ".run(benchmarks.xcopa_zh(" in script
     assert ".run(benchmarks.piqa(" in script
     assert ".run(benchmarks.pile_10k(" in script
     assert ".run(benchmarks.prost(" in script

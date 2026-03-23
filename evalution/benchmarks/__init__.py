@@ -82,6 +82,7 @@ from .wikitext import WikiText, wikitext
 from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
+from .xcopa import XCOPA, xcopa, xcopa_et, xcopa_ht, xcopa_id, xcopa_it, xcopa_qu, xcopa_sw, xcopa_ta, xcopa_th, xcopa_tr, xcopa_vi, xcopa_zh
 
 __all__ = [
     "ANLI",
@@ -147,6 +148,7 @@ __all__ = [
     "WSC273",
     "WNLI",
     "WinoGrande",
+    "XCOPA",
     "aime",
     "aime24",
     "aime25",
@@ -234,4 +236,16 @@ __all__ = [
     "wsc273",
     "wnli",
     "winogrande",
+    "xcopa",
+    "xcopa_et",
+    "xcopa_ht",
+    "xcopa_id",
+    "xcopa_it",
+    "xcopa_qu",
+    "xcopa_sw",
+    "xcopa_ta",
+    "xcopa_th",
+    "xcopa_tr",
+    "xcopa_vi",
+    "xcopa_zh",
 ]

@@ -276,6 +276,17 @@ logic, those implementation details can shift results.
 | `paws_x_ja` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
 | `paws_x_ko` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
 | `paws_x_zh` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `xcopa_et` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_ht` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_id` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_it` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_qu` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_sw` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_ta` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_th` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_tr` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_vi` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_zh` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
 | `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
@@ -392,6 +403,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `wikitext`: WikiText-2 `merity2016pointer`
 - `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
+- `xcopa_et`, `xcopa_ht`, `xcopa_id`, `xcopa_it`, `xcopa_qu`, `xcopa_sw`, `xcopa_ta`, `xcopa_th`, `xcopa_tr`, `xcopa_vi`, `xcopa_zh`: XCOPA `ponti2020xcopa`
 
 ```bibtex
 
@@ -698,6 +710,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Yinfei Yang and Yuan Zhang and Chris Tar and Jason Baldridge},
   booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
   year = {2019},
+}
+
+# XCOPA
+@inproceedings{ponti2020xcopa,
+  title = {XCOPA: A Multilingual Dataset for Causal Commonsense Reasoning},
+  author = {Edoardo M. Ponti and Rahul Gupta and Ivan Vuli{\'c} and Goran Glava{\v{s}} and Anna Korhonen},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing},
+  year = {2020},
 }
 
 # SciQ
