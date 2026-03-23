@@ -50,6 +50,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "commonsense_qa": benchmarks.commonsense_qa,
     "coqa": benchmarks.coqa,
     "copa": benchmarks.copa,
+    "drop": benchmarks.drop,
     "ethics_cm": benchmarks.ethics_cm,
     "ethics_deontology": benchmarks.ethics_deontology,
     "ethics_justice": benchmarks.ethics_justice,

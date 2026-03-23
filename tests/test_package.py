@@ -69,6 +69,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.coqa)
     assert evalution.benchmarks.COPA is not None
     assert callable(evalution.benchmarks.copa)
+    assert evalution.benchmarks.DROP is not None
+    assert callable(evalution.benchmarks.drop)
     assert evalution.benchmarks.HendrycksEthics is not None
     assert callable(evalution.benchmarks.ethics_cm)
     assert callable(evalution.benchmarks.ethics_deontology)

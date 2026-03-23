@@ -164,6 +164,8 @@ tests:
     max_rows: 16
   - type: copa
     max_rows: 12
+  - type: drop
+    max_rows: 16
   - type: ethics_cm
     max_rows: 18
   - type: ethics_deontology
@@ -268,6 +270,7 @@ tests:
     assert ".run(benchmarks.commonsense_qa(" in script
     assert ".run(benchmarks.coqa(" in script
     assert ".run(benchmarks.copa(" in script
+    assert ".run(benchmarks.drop(" in script
     assert ".run(benchmarks.ethics_cm(" in script
     assert ".run(benchmarks.ethics_deontology(" in script
     assert ".run(benchmarks.ethics_justice(" in script

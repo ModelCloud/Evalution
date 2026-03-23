@@ -31,6 +31,7 @@ from .cola import CoLA, cola
 from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
+from .drop import DROP, drop
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hendrycks_ethics import (
@@ -101,6 +102,7 @@ __all__ = [
     "CommonsenseQA",
     "CoQA",
     "COPA",
+    "DROP",
     "GSM8K",
     "GSM8KPlatinum",
     "HendrycksEthics",
@@ -171,6 +173,7 @@ __all__ = [
     "commonsense_qa",
     "coqa",
     "copa",
+    "drop",
     "ethics_cm",
     "ethics_deontology",
     "ethics_justice",

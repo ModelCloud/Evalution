@@ -609,6 +609,22 @@ def _assert_coqa_sample(sample: Any, index: int) -> None:
     assert sample.prompt.count("\nAnswer:") == sample.metadata["history_turns"] + 1
 
 
+def _assert_drop_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Passage: ")
+    assert "\nQuestion: " in sample.prompt
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["section_id"]
+    assert sample.metadata["query_id"]
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_spans"]
+    assert sample.metadata["answer_types"]
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -2289,6 +2305,26 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=_assert_coqa_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "drop": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.drop(batch_size=16, max_rows=32),
+        expected_name="drop",
+        baseline={
+            "em": 0.21875,
+            "f1": 0.3130140692640693,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "drop",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_drop_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "wic": SuiteSpec(

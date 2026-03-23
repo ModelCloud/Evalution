@@ -45,7 +45,6 @@ darija_bench,37,darija_bench/darija_sentiment/darija_sentiment.yaml,darija_bench
 darijahellaswag,1,darijahellaswag/darijahellaswag.yaml,
 darijammlu,47,darijammlu/darijammlu_accounting.yaml,darijammlu/darijammlu_arabic_language.yaml
 discrim_eval,2,discrim_eval/discrim_eval_explicit.yaml,discrim_eval/discrim_eval_implicit.yaml
-drop,1,drop/default.yaml,
 e2lmc,20,e2lmc/mmlu_early_training/mmlu_early_training.yaml,e2lmc/noor/noor_abstract_algebra.yaml
 egyhellaswag,1,egyhellaswag/egyhellaswag.yaml,
 egymmlu,47,egymmlu/egymmlu_accounting.yaml,egymmlu/egymmlu_arabic_language.yaml
