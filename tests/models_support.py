@@ -1104,6 +1104,29 @@ SUITE_SPECS = {
             prompt_substrings=("\nQuestion: ", " True or False?\nAnswer:"),
         ),
     ),
+    "sciq": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.sciq(batch_size=24, streaming=True, max_rows=128),
+        expected_name="sciq",
+        baseline={
+            "acc,ll": 0.9296875,
+            "acc,ll_avg": 0.8984375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "allenai/sciq",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=("Question: ", "\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
     "sst2": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.sst2(batch_size=24, streaming=True, max_rows=128),
         expected_name="sst2",

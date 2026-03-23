@@ -26,6 +26,7 @@ from .piqa import PIQA, piqa
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .rte import RTE, rte
+from .sciq import SciQ, sciq
 from .sst2 import SST2, sst2
 from .wic import WiC, wic
 from .wnli import WNLI, wnli
@@ -54,6 +55,7 @@ __all__ = [
     "QNLI",
     "QQP",
     "RTE",
+    "SciQ",
     "SST2",
     "TestSuite",
     "WiC",
@@ -82,6 +84,7 @@ __all__ = [
     "qnli",
     "qqp",
     "rte",
+    "sciq",
     "question_answer_prompt",
     "sst2",
     "wic",
