@@ -13,15 +13,16 @@ import evalution
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 from evalution import runtime as runtime_module
 
-gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
+gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 
 
 class FakeEngine(BaseEngine):
     def __init__(self) -> None:
         self.session = FakeSession()
+        self.model_config = None
 
     def build(self, model):
-        self.model = model
+        self.model_config = model
         return self.session
 
     def to_dict(self):
@@ -93,7 +94,7 @@ def test_evaluation_run_renders_per_suite_table(monkeypatch) -> None:
     evalution.run(
         model={"path": "/tmp/model"},
         engine=FakeEngine(),
-        tests=[evalution.gsm8k_platinum(max_rows=1)],
+        tests=[evalution.benchmarks.gsm8k_platinum(max_rows=1)],
     )
 
     assert rendered_results == [("gsm8k_platinum_cot", True)]
@@ -119,8 +120,8 @@ def test_evaluation_run_renders_consolidated_summary_for_multiple_suites(monkeyp
         model={"path": "/tmp/model"},
         engine=FakeEngine(),
         tests=[
-            evalution.gsm8k_platinum(max_rows=1),
-            evalution.gsm8k_platinum(max_rows=1),
+            evalution.benchmarks.gsm8k_platinum(max_rows=1),
+            evalution.benchmarks.gsm8k_platinum(max_rows=1),
         ],
     )
 

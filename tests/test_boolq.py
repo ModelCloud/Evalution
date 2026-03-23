@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-boolq_module = importlib.import_module("evalution.suites.boolq")
+boolq_module = importlib.import_module("evalution.benchmarks.boolq")
 
 
 class FakeSession:
@@ -42,12 +42,12 @@ def test_boolq_scores_boolean_multiple_choice_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(boolq_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.boolq(max_rows=1, batch_size=6).evaluate(FakeSession())
+    result = evalution.benchmarks.boolq(max_rows=1, batch_size=6).evaluate(FakeSession())
 
     assert result.name == "boolq"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "super_glue"
     assert result.metadata["dataset_name"] == "boolq"

@@ -13,7 +13,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-mnli_module = importlib.import_module("evalution.suites.mnli")
+mnli_module = importlib.import_module("evalution.benchmarks.mnli")
 
 
 class FakeSession:
@@ -67,12 +67,12 @@ def test_mnli_scores_three_way_multiple_choice_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(mnli_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.mnli(max_rows=3, batch_size=5).evaluate(FakeSession())
+    result = evalution.benchmarks.mnli(max_rows=3, batch_size=5).evaluate(FakeSession())
 
     assert result.name == "mnli"
     assert result.metrics == {
-        "accuracy,loglikelihood": pytest.approx(2 / 3),
-        "accuracy,loglikelihood_norm": pytest.approx(2 / 3),
+        "acc,ll": pytest.approx(2 / 3),
+        "acc,ll_avg": pytest.approx(2 / 3),
     }
     assert result.metadata["dataset_path"] == "nyu-mll/glue"
     assert result.metadata["dataset_name"] == "mnli"

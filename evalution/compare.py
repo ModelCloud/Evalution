@@ -15,7 +15,7 @@ from typing import Any
 from evalution.logbar import create_split_pane_logging_session, get_logger, render_compare_summary_table
 from evalution.results import CompareMetricResult, CompareRunResult, CompareTestResult
 from evalution.runtime import EvaluationRun
-from evalution.suites.base import TestSuite
+from evalution.benchmarks.base import TestSuite
 
 
 @dataclass(slots=True)
@@ -192,12 +192,12 @@ def _clone_test(test: TestSuite) -> TestSuite:
 
 def _coerce_compare_lane(lane: EvaluationRun, *, lane_label: str) -> EvaluationRun:
     if not isinstance(lane, EvaluationRun):
-        raise TypeError(f"{lane_label} must be an evalution.engine(...).model(...) handle")
+        raise TypeError(f"{lane_label} must be an engine.model(...) handle")
     if lane._closed:
         raise ValueError(f"{lane_label} compare lane is already closed")
     if lane._session is not None or lane._test_results:
         raise ValueError(
-            f"{lane_label} compare lane must be a fresh evalution.engine(...).model(...) handle"
+            f"{lane_label} compare lane must be a fresh engine.model(...) handle"
         )
     return lane
 

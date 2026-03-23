@@ -115,29 +115,36 @@ specific batching implementation.
 
 Evalution ships three Hugging Face-compatible engines:
 
-- `Transformers()`: the modern backend
-- `TransformersCompat()`: the compatibility backend
-- `GPTQModel()`: the quantized GPTQModel backend
+- `engines.Transformers()`: the modern backend
+- `engines.TransformersCompat()`: the compatibility backend
+- `engines.GPTQModel()`: the quantized GPTQModel backend
 
-`Transformers()` defaults batching, paged attention, dtype resolution, and attention selection to
-auto behavior. On compatible CUDA `transformers` setups it can switch to paged continuous batching
-for `flash_attention_2`.
+The preferred import shape is:
+
+```python
+import evalution as eval
+import evalution.engines as engines
+```
+
+`engines.Transformers()` defaults batching, paged attention, dtype resolution, and attention
+selection to auto behavior. On compatible CUDA `transformers` setups it can switch to paged
+continuous batching for `flash_attention_2`.
 
 If the installed `transformers` build predates the first release that includes
-`generation/continuous_batching` (`4.56.0`), `Transformers()` falls back to
-`TransformersCompat()`. `TransformersCompat()` also remains available as the explicit fixed-batch
-execution path.
+`generation/continuous_batching` (`4.56.0`), `engines.Transformers()` falls back to
+`engines.TransformersCompat()`. `engines.TransformersCompat()` also remains available as the
+explicit fixed-batch execution path.
 
-The modern `Transformers(...)` engine also exposes the upstream continuous batching manager knobs
-`manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
+The modern `engines.Transformers(...)` engine also exposes the upstream continuous batching manager
+knobs `manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
 `kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned manager alive
 while stop strings and sampling settings stay compatible, then tears it down on `gc()` between
 suites or on `close()`.
 
-`GPTQModel()` loads quantized checkpoints through GPTQModel's native loader, then reuses the
-same shared generation, scoring, and paged continuous-batching path as the built-in transformer
-engines when the loaded quantized model exposes the required HF hooks. It also surfaces the
-resolved quantized runtime backend in execution metadata.
+`engines.GPTQModel()` loads quantized checkpoints through GPTQModel's native loader, then reuses
+the same shared generation, scoring, and paged continuous-batching path as the built-in
+transformer engines when the loaded quantized model exposes the required HF hooks. It also
+surfaces the resolved quantized runtime backend in execution metadata.
 
 
 ## Log-Likelihood Requirements
@@ -311,7 +318,7 @@ Once the engine is implemented:
 2. Export it from `evalution/__init__.py` if it is part of the public API.
 3. Add YAML factory support in `evalution/yaml.py` if you want declarative execution.
 4. Add unit tests for the engine contract.
-5. Add at least one runtime/API test that exercises it through `evalution.engine(...).model(...).run(...)`.
+5. Add at least one runtime/API test that exercises it through `engine.model(...).run(...)`.
 
 ## Current Reference Implementations
 

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from evalution.config import Model
+    from evalution.runtime import EvaluationRun
 
 
 @dataclass(slots=True)
@@ -129,6 +130,15 @@ class BaseEngine(ABC):
         # The returned object must inherit BaseInferenceSession because runtime orchestration,
         # suite execution, and result materialization depend on the common inference APIs.
         raise NotImplementedError
+
+    def model(self, model: Model | dict, *, label: str | None = None) -> EvaluationRun:
+        from evalution.config import coerce_model, model_with_label
+        from evalution.runtime import EvaluationRun
+
+        return EvaluationRun(
+            _engine_impl=self,
+            _model_config=model_with_label(coerce_model(model), label=label),
+        )
 
     # Serialize engine controls into the public run result payload.
     def to_dict(self) -> dict[str, Any]:

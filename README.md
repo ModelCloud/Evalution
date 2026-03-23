@@ -19,16 +19,19 @@ pip install .
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
+Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
+scorer-module mapping live in [docs/scorers.md](docs/scorers.md).
 
 Simple usage:
 
 ```python
-import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
 
 result = (
-    eval.engine(eval.Transformers())
+    engines.Transformers()
     .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
-    .run(eval.gsm8k_platinum())
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -36,19 +39,19 @@ Advanced usage:
 
 ```python
 import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
 
 result = (
-    eval.engine(
-        eval.Transformers(
-            dtype="bfloat16",
-            attn_implementation="flash_attention_2",
-            device="cuda:0",
-            batch_size="auto",
-            paged_attention="auto",
-            allow_block_sharing=True,
-            use_async_batching=None,
-            max_new_tokens=256,
-        )
+    engines.Transformers(
+        dtype="bfloat16",
+        attn_implementation="flash_attention_2",
+        device="cuda:0",
+        batch_size="auto",
+        paged_attention="auto",
+        allow_block_sharing=True,
+        use_async_batching=None,
+        max_new_tokens=256,
     )
     .model(
         eval.Model(
@@ -56,7 +59,7 @@ result = (
         )
     )
     .run(
-        eval.gsm8k_platinum(
+        benchmarks.gsm8k_platinum(
             variant="cot",
             apply_chat_template=True,
             max_new_tokens=96,
@@ -65,7 +68,7 @@ result = (
         )
     )
     .run(
-        eval.arc_challenge(
+        benchmarks.arc_challenge(
             batch_size=64,
             max_rows=128,
         )
@@ -80,24 +83,26 @@ Compare usage:
 
 ```python
 import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
 
 result = (
     eval.compare(
-        eval.engine(eval.Transformers(dtype="bfloat16", device="cuda:0")).model(
+        engines.Transformers(dtype="bfloat16", device="cuda:0").model(
             {"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
             label="llama",
         ),
-        eval.engine(eval.TransformersCompat(device="cuda:1")).model(
+        engines.TransformersCompat(device="cuda:1").model(
             {"path": "/monster/data/model/Qwen2.5-1.5B-Instruct"},
             label="qwen",
         ),
     )
-    .run(eval.gsm8k_platinum(max_rows=128))
-    .run(eval.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum(max_rows=128))
+    .run(benchmarks.arc_challenge(max_rows=128))
 )
 ```
 
-`compare(...)` takes the same `eval.engine(...).model(...)` handles used for single-model runs, so
+`compare(...)` takes the same `engine.model(...)` handles used for single-model runs, so
 single and compare flows share one fluent entry shape. Compare lane labels come from
 `.model(..., label="...")`; when omitted, Evalution falls back to the model path. It runs the same
 suite list on both lanes while allowing different engines and model configs on the left and right.
@@ -146,18 +151,19 @@ evalution run evalution.yaml --output result.json
 evalution emit-python evalution.yaml
 ```
 
-`Transformers(...)` accepts runtime options such as `dtype`, `device`, `batch_size`,
+`engines.Transformers(...)` accepts runtime options such as `dtype`, `device`, `batch_size`,
 `paged_attention`, `attn_implementation`, and `max_new_tokens`.
 
-Per-suite options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, and `max_rows`
-can be set directly on each suite call or in each YAML `tests` entry.
+Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`,
+and scorer-specific options like `label_permutations` can be set directly on each benchmark call
+or in each YAML `tests` entry.
 
 ## Subset Selection
 
-Subset-aware suites use a `subsets` selector instead of suite-specific selector names.
+Subset-aware benchmarks use a `subsets` selector instead of benchmark-specific selector names.
 Currently this applies to `mmlu` and `mmlu_pro`.
 
-- `subsets: all` runs the full suite.
+- `subsets: all` runs the full benchmark.
 - `subsets: stem` runs the full `stem` subtree.
 - `subsets: stem.math` or `subsets: stem.abstract_algebra` runs a single leaf path.
 - `subsets: [stem, humanities]` runs the union of multiple selections.
@@ -167,12 +173,14 @@ Python:
 
 ```python
 import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
 
 result = (
-    eval.engine(eval.Transformers())
+    engines.Transformers()
     .model(eval.Model(path="/monster/data/model/Llama-3.2-1B-Instruct"))
-    .run(eval.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
-    .run(eval.mmlu_pro(subsets="stem.math"))
+    .run(benchmarks.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
+    .run(benchmarks.mmlu_pro(subsets="stem.math"))
 )
 ```
 
@@ -190,12 +198,22 @@ tests:
     num_fewshot: 5
 ```
 
-Use `TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you want
-the compatibility engine explicitly.
+Use `engines.TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you
+want the compatibility engine explicitly.
 
-## Supported Suites
+## Supported Benchmarks
 
-Evalution currently ships the following built-in suites:
+Evalution currently ships the following built-in benchmarks:
+
+Evalution aims to align each built-in suite's default split, prompting shape, and scoring logic as
+closely as practical with the original benchmark paper and any released reference code from the
+benchmark authors. Users should compare scores across different LLM evaluation projects with care:
+some frameworks do not match the original benchmark scoring exactly, which can make headline
+numbers look comparable when they are not. This matters most for researchers reporting results in
+papers or otherwise making cross-project claims. Reported scores are also affected by runtime and
+numerics details such as hardware behavior, dtype and normalization choices, kernel differences,
+and attention or matmul approximation and accumulation behavior. Even with the same benchmark
+logic, those implementation details can shift results.
 
 | Suite | Hugging Face dataset | Default split | Scoring | Original benchmark |
 | --- | --- | --- | --- | --- |
@@ -205,8 +223,8 @@ Evalution currently ships the following built-in suites:
 | `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `cola` | `nyu-mll/glue` / `cola` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
 | `copa` | `super_glue` / `copa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `gsm8k` | `openai/gsm8k` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K `cobbe2021trainingverifierssolvemath` |
-| `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Generated answer exact match, strict + flexible extraction | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| `gsm8k` | `openai/gsm8k` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
+| `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
 | `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `mmlu` | `cais/mmlu` / `<subsets>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
 | `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<subsets>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
@@ -224,6 +242,30 @@ Evalution currently ships the following built-in suites:
 
 `arc_challenge` and `arc_easy`: choose among answer options and score the question as an exam
 item, including partial credit when multiple top-scoring choices tie.
+
+For selected multiple-choice suites, `label_permutations` can be set to any float in `[0.0, 1.0]`
+to add an extra permutation-averaged label-only metric. This does not replace the default
+benchmark score. It adds extra inference work on purpose so users can compare the benchmark-native
+score against a label-bias-mitigated alternative when option length is a concern. Metric names
+carry the exact configured fraction after `:`, for example `acc,label_perm:0.25`. See
+[docs/scores.md](docs/scores.md) for the short-label glossary and [docs/scorers.md](docs/scorers.md)
+for the exact math, metric names, and compute tradeoffs.
+
+Metric key glossary:
+
+- `acc`: accuracy-like credit on a `0.0` to `1.0` scale for each sample, then averaged.
+- `ll`: raw summed continuation log-likelihood over the scored answer tokens.
+- `ll_avg`: average continuation log-likelihood per scored answer token to reduce length bias.
+- `exam`: ARC exam-style tie-aware partial credit.
+- `num`: numeric-answer match after numeric extraction and canonicalization.
+- `em`: exact match after the suite's task-specific extraction step.
+- `choice_label`: extracted option-label match such as `A/B/C/D`.
+- `label_perm:<fraction>`: permutation-averaged label-only accuracy using the configured fraction
+  of all label permutations.
+- `f1`: F1 score derived from the suite's predicted labels.
+- `mcc`: Matthews correlation coefficient derived from the suite's predicted labels.
+- `macro`: macro-average across labels rather than a single positive class.
+- `yes`: positive-class metric using the suite's `yes` or equivalent positive label.
 
 Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
 

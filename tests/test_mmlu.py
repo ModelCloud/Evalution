@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-mmlu_module = importlib.import_module("evalution.suites.mmlu")
+mmlu_module = importlib.import_module("evalution.benchmarks.mmlu")
 
 
 class FakeSession:
@@ -80,12 +80,12 @@ def test_mmlu_uses_subset_matched_fewshot_prompts(monkeypatch) -> None:
 
     monkeypatch.setattr(mmlu_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu(subsets="all", num_fewshot=1, max_rows=2, batch_size=11).evaluate(FakeSession())
+    result = evalution.benchmarks.mmlu(subsets="all", num_fewshot=1, max_rows=2, batch_size=11).evaluate(FakeSession())
 
     assert result.name == "mmlu"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "cais/mmlu"
     assert result.metadata["dataset_name"] == "all"
@@ -187,7 +187,7 @@ def test_mmlu_subset_node_filter_uses_distinct_result_name(monkeypatch) -> None:
 
     monkeypatch.setattr(mmlu_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu(subsets="stem", num_fewshot=1, max_rows=2, batch_size=8).evaluate(
+    result = evalution.benchmarks.mmlu(subsets="stem", num_fewshot=1, max_rows=2, batch_size=8).evaluate(
         StemSession()
     )
 
@@ -260,7 +260,7 @@ def test_mmlu_subset_leaf_filter_uses_canonical_path_name(monkeypatch) -> None:
 
     monkeypatch.setattr(mmlu_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu(
+    result = evalution.benchmarks.mmlu(
         subsets="stem.abstract_algebra",
         num_fewshot=1,
         max_rows=1,
@@ -352,7 +352,7 @@ def test_mmlu_subsets_list_combines_multiple_paths(monkeypatch) -> None:
 
     monkeypatch.setattr(mmlu_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu(
+    result = evalution.benchmarks.mmlu(
         subsets=["stem.abstract_algebra", "humanities.philosophy"],
         num_fewshot=1,
         max_rows=2,

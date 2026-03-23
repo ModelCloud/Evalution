@@ -12,16 +12,17 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import BaseEngine, BaseInferenceSession, LoglikelihoodOutput
 
-arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
+arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challenge")
 
 
 class FakeEngine(BaseEngine):
     def __init__(self, *, choice_index: int, name: str) -> None:
         self.session = FakeSession(choice_index=choice_index)
         self.name = name
+        self.model_config = None
 
     def build(self, model):
-        self.model = model
+        self.model_config = model
         return self.session
 
     def to_dict(self):
@@ -97,12 +98,12 @@ def test_compare_runs_same_suite_on_both_lanes_and_computes_delta(monkeypatch) -
     monkeypatch.setattr(arc_challenge_module, "load_dataset", lambda *args, **kwargs: _dataset())
     left_engine = FakeEngine(choice_index=2, name="left-engine")
     right_engine = FakeEngine(choice_index=0, name="right-engine")
-    left_lane = evalution.engine(left_engine).model({"path": "/tmp/left-model"}, label="model_a")
-    right_lane = evalution.engine(right_engine).model({"path": "/tmp/right-model"}, label="model_b")
+    left_lane = left_engine.model({"path": "/tmp/left-model"}, label="model_a")
+    right_lane = right_engine.model({"path": "/tmp/right-model"}, label="model_b")
 
     result = (
         evalution.compare(left_lane, right_lane)
-        .run(evalution.arc_challenge(max_rows=1))
+        .run(evalution.benchmarks.arc_challenge(max_rows=1))
         .result()
     )
 
@@ -112,9 +113,9 @@ def test_compare_runs_same_suite_on_both_lanes_and_computes_delta(monkeypatch) -
     assert result.right.engine["name"] == "right-engine"
     assert len(result.tests) == 1
     assert result.tests[0].name == "arc_challenge"
-    assert result.tests[0].left.metrics["accuracy,exam_score"] == 1.0
-    assert result.tests[0].right.metrics["accuracy,exam_score"] == 0.0
-    metric = result.tests[0].metrics["accuracy,exam_score"]
+    assert result.tests[0].left.metrics["acc,exam"] == 1.0
+    assert result.tests[0].right.metrics["acc,exam"] == 0.0
+    metric = result.tests[0].metrics["acc,exam"]
     assert metric.left_value == 1.0
     assert metric.right_value == 0.0
     assert metric.delta == 1.0
@@ -129,15 +130,15 @@ def test_run_compare_calls_gc_between_shared_suite_list(monkeypatch) -> None:
     monkeypatch.setattr(arc_challenge_module, "load_dataset", lambda *args, **kwargs: _dataset())
     left_engine = FakeEngine(choice_index=2, name="left-engine")
     right_engine = FakeEngine(choice_index=2, name="right-engine")
-    left_lane = evalution.engine(left_engine).model({"path": "/tmp/left-model"}, label="model_a")
-    right_lane = evalution.engine(right_engine).model({"path": "/tmp/right-model"}, label="model_b")
+    left_lane = left_engine.model({"path": "/tmp/left-model"}, label="model_a")
+    right_lane = right_engine.model({"path": "/tmp/right-model"}, label="model_b")
 
     result = evalution.run_compare(
         left_lane,
         right_lane,
         tests=[
-            evalution.arc_challenge(max_rows=1),
-            evalution.arc_challenge(max_rows=1),
+            evalution.benchmarks.arc_challenge(max_rows=1),
+            evalution.benchmarks.arc_challenge(max_rows=1),
         ],
     )
 
@@ -155,10 +156,10 @@ def test_compare_defaults_lane_names_to_model_paths_when_labels_are_omitted(monk
 
     result = (
         evalution.compare(
-            evalution.engine(left_engine).model({"path": "/tmp/left-model"}),
-            evalution.engine(right_engine).model({"path": "/tmp/right-model"}),
+            left_engine.model({"path": "/tmp/left-model"}),
+            right_engine.model({"path": "/tmp/right-model"}),
         )
-        .run(evalution.arc_challenge(max_rows=1))
+        .run(evalution.benchmarks.arc_challenge(max_rows=1))
         .result()
     )
 

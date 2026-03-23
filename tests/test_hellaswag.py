@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-hellaswag_module = importlib.import_module("evalution.suites.hellaswag")
+hellaswag_module = importlib.import_module("evalution.benchmarks.hellaswag")
 
 
 class FakeSession:
@@ -55,12 +55,12 @@ def test_hellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(hellaswag_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.hellaswag(max_rows=1, batch_size=8).evaluate(FakeSession())
+    result = evalution.benchmarks.hellaswag(max_rows=1, batch_size=8).evaluate(FakeSession())
 
     assert result.name == "hellaswag"
     assert result.metrics == {
-        "accuracy,loglikelihood": 0.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 0.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "Rowan/hellaswag"
     assert result.metadata["split"] == "validation"
@@ -77,8 +77,8 @@ def test_hellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
         "predicted_index_norm": "3",
     }
     assert sample.scores == {
-        "accuracy,loglikelihood": 0.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 0.0,
+        "acc,ll_avg": 1.0,
     }
     assert sample.metadata["activity_label"] == "Roof shingle removal"
     assert sample.metadata["split_type"] == "indomain"

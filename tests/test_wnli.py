@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-wnli_module = importlib.import_module("evalution.suites.wnli")
+wnli_module = importlib.import_module("evalution.benchmarks.wnli")
 
 
 class FakeSession:
@@ -54,12 +54,12 @@ def test_wnli_scores_true_false_multiple_choice_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(wnli_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.wnli(max_rows=2, batch_size=4).evaluate(FakeSession())
+    result = evalution.benchmarks.wnli(max_rows=2, batch_size=4).evaluate(FakeSession())
 
     assert result.name == "wnli"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "nyu-mll/glue"
     assert result.metadata["dataset_name"] == "wnli"

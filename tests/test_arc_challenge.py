@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
+arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challenge")
 
 
 class FakeSession:
@@ -58,7 +58,7 @@ def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(max_rows=1, batch_size=7)
+    suite = evalution.benchmarks.arc_challenge(max_rows=1, batch_size=7)
     session = FakeSession(
         [
             LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=5),
@@ -70,7 +70,7 @@ def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
     result = suite.evaluate(session)
 
     assert result.name == "arc_challenge"
-    assert result.metrics == {"accuracy,exam_score": 1.0}
+    assert result.metrics == {"acc,exam": 1.0}
     assert result.metadata == {
         "dataset_path": "allenai/ai2_arc",
         "dataset_name": "ARC-Challenge",
@@ -108,7 +108,7 @@ def test_arc_challenge_awards_partial_credit_for_tied_top_choices(monkeypatch) -
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(max_rows=1, batch_size=7)
+    suite = evalution.benchmarks.arc_challenge(max_rows=1, batch_size=7)
     session = FakeSession(
         [
             LoglikelihoodOutput(logprob=-0.4, is_greedy=False, token_count=5),
@@ -119,7 +119,7 @@ def test_arc_challenge_awards_partial_credit_for_tied_top_choices(monkeypatch) -
     )
     result = suite.evaluate(session)
 
-    assert result.metrics == {"accuracy,exam_score": 0.5}
+    assert result.metrics == {"acc,exam": 0.5}
     assert result.samples[0].prediction == (
         "Planetary density will decrease. | Planetary days will become shorter."
     )
@@ -138,7 +138,7 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
 
     monkeypatch.setattr(arc_challenge_module, "load_dataset", fake_load_dataset)
 
-    suite = evalution.arc_challenge(
+    suite = evalution.benchmarks.arc_challenge(
         max_rows=1,
         batch_size=7,
         streaming=True,
@@ -156,3 +156,57 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
     assert result.metadata["streaming"] is True
     assert calls
     assert calls[0]["streaming"] is True
+
+
+def test_arc_challenge_can_emit_label_permutation_metric(monkeypatch) -> None:
+    monkeypatch.setattr(
+        arc_challenge_module,
+        "load_dataset",
+        lambda *args, **kwargs: _dataset(),
+    )
+
+    class LabelPermutationSession:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def loglikelihood(self, requests, *, batch_size=None):
+            assert batch_size == 7
+            self.calls += 1
+            if self.calls == 1:
+                assert len(requests) == 4
+                return [
+                    LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=5),
+                    LoglikelihoodOutput(logprob=-1.1, is_greedy=False, token_count=6),
+                    LoglikelihoodOutput(logprob=-0.2, is_greedy=True, token_count=6),
+                    LoglikelihoodOutput(logprob=-1.0, is_greedy=False, token_count=6),
+                ]
+
+            assert len(requests) == 24
+            gold_text = "Planetary days will become shorter."
+            outputs = []
+            for request in requests:
+                label = request.continuation.strip()
+                is_gold_label = f"{label}. {gold_text}" in request.context
+                outputs.append(
+                    LoglikelihoodOutput(
+                        logprob=-0.1 if is_gold_label else -1.5,
+                        is_greedy=is_gold_label,
+                        token_count=1,
+                    )
+                )
+            return outputs
+
+    result = evalution.benchmarks.arc_challenge(
+        max_rows=1,
+        batch_size=7,
+        label_permutations=0.25,
+    ).evaluate(LabelPermutationSession())
+
+    assert result.metrics == {
+        "acc,exam": 1.0,
+        "acc,label_perm:0.25": 1.0,
+    }
+    assert result.metadata["label_permutations"] == 0.25
+    assert result.metadata["label_permutation_metric"] == "acc,label_perm:0.25"
+    assert result.samples[0].extracted["predicted_index_label_perm:0.25"] == "2"
+    assert result.samples[0].metadata["label_permutation_count"] == 6

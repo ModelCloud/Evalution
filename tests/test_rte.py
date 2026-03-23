@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-rte_module = importlib.import_module("evalution.suites.rte")
+rte_module = importlib.import_module("evalution.benchmarks.rte")
 
 
 class FakeSession:
@@ -46,12 +46,12 @@ def test_rte_scores_entailment_multiple_choice_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(rte_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.rte(max_rows=1, batch_size=5).evaluate(FakeSession())
+    result = evalution.benchmarks.rte(max_rows=1, batch_size=5).evaluate(FakeSession())
 
     assert result.name == "rte"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "super_glue"
     assert result.metadata["dataset_name"] == "rte"

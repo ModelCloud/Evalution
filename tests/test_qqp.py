@@ -13,7 +13,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-qqp_module = importlib.import_module("evalution.suites.qqp")
+qqp_module = importlib.import_module("evalution.benchmarks.qqp")
 
 
 class FakeSession:
@@ -64,13 +64,13 @@ def test_qqp_scores_accuracy_and_positive_class_f1(monkeypatch) -> None:
     )
     monkeypatch.setattr(qqp_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.qqp(max_rows=3, batch_size=4).evaluate(FakeSession())
+    result = evalution.benchmarks.qqp(max_rows=3, batch_size=4).evaluate(FakeSession())
 
     assert result.name == "qqp"
-    assert result.metrics["accuracy,loglikelihood"] == pytest.approx(2 / 3)
-    assert result.metrics["accuracy,loglikelihood_norm"] == pytest.approx(2 / 3)
-    assert result.metrics["f1,loglikelihood_yes"] == pytest.approx(2 / 3)
-    assert result.metrics["f1,loglikelihood_norm_yes"] == pytest.approx(2 / 3)
+    assert result.metrics["acc,ll"] == pytest.approx(2 / 3)
+    assert result.metrics["acc,ll_avg"] == pytest.approx(2 / 3)
+    assert result.metrics["f1,ll_yes"] == pytest.approx(2 / 3)
+    assert result.metrics["f1,ll_avg_yes"] == pytest.approx(2 / 3)
     assert result.metadata["dataset_path"] == "nyu-mll/glue"
     assert result.metadata["dataset_name"] == "qqp"
     assert len(result.samples) == 3

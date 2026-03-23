@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-qnli_module = importlib.import_module("evalution.suites.qnli")
+qnli_module = importlib.import_module("evalution.benchmarks.qnli")
 
 
 class FakeSession:
@@ -55,12 +55,12 @@ def test_qnli_scores_answer_relevance_multiple_choice_accuracy(monkeypatch) -> N
     )
     monkeypatch.setattr(qnli_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.qnli(max_rows=2, batch_size=3).evaluate(FakeSession())
+    result = evalution.benchmarks.qnli(max_rows=2, batch_size=3).evaluate(FakeSession())
 
     assert result.name == "qnli"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "nyu-mll/glue"
     assert result.metadata["dataset_name"] == "qnli"

@@ -21,7 +21,7 @@ from evalution.logbar import (
     use_logging_context,
 )
 from evalution.results import RunResult
-from evalution.suites.base import TestSuite
+from evalution.benchmarks.base import TestSuite
 
 
 @dataclass(slots=True)
@@ -115,23 +115,6 @@ class EvaluationRun:
         return use_logging_context(self._logging_context)
 
 
-@dataclass(slots=True)
-class EngineBuilder:
-    _engine_impl: BaseEngine
-
-    def model(self, model: Model | dict, *, label: str | None = None) -> EvaluationRun:
-        return EvaluationRun(
-            _engine_impl=self._engine_impl,
-            _model_config=model_with_label(coerce_model(model), label=label),
-        )
-
-
-def engine(engine: BaseEngine) -> EngineBuilder:
-    if not isinstance(engine, BaseEngine):
-        raise TypeError("engine must inherit BaseEngine")
-    return EngineBuilder(_engine_impl=engine)
-
-
 def run(
     *,
     model: Model | dict,
@@ -141,7 +124,7 @@ def run(
     if not isinstance(engine, BaseEngine):
         raise TypeError("engine must inherit BaseEngine")
 
-    evaluation = EngineBuilder(_engine_impl=engine).model(model)
+    evaluation = engine.model(model)
     try:
         for test in tests:
             evaluation.run(test)
