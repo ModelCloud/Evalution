@@ -188,6 +188,8 @@ tests:
     max_rows: 44
   - type: mrpc
     max_rows: 28
+  - type: nq_open
+    max_rows: 16
   - type: openbookqa
     max_rows: 20
   - type: piqa
@@ -275,6 +277,7 @@ tests:
     assert ".run(benchmarks.mmlu_pro(" in script
     assert ".run(benchmarks.mnli(" in script
     assert ".run(benchmarks.mrpc(" in script
+    assert ".run(benchmarks.nq_open(" in script
     assert ".run(benchmarks.openbookqa(" in script
     assert ".run(benchmarks.piqa(" in script
     assert ".run(benchmarks.pile_10k(" in script

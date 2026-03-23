@@ -577,6 +577,18 @@ def _assert_triviaqa_sample(sample: Any, index: int) -> None:
     assert sample.metadata["answer_value"]
 
 
+def _assert_nq_open_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_aliases"]
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -2216,6 +2228,26 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=_assert_triviaqa_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "nq_open": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.nq_open(batch_size=16, max_rows=32),
+        expected_name="nq_open",
+        baseline={
+            "em": 0.15625,
+            "f1": 0.2424139492753623,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "nq_open",
+            "dataset_name": "nq_open",
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_nq_open_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "wic": SuiteSpec(

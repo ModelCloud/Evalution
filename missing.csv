@@ -120,7 +120,6 @@ multiblimp,101,multiblimp/multiblimp_abk.yaml,multiblimp/multiblimp_aln.yaml
 mutual,2,mutual/multual_plus.yaml,mutual/mutual.yaml
 noreval,116,noreval/ask_gec/ask_gec_p0.yaml,noreval/ask_gec/ask_gec_p1.yaml
 noticia,1,noticia/noticia.yaml,
-nq_open,1,nq_open/nq_open.yaml,
 okapi,157,okapi/arc_multilingual/arc_ar.yaml,okapi/arc_multilingual/arc_bn.yaml
 olaph,2,olaph/olaph.yaml,olaph/olaph_perplexity.yaml
 openai-mmmlu,869,openai-mmmlu/default/mmmlu_ar_xy_abstract_algebra.yaml,openai-mmmlu/default/mmmlu_ar_xy_anatomy.yaml

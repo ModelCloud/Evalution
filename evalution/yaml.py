@@ -72,6 +72,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "mmlu_pro": benchmarks.mmlu_pro,
     "mnli": benchmarks.mnli,
     "mrpc": benchmarks.mrpc,
+    "nq_open": benchmarks.nq_open,
     "openbookqa": benchmarks.openbookqa,
     "piqa": benchmarks.piqa,
     "pile_10k": benchmarks.pile_10k,

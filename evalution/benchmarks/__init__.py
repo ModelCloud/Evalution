@@ -53,6 +53,7 @@ from .mmlu import MMLU, mmlu
 from .mmlu_pro import MMLUPro, mmlu_pro
 from .mnli import MNLI, mnli
 from .mrpc import MRPC, mrpc
+from .nq_open import NQOpen, nq_open
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
@@ -114,6 +115,7 @@ __all__ = [
     "MMLUPro",
     "MNLI",
     "MRPC",
+    "NQOpen",
     "MultipleChoiceSample",
     "OpenBookQA",
     "PIQA",
@@ -193,6 +195,7 @@ __all__ = [
     "mmlu_pro",
     "mnli",
     "mrpc",
+    "nq_open",
     "openbookqa",
     "piqa",
     "pile_10k",

@@ -265,6 +265,7 @@ logic, those implementation details can shift results.
 | `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
@@ -363,6 +364,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `mmlu`: MMLU `hendryckstest2021`
 - `mmlu_pro`: MMLU-Pro `wang2024mmlupro`
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
+- `nq_open`: Natural Questions `kwiatkowski2019natural`
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
 - `piqa`: PIQA `bisk2020piqa`
 - `pile_10k`: The Pile `gao2020pile`
@@ -514,6 +516,16 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Mandar Joshi and Eunsol Choi and Daniel Weld and Luke Zettlemoyer},
   journal = {Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics},
   year = {2017},
+}
+
+# Natural Questions
+@article{kwiatkowski2019natural,
+  title = {Natural Questions: A Benchmark for Question Answering Research},
+  author = {Tom Kwiatkowski and Jennimaria Palomaki and Olivia Redfield and Michael Collins and Ankur Parikh and Chris Alberti and Danielle Epstein and Illia Polosukhin and Jacob Devlin and Kenton Lee and Kristina Toutanova and Llion Jones and Matthew Kelcey and Ming-Wei Chang and Andrew M. Dai and Jakob Uszkoreit and Quoc Le and Slav Petrov},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume = {7},
+  pages = {452--466},
+  year = {2019},
 }
 
 # PubMedQA
