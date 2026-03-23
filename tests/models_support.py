@@ -482,6 +482,25 @@ def _assert_single_continuation_loglikelihood_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_webqs_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "greedy_alias_index",
+        "highest_logprob_alias_index",
+    }
+    assert set(sample.scores) == {"em"}
+    assert sample.metadata["question"]
+    assert sample.metadata["url"]
+    assert sample.metadata["accepted_answers"]
+    assert sample.metadata["choice_texts"] == sample.metadata["accepted_answers"]
+    assert len(sample.metadata["choice_logprobs"]) == len(sample.metadata["accepted_answers"])
+    assert len(sample.metadata["choice_greedy"]) == len(sample.metadata["accepted_answers"])
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -2086,6 +2105,24 @@ SUITE_SPECS = {
             prompt_substrings=("\nSentence 2: ", "used in the same way"),
             metadata_validator=_metadata_field_truthy("word"),
         ),
+    ),
+    "webqs": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.webqs(batch_size=24, streaming=True, max_rows=128),
+        expected_name="webqs",
+        baseline={
+            "em": 0.1328125,
+        },
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "web_questions",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "accepted_alias_greedy_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_webqs_sample,
     ),
     "wsc273": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wsc273(batch_size=24, max_rows=128),

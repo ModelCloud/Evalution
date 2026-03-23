@@ -68,6 +68,7 @@ from .single_continuation import BaseSingleContinuationSuite, SingleContinuation
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .wic import WiC, wic
+from .webqs import WebQS, webqs
 from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
@@ -121,6 +122,7 @@ __all__ = [
     "SST2",
     "TestSuite",
     "WiC",
+    "WebQS",
     "WSC273",
     "WNLI",
     "WinoGrande",
@@ -191,6 +193,7 @@ __all__ = [
     "question_answer_prompt",
     "sst2",
     "wic",
+    "webqs",
     "wsc273",
     "wnli",
     "winogrande",

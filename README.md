@@ -277,6 +277,7 @@ logic, those implementation details can shift results.
 | `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
 | `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
 | `wsc273` | Partial-evaluation multiple-choice log-likelihood, raw + length-normalized accuracy | WSC273 `levesque2012winograd` |
 | `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
@@ -361,6 +362,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `sciq`: SciQ `welbl2017crowdsourcing`
 - `siqa`: Social IQA `sap2019social`
 - `swag`: SWAG `zellers2018swagaf`
+- `webqs`: WebQuestions `berant-etal-2013-semantic`
 - `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 
@@ -621,6 +623,16 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Rowan Zellers and Yonatan Bisk and Roy Schwartz and Yejin Choi},
   booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
   year = {2018},
+}
+
+# WebQuestions
+@inproceedings{berant-etal-2013-semantic,
+  title = {Semantic Parsing on Freebase from Question-Answer Pairs},
+  author = {Jonathan Berant and Andrew Chou and Roy Frostig and Percy Liang},
+  booktitle = {Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing},
+  year = {2013},
+  pages = {1533--1544},
+  url = {https://aclanthology.org/D13-1160},
 }
 
 # WSC273

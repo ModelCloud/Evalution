@@ -125,6 +125,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.sst2)
     assert evalution.benchmarks.WiC is not None
     assert callable(evalution.benchmarks.wic)
+    assert evalution.benchmarks.WebQS is not None
+    assert callable(evalution.benchmarks.webqs)
     assert evalution.benchmarks.WSC273 is not None
     assert callable(evalution.benchmarks.wsc273)
     assert evalution.benchmarks.WNLI is not None
