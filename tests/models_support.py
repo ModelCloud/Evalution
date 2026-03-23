@@ -1837,6 +1837,29 @@ SUITE_SPECS = {
             ),
         ),
     ),
+    "race": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.race(batch_size=24, max_rows=128),
+        expected_name="race",
+        baseline={
+            "acc,ll": 0.4609375,
+            "acc,ll_avg": 0.4375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "EleutherAI/race",
+            "dataset_name": "high",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Article: ",
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
     "rte": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.rte(batch_size=24, streaming=True, max_rows=128),
         expected_name="rte",

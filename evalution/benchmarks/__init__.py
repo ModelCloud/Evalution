@@ -57,6 +57,7 @@ from .openbookqa import OpenBookQA, openbookqa
 from .piqa import PIQA, piqa
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
+from .race import RACE, race
 from .rte import RTE, rte
 from .sciq import SciQ, sciq
 from .siqa import SIQA, siqa
@@ -105,6 +106,7 @@ __all__ = [
     "PIQA",
     "QNLI",
     "QQP",
+    "RACE",
     "RTE",
     "SciQ",
     "SIQA",
@@ -172,6 +174,7 @@ __all__ = [
     "piqa",
     "qnli",
     "qqp",
+    "race",
     "rte",
     "sciq",
     "siqa",

@@ -192,6 +192,8 @@ tests:
     max_rows: 26
   - type: qqp
     max_rows: 24
+  - type: race
+    max_rows: 18
   - type: rte
     max_rows: 18
   - type: sciq
@@ -257,6 +259,7 @@ tests:
     assert ".run(benchmarks.piqa(" in script
     assert ".run(benchmarks.qnli(" in script
     assert ".run(benchmarks.qqp(" in script
+    assert ".run(benchmarks.race(" in script
     assert ".run(benchmarks.rte(" in script
     assert ".run(benchmarks.sciq(" in script
     assert ".run(benchmarks.siqa(" in script

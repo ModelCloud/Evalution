@@ -137,7 +137,6 @@ prost,1,prost/corypaik_prost.yaml,
 pubmedqa,1,pubmedqa/pubmedqa.yaml,
 qa4mre,3,qa4mre/qa4mre_2011.yaml,qa4mre/qa4mre_2012.yaml
 qasper,2,qasper/bool.yaml,qasper/freeform.yaml
-race,1,race/race.yaml,
 realtoxicityprompts,1,realtoxicityprompts/realtoxicityprompts.yaml,
 ruler,14,ruler/cwe.yaml,ruler/fwe.yaml
 scrolls,7,scrolls/scrolls_contractnli.yaml,scrolls/scrolls_govreport.yaml

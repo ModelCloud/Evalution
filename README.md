@@ -267,6 +267,7 @@ logic, those implementation details can shift results.
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `qnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `race` | Multiple-choice log-likelihood, raw + length-normalized accuracy | RACE `lai-etal-2017-race` |
 | `rte` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `sciq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
 | `siqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | Social IQA `sap2019social` |
@@ -350,6 +351,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
 - `piqa`: PIQA `bisk2020piqa`
+- `race`: RACE `lai-etal-2017-race`
 - `sciq`: SciQ `welbl2017crowdsourcing`
 - `siqa`: Social IQA `sap2019social`
 - `swag`: SWAG `zellers2018swagaf`

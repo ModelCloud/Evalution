@@ -105,6 +105,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.qnli)
     assert evalution.benchmarks.QQP is not None
     assert callable(evalution.benchmarks.qqp)
+    assert evalution.benchmarks.RACE is not None
+    assert callable(evalution.benchmarks.race)
     assert evalution.benchmarks.RTE is not None
     assert callable(evalution.benchmarks.rte)
     assert evalution.benchmarks.SciQ is not None
