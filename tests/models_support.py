@@ -310,6 +310,21 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert set(sample.scores) == {"acc,num"}
 
 
+def _assert_asdiv_cot_llama_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert "<|start_header_id|>user<|end_header_id|>" in sample.prompt
+    assert "Given the following problem" in sample.prompt
+    assert "Problem: " in sample.prompt
+    assert 'The final answer is [answer]' in sample.prompt
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert set(sample.scores) == {"acc,num"}
+    assert sample.metadata["solution_type"]
+    assert sample.metadata["formula"]
+
+
 def _assert_arc_exam_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -355,6 +370,70 @@ def _assert_arc_exam_label_perm_sample(
     assert "selected_count" in sample.metadata
     assert "label_permutation_count" in sample.metadata
     assert sample.metadata["label_permutation_count"] > 0
+
+
+def _assert_generated_exact_match_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "target-stripped",
+    }
+    assert set(sample.scores) == {"em"}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
+def _assert_single_continuation_loglikelihood_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+    expected_scores: frozenset[str] = frozenset({"acc,ll", "ppl,ll"}),
+    require_leading_space_target: bool = True,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    if require_leading_space_target:
+        assert sample.target.startswith(" ")
+    else:
+        assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "greedy_match",
+        "token_count",
+    }
+    assert set(sample.scores) == expected_scores
+    assert "logprob" in sample.metadata
+    assert "token_count" in sample.metadata
+    assert "is_greedy" in sample.metadata
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
 
 
 def _assert_mmlu_pro_sample(
@@ -444,6 +523,14 @@ def _metadata_field_truthy(field: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_fields_truthy(*fields: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        for field in fields:
+            assert metadata[field]
+
+    return validate
+
+
 def _metadata_sentence_has_blank(metadata: dict[str, Any]) -> None:
     assert " _ " in metadata["sentence"]
 
@@ -463,6 +550,95 @@ def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[di
 
 
 SUITE_SPECS = {
+    "asdiv": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, streaming=True, max_rows=128),
+        expected_name="asdiv",
+        baseline={
+            "acc,ll": 0.0625,
+        },
+        expected_metrics=frozenset({"acc,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/asdiv",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=("\nQuestion:", "\nAnswer:"),
+            metadata_validator=_metadata_fields_truthy(
+                "body",
+                "question",
+                "answer",
+                "solution_type",
+                "formula",
+            ),
+            expected_scores=frozenset({"acc,ll"}),
+            require_leading_space_target=False,
+        ),
+    ),
+    "asdiv_cot_llama": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.asdiv_cot_llama(
+            apply_chat_template=True,
+            batch_size=24,
+            max_new_tokens=96,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="asdiv_cot_llama",
+        baseline={
+            "acc,num": 0.8984375,
+        },
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "cot_llama",
+            "apply_chat_template": True,
+            "fewshot_as_multiturn": True,
+            "streaming": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 8,
+            "dataset_path": "EleutherAI/asdiv",
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_asdiv_cot_llama_sample,
+        result_validator=_validate_gsm8k_like_result,
+    ),
+    "babi": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.babi(
+            batch_size=24,
+            max_new_tokens=16,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="babi",
+        baseline={
+            "em": 0.0,
+        },
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/babi",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_prefix="Passage: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("Question: ",),
+            metadata_validator=_metadata_field_truthy("task"),
+        ),
+    ),
     "gsm8k": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.gsm8k(
             variant="cot",
@@ -519,6 +695,81 @@ SUITE_SPECS = {
         expected_sample_count=128,
         sample_validator=_assert_gsm8k_sample,
         result_validator=_validate_gsm8k_like_result,
+    ),
+    "anli_r1": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.anli_r1(batch_size=24, streaming=True, max_rows=128),
+        expected_name="anli_r1",
+        baseline={
+            "acc,ll": 0.328125,
+            "acc,ll_avg": 0.328125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "facebook/anli",
+            "dataset_name": None,
+            "split": "test_r1",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"True", "Neither", "False"},
+            prediction_values={"True", "Neither", "False"},
+            prompt_substrings=("Question: ", " True, False, or Neither?\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=3),
+        ),
+    ),
+    "anli_r2": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.anli_r2(batch_size=24, streaming=True, max_rows=128),
+        expected_name="anli_r2",
+        baseline={
+            "acc,ll": 0.375,
+            "acc,ll_avg": 0.375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "facebook/anli",
+            "dataset_name": None,
+            "split": "test_r2",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"True", "Neither", "False"},
+            prediction_values={"True", "Neither", "False"},
+            prompt_substrings=("Question: ", " True, False, or Neither?\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=3),
+        ),
+    ),
+    "anli_r3": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.anli_r3(batch_size=24, streaming=True, max_rows=128),
+        expected_name="anli_r3",
+        baseline={
+            "acc,ll": 0.3671875,
+            "acc,ll_avg": 0.3671875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "facebook/anli",
+            "dataset_name": None,
+            "split": "test_r3",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"True", "Neither", "False"},
+            prediction_values={"True", "Neither", "False"},
+            prompt_substrings=("Question: ", " True, False, or Neither?\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=3),
+        ),
     ),
     "boolq": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.boolq(batch_size=24, streaming=True, max_rows=128),
@@ -610,6 +861,37 @@ SUITE_SPECS = {
             prompt_substrings=("\nQuestion: Does this sentence make sense?\nAnswer:",),
         ),
     ),
+    "commonsense_qa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.commonsense_qa(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="commonsense_qa",
+        baseline={
+            "acc,ll": 0.546875,
+            "acc,ll_avg": 0.546875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "tau/commonsense_qa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D", "E"},
+            prediction_values={"A", "B", "C", "D", "E"},
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("\nA. ", "\nE. "),
+            metadata_validator=_metadata_has_choice_labels(exact_count=5),
+        ),
+    ),
     "copa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, streaming=True, max_rows=100),
         expected_name="copa",
@@ -630,6 +912,138 @@ SUITE_SPECS = {
             sample,
             index,
             metadata_validator=_metadata_field_in("question", {"cause", "effect"}),
+        ),
+    ),
+    "ethics_cm": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ethics_cm(batch_size=24, streaming=True, max_rows=128),
+        expected_name="ethics_cm",
+        baseline={
+            "acc,ll": 0.5,
+            "acc,ll_avg": 0.5,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/hendrycks_ethics",
+            "dataset_name": "commonsense",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"no", "yes"},
+            prediction_values={"no", "yes"},
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("\nQuestion: Is this wrong?\nAnswer:",),
+            metadata_validator=_metadata_has_choice_labels(exact_count=2),
+        ),
+    ),
+    "ethics_deontology": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ethics_deontology(batch_size=24, streaming=True, max_rows=128),
+        expected_name="ethics_deontology",
+        baseline={
+            "acc,ll": 0.546875,
+            "acc,ll_avg": 0.546875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/hendrycks_ethics",
+            "dataset_name": "deontology",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"unreasonable", "reasonable"},
+            prediction_values={"unreasonable", "reasonable"},
+            prompt_prefix='Question: Would most people believe this reasonable or unreasonable to say? "',
+            prompt_suffix='"\nAnswer:',
+            metadata_validator=_metadata_has_choice_labels(exact_count=2),
+        ),
+    ),
+    "ethics_justice": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ethics_justice(batch_size=24, streaming=True, max_rows=128),
+        expected_name="ethics_justice",
+        baseline={
+            "acc,ll": 0.4921875,
+            "acc,ll_avg": 0.4921875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/hendrycks_ethics",
+            "dataset_name": "justice",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"unreasonable", "reasonable"},
+            prediction_values={"unreasonable", "reasonable"},
+            prompt_prefix='Question: Would most people believe this reasonable or unreasonable to say? "',
+            prompt_suffix='"\nAnswer:',
+            metadata_validator=_metadata_has_choice_labels(exact_count=2),
+        ),
+    ),
+    "ethics_utilitarianism": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ethics_utilitarianism(batch_size=24, streaming=True, max_rows=128),
+        expected_name="ethics_utilitarianism",
+        baseline={
+            "acc,ll": 0.4765625,
+            "acc,ll_avg": 0.4765625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/hendrycks_ethics",
+            "dataset_name": "utilitarianism",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"no", "yes"},
+            prediction_values={"no", "yes"},
+            prompt_prefix="Scenario 1: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("\nScenario 2: ", "\nQuestion: Is Scenario 1 preferable?\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=2),
+        ),
+    ),
+    "ethics_virtue": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ethics_virtue(batch_size=24, streaming=True, max_rows=128),
+        expected_name="ethics_virtue",
+        baseline={
+            "acc,ll": 0.2890625,
+            "acc,ll_avg": 0.2890625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/hendrycks_ethics",
+            "dataset_name": "virtue",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"no", "yes"},
+            prediction_values={"no", "yes"},
+            prompt_prefix="Sentence: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=('Question: Does the character in this sentence exhibit the trait "',),
+            metadata_validator=_metadata_has_choice_labels(exact_count=2),
         ),
     ),
     "arc_easy": SuiteSpec(
@@ -769,6 +1183,208 @@ SUITE_SPECS = {
             index,
             label_permutations=0.25,
             prompt_substrings=(":",),
+        ),
+    ),
+    "headqa_en": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.headqa_en(batch_size=24, streaming=True, max_rows=128),
+        expected_name="headqa_en",
+        baseline={
+            "acc,ll": 0.3671875,
+            "acc,ll_avg": 0.421875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/headqa",
+            "dataset_name": "en",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "headqa_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.headqa_es(batch_size=24, streaming=True, max_rows=128),
+        expected_name="headqa_es",
+        baseline={
+            "acc,ll": 0.25,
+            "acc,ll_avg": 0.296875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/headqa",
+            "dataset_name": "es",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "lambada_openai": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai(batch_size=24, streaming=True, max_rows=128),
+        expected_name="lambada_openai",
+        baseline={
+            "acc,ll": 0.5703125,
+            "ppl,ll": 6.5496755370042115,
+        },
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/lambada_openai",
+            "dataset_name": "default",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_openai_cloze": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_cloze(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="lambada_openai_cloze",
+        baseline={
+            "acc,ll": 0.0234375,
+            "ppl,ll": 2083.3316223968745,
+        },
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/lambada_openai",
+            "dataset_name": "default",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+            "prompt_variant": "cloze",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix=" ____. ->",
+            metadata_validator=_metadata_fields_truthy("text", "target_token", "prompt_variant"),
+        ),
+    ),
+    "lambada_standard": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_standard(batch_size=24, streaming=True, max_rows=128),
+        expected_name="lambada_standard",
+        baseline={
+            "acc,ll": 0.484375,
+            "ppl,ll": 11.26453696980533,
+        },
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "cimec/lambada",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_standard_cloze": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_standard_cloze(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="lambada_standard_cloze",
+        baseline={
+            "acc,ll": 0.015625,
+            "ppl,ll": 4921.9734842680955,
+        },
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "cimec/lambada",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+            "prompt_variant": "cloze",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix=" ____. ->",
+            metadata_validator=_metadata_fields_truthy("text", "target_token", "prompt_variant"),
+        ),
+    ),
+    "medmcqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, streaming=True, max_rows=128),
+        expected_name="medmcqa",
+        baseline={
+            "acc,ll": 0.4296875,
+            "acc,ll_avg": 0.4296875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "openlifescienceai/medmcqa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("\nChoices:\nA. ", "\nD. "),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "medqa_4options": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.medqa_4options(batch_size=24, streaming=True, max_rows=128),
+        expected_name="medqa_4options",
+        baseline={
+            "acc,ll": 0.4140625,
+            "acc,ll_avg": 0.4140625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "GBaker/MedQA-USMLE-4-options-hf",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("\nA. ", "\nD. "),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
     "mmlu_all": SuiteSpec(
@@ -1071,6 +1687,51 @@ SUITE_SPECS = {
             target_values={"True", "False"},
             prediction_values={"True", "False"},
             prompt_substrings=("\nQuestion: ", " True or False?\nAnswer:"),
+        ),
+    ),
+    "sciq": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.sciq(batch_size=24, streaming=True, max_rows=128),
+        expected_name="sciq",
+        baseline={
+            "acc,ll": 0.9296875,
+            "acc,ll_avg": 0.8984375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "allenai/sciq",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=("Question: ", "\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "swag": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.swag(batch_size=24, streaming=True, max_rows=128),
+        expected_name="swag",
+        baseline={
+            "acc,ll": 0.4921875,
+            "acc,ll_avg": 0.625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "swag",
+            "dataset_name": "regular",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
     "sst2": SuiteSpec(

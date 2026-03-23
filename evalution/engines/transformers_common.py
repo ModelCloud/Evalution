@@ -162,7 +162,9 @@ class BaseTransformerSession(BaseInferenceSession):
             prepared_requests = [self._prepare_loglikelihood_request(request) for request in requests]
             effective_batch_size = batch_size or self._resolve_scoring_batch_size(prepared_requests)
             chunks: list[_ScoringChunk] = []
-            for request_index, (prefix_ids, target_ids, metadata) in enumerate(prepared_requests):
+            ordered_requests = list(enumerate(prepared_requests))
+            ordered_requests.sort(key=self._loglikelihood_request_sort_key)
+            for request_index, (prefix_ids, target_ids, metadata) in ordered_requests:
                 chunks.extend(
                     self._build_loglikelihood_chunks(
                         request_index=request_index,
@@ -191,6 +193,15 @@ class BaseTransformerSession(BaseInferenceSession):
                     metadata=current.metadata,
                 )
             return totals
+
+    # Mirror lm-eval batching by scoring longer token sequences first and breaking ties deterministically.
+    def _loglikelihood_request_sort_key(
+        self,
+        item: tuple[int, tuple[list[int], list[int], dict[str, Any]]],
+    ) -> tuple[int, tuple[int, ...]]:
+        _request_index, (prefix_ids, target_ids, _metadata) = item
+        combined = tuple(prefix_ids + target_ids)
+        return (-len(combined), combined)
 
     # Reuse continuation scoring to evaluate rolling text likelihood for perplexity-style suites.
     def loglikelihood_rolling(
@@ -663,10 +674,7 @@ class BaseTransformerSession(BaseInferenceSession):
             if request.context_input_ids is not None:
                 prefix_ids = list(request.context_input_ids)
             elif request.context:
-                prefix_ids = self.tokenizer(
-                    request.context,
-                    add_special_tokens=False,
-                )["input_ids"]
+                prefix_ids = self._tokenize_loglikelihood_context(request.context)
             else:
                 prefix_ids = []
 
@@ -683,6 +691,14 @@ class BaseTransformerSession(BaseInferenceSession):
         if not target_ids:
             raise ValueError("loglikelihood requests must provide a non-empty continuation")
         return list(prefix_ids), list(target_ids), dict(request.metadata)
+
+    # Match lm-eval/HF tokenizer defaults for scoring contexts while avoiding a doubled BOS prefix.
+    def _tokenize_loglikelihood_context(self, text: str) -> list[int]:
+        tokenizer_kwargs: dict[str, Any] = {}
+        prefix_text = self._decoded_prefix_token_text()
+        if prefix_text and text.startswith(prefix_text):
+            tokenizer_kwargs["add_special_tokens"] = False
+        return list(self.tokenizer(text, **tokenizer_kwargs)["input_ids"])
 
     # Reuse the auto batch heuristic by mapping scored tokens onto zero-generation requests.
     def _resolve_scoring_batch_size(
@@ -752,27 +768,31 @@ class BaseTransformerSession(BaseInferenceSession):
             encoded = None
             logits = None
             try:
-                with self._tokenizer_lock:
-                    encoded = self.tokenizer.pad(
-                        {"input_ids": [list(chunk.input_ids) for chunk in batch]},
-                        return_tensors="pt",
-                        padding=True,
+                pad_token_id = getattr(self.tokenizer, "pad_token_id", None)
+                if pad_token_id is None:
+                    pad_token_id = self._prefix_token_id()
+                padded_length = max(len(chunk.input_ids) for chunk in batch)
+                padded_rows = [
+                    list(chunk.input_ids) + ([int(pad_token_id)] * (padded_length - len(chunk.input_ids)))
+                    for chunk in batch
+                ]
+                encoded = {
+                    "input_ids": torch.tensor(
+                        padded_rows,
+                        dtype=torch.long,
+                        device=self.input_device,
                     )
-                encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
+                }
 
                 with self._scoring_attention_context():
                     with torch.inference_mode():
-                        outputs = self.model(**encoded)
+                        outputs = self.model(input_ids=encoded["input_ids"])
                 logits = outputs.logits
                 shift_log_probs = torch.log_softmax(logits[:, :-1, :], dim=-1)
                 shift_labels = encoded["input_ids"][:, 1:]
-                padded_length = int(encoded["input_ids"].shape[1])
-                padding_side = getattr(self.tokenizer, "padding_side", "right")
 
                 for row_index, chunk in enumerate(batch):
-                    sample_length = len(chunk.input_ids)
-                    pad_offset = padded_length - sample_length if padding_side == "left" else 0
-                    target_start = pad_offset + chunk.score_start
+                    target_start = chunk.score_start
                     shift_start = target_start - 1
                     shift_end = shift_start + chunk.score_count
                     sample_log_probs = shift_log_probs[row_index, shift_start:shift_end, :]
@@ -806,6 +826,24 @@ class BaseTransformerSession(BaseInferenceSession):
         raise ValueError(
             "token-level scoring requires tokenizer.bos_token_id, eos_token_id, or pad_token_id"
         )
+
+    # Decode the synthetic prefix token once so callers can detect explicit BOS-prefixed text.
+    def _decoded_prefix_token_text(self) -> str | None:
+        with suppress(Exception):
+            decoded = self.tokenizer.decode(
+                [self._prefix_token_id()],
+                skip_special_tokens=False,
+            )
+            if decoded:
+                return str(decoded)
+        with suppress(Exception):
+            decoded = self.tokenizer.decode(
+                self._prefix_token_id(),
+                skip_special_tokens=False,
+            )
+            if decoded:
+                return str(decoded)
+        return None
 
     # Resolve the finite scoring window the model/tokenizer expose, with a conservative fallback.
     def _max_scoring_input_length(self) -> int:

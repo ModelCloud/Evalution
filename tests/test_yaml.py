@@ -101,16 +101,56 @@ engine:
 model:
   path: /tmp/model
 tests:
+  - type: anli_r1
+    max_rows: 18
+  - type: anli_r2
+    max_rows: 18
+  - type: anli_r3
+    max_rows: 18
+  - type: asdiv
+    max_rows: 18
+  - type: asdiv_cot_llama
+    max_rows: 18
+  - type: babi
+    max_rows: 18
   - type: gsm8k_platinum
     max_rows: 128
+  - type: headqa_en
+    max_rows: 18
+  - type: headqa_es
+    max_rows: 18
+  - type: lambada_openai
+    max_rows: 18
+  - type: lambada_openai_cloze
+    max_rows: 18
+  - type: lambada_standard
+    max_rows: 18
+  - type: lambada_standard_cloze
+    max_rows: 18
+  - type: medmcqa
+    max_rows: 18
+  - type: medqa_4options
+    max_rows: 18
   - type: boolq
     max_rows: 48
   - type: cb
     max_rows: 56
   - type: cola
     max_rows: 52
+  - type: commonsense_qa
+    max_rows: 18
   - type: copa
     max_rows: 12
+  - type: ethics_cm
+    max_rows: 18
+  - type: ethics_deontology
+    max_rows: 18
+  - type: ethics_justice
+    max_rows: 18
+  - type: ethics_utilitarianism
+    max_rows: 18
+  - type: ethics_virtue
+    max_rows: 18
   - type: arc_easy
     max_rows: 40
   - type: arc_challenge
@@ -137,6 +177,10 @@ tests:
     max_rows: 24
   - type: rte
     max_rows: 18
+  - type: sciq
+    max_rows: 20
+  - type: swag
+    max_rows: 18
   - type: sst2
     max_rows: 22
   - type: wic
@@ -154,11 +198,31 @@ tests:
     assert "engines.Transformers(" in script
     assert "eval(engines." not in script
     assert ".model(eval.Model(" in script
+    assert ".run(benchmarks.anli_r1(" in script
+    assert ".run(benchmarks.anli_r2(" in script
+    assert ".run(benchmarks.anli_r3(" in script
+    assert ".run(benchmarks.asdiv(" in script
+    assert ".run(benchmarks.asdiv_cot_llama(" in script
+    assert ".run(benchmarks.babi(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
+    assert ".run(benchmarks.headqa_en(" in script
+    assert ".run(benchmarks.headqa_es(" in script
+    assert ".run(benchmarks.lambada_openai(" in script
+    assert ".run(benchmarks.lambada_openai_cloze(" in script
+    assert ".run(benchmarks.lambada_standard(" in script
+    assert ".run(benchmarks.lambada_standard_cloze(" in script
+    assert ".run(benchmarks.medmcqa(" in script
+    assert ".run(benchmarks.medqa_4options(" in script
     assert ".run(benchmarks.boolq(" in script
     assert ".run(benchmarks.cb(" in script
     assert ".run(benchmarks.cola(" in script
+    assert ".run(benchmarks.commonsense_qa(" in script
     assert ".run(benchmarks.copa(" in script
+    assert ".run(benchmarks.ethics_cm(" in script
+    assert ".run(benchmarks.ethics_deontology(" in script
+    assert ".run(benchmarks.ethics_justice(" in script
+    assert ".run(benchmarks.ethics_utilitarianism(" in script
+    assert ".run(benchmarks.ethics_virtue(" in script
     assert ".run(benchmarks.arc_easy(" in script
     assert ".run(benchmarks.arc_challenge(" in script
     assert ".run(benchmarks.hellaswag(" in script
@@ -171,6 +235,8 @@ tests:
     assert ".run(benchmarks.qnli(" in script
     assert ".run(benchmarks.qqp(" in script
     assert ".run(benchmarks.rte(" in script
+    assert ".run(benchmarks.sciq(" in script
+    assert ".run(benchmarks.swag(" in script
     assert ".run(benchmarks.sst2(" in script
     assert ".run(benchmarks.wic(" in script
     assert ".run(benchmarks.wnli(" in script

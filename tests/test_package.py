@@ -22,20 +22,51 @@ def test_package_import() -> None:
 
 
 def test_package_exports_benchmarks_namespace() -> None:
+    assert evalution.benchmarks.ANLI is not None
+    assert callable(evalution.benchmarks.anli_r1)
+    assert callable(evalution.benchmarks.anli_r2)
+    assert callable(evalution.benchmarks.anli_r3)
     assert evalution.benchmarks.ARCChallenge is not None
     assert callable(evalution.benchmarks.arc_challenge)
     assert evalution.benchmarks.ARCEasy is not None
     assert callable(evalution.benchmarks.arc_easy)
+    assert evalution.benchmarks.ASDiv is not None
+    assert evalution.benchmarks.ASDivCoTLlama is not None
+    assert callable(evalution.benchmarks.asdiv)
+    assert callable(evalution.benchmarks.asdiv_cot_llama)
+    assert evalution.benchmarks.BABI is not None
+    assert callable(evalution.benchmarks.babi)
     assert evalution.benchmarks.BoolQ is not None
     assert callable(evalution.benchmarks.boolq)
     assert evalution.benchmarks.CB is not None
     assert callable(evalution.benchmarks.cb)
     assert evalution.benchmarks.CoLA is not None
     assert callable(evalution.benchmarks.cola)
+    assert evalution.benchmarks.CommonsenseQA is not None
+    assert callable(evalution.benchmarks.commonsense_qa)
     assert evalution.benchmarks.COPA is not None
     assert callable(evalution.benchmarks.copa)
+    assert evalution.benchmarks.HendrycksEthics is not None
+    assert callable(evalution.benchmarks.ethics_cm)
+    assert callable(evalution.benchmarks.ethics_deontology)
+    assert callable(evalution.benchmarks.ethics_justice)
+    assert callable(evalution.benchmarks.ethics_utilitarianism)
+    assert callable(evalution.benchmarks.ethics_virtue)
+    assert evalution.benchmarks.HEADQA is not None
+    assert callable(evalution.benchmarks.headqa_en)
+    assert callable(evalution.benchmarks.headqa_es)
     assert evalution.benchmarks.HellaSwag is not None
     assert callable(evalution.benchmarks.hellaswag)
+    assert evalution.benchmarks.LAMBADA is not None
+    assert evalution.benchmarks.LAMBADACloze is not None
+    assert callable(evalution.benchmarks.lambada_openai)
+    assert callable(evalution.benchmarks.lambada_openai_cloze)
+    assert callable(evalution.benchmarks.lambada_standard)
+    assert callable(evalution.benchmarks.lambada_standard_cloze)
+    assert evalution.benchmarks.MedMCQA is not None
+    assert callable(evalution.benchmarks.medmcqa)
+    assert evalution.benchmarks.MedQA is not None
+    assert callable(evalution.benchmarks.medqa_4options)
     assert evalution.benchmarks.MMLU is not None
     assert callable(evalution.benchmarks.mmlu)
     assert evalution.benchmarks.MMLUPro is not None
@@ -54,6 +85,10 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.qqp)
     assert evalution.benchmarks.RTE is not None
     assert callable(evalution.benchmarks.rte)
+    assert evalution.benchmarks.SciQ is not None
+    assert callable(evalution.benchmarks.sciq)
+    assert evalution.benchmarks.SWAG is not None
+    assert callable(evalution.benchmarks.swag)
     assert evalution.benchmarks.SST2 is not None
     assert callable(evalution.benchmarks.sst2)
     assert evalution.benchmarks.WiC is not None
