@@ -17,7 +17,12 @@ on:
 
 env:
   ref: ${{ github.event.inputs.ref || github.ref }}
-  PYTHON_VERSION: "3.12"
+  CUDA_VERSION: 131
+  UV_TORCH_BACKEND: cu130
+  TORCH_VERSION: 2.10.0
+  PYTHON_VERSION: 3.14t
+  UV_PYTHON: python3.14t
+  UV_INDEX_URL: http://10.0.14.249/simple
 
 concurrency:
   group: ${{ github.event.inputs.ref || github.ref }}-workflow-unit-tests
@@ -25,35 +30,60 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
+    runs-on: [ self-hosted, xeon5 ]
+    container:
+      image: 10.0.13.31:5000/nvidia/cuda:131-ubuntu22.04_0206
+      volumes:
+        - /monster/ci/env/entrypoint.sh:/entrypoint.sh
+        - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
+        - /monster/ci/uv:/opt/uv
+        - /monster/ci/env:/opt/env
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
           ref: ${{ env.ref }}
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
 
-      - name: Install dependencies
+      - name: Activate uv env
         run: |
-          python -V
-          pip install pip build setuptools wheel pytest -U
+          env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
+          /opt/uv/setup_uv_venv.sh $env_name
 
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+      - name: Setup uv env
+        run: |
+          /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
 
-          if [ -f pyproject.toml ] || [ -f setup.py ] || [ -f setup.cfg ]; then
-            pip install -e .
-          else
-            echo "::error::Missing pyproject.toml or setup.py/setup.cfg for package installation."
-            exit 1
-          fi
+      - name: Print uv env
+        run: |
+          echo "::group::uv python list"
+          uv python list
+          ls -ahl /opt/uv/venvs
+          echo "::endgroup::"
+          
+          echo "== python =="
+          python --version
+          which python
+          which pip || true
+
+          echo "== nvcc =="
+          nvcc --version
+
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+
+          echo "== torch =="
+          uv pip show torch || true
+
+          echo "::group::project files"
+          ls -ahl
+          echo "::endgroup::"
+
+          echo "::group::git status"
+          git config --global --add safe.directory $(pwd)
+          git status
+          echo "::endgroup::"
 
       - name: Run tests
         run: |
@@ -61,7 +91,14 @@ jobs:
             echo "::error::tests/ directory not found."
             exit 1
           fi
-
+          
+          uv pip install .
+          uv pip install -U pytest datasets
+          
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+          
           mkdir -p artifacts
           pytest --durations=0 tests --junitxml=artifacts/unit-tests.xml
 
