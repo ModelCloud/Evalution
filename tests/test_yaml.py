@@ -125,6 +125,16 @@ tests:
     max_rows: 18
   - type: copa
     max_rows: 12
+  - type: ethics_cm
+    max_rows: 18
+  - type: ethics_deontology
+    max_rows: 18
+  - type: ethics_justice
+    max_rows: 18
+  - type: ethics_utilitarianism
+    max_rows: 18
+  - type: ethics_virtue
+    max_rows: 18
   - type: arc_easy
     max_rows: 40
   - type: arc_challenge
@@ -184,6 +194,11 @@ tests:
     assert ".run(benchmarks.cola(" in script
     assert ".run(benchmarks.commonsense_qa(" in script
     assert ".run(benchmarks.copa(" in script
+    assert ".run(benchmarks.ethics_cm(" in script
+    assert ".run(benchmarks.ethics_deontology(" in script
+    assert ".run(benchmarks.ethics_justice(" in script
+    assert ".run(benchmarks.ethics_utilitarianism(" in script
+    assert ".run(benchmarks.ethics_virtue(" in script
     assert ".run(benchmarks.arc_easy(" in script
     assert ".run(benchmarks.arc_challenge(" in script
     assert ".run(benchmarks.hellaswag(" in script

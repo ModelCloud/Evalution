@@ -16,6 +16,14 @@ from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .copa import COPA, copa
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
+from .hendrycks_ethics import (
+    HendrycksEthics,
+    ethics_cm,
+    ethics_deontology,
+    ethics_justice,
+    ethics_utilitarianism,
+    ethics_virtue,
+)
 from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
 from .mmlu import MMLU, mmlu
@@ -50,6 +58,7 @@ __all__ = [
     "COPA",
     "GSM8K",
     "GSM8KPlatinum",
+    "HendrycksEthics",
     "HEADQA",
     "HellaSwag",
     "MMLU",
@@ -80,6 +89,11 @@ __all__ = [
     "cola",
     "commonsense_qa",
     "copa",
+    "ethics_cm",
+    "ethics_deontology",
+    "ethics_justice",
+    "ethics_utilitarianism",
+    "ethics_virtue",
     "choice_index_from_labels",
     "f1_for_label",
     "gsm8k",

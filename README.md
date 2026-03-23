@@ -226,6 +226,11 @@ logic, those implementation details can shift results.
 | `cola` | `nyu-mll/glue` / `cola` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
 | `commonsense_qa` | `tau/commonsense_qa` | `validation` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
 | `copa` | `super_glue` / `copa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `ethics_cm` | `EleutherAI/hendrycks_ethics` / `commonsense` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_deontology` | `EleutherAI/hendrycks_ethics` / `deontology` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_justice` | `EleutherAI/hendrycks_ethics` / `justice` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_utilitarianism` | `EleutherAI/hendrycks_ethics` / `utilitarianism` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_virtue` | `EleutherAI/hendrycks_ethics` / `virtue` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | `openai/gsm8k` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
 | `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
@@ -301,6 +306,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `babi`: bAbI `weston2015towards`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
+- `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
@@ -370,6 +376,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Alon Talmor and Jonathan Herzig and Nicholas Lourie and Jonathan Berant},
   booktitle = {Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers)},
   year = {2019},
+}
+
+# ETHICS
+@article{hendrycks2021ethics,
+  title = {Aligning AI With Shared Human Values},
+  author = {Dan Hendrycks and Collin Burns and Steven Basart and Andrew Critch and Jerry Li and Dawn Song and Jacob Steinhardt},
+  journal = {International Conference on Learning Representations},
+  year = {2021},
 }
 
 # MMLU

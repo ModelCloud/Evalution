@@ -42,6 +42,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.commonsense_qa)
     assert evalution.benchmarks.COPA is not None
     assert callable(evalution.benchmarks.copa)
+    assert evalution.benchmarks.HendrycksEthics is not None
+    assert callable(evalution.benchmarks.ethics_cm)
+    assert callable(evalution.benchmarks.ethics_deontology)
+    assert callable(evalution.benchmarks.ethics_justice)
+    assert callable(evalution.benchmarks.ethics_utilitarianism)
+    assert callable(evalution.benchmarks.ethics_virtue)
     assert evalution.benchmarks.HEADQA is not None
     assert callable(evalution.benchmarks.headqa_en)
     assert callable(evalution.benchmarks.headqa_es)
