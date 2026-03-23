@@ -501,6 +501,20 @@ def _assert_webqs_sample(sample: Any, index: int) -> None:
     assert len(sample.metadata["choice_greedy"]) == len(sample.metadata["accepted_answers"])
 
 
+def _assert_wikitext_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target == "[document]"
+    assert sample.prediction == "[rolling-loglikelihood]"
+    assert set(sample.extracted) == {"token_count", "word_count", "byte_count"}
+    assert set(sample.scores) == {"word_perplexity", "byte_perplexity", "bits_per_byte"}
+    assert sample.metadata["page_preview"]
+    assert sample.metadata["detokenized_preview"]
+    assert sample.metadata["page_char_count"] > 0
+    assert "logprob" in sample.metadata
+    assert sample.metadata["token_count"] >= 1
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -2123,6 +2137,26 @@ SUITE_SPECS = {
         },
         expected_sample_count=128,
         sample_validator=_assert_webqs_sample,
+    ),
+    "wikitext": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.wikitext(batch_size=1, max_rows=62),
+        expected_name="wikitext",
+        baseline={
+            "word_perplexity": 16.73750168679846,
+            "byte_perplexity": 1.6936991338088203,
+            "bits_per_byte": 0.7601776192318436,
+        },
+        expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "EleutherAI/wikitext_document_level",
+            "dataset_name": "wikitext-2-raw-v1",
+            "split": "test",
+            "scoring_mode": "rolling_loglikelihood_perplexity",
+            "primary_metric": "word_perplexity",
+        },
+        expected_sample_count=62,
+        sample_validator=_assert_wikitext_sample,
     ),
     "wsc273": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wsc273(batch_size=24, max_rows=128),

@@ -214,6 +214,8 @@ tests:
     max_rows: 14
   - type: webqs
     max_rows: 18
+  - type: wikitext
+    max_rows: 8
   - type: wsc273
     max_rows: 14
   - type: wnli
@@ -278,6 +280,7 @@ tests:
     assert ".run(benchmarks.sst2(" in script
     assert ".run(benchmarks.wic(" in script
     assert ".run(benchmarks.webqs(" in script
+    assert ".run(benchmarks.wikitext(" in script
     assert ".run(benchmarks.wsc273(" in script
     assert ".run(benchmarks.wnli(" in script
     assert ".run(benchmarks.winogrande(" in script

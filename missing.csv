@@ -156,7 +156,6 @@ turkishmmlu,18,turkishmmlu/config/Biology.yaml,turkishmmlu/config/Chemistry.yaml
 ulqa,12,ulqa/celep1.yaml,ulqa/celep2.yaml
 unitxt,19,unitxt/20_newsgroups.yaml,unitxt/ag_news.yaml
 unscramble,5,unscramble/anagrams1.yaml,unscramble/anagrams2.yaml
-wikitext,1,wikitext/wikitext.yaml,
 winogender,7,winogender/winogender.yaml,winogender/winogender_female.yaml
 wmdp,4,wmdp/wmdp_bio.yaml,wmdp/wmdp_chem.yaml
 wmt2016,1,wmt2016/ro_en-t5_prompt.yaml,

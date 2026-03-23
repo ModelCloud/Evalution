@@ -278,6 +278,7 @@ logic, those implementation details can shift results.
 | `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
+| `wikitext` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | WikiText-2 `merity2016pointer` |
 | `wsc273` | Partial-evaluation multiple-choice log-likelihood, raw + length-normalized accuracy | WSC273 `levesque2012winograd` |
 | `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
@@ -302,6 +303,9 @@ Metric key glossary:
 - `num`: numeric-answer match after numeric extraction and canonicalization.
 - `em`: exact match after the suite's task-specific extraction step.
 - `ppl`: perplexity from exponentiated negative mean continuation log-likelihood. Lower is better.
+- `word_perplexity`: exponentiated negative mean log-likelihood per original-document word, weighted across samples.
+- `byte_perplexity`: exponentiated negative mean log-likelihood per original-document byte, weighted across samples.
+- `bits_per_byte`: negative mean log-likelihood per original-document byte in base-2 units.
 - `choice_label`: extracted option-label match such as `A/B/C/D`.
 - `label_perm:<fraction>`: permutation-averaged label-only accuracy using the configured fraction
   of all label permutations.
@@ -363,6 +367,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `siqa`: Social IQA `sap2019social`
 - `swag`: SWAG `zellers2018swagaf`
 - `webqs`: WebQuestions `berant-etal-2013-semantic`
+- `wikitext`: WikiText-2 `merity2016pointer`
 - `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 
@@ -633,6 +638,16 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2013},
   pages = {1533--1544},
   url = {https://aclanthology.org/D13-1160},
+}
+
+# WikiText-2
+@misc{merity2016pointer,
+  title = {Pointer Sentinel Mixture Models},
+  author = {Stephen Merity and Caiming Xiong and James Bradbury and Richard Socher},
+  year = {2016},
+  eprint = {1609.07843},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
 }
 
 # WSC273

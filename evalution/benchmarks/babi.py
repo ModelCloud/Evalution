@@ -70,7 +70,7 @@ class BABI(BaseTestSuite):
                 ),
             )
 
-    # Score exact raw answer-string match to mirror lm-eval's generate_until exact_match metric.
+    # Score exact raw answer-string match against the generated continuation.
     def score_sample(
         self,
         prepared_sample: PreparedSample,

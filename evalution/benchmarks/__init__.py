@@ -69,6 +69,7 @@ from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .wic import WiC, wic
 from .webqs import WebQS, webqs
+from .wikitext import WikiText, wikitext
 from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
@@ -123,6 +124,7 @@ __all__ = [
     "TestSuite",
     "WiC",
     "WebQS",
+    "WikiText",
     "WSC273",
     "WNLI",
     "WinoGrande",
@@ -194,6 +196,7 @@ __all__ = [
     "sst2",
     "wic",
     "webqs",
+    "wikitext",
     "wsc273",
     "wnli",
     "winogrande",
