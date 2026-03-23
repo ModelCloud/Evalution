@@ -77,7 +77,7 @@ def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
         "split": "test",
         "streaming": False,
         "scoring_mode": "multiple_choice_exam_score",
-        "scoring_reference": "arc_original_code_tie_aware",
+        "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
     }
 
     sample = result.samples[0]

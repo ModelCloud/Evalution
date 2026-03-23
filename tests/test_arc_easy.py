@@ -16,23 +16,19 @@ arc_easy_module = importlib.import_module("evalution.suites.arc_easy")
 
 
 class FakeSession:
-    # Return deterministic per-choice scores so the suite can be tested without a real model.
+    def __init__(self, outputs: list[LoglikelihoodOutput]) -> None:
+        self.outputs = outputs
+        self.requests = []
+
     def loglikelihood(self, requests, *, batch_size=None):
         assert batch_size == 9
         assert len(requests) == 4
-        assert requests[0].context == "Question: Which technology was developed most recently?\nAnswer:"
-        assert requests[0].continuation == " cellular telephone"
-        assert requests[3].continuation == " airplane"
-        return [
-            LoglikelihoodOutput(logprob=-0.1, is_greedy=True, token_count=1),
-            LoglikelihoodOutput(logprob=-0.2, is_greedy=False, token_count=10),
-            LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=1),
-            LoglikelihoodOutput(logprob=-0.9, is_greedy=False, token_count=1),
-        ]
+        self.requests.extend(requests)
+        return self.outputs
 
 
-def test_arc_easy_scores_multiple_choice_accuracy(monkeypatch) -> None:
-    dataset = Dataset.from_list(
+def _dataset() -> Dataset:
+    return Dataset.from_list(
         [
             {
                 "id": "MCAS_2000_4_6",
@@ -45,27 +41,64 @@ def test_arc_easy_scores_multiple_choice_accuracy(monkeypatch) -> None:
             }
         ]
     )
-    monkeypatch.setattr(arc_easy_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.arc_easy(max_rows=1, batch_size=9).evaluate(FakeSession())
+
+def test_arc_easy_scores_original_style_exam_score(monkeypatch) -> None:
+    monkeypatch.setattr(arc_easy_module, "load_dataset", lambda *args, **kwargs: _dataset())
+
+    result = evalution.arc_easy(max_rows=1, batch_size=9).evaluate(
+        FakeSession(
+            [
+                LoglikelihoodOutput(logprob=-0.1, is_greedy=True, token_count=1),
+                LoglikelihoodOutput(logprob=-0.2, is_greedy=False, token_count=10),
+                LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=1),
+                LoglikelihoodOutput(logprob=-0.9, is_greedy=False, token_count=1),
+            ]
+        )
+    )
 
     assert result.name == "arc_easy"
-    assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 0.0,
+    assert result.metrics == {"accuracy,exam_score": 1.0}
+    assert result.metadata == {
+        "dataset_path": "allenai/ai2_arc",
+        "dataset_name": "ARC-Easy",
+        "split": "test",
+        "streaming": False,
+        "scoring_mode": "multiple_choice_exam_score",
+        "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
     }
-    assert result.metadata["dataset_path"] == "allenai/ai2_arc"
-    assert result.metadata["dataset_name"] == "ARC-Easy"
-    assert len(result.samples) == 1
 
     sample = result.samples[0]
     assert sample.prompt == "Question: Which technology was developed most recently?\nAnswer:"
     assert sample.target == "cellular telephone"
-    assert sample.prediction == "television"
+    assert sample.prediction == "cellular telephone"
     assert sample.extracted == {
         "gold_index": "0",
-        "predicted_index": "0",
-        "predicted_index_norm": "1",
+        "selected_indices": "0",
+        "selected_labels": "A",
     }
     assert sample.metadata["id"] == "MCAS_2000_4_6"
     assert sample.metadata["choice_labels"] == ["A", "B", "C", "D"]
+    assert sample.metadata["choice_logprobs"] == [-0.1, -0.2, -1.3, -0.9]
+    assert sample.metadata["selected_count"] == 1
+
+
+def test_arc_easy_awards_partial_credit_for_tied_top_choices(monkeypatch) -> None:
+    monkeypatch.setattr(arc_easy_module, "load_dataset", lambda *args, **kwargs: _dataset())
+
+    result = evalution.arc_easy(max_rows=1, batch_size=9).evaluate(
+        FakeSession(
+            [
+                LoglikelihoodOutput(logprob=-0.1, is_greedy=True, token_count=1),
+                LoglikelihoodOutput(logprob=-0.1, is_greedy=False, token_count=10),
+                LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=1),
+                LoglikelihoodOutput(logprob=-0.9, is_greedy=False, token_count=1),
+            ]
+        )
+    )
+
+    assert result.metrics == {"accuracy,exam_score": 0.5}
+    assert result.samples[0].prediction == "cellular telephone | television"
+    assert result.samples[0].extracted["selected_indices"] == "0,1"
+    assert result.samples[0].extracted["selected_labels"] == "A,B"
+    assert result.samples[0].metadata["selected_count"] == 2

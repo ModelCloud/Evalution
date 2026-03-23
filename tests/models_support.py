@@ -276,7 +276,7 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     }
 
 
-def _assert_arc_challenge_sample(sample: Any, index: int) -> None:
+def _assert_arc_exam_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
     assert sample.target
@@ -334,7 +334,7 @@ def _validate_gsm8k_like_result(test_result: Any) -> None:
     assert invalid_predictions / len(test_result.samples) < 0.40
 
 
-def _validate_arc_challenge_result(test_result: Any) -> None:
+def _validate_arc_exam_result(test_result: Any) -> None:
     exact_matches = sum(
         1
         for sample in test_result.samples
@@ -570,25 +570,20 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.arc_easy(batch_size=24, streaming=True, max_rows=128),
         expected_name="arc_easy",
         baseline={
-            "accuracy,loglikelihood": 0.6640625,
-            "accuracy,loglikelihood_norm": 0.6484375,
+            "accuracy,exam_score": 0.6640625,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"accuracy,exam_score"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "allenai/ai2_arc",
             "dataset_name": "ARC-Easy",
-            "split": "validation",
-            "scoring_mode": "multiple_choice_loglikelihood",
+            "split": "test",
+            "scoring_mode": "multiple_choice_exam_score",
+            "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
         },
         expected_sample_count=128,
-        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
-            sample,
-            index,
-            prompt_prefix="Question: ",
-            prompt_suffix="\nAnswer:",
-            metadata_validator=_metadata_has_choice_labels(min_count=2),
-        ),
+        sample_validator=_assert_arc_exam_sample,
+        result_validator=_validate_arc_exam_result,
     ),
     "arc_challenge": SuiteSpec(
         suite_factory=lambda: evalution.arc_challenge(
@@ -607,11 +602,11 @@ SUITE_SPECS = {
             "dataset_name": "ARC-Challenge",
             "split": "test",
             "scoring_mode": "multiple_choice_exam_score",
-            "scoring_reference": "arc_original_code_tie_aware",
+            "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
         },
         expected_sample_count=128,
-        sample_validator=_assert_arc_challenge_sample,
-        result_validator=_validate_arc_challenge_result,
+        sample_validator=_assert_arc_exam_sample,
+        result_validator=_validate_arc_exam_result,
     ),
     "hellaswag": SuiteSpec(
         suite_factory=lambda: evalution.hellaswag(batch_size=24, streaming=True, max_rows=128),
