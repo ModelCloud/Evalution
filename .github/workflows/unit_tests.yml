@@ -95,6 +95,10 @@ jobs:
           uv pip install .
           uv pip install -U pytest datasets
           
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+          
           mkdir -p artifacts
           pytest --durations=0 tests --junitxml=artifacts/unit-tests.xml
 
