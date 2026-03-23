@@ -267,6 +267,7 @@ logic, those implementation details can shift results.
 | `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `rte` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `sciq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
+| `siqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | Social IQA `sap2019social` |
 | `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
 | `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
@@ -345,6 +346,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
 - `piqa`: PIQA `bisk2020piqa`
 - `sciq`: SciQ `welbl2017crowdsourcing`
+- `siqa`: Social IQA `sap2019social`
 - `swag`: SWAG `zellers2018swagaf`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 
@@ -542,6 +544,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Johannes Welbl and Nelson F. Liu and Matt Gardner},
   booktitle = {Proceedings of the 3rd Workshop on Noisy User-generated Text},
   year = {2017},
+}
+
+# Social IQA
+@inproceedings{sap2019social,
+  title = {Social IQa: Commonsense Reasoning about Social Interactions},
+  author = {Maarten Sap and Hannah Rashkin and Derek Chen and Ronan Le Bras and Yejin Choi},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
+  year = {2019},
 }
 
 # SWAG

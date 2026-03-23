@@ -57,6 +57,7 @@ from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .rte import RTE, rte
 from .sciq import SciQ, sciq
+from .siqa import SIQA, siqa
 from .single_continuation import BaseSingleContinuationSuite, SingleContinuationSample
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
@@ -101,6 +102,7 @@ __all__ = [
     "QQP",
     "RTE",
     "SciQ",
+    "SIQA",
     "SingleContinuationSample",
     "SWAG",
     "SST2",
@@ -164,6 +166,7 @@ __all__ = [
     "qqp",
     "rte",
     "sciq",
+    "siqa",
     "swag",
     "question_answer_prompt",
     "sst2",

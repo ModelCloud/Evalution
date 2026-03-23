@@ -192,6 +192,8 @@ tests:
     max_rows: 18
   - type: sciq
     max_rows: 20
+  - type: siqa
+    max_rows: 20
   - type: swag
     max_rows: 18
   - type: sst2
@@ -249,6 +251,7 @@ tests:
     assert ".run(benchmarks.qqp(" in script
     assert ".run(benchmarks.rte(" in script
     assert ".run(benchmarks.sciq(" in script
+    assert ".run(benchmarks.siqa(" in script
     assert ".run(benchmarks.swag(" in script
     assert ".run(benchmarks.sst2(" in script
     assert ".run(benchmarks.wic(" in script

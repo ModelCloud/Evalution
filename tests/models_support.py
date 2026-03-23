@@ -1836,6 +1836,29 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
+    "siqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.siqa(batch_size=24, max_rows=128),
+        expected_name="siqa",
+        baseline={
+            "acc,ll": 0.3984375,
+            "acc,ll_avg": 0.453125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "allenai/social_i_qa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Q: ",
+            prompt_suffix="\nA:",
+        ),
+    ),
     "swag": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.swag(batch_size=24, streaming=True, max_rows=128),
         expected_name="swag",

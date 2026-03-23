@@ -144,7 +144,6 @@ realtoxicityprompts,1,realtoxicityprompts/realtoxicityprompts.yaml,
 ruler,14,ruler/cwe.yaml,ruler/fwe.yaml
 scrolls,7,scrolls/scrolls_contractnli.yaml,scrolls/scrolls_govreport.yaml
 simple_cooccurrence_bias,2,simple_cooccurrence_bias/simple_cooccurrence_bias.yaml,simple_cooccurrence_bias/simple_cooccurrence_bias_gen.yaml
-siqa,1,siqa/siqa.yaml,
 slr_bench,6,slr_bench/slr_bench_all.yaml,slr_bench/slr_bench_basic.yaml
 spanish_bench,29,spanish_bench/cocoteros_es.yaml,spanish_bench/copa_es.yaml
 squad_completion,1,squad_completion/squad_completion.yaml,
