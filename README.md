@@ -245,6 +245,8 @@ logic, those implementation details can shift results.
 | `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
 | `coqa` | Generated conversational QA exact match and token-overlap F1 with gold history turns | CoQA `reddy2019coqa` |
 | `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `copal_id_standard` | Multiple-choice log-likelihood, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
+| `copal_id_colloquial` | Multiple-choice log-likelihood, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
 | `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `ethics_deontology` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
@@ -375,6 +377,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
 - `coqa`: CoQA `reddy2019coqa`
+- `copal_id_standard`, `copal_id_colloquial`: COPAL-ID `wibowo-etal-2024-copal`
 - `drop`: DROP `dua2019drop`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
@@ -593,6 +596,16 @@ The current built-in suite coverage maps to these benchmark citations:
   volume = {7},
   pages = {249--266},
   year = {2019},
+}
+
+# COPAL-ID
+@inproceedings{wibowo-etal-2024-copal,
+  title = {COPAL-ID: Indonesian Language Reasoning with Local Culture and Nuances},
+  author = {Haryo Akbarianto Wibowo and Swandana Rama Sandhiyudha and Genta Indra Winata and Ayu Purwarianti and Sebastian Ruder and Rahmad Mahardhika and Pascale Fung},
+  booktitle = {Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers)},
+  pages = {1393--1410},
+  year = {2024},
+  url = {https://aclanthology.org/2024.naacl-long.77/},
 }
 
 # DROP

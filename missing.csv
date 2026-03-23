@@ -36,7 +36,6 @@ click,14,click/click.yaml,click/click_cul/click_cul_economy.yaml
 cmmlu,68,cmmlu/cmmlu_agronomy.yaml,cmmlu/cmmlu_anatomy.yaml
 code_x_glue,7,code_x_glue/code-text/go.yaml,code_x_glue/code-text/java.yaml
 common_voice,1,common_voice/common_voice_en.yaml,
-copal_id,2,copal_id/colloquial.yaml,copal_id/standard.yaml
 crows_pairs,22,crows_pairs/crows_pairs_english.yaml,crows_pairs/crows_pairs_english_age.yaml
 csatqa,7,csatqa/csatqa_gr.yaml,csatqa/csatqa_li.yaml
 darija_bench,37,darija_bench/darija_sentiment/darija_sentiment.yaml,darija_bench/darija_sentiment/darija_sentiment_electrom.yaml

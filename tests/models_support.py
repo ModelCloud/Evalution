@@ -106,6 +106,10 @@ BLIMP_TASKS = tuple(
     f"blimp_{subset.lower()}"
     for subset in BLIMP_INTEGRATION_SUBSETS
 )
+COPAL_ID_TASKS = (
+    "copal_id_standard",
+    "copal_id_colloquial",
+)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -849,6 +853,15 @@ def _metadata_fields_truthy(*fields: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_question_and_variant(variant: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["question"] in {"cause", "effect"}
+        assert metadata["variant"] == variant
+        assert len(metadata["raw_choices"]) == 2
+
+    return validate
+
+
 def _metadata_sentence_has_blank(metadata: dict[str, Any]) -> None:
     assert " _ " in metadata["sentence"]
 
@@ -1477,6 +1490,58 @@ SUITE_SPECS = {
             sample,
             index,
             metadata_validator=_metadata_field_in("question", {"cause", "effect"}),
+        ),
+    ),
+    "copal_id_standard": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.copal_id_standard(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="copal_id_standard",
+        baseline={
+            "acc,ll": 0.5078125,
+            "acc,ll_avg": 0.546875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "haryoaw/COPAL",
+            "dataset_name": "id",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_question_and_variant("standard"),
+        ),
+    ),
+    "copal_id_colloquial": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.copal_id_colloquial(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="copal_id_colloquial",
+        baseline={
+            "acc,ll": 0.4140625,
+            "acc,ll_avg": 0.4140625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "haryoaw/COPAL",
+            "dataset_name": "id",
+            "split": "test_colloquial",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_question_and_variant("colloquial"),
         ),
     ),
     "ethics_cm": SuiteSpec(

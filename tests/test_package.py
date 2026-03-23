@@ -70,6 +70,10 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.cnn_dailymail)
     assert evalution.benchmarks.CommonsenseQA is not None
     assert callable(evalution.benchmarks.commonsense_qa)
+    assert evalution.benchmarks.COPALID is not None
+    assert callable(evalution.benchmarks.copal_id)
+    assert callable(evalution.benchmarks.copal_id_standard)
+    assert callable(evalution.benchmarks.copal_id_colloquial)
     assert evalution.benchmarks.CoQA is not None
     assert callable(evalution.benchmarks.coqa)
     assert evalution.benchmarks.COPA is not None

@@ -31,6 +31,7 @@ from .cb import CB, cb
 from .cola import CoLA, cola
 from .cnn_dailymail import CNNDailyMail, cnn_dailymail
 from .commonsense_qa import CommonsenseQA, commonsense_qa
+from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
 from .drop import DROP, drop
@@ -107,6 +108,7 @@ __all__ = [
     "CoLA",
     "CNNDailyMail",
     "CommonsenseQA",
+    "COPALID",
     "CoQA",
     "COPA",
     "DROP",
@@ -182,6 +184,9 @@ __all__ = [
     "cola",
     "cnn_dailymail",
     "commonsense_qa",
+    "copal_id",
+    "copal_id_colloquial",
+    "copal_id_standard",
     "coqa",
     "copa",
     "drop",

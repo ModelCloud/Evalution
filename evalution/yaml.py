@@ -50,6 +50,8 @@ _TEST_FACTORIES: dict[str, Any] = {
     "cola": benchmarks.cola,
     "cnn_dailymail": benchmarks.cnn_dailymail,
     "commonsense_qa": benchmarks.commonsense_qa,
+    "copal_id_colloquial": benchmarks.copal_id_colloquial,
+    "copal_id_standard": benchmarks.copal_id_standard,
     "coqa": benchmarks.coqa,
     "copa": benchmarks.copa,
     "drop": benchmarks.drop,
