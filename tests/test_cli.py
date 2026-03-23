@@ -115,6 +115,8 @@ tests:
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "import evalution as eval" in captured.out
+    assert "import evalution.engines as engines" in captured.out
+    assert "eval.engine(engines.Transformers(" in captured.out
     assert ".run(eval.arc_challenge(" in captured.out
 
 

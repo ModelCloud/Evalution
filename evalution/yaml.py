@@ -97,9 +97,10 @@ def python_from_yaml(source: str | Path) -> str:
         engine_alias = engine_name
     lines = [
         "import evalution as eval",
+        "import evalution.engines as engines",
         "",
         "result = (",
-        f"    eval.engine({_emit_call(f'eval.{engine_alias}', _mapping_without_name(engine_spec), indent='    ')})",
+        f"    eval.engine({_emit_call(f'engines.{engine_alias}', _mapping_without_name(engine_spec), indent='    ')})",
         f"    .model({_emit_call('eval.Model', model_spec, indent='    ')})",
     ]
     for test_spec in test_specs:

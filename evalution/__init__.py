@@ -8,6 +8,7 @@
 from contextlib import redirect_stdout
 import sys
 
+from . import engines
 from evalution._banner import ASCII_LOGO, get_startup_banner
 from evalution.compare import CompareRun, compare, run_compare
 from evalution.config import Model
@@ -135,6 +136,7 @@ __all__ = [
     "choice_index_from_labels",
     "compare",
     "engine",
+    "engines",
     "f1_for_label",
     "gsm8k",
     "gsm8k_platinum",
