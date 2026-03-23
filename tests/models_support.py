@@ -269,11 +269,8 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert "<|start_header_id|>user<|end_header_id|>" in sample.prompt
     assert "Q:" in sample.prompt
     assert "A:" in sample.prompt
-    assert set(sample.extracted) == {"strict-match", "flexible-extract"}
-    assert set(sample.scores) == {
-        "exact_match,strict-match",
-        "exact_match,flexible-extract",
-    }
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert set(sample.scores) == {"accuracy,numeric"}
 
 
 def _assert_arc_exam_sample(sample: Any, index: int) -> None:
@@ -324,13 +321,13 @@ def _assert_mmlu_pro_sample(
 
 def _validate_gsm8k_like_result(test_result: Any) -> None:
     invalid_predictions = 0
-    exact_matches = 0
+    numeric_matches = 0
     for sample in test_result.samples:
-        if sample.extracted["flexible-extract"] == "[invalid]":
+        if sample.extracted["numeric-extract"] == "[invalid]":
             invalid_predictions += 1
-        if sample.scores["exact_match,flexible-extract"] == 1.0:
-            exact_matches += 1
-    assert exact_matches > 0
+        if sample.scores["accuracy,numeric"] == 1.0:
+            numeric_matches += 1
+    assert numeric_matches > 0
     assert invalid_predictions / len(test_result.samples) < 0.40
 
 
@@ -410,10 +407,9 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_cot",
         baseline={
-            "exact_match,strict-match": 0.328125,
-            "exact_match,flexible-extract": 0.3671875,
+            "accuracy,numeric": 0.38671875,
         },
-        expected_metrics=frozenset({"exact_match,strict-match", "exact_match,flexible-extract"}),
+        expected_metrics=frozenset({"accuracy,numeric"}),
         expected_metadata={
             "variant": "cot",
             "apply_chat_template": True,
@@ -422,6 +418,8 @@ SUITE_SPECS = {
             "generation_submission_mode": "continuous_refill",
             "num_fewshot": 8,
             "dataset_path": "openai/gsm8k",
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "accuracy,numeric",
         },
         expected_sample_count=128,
         sample_validator=_assert_gsm8k_sample,
@@ -438,10 +436,9 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_platinum_cot",
         baseline={
-            "exact_match,strict-match": 0.375,
-            "exact_match,flexible-extract": 0.4140625,
+            "accuracy,numeric": 0.390625,
         },
-        expected_metrics=frozenset({"exact_match,strict-match", "exact_match,flexible-extract"}),
+        expected_metrics=frozenset({"accuracy,numeric"}),
         expected_metadata={
             "variant": "cot",
             "apply_chat_template": True,
@@ -449,6 +446,8 @@ SUITE_SPECS = {
             "streaming": True,
             "generation_submission_mode": "continuous_refill",
             "num_fewshot": 8,
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "accuracy,numeric",
         },
         expected_sample_count=128,
         sample_validator=_assert_gsm8k_sample,

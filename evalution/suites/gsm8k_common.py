@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from typing import Any, ClassVar, Literal
 
 import pcre
@@ -17,19 +18,41 @@ from evalution.suites.base import BaseTestSuite
 from evalution.suites.execution import PreparedSample
 
 GSM8KVariant = Literal["base", "cot", "cot_llama", "cot_zeroshot", "default"]
+INVALID_ANSWER = "[invalid]"
 
+# OpenAI's released GSM8K scorer in grade_school_math/dataset.py only accepts
+# answers emitted in the `#### number` format. We keep a faithful copy here for
+# regression tests against the benchmark-owner parser, but the live suite score
+# uses the format-insensitive numeric matcher below.
+_GSM8K_REFERENCE_ANSWER_RE = pcre.compile(r"#### (\-?[0-9\.\,]+)")
 
-# Compile regexes through PyPcre so extraction stays on the faster backend.
-def compile_regex(pattern: str) -> Any:
-    return pcre.compile(pattern)
+# MadryLab's GSM8K-Platinum scorer in src/utils.py recovers boxed answers and
+# then parses a numeric answer out of the answer section or last line. This is
+# also retained for regression tests rather than the live suite score.
+_GSM8K_PLATINUM_BOXED_RE = pcre.compile(r"\\boxed\{(?:\\text\{)?([^\\{}]+)\}")
 
-
-REGEXES_TO_IGNORE = tuple(
-    compile_regex(pattern)
-    for pattern in (",", r"\$", r"(?s).*#### ", r"\.$")
+# Format-insensitive numeric extraction used by the live scorer. This keeps
+# chat-template wrappers like `The answer is 42.` from zeroing out a correct
+# answer purely because it was not rendered as `#### 42`.
+_HASH_ANSWER_RE = pcre.compile(r"####\s*(-?(?:[0-9][0-9,]*(?:\.[0-9]+)?|\.[0-9]+))")
+_ANSWER_LINE_RE = pcre.compile(
+    r"(?:the\s+final\s+answer\s+is|final\s+answer\s*:|the\s+answer\s+is|answer\s*:)\s*(.+)",
+    pcre.IGNORECASE,
 )
-FLEXIBLE_EXTRACT_REGEX = compile_regex(r"(-?[$0-9.,]{2,})|(-?[0-9]+)")
-FLEXIBLE_EXTRACT_PATTERN = FLEXIBLE_EXTRACT_REGEX
+_NUMERIC_TOKEN_RE = pcre.compile(r"-?(?:[0-9][0-9,]*(?:\.[0-9]+)?|\.[0-9]+)")
+_PLATINUM_REFERENCE_NUMBER_RE = pcre.compile(r"-?[0-9.]*[0-9]")
+_TRAILING_ZERO_RE = pcre.compile(r"\.0+$")
+
+
+@dataclass(frozen=True, slots=True)
+class VariantSpec:
+    task_name: str
+    stop_strings: tuple[str, ...]
+    prompt_builder: Any
+    target_builder: Any
+    num_fewshot: int
+    fewshots: tuple[dict[str, str], ...]
+
 
 _COT_FEWSHOTS = (
     {
@@ -102,34 +125,18 @@ _LLAMA_FEWSHOTS = (
 )
 
 
-@dataclass(frozen=True, slots=True)
-class VariantSpec:
-    task_name: str
-    strict_regex: Any
-    strict_group_select: int
-    stop_strings: tuple[str, ...]
-    prompt_builder: Any
-    target_builder: Any
-    num_fewshot: int
-    fewshots: tuple[dict[str, str], ...]
-
-
-    # Render the plain base prompt used by the non-CoT variant.
 def base_prompt(doc: dict[str, Any]) -> str:
     return f"Question: {doc['question']}\nAnswer:"
 
 
-# Render the short chain-of-thought prompt used by the default variant.
 def cot_prompt(doc: dict[str, Any]) -> str:
     return f"Q: {doc['question']}\nA:"
 
 
-# Render the zero-shot chain-of-thought prompt.
 def cot_zeroshot_prompt(doc: dict[str, Any]) -> str:
     return f"Q: {doc['question']}\nA: Let's think step by step."
 
 
-# Render the Llama-style instruction prompt ending in a final-answer marker.
 def llama_prompt(doc: dict[str, Any]) -> str:
     return (
         "Given the following problem, reason and give a final answer to the problem.\n"
@@ -138,23 +145,14 @@ def llama_prompt(doc: dict[str, Any]) -> str:
     )
 
 
-# Preserve the full reference answer for variants that score on the complete string.
 def full_answer(doc: dict[str, Any]) -> str:
     return str(doc["answer"])
 
 
-# Extract just the numeric answer from GSM8K-style `####` targets.
-def numeric_answer(doc: dict[str, Any]) -> str:
-    return str(doc["answer"]).split("####")[-1].strip()
-
-
-# Build the variant table for a concrete suite name prefix.
 def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
     return {
         "base": VariantSpec(
             task_name=task_prefix,
-            strict_regex=compile_regex(r"#### (\-?[0-9\.\,]+)"),
-            strict_group_select=0,
             stop_strings=("Question:", "</s>", "<|im_end|>"),
             prompt_builder=base_prompt,
             target_builder=full_answer,
@@ -163,18 +161,14 @@ def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
         ),
         "cot": VariantSpec(
             task_name=f"{task_prefix}_cot",
-            strict_regex=compile_regex(r"The answer is (\-?[0-9\.\,]+)."),
-            strict_group_select=0,
             stop_strings=("Q:", "</s>", "<|im_end|>"),
             prompt_builder=cot_prompt,
-            target_builder=numeric_answer,
+            target_builder=full_answer,
             num_fewshot=8,
             fewshots=_COT_FEWSHOTS,
         ),
         "cot_zeroshot": VariantSpec(
             task_name=f"{task_prefix}_cot_zeroshot",
-            strict_regex=compile_regex(r"The answer is (\-?[0-9\.\,]+)."),
-            strict_group_select=0,
             stop_strings=("Q:", "</s>", "<|im_end|>"),
             prompt_builder=cot_zeroshot_prompt,
             target_builder=full_answer,
@@ -183,51 +177,136 @@ def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
         ),
         "cot_llama": VariantSpec(
             task_name=f"{task_prefix}_cot_llama",
-            strict_regex=compile_regex(r"The final answer is ((-?[$0-9.,]{2,})|(-?[0-9]+))"),
-            strict_group_select=-1,
             stop_strings=("<|eot_id|>", "<|start_header_id|>user<|end_header_id|>", "Q:", "</s>", "<|im_end|>"),
             prompt_builder=llama_prompt,
-            target_builder=numeric_answer,
+            target_builder=full_answer,
             num_fewshot=8,
             fewshots=_LLAMA_FEWSHOTS,
         ),
     }
 
 
-# Determine whether random fewshot sampling requires materialized docs.
 def requires_full_doc_materialization(spec: VariantSpec) -> bool:
     return not spec.fewshots and spec.num_fewshot > 0
 
 
-# Extract a regex match and normalize tuple captures into a single string.
-def extract_match(
-    text: str,
-    pattern: Any,
-    *,
-    group_select: int,
-    fallback: str = "[invalid]",
-) -> str:
-    matches = pattern.findall(text or "")
+def extract_gsm8k_reference_answer(text: str) -> str:
+    match = _GSM8K_REFERENCE_ANSWER_RE.search(text or "")
+    if match is None:
+        return INVALID_ANSWER
+    return match.group(1).strip().replace(",", "")
+
+
+def extract_gsm8k_platinum_reference_answer(text: str) -> str:
+    output = text or ""
+    lowered_without_stars = output.lower().replace("*", "")
+    boxed_match = None
+
+    if "answer:" in lowered_without_stars:
+        answer_section = output.lower().split("answer: ")[-1]
+        boxed_match = _GSM8K_PLATINUM_BOXED_RE.search(answer_section)
+        if boxed_match is not None:
+            output = f"Answer: {boxed_match.group(1)}"
+    else:
+        boxed_match = _GSM8K_PLATINUM_BOXED_RE.search(output)
+        if boxed_match is not None:
+            output = f"Answer: {boxed_match.group(1)}"
+        else:
+            last_line = output.strip("\n").split("\n")[-1].lower()
+            output = f"Answer: {last_line}"
+
+    cleaned = output.replace("*", "").replace("#", "").lower()
+    answer_section = cleaned.split("answer: ")[-1].replace(",", "")
+    match = _PLATINUM_REFERENCE_NUMBER_RE.search(answer_section)
+    if match is None:
+        return INVALID_ANSWER
+    return _TRAILING_ZERO_RE.sub("", match.group())
+
+
+def extract_format_insensitive_numeric_answer(text: str) -> str:
+    output = text or ""
+
+    hash_match = _HASH_ANSWER_RE.search(output)
+    if hash_match is not None:
+        return canonicalize_numeric_token(hash_match.group(1))
+
+    answer_matches = list(_ANSWER_LINE_RE.finditer(output))
+    if answer_matches:
+        extracted = _extract_first_numeric_token(answer_matches[-1].group(1))
+        if extracted != INVALID_ANSWER:
+            return extracted
+
+    boxed_match = _GSM8K_PLATINUM_BOXED_RE.search(output)
+    if boxed_match is not None:
+        extracted = _extract_first_numeric_token(boxed_match.group(1))
+        if extracted != INVALID_ANSWER:
+            return extracted
+
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    if lines:
+        extracted = _extract_last_numeric_token(lines[-1])
+        if extracted != INVALID_ANSWER:
+            return extracted
+
+    return _extract_last_numeric_token(output)
+
+
+def canonicalize_numeric_token(token: str) -> str:
+    cleaned = token.replace(",", "").strip()
+    if not cleaned:
+        return INVALID_ANSWER
+    try:
+        value = Decimal(cleaned)
+    except InvalidOperation:
+        return INVALID_ANSWER
+    normalized = format(value.normalize(), "f")
+    if "." in normalized:
+        normalized = normalized.rstrip("0").rstrip(".")
+    if normalized in {"", "-0"}:
+        return "0"
+    return normalized
+
+
+def numbers_equal(left: str, right: str) -> bool:
+    if left == INVALID_ANSWER or right == INVALID_ANSWER:
+        return False
+    return canonicalize_numeric_token(left) == canonicalize_numeric_token(right)
+
+
+def _extract_first_numeric_token(text: str) -> str:
+    match = _NUMERIC_TOKEN_RE.search(text)
+    if match is None:
+        return INVALID_ANSWER
+    return canonicalize_numeric_token(match.group())
+
+
+def _extract_last_numeric_token(text: str) -> str:
+    matches = list(_NUMERIC_TOKEN_RE.finditer(text))
     if not matches:
-        return fallback
-    match = matches[group_select]
-    if isinstance(match, tuple):
-        match = next((candidate for candidate in match if candidate), fallback)
-    return str(match).strip() or fallback
+        return INVALID_ANSWER
+    return canonicalize_numeric_token(matches[-1].group())
 
 
-# Compare answers after suite-specific normalization.
-def exact_match(prediction: str, target: str) -> bool:
-    return normalize(prediction) == normalize(target)
+def gsm8k_reference_target(doc: dict[str, Any]) -> str:
+    target = extract_gsm8k_reference_answer(str(doc["answer"]))
+    if target == INVALID_ANSWER:
+        raise ValueError("GSM8K ground-truth answer is missing the official `#### number` marker")
+    return target
 
 
-# Strip formatting noise and case differences before exact-match scoring.
-def normalize(text: str) -> str:
-    normalized = text
-    for pattern in REGEXES_TO_IGNORE:
-        normalized = pattern.sub("", normalized)
-    normalized = normalized.lower()
-    return normalized.strip()
+def gsm8k_numeric_target(doc: dict[str, Any]) -> str:
+    return canonicalize_numeric_token(gsm8k_reference_target(doc))
+
+
+def gsm8k_platinum_reference_target(doc: dict[str, Any]) -> str:
+    return str(doc["answer"]).split("\n#### ")[-1].replace(",", "").strip()
+
+
+def gsm8k_platinum_numeric_target(doc: dict[str, Any]) -> str:
+    target = canonicalize_numeric_token(gsm8k_platinum_reference_target(doc))
+    if target == INVALID_ANSWER:
+        raise ValueError("GSM8K-Platinum ground-truth answer could not be parsed into a numeric target")
+    return target
 
 
 @dataclass(slots=True)
@@ -242,13 +321,17 @@ class BaseGSM8KSuite(BaseTestSuite):
 
     VARIANTS: ClassVar[dict[str, VariantSpec]]
     INCLUDE_CLEANING_STATUS: ClassVar[bool] = False
+    PRIMARY_METRIC: ClassVar[str] = "accuracy,numeric"
+    NUMERIC_EXTRACT_KEY: ClassVar[str] = "numeric-extract"
+    SCORING_MODE: ClassVar[str]
 
-    # Resolve `default` to the concrete variant used by the suite.
+    def numeric_target_from_doc(self, doc: dict[str, Any]) -> str:
+        raise NotImplementedError
+
     def _resolved_variant(self) -> tuple[str, VariantSpec]:
         variant_name = "base" if self.variant == "default" else self.variant
         return variant_name, self.VARIANTS[variant_name]
 
-    # Default multiturn fewshot behavior to the chat-template setting.
     def _resolved_fewshot_as_multiturn(self) -> bool:
         return (
             self.fewshot_as_multiturn
@@ -256,15 +339,12 @@ class BaseGSM8KSuite(BaseTestSuite):
             else self.apply_chat_template
         )
 
-    # Expose the resolved task name through the shared base pipeline.
     def task_name(self) -> str:
         return self._resolved_variant()[1].task_name
 
-    # Materialize docs only for variants that sample fewshots from the dataset itself.
     def requires_full_doc_materialization(self) -> bool:
         return requires_full_doc_materialization(self._resolved_variant()[1])
 
-    # Render the live GSM8K scoring summary shown in the progress bar.
     def score_progress_title(
         self,
         *,
@@ -272,22 +352,17 @@ class BaseGSM8KSuite(BaseTestSuite):
         aggregate_scores: dict[str, float],
         invalid_predictions: int,
     ) -> str:
-        strict_total = aggregate_scores.get("exact_match,strict-match", 0.0)
-        flexible_total = aggregate_scores.get("exact_match,flexible-extract", 0.0)
+        numeric_total = aggregate_scores.get(self.PRIMARY_METRIC, 0.0)
         if processed == 0:
-            strict_score = 0.0
-            flexible_score = 0.0
+            numeric_score = 0.0
         else:
-            strict_score = strict_total / processed
-            flexible_score = flexible_total / processed
+            numeric_score = numeric_total / processed
         return (
             f"{self.task_name()}: scoring "
-            f"strict={strict_score:.4f} "
-            f"flex={flexible_score:.4f} "
+            f"numeric={numeric_score:.4f} "
             f"invalid={invalid_predictions}"
         )
 
-    # Return result metadata common to all GSM8K-family suites.
     def result_metadata(
         self,
         *,
@@ -302,9 +377,10 @@ class BaseGSM8KSuite(BaseTestSuite):
             "num_fewshot": spec.num_fewshot,
             "apply_chat_template": self.apply_chat_template,
             "fewshot_as_multiturn": self._resolved_fewshot_as_multiturn(),
+            "scoring_mode": self.SCORING_MODE,
+            "primary_metric": self.PRIMARY_METRIC,
         }
 
-    # Build generation requests and scoring targets for each dataset row.
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
         _, spec = self._resolved_variant()
         fewshot_docs = docs if requires_full_doc_materialization(spec) else list(spec.fewshots)
@@ -319,7 +395,7 @@ class BaseGSM8KSuite(BaseTestSuite):
             yield PreparedSample(
                 index=index,
                 doc=doc,
-                target=spec.target_builder(doc),
+                target=self.numeric_target_from_doc(doc),
                 request=self._build_request(
                     spec=spec,
                     doc=doc,
@@ -328,26 +404,14 @@ class BaseGSM8KSuite(BaseTestSuite):
                 ),
             )
 
-    # Score a single model output using strict and flexible extraction rules.
     def score_sample(
         self,
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
-        _, spec = self._resolved_variant()
-        strict_prediction = extract_match(
-            output.text,
-            spec.strict_regex,
-            group_select=spec.strict_group_select,
-        )
-        flexible_prediction = extract_match(
-            output.text,
-            FLEXIBLE_EXTRACT_REGEX,
-            group_select=-1,
-        )
+        numeric_prediction = extract_format_insensitive_numeric_answer(output.text)
         scores = {
-            "exact_match,strict-match": float(exact_match(strict_prediction, prepared_sample.target)),
-            "exact_match,flexible-extract": float(exact_match(flexible_prediction, prepared_sample.target)),
+            self.PRIMARY_METRIC: float(numbers_equal(numeric_prediction, prepared_sample.target)),
         }
         return SampleResult(
             index=prepared_sample.index,
@@ -355,18 +419,15 @@ class BaseGSM8KSuite(BaseTestSuite):
             target=prepared_sample.target,
             prediction=output.text,
             extracted={
-                "strict-match": strict_prediction,
-                "flexible-extract": flexible_prediction,
+                self.NUMERIC_EXTRACT_KEY: numeric_prediction,
             },
             scores=scores,
             metadata=self._sample_metadata(prepared_sample.doc),
         )
 
-    # Count flexible-extract misses as invalid predictions in progress reporting.
     def invalid_prediction_count(self, sample: SampleResult) -> int:
-        return int(sample.extracted["flexible-extract"] == "[invalid]")
+        return int(sample.extracted[self.NUMERIC_EXTRACT_KEY] == INVALID_ANSWER)
 
-    # Attach suite-specific row metadata to the per-sample result.
     def _sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
         if self.INCLUDE_CLEANING_STATUS:
             return {
@@ -374,7 +435,6 @@ class BaseGSM8KSuite(BaseTestSuite):
             }
         return {}
 
-    # Build either plain or chat-formatted requests for the selected variant.
     def _build_request(
         self,
         *,
@@ -408,7 +468,6 @@ class BaseGSM8KSuite(BaseTestSuite):
             temperature=self.temperature,
         )
 
-    # Concatenate fewshots and the current prompt into the plain-text request body.
     def _build_plain_prompt(
         self,
         spec: VariantSpec,
@@ -424,7 +483,6 @@ class BaseGSM8KSuite(BaseTestSuite):
         parts.append(spec.prompt_builder(doc))
         return "".join(parts)
 
-    # Choose static fewshots or sample deterministic in-dataset fewshots per row.
     def _select_fewshots(
         self,
         *,

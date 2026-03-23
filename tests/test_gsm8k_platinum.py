@@ -12,6 +12,7 @@ import time
 from dataclasses import replace
 from queue import Queue
 
+import pcre
 import pytest
 from datasets import Dataset
 
@@ -22,11 +23,39 @@ from evalution.suites.execution import PreparedSample
 from evalution.suites.execution import _prefetch_executor
 from evalution.suites.execution import iter_prefetched_batches
 from evalution.suites.execution import iter_prefetched_samples
-from evalution.suites.gsm8k_common import FLEXIBLE_EXTRACT_REGEX
-from evalution.suites.gsm8k_common import REGEXES_TO_IGNORE
-from evalution.suites.gsm8k_common import extract_match
+from evalution.suites.gsm8k_common import INVALID_ANSWER
+from evalution.suites.gsm8k_common import extract_format_insensitive_numeric_answer
+from evalution.suites.gsm8k_common import extract_gsm8k_platinum_reference_answer
 
 gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
+
+_BOXED_RE = pcre.compile(r"\\boxed\{(?:\\text\{)?([^\\{}]+)\}")
+_PLATINUM_REFERENCE_NUMBER_RE = pcre.compile(r"-?[0-9.]*[0-9]")
+_TRAILING_ZERO_RE = pcre.compile(r"\.0+$")
+
+
+def _official_gsm8k_platinum_reference_answer(output: str) -> str:
+    text = output
+    lowered_without_stars = text.lower().replace("*", "")
+    if "answer:" in lowered_without_stars:
+        answer_section = text.lower().split("answer: ")[-1]
+        boxed_match = _BOXED_RE.search(answer_section)
+        if boxed_match is not None:
+            text = f"Answer: {boxed_match.group(1)}"
+    else:
+        boxed_match = _BOXED_RE.search(text)
+        if boxed_match is not None:
+            text = f"Answer: {boxed_match.group(1)}"
+        else:
+            last_line = text.strip("\n").split("\n")[-1].lower()
+            text = f"Answer: {last_line}"
+
+    match = _PLATINUM_REFERENCE_NUMBER_RE.search(
+        text.replace("*", "").replace("#", "").lower().split("answer: ")[-1].replace(",", "")
+    )
+    if match is None:
+        return INVALID_ANSWER
+    return _TRAILING_ZERO_RE.sub("", match.group())
 
 
 class FakeSession:
@@ -184,15 +213,15 @@ def test_gsm8k_platinum_cot_llama_uses_multiturn_chat_by_default(monkeypatch) ->
     result = suite.evaluate(session)
 
     assert result.name == "gsm8k_platinum_cot_llama"
-    assert result.metrics["exact_match,strict-match"] == 1.0
-    assert result.metrics["exact_match,flexible-extract"] == 1.0
+    assert set(result.metrics) == {"accuracy,numeric"}
+    assert result.metrics["accuracy,numeric"] == 1.0
     assert len(session.requests) == 1
     assert session.requests[0].messages is not None
     assert len(session.requests[0].messages) == 17
     assert result.metadata["fewshot_as_multiturn"] is True
 
 
-def test_gsm8k_platinum_scores_strict_and_flexible_extract_separately(monkeypatch) -> None:
+def test_gsm8k_platinum_scores_numeric_primary(monkeypatch) -> None:
     dataset = Dataset.from_list(
         [
             {
@@ -212,22 +241,25 @@ def test_gsm8k_platinum_scores_strict_and_flexible_extract_separately(monkeypatc
     session = FakeSession(["I think it comes out to 12 in total."])
     result = suite.evaluate(session)
 
-    assert result.metrics["exact_match,strict-match"] == 0.0
-    assert result.metrics["exact_match,flexible-extract"] == 1.0
+    assert set(result.metrics) == {"accuracy,numeric"}
+    assert result.metrics["accuracy,numeric"] == 1.0
+    assert result.samples[0].extracted["numeric-extract"] == "12"
+    assert set(result.samples[0].extracted) == {"numeric-extract"}
 
 
-def test_gsm8k_platinum_uses_compiled_pcre_patterns_for_extraction() -> None:
-    strict_regex = gsm8k_platinum_module.GSM8KPlatinum.VARIANTS["cot"].strict_regex
-    flexible_regex = FLEXIBLE_EXTRACT_REGEX
+def test_gsm8k_platinum_reference_parser_matches_madrylab_release_cases() -> None:
+    cases = [
+        ("Answer: 42", "42"),
+        ("Reasoning\n\\boxed{18}", "18"),
+        ("The answer is 7.", "7"),
+        ("No numeric answer", INVALID_ANSWER),
+    ]
 
-    assert hasattr(strict_regex, "findall")
-    assert hasattr(flexible_regex, "findall")
-    assert all(hasattr(pattern, "sub") for pattern in REGEXES_TO_IGNORE)
-    assert extract_match(
-        "Reasoning... The answer is 42.",
-        strict_regex,
-        group_select=0,
-    ) == "42"
+    for completion, expected in cases:
+        assert _official_gsm8k_platinum_reference_answer(completion) == expected
+        assert extract_gsm8k_platinum_reference_answer(completion) == expected
+
+    assert extract_format_insensitive_numeric_answer("The answer is 7.") == "7"
 
 
 def test_gsm8k_platinum_uses_engine_batch_size_by_default(monkeypatch) -> None:
@@ -250,7 +282,7 @@ def test_gsm8k_platinum_uses_engine_batch_size_by_default(monkeypatch) -> None:
     session = FakeSession(["The answer is 42."] * 5, batch_size=4)
     result = suite.evaluate(session)
 
-    assert result.metrics["exact_match,strict-match"] == 1.0
+    assert result.metrics["accuracy,numeric"] == 1.0
     assert session.generate_batch_sizes == [4, 1]
 
 
@@ -275,7 +307,7 @@ def test_gsm8k_platinum_suite_batch_size_overrides_engine_default(monkeypatch) -
     session = FakeSession(["The answer is 42."] * 5, batch_size=4)
     result = suite.evaluate(session)
 
-    assert result.metrics["exact_match,strict-match"] == 1.0
+    assert result.metrics["accuracy,numeric"] == 1.0
     assert session.generate_batch_sizes == [2, 2, 1]
 
 
@@ -299,7 +331,7 @@ def test_gsm8k_platinum_uses_session_batch_size_resolver(monkeypatch) -> None:
     session = FakeSession(["The answer is 42."] * 5, batch_size=99, resolved_batch_size=3)
     result = suite.evaluate(session)
 
-    assert result.metrics["exact_match,strict-match"] == 1.0
+    assert result.metrics["accuracy,numeric"] == 1.0
     assert session.resolve_calls == 1
     assert session.generate_batch_sizes == [3, 2]
 
