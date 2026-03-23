@@ -56,6 +56,7 @@ from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
 from .piqa import PIQA, piqa
+from .prost import Prost, prost
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .race import RACE, race
@@ -106,6 +107,7 @@ __all__ = [
     "MultipleChoiceSample",
     "OpenBookQA",
     "PIQA",
+    "Prost",
     "QNLI",
     "QQP",
     "RACE",
@@ -175,6 +177,7 @@ __all__ = [
     "mrpc",
     "openbookqa",
     "piqa",
+    "prost",
     "qnli",
     "qqp",
     "race",

@@ -73,6 +73,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "mrpc": benchmarks.mrpc,
     "openbookqa": benchmarks.openbookqa,
     "piqa": benchmarks.piqa,
+    "prost": benchmarks.prost,
     "qnli": benchmarks.qnli,
     "qqp": benchmarks.qqp,
     "race": benchmarks.race,

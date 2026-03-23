@@ -190,6 +190,8 @@ tests:
     max_rows: 20
   - type: piqa
     max_rows: 16
+  - type: prost
+    max_rows: 18
   - type: qnli
     max_rows: 26
   - type: qqp
@@ -260,6 +262,7 @@ tests:
     assert ".run(benchmarks.mrpc(" in script
     assert ".run(benchmarks.openbookqa(" in script
     assert ".run(benchmarks.piqa(" in script
+    assert ".run(benchmarks.prost(" in script
     assert ".run(benchmarks.qnli(" in script
     assert ".run(benchmarks.qqp(" in script
     assert ".run(benchmarks.race(" in script

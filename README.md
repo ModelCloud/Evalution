@@ -266,6 +266,7 @@ logic, those implementation details can shift results.
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
+| `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
 | `qnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `race` | Multiple-choice log-likelihood, raw + length-normalized accuracy | RACE `lai-etal-2017-race` |
@@ -353,6 +354,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
 - `piqa`: PIQA `bisk2020piqa`
+- `prost`: PROST `aroca-ouellette-etal-2021-prost`
 - `race`: RACE `lai-etal-2017-race`
 - `sciq`: SciQ `welbl2017crowdsourcing`
 - `siqa`: Social IQA `sap2019social`
@@ -449,6 +451,16 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Yonatan Bisk and Rowan Zellers and Ronan Le Bras and Jianfeng Gao and Yejin Choi},
   booktitle = {AAAI Conference on Artificial Intelligence},
   year = {2020},
+}
+
+# PROST
+@inproceedings{aroca-ouellette-etal-2021-prost,
+  title = {{PROST}: Physical Reasoning about Objects through Space and Time},
+  author = {St{\'e}phane Aroca-Ouellette and Cory Paik and Alessandro Roncone and Katharina Kann},
+  booktitle = {Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021},
+  year = {2021},
+  pages = {4597--4608},
+  url = {https://aclanthology.org/2021.findings-acl.404},
 }
 
 # CommonsenseQA

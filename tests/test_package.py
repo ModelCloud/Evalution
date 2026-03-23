@@ -103,6 +103,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.openbookqa)
     assert evalution.benchmarks.PIQA is not None
     assert callable(evalution.benchmarks.piqa)
+    assert evalution.benchmarks.Prost is not None
+    assert callable(evalution.benchmarks.prost)
     assert evalution.benchmarks.QNLI is not None
     assert callable(evalution.benchmarks.qnli)
     assert evalution.benchmarks.QQP is not None
