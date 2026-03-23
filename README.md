@@ -269,6 +269,13 @@ logic, those implementation details can shift results.
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
+| `paws_x_de` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_fr` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_ja` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_ko` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_zh` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
 | `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
@@ -370,6 +377,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
 - `nq_open`: Natural Questions `kwiatkowski2019natural`
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
+- `paws_x_de`, `paws_x_en`, `paws_x_es`, `paws_x_fr`, `paws_x_ja`, `paws_x_ko`, `paws_x_zh`: PAWS-X `yang2019pawsx`
 - `piqa`: PIQA `bisk2020piqa`
 - `pile_10k`: The Pile `gao2020pile`
 - `prost`: PROST `aroca-ouellette-etal-2021-prost`
@@ -682,6 +690,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Todor Mihaylov and Peter Clark and Tushar Khot and Ashish Sabharwal},
   booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
   year = {2018},
+}
+
+# PAWS-X
+@inproceedings{yang2019pawsx,
+  title = {PAWS-X: A Cross-lingual Adversarial Dataset for Paraphrase Identification},
+  author = {Yinfei Yang and Yuan Zhang and Chris Tar and Jason Baldridge},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
+  year = {2019},
 }
 
 # SciQ

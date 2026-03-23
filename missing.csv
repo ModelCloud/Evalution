@@ -122,7 +122,6 @@ okapi,157,okapi/arc_multilingual/arc_ar.yaml,okapi/arc_multilingual/arc_bn.yaml
 olaph,2,olaph/olaph.yaml,olaph/olaph_perplexity.yaml
 openai-mmmlu,869,openai-mmmlu/default/mmmlu_ar_xy_abstract_algebra.yaml,openai-mmmlu/default/mmmlu_ar_xy_anatomy.yaml
 paloma,16,paloma/paloma_4chan_meta_sep.yaml,paloma/paloma_c4_100_domains.yaml
-paws-x,8,paws-x/paws_de.yaml,paws-x/paws_en.yaml
 pile,22,pile/pile_arxiv.yaml,pile/pile_bookcorpus2.yaml
 pisa,14,pisa/pisa_ch.yaml,pisa/pisa_ch_llm_judged.yaml
 polemo2,2,polemo2/polemo2_in.yaml,polemo2/polemo2_out.yaml

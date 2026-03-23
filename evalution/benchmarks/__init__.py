@@ -59,6 +59,7 @@ from .nq_open import NQOpen, nq_open
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
+from .paws_x import PAWSX, paws_x, paws_x_de, paws_x_en, paws_x_es, paws_x_fr, paws_x_ja, paws_x_ko, paws_x_zh
 from .piqa import PIQA, piqa
 from .pile_10k import Pile10K, pile_10k
 from .prost import Prost, prost
@@ -122,6 +123,7 @@ __all__ = [
     "NQOpen",
     "MultipleChoiceSample",
     "OpenBookQA",
+    "PAWSX",
     "PIQA",
     "Pile10K",
     "Prost",
@@ -203,6 +205,14 @@ __all__ = [
     "mrpc",
     "nq_open",
     "openbookqa",
+    "paws_x",
+    "paws_x_de",
+    "paws_x_en",
+    "paws_x_es",
+    "paws_x_fr",
+    "paws_x_ja",
+    "paws_x_ko",
+    "paws_x_zh",
     "piqa",
     "pile_10k",
     "prost",

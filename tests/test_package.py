@@ -110,6 +110,15 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.nq_open)
     assert evalution.benchmarks.OpenBookQA is not None
     assert callable(evalution.benchmarks.openbookqa)
+    assert evalution.benchmarks.PAWSX is not None
+    assert callable(evalution.benchmarks.paws_x)
+    assert callable(evalution.benchmarks.paws_x_de)
+    assert callable(evalution.benchmarks.paws_x_en)
+    assert callable(evalution.benchmarks.paws_x_es)
+    assert callable(evalution.benchmarks.paws_x_fr)
+    assert callable(evalution.benchmarks.paws_x_ja)
+    assert callable(evalution.benchmarks.paws_x_ko)
+    assert callable(evalution.benchmarks.paws_x_zh)
     assert evalution.benchmarks.PIQA is not None
     assert callable(evalution.benchmarks.piqa)
     assert evalution.benchmarks.Pile10K is not None

@@ -70,6 +70,15 @@ ARITHMETIC_TASKS = (
     "arithmetic_5da",
     "arithmetic_5ds",
 )
+PAWS_X_TASKS = (
+    "paws_x_de",
+    "paws_x_en",
+    "paws_x_es",
+    "paws_x_fr",
+    "paws_x_ja",
+    "paws_x_ko",
+    "paws_x_zh",
+)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -762,6 +771,59 @@ def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
             sample,
             index,
             task_name=task_name,
+        ),
+    )
+
+
+def _metadata_language_and_id(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["id"] is not None
+
+    return validate
+
+
+def _paws_x_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.paws_x(
+            language=language,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset(
+            {
+                "acc,ll",
+                "acc,ll_avg",
+                "f1,ll_yes",
+                "f1,ll_avg_yes",
+            }
+        ),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "paws-x",
+            "dataset_name": language,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"yes", "no"},
+            prediction_values={"yes", "no"},
+            prompt_substrings=(
+                "Sentence 1: ",
+                "\nSentence 2: ",
+                "\nQuestion: Do both sentences mean the same thing?\nAnswer:",
+            ),
+            metadata_validator=_metadata_language_and_id(language),
         ),
     )
 
@@ -2564,6 +2626,64 @@ for _task_name, _baseline in {
     "arithmetic_5ds": 0.3203125,
 }.items():
     SUITE_SPECS[_task_name] = _arithmetic_suite_spec(_task_name, _baseline)
+
+for _task_name, _language in (
+    ("paws_x_de", "de"),
+    ("paws_x_en", "en"),
+    ("paws_x_es", "es"),
+    ("paws_x_fr", "fr"),
+    ("paws_x_ja", "ja"),
+    ("paws_x_ko", "ko"),
+    ("paws_x_zh", "zh"),
+):
+    SUITE_SPECS[_task_name] = _paws_x_suite_spec(
+        _task_name,
+        language=_language,
+        baseline={
+            "paws_x_de": {
+                "acc,ll": 0.4296875,
+                "acc,ll_avg": 0.4296875,
+                "f1,ll_yes": 0.6010928961748634,
+                "f1,ll_avg_yes": 0.6010928961748634,
+            },
+            "paws_x_en": {
+                "acc,ll": 0.4765625,
+                "acc,ll_avg": 0.4765625,
+                "f1,ll_yes": 0.588957055214724,
+                "f1,ll_avg_yes": 0.588957055214724,
+            },
+            "paws_x_es": {
+                "acc,ll": 0.4921875,
+                "acc,ll_avg": 0.4921875,
+                "f1,ll_yes": 0.5806451612903226,
+                "f1,ll_avg_yes": 0.5806451612903226,
+            },
+            "paws_x_fr": {
+                "acc,ll": 0.46875,
+                "acc,ll_avg": 0.46875,
+                "f1,ll_yes": 0.24444444444444444,
+                "f1,ll_avg_yes": 0.24444444444444444,
+            },
+            "paws_x_ja": {
+                "acc,ll": 0.4375,
+                "acc,ll_avg": 0.4375,
+                "f1,ll_yes": 0.6086956521739131,
+                "f1,ll_avg_yes": 0.6086956521739131,
+            },
+            "paws_x_ko": {
+                "acc,ll": 0.421875,
+                "acc,ll_avg": 0.421875,
+                "f1,ll_yes": 0.5934065934065934,
+                "f1,ll_avg_yes": 0.5934065934065934,
+            },
+            "paws_x_zh": {
+                "acc,ll": 0.453125,
+                "acc,ll_avg": 0.453125,
+                "f1,ll_yes": 0.6195652173913043,
+                "f1,ll_avg_yes": 0.6195652173913043,
+            },
+        }[_task_name],
+    )
 
 
 def run_suite_spec(

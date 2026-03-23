@@ -196,6 +196,20 @@ tests:
     max_rows: 16
   - type: openbookqa
     max_rows: 20
+  - type: paws_x_de
+    max_rows: 16
+  - type: paws_x_en
+    max_rows: 16
+  - type: paws_x_es
+    max_rows: 16
+  - type: paws_x_fr
+    max_rows: 16
+  - type: paws_x_ja
+    max_rows: 16
+  - type: paws_x_ko
+    max_rows: 16
+  - type: paws_x_zh
+    max_rows: 16
   - type: piqa
     max_rows: 16
   - type: pile_10k
@@ -285,6 +299,13 @@ tests:
     assert ".run(benchmarks.mrpc(" in script
     assert ".run(benchmarks.nq_open(" in script
     assert ".run(benchmarks.openbookqa(" in script
+    assert ".run(benchmarks.paws_x_de(" in script
+    assert ".run(benchmarks.paws_x_en(" in script
+    assert ".run(benchmarks.paws_x_es(" in script
+    assert ".run(benchmarks.paws_x_fr(" in script
+    assert ".run(benchmarks.paws_x_ja(" in script
+    assert ".run(benchmarks.paws_x_ko(" in script
+    assert ".run(benchmarks.paws_x_zh(" in script
     assert ".run(benchmarks.piqa(" in script
     assert ".run(benchmarks.pile_10k(" in script
     assert ".run(benchmarks.prost(" in script
