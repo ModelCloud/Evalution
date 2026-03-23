@@ -24,6 +24,7 @@ from .arithmetic import (
 from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
 from .base import BaseTestSuite, TestSuite
+from .blimp import BLiMP, BLIMP_SUBSETS, blimp
 from .c4 import C4, c4
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
@@ -94,6 +95,8 @@ __all__ = [
     "ASDiv",
     "ASDivCoTLlama",
     "BABI",
+    "BLiMP",
+    "BLIMP_SUBSETS",
     "BaseRollingPerplexitySuite",
     "BaseMultipleChoiceSuite",
     "BaseSingleContinuationSuite",
@@ -172,6 +175,7 @@ __all__ = [
     "asdiv",
     "asdiv_cot_llama",
     "babi",
+    "blimp",
     "c4",
     "boolq",
     "cb",

@@ -92,6 +92,20 @@ XCOPA_TASKS = (
     "xcopa_vi",
     "xcopa_zh",
 )
+BLIMP_INTEGRATION_SUBSETS = (
+    "adjunct_island",
+    "anaphor_gender_agreement",
+    "animate_subject_passive",
+    "animate_subject_trans",
+    "complex_NP_island",
+    "determiner_noun_agreement_1",
+    "matrix_question_npi_licensor_present",
+    "npi_present_1",
+)
+BLIMP_TASKS = tuple(
+    f"blimp_{subset.lower()}"
+    for subset in BLIMP_INTEGRATION_SUBSETS
+)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -168,6 +182,32 @@ def run_llama3_2_suite(
     assert result.engine["execution"]["paged_attention"] is True
     assert len(result.tests) == 1
     return result, result.tests[0]
+
+
+def run_llama3_2_suites(
+    capsys: pytest.CaptureFixture[str],
+    suites: list[Any],
+) -> tuple[Any, list[Any]]:
+    with capsys.disabled():
+        evaluation = evalution.Transformers(
+            dtype="bfloat16",
+            attn_implementation="paged|flash_attention_2",
+            device=LLAMA3_2_TRANSFORMERS_DEVICE,
+            batch_size="auto",
+        ).model(evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)))
+        for suite in suites:
+            evaluation = evaluation.run(suite)
+        result = evaluation.result()
+
+    assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
+    assert result.engine["dtype"] == "bfloat16"
+    assert result.engine["attn_implementation"] == "paged|flash_attention_2"
+    assert result.engine["batch_size"] == "auto"
+    assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
+    assert result.engine["execution"]["generation_backend"] == "continuous_batching"
+    assert result.engine["execution"]["paged_attention"] is True
+    assert len(result.tests) == len(suites)
+    return result, result.tests
 
 
 def run_llama3_2_compare_suite(
@@ -331,6 +371,39 @@ def _assert_multiple_choice_loglikelihood_label_perm_sample(
     assert sample.metadata["label_permutation_count"] > 0
     if metadata_validator is not None:
         metadata_validator(sample.metadata)
+
+
+def _assert_blimp_sample(sample: Any, index: int, *, subset: str) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["subset"] == subset
+    assert sample.metadata["field"] in {
+        "morphology",
+        "semantics",
+        "syntax",
+        "syntax_semantics",
+        "syntax-semantics",
+    }
+    assert sample.metadata["linguistics_term"]
+    assert sample.metadata["uid"]
+    assert isinstance(sample.metadata["simple_lm_method"], bool)
+    assert isinstance(sample.metadata["one_prefix_method"], bool)
+    assert isinstance(sample.metadata["two_prefix_method"], bool)
+    assert isinstance(sample.metadata["lexically_identical"], bool)
+    assert sample.metadata["pair_id"] >= 0
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
 
 
 def _assert_gsm8k_sample(sample: Any, index: int) -> None:
@@ -922,6 +995,40 @@ def _xcopa_suite_spec(
             ),
             metadata_validator=_metadata_language_and_idx(language),
         ),
+    )
+
+
+def _blimp_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    task_name = f"blimp_{subset.lower()}"
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.blimp(
+            subset=subset,
+            batch_size=32,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "blimp",
+            "dataset_name": subset,
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "full_sentence_pair",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_blimp_sample(
+            sample,
+            index,
+            subset=subset,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
 
 
@@ -2878,6 +2985,45 @@ for _task_name, _language in (
         }[_task_name],
     )
 
+for _subset, _baseline in {
+    "adjunct_island": {
+        "acc,ll": 0.8125,
+        "acc,ll_avg": 0.8125,
+    },
+    "anaphor_gender_agreement": {
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
+    },
+    "animate_subject_passive": {
+        "acc,ll": 0.84375,
+        "acc,ll_avg": 0.875,
+    },
+    "animate_subject_trans": {
+        "acc,ll": 0.9375,
+        "acc,ll_avg": 0.75,
+    },
+    "complex_NP_island": {
+        "acc,ll": 0.78125,
+        "acc,ll_avg": 0.78125,
+    },
+    "determiner_noun_agreement_1": {
+        "acc,ll": 0.96875,
+        "acc,ll_avg": 0.96875,
+    },
+    "matrix_question_npi_licensor_present": {
+        "acc,ll": 0.40625,
+        "acc,ll_avg": 0.28125,
+    },
+    "npi_present_1": {
+        "acc,ll": 0.59375,
+        "acc,ll_avg": 0.59375,
+    },
+}.items():
+    SUITE_SPECS[f"blimp_{_subset.lower()}"] = _blimp_suite_spec(
+        subset=_subset,
+        baseline=_baseline,
+    )
+
 
 def run_suite_spec(
     capsys: pytest.CaptureFixture[str],
@@ -2885,22 +3031,31 @@ def run_suite_spec(
 ) -> tuple[Any, Any]:
     spec = SUITE_SPECS[suite_key]
     result, test_result = run_llama3_2_suite(capsys, spec.suite_factory())
-    assert test_result.name == spec.expected_name
-    for key, expected_value in spec.expected_metadata.items():
-        assert test_result.metadata[key] == expected_value
-    assert len(test_result.samples) == spec.expected_sample_count
-    assert set(test_result.metrics) == spec.expected_metrics
-    assert_metrics_match_baseline(
-        test_result.metrics,
-        spec.baseline,
-        abs_tolerance=spec.abs_tolerance,
-    )
-    for index, sample in enumerate(test_result.samples):
-        spec.sample_validator(sample, index)
-    if spec.result_validator is not None:
-        spec.result_validator(test_result)
+    _assert_suite_matches_spec(test_result, spec)
     assert_single_test_serialization(result, test_result)
     return result, test_result
+
+
+def run_suite_specs(
+    capsys: pytest.CaptureFixture[str],
+    suite_keys: tuple[str, ...] | list[str],
+) -> tuple[Any, list[Any]]:
+    suite_keys = list(suite_keys)
+    specs = [SUITE_SPECS[suite_key] for suite_key in suite_keys]
+    result, test_results = run_llama3_2_suites(
+        capsys,
+        [spec.suite_factory() for spec in specs],
+    )
+    for test_result, spec in zip(test_results, specs, strict=True):
+        _assert_suite_matches_spec(test_result, spec)
+    serialized = result.to_dict()
+    assert len(serialized["tests"]) == len(test_results)
+    for serialized_test, test_result in zip(serialized["tests"], test_results, strict=True):
+        assert serialized_test["name"] == test_result.name
+        assert len(serialized_test["samples"]) == len(test_result.samples)
+        if test_result.samples:
+            assert serialized_test["samples"][0]["prediction"]
+    return result, test_results
 
 
 def run_compare_suite_spec(
@@ -2960,3 +3115,20 @@ def run_compare_suite_spec(
     assert serialized_test["left"]["name"] == left_test.name
     assert serialized_test["right"]["name"] == right_test.name
     return result, compare_test_result
+
+
+def _assert_suite_matches_spec(test_result: Any, spec: SuiteSpec) -> None:
+    assert test_result.name == spec.expected_name
+    for key, expected_value in spec.expected_metadata.items():
+        assert test_result.metadata[key] == expected_value
+    assert len(test_result.samples) == spec.expected_sample_count
+    assert set(test_result.metrics) == spec.expected_metrics
+    assert_metrics_match_baseline(
+        test_result.metrics,
+        spec.baseline,
+        abs_tolerance=spec.abs_tolerance,
+    )
+    for index, sample in enumerate(test_result.samples):
+        spec.sample_validator(sample, index)
+    if spec.result_validator is not None:
+        spec.result_validator(test_result)

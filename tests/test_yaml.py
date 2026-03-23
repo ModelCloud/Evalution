@@ -126,6 +126,9 @@ tests:
     max_rows: 18
   - type: babi
     max_rows: 18
+  - type: blimp
+    subset: adjunct_island
+    max_rows: 18
   - type: c4
     max_rows: 8
   - type: gsm8k_platinum
@@ -289,6 +292,7 @@ tests:
     assert ".run(benchmarks.asdiv(" in script
     assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script
+    assert ".run(benchmarks.blimp(" in script
     assert ".run(benchmarks.c4(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.headqa_en(" in script

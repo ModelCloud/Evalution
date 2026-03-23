@@ -54,6 +54,9 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.asdiv_cot_llama)
     assert evalution.benchmarks.BABI is not None
     assert callable(evalution.benchmarks.babi)
+    assert evalution.benchmarks.BLiMP is not None
+    assert evalution.benchmarks.BLIMP_SUBSETS
+    assert callable(evalution.benchmarks.blimp)
     assert evalution.benchmarks.BaseRollingPerplexitySuite is not None
     assert evalution.benchmarks.C4 is not None
     assert callable(evalution.benchmarks.c4)

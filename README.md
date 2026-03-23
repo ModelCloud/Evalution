@@ -236,6 +236,7 @@ logic, those implementation details can shift results.
 | `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
 | `babi` | Generated exact match | bAbI `weston2015towards` |
+| `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
 | `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
@@ -368,6 +369,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
+- `blimp`: BLiMP `warstadt2020blimp`
 - `c4`: C4 `raffel2020exploring`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
@@ -448,6 +450,18 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Jason Weston and Antoine Bordes and Sumit Chopra and Alexander M. Rush and Bart van Merri{\"e}nboer and Armand Joulin and Tomas Mikolov},
   journal = {arXiv preprint arXiv:1502.05698},
   year = {2015},
+}
+
+# BLiMP
+@article{warstadt2020blimp,
+  title = {BLiMP: The Benchmark of Linguistic Minimal Pairs for English},
+  author = {Alex Warstadt and Alicia Parrish and Haokun Liu and Anhad Mohananey and Wei Peng and Sheng-Fu Wang and Samuel R. Bowman},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume = {8},
+  pages = {377--392},
+  year = {2020},
+  doi = {10.1162/tacl_a_00321},
+  url = {https://doi.org/10.1162/tacl_a_00321},
 }
 
 # C4
