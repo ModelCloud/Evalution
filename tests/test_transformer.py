@@ -970,7 +970,12 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             assert block is True
             self.stopped = True
 
-    monkeypatch.setattr(transformers, "ContinuousBatchingConfig", FakeContinuousBatchingConfig)
+    monkeypatch.setattr(
+        transformers,
+        "ContinuousBatchingConfig",
+        FakeContinuousBatchingConfig,
+        raising=False,
+    )
     monkeypatch.setattr(transformers, "ContinuousBatchingManager", FakeContinuousBatchingManager)
 
     session = TransformerSession(
