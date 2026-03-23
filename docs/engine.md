@@ -318,7 +318,7 @@ Once the engine is implemented:
 2. Export it from `evalution/__init__.py` if it is part of the public API.
 3. Add YAML factory support in `evalution/yaml.py` if you want declarative execution.
 4. Add unit tests for the engine contract.
-5. Add at least one runtime/API test that exercises it through `evalution.engine(...).model(...).run(...)`.
+5. Add at least one runtime/API test that exercises it through `evalution(...).model(...).run(...)`.
 
 ## Current Reference Implementations
 

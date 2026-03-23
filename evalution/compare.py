@@ -192,12 +192,12 @@ def _clone_test(test: TestSuite) -> TestSuite:
 
 def _coerce_compare_lane(lane: EvaluationRun, *, lane_label: str) -> EvaluationRun:
     if not isinstance(lane, EvaluationRun):
-        raise TypeError(f"{lane_label} must be an evalution.engine(...).model(...) handle")
+        raise TypeError(f"{lane_label} must be an evalution(...).model(...) handle")
     if lane._closed:
         raise ValueError(f"{lane_label} compare lane is already closed")
     if lane._session is not None or lane._test_results:
         raise ValueError(
-            f"{lane_label} compare lane must be a fresh evalution.engine(...).model(...) handle"
+            f"{lane_label} compare lane must be a fresh evalution(...).model(...) handle"
         )
     return lane
 

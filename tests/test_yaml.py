@@ -151,7 +151,7 @@ tests:
     assert "import evalution as eval" in script
     assert "import evalution.benchmarks as benchmarks" in script
     assert "import evalution.engines as engines" in script
-    assert "eval.engine(engines.Transformers(" in script
+    assert "eval(engines.Transformers(" in script
     assert ".model(eval.Model(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.boolq(" in script
@@ -205,7 +205,7 @@ tests:
 """
     )
 
-    assert "eval.engine(engines.TransformersCompat(" in script
+    assert "eval(engines.TransformersCompat(" in script
 
 
 def test_python_from_yaml_emits_gptqmodel_name() -> None:
@@ -222,4 +222,4 @@ tests:
 """
     )
 
-    assert "eval.engine(engines.GPTQModel(" in script
+    assert "eval(engines.GPTQModel(" in script

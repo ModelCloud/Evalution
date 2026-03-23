@@ -30,7 +30,7 @@ import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
 result = (
-    eval.engine(engines.Transformers())
+    eval(engines.Transformers())
     .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
     .run(benchmarks.gsm8k_platinum())
 )
@@ -44,7 +44,7 @@ import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
 result = (
-    eval.engine(
+    eval(
         engines.Transformers(
             dtype="bfloat16",
             attn_implementation="flash_attention_2",
@@ -91,11 +91,11 @@ import evalution.engines as engines
 
 result = (
     eval.compare(
-        eval.engine(engines.Transformers(dtype="bfloat16", device="cuda:0")).model(
+        eval(engines.Transformers(dtype="bfloat16", device="cuda:0")).model(
             {"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
             label="llama",
         ),
-        eval.engine(engines.TransformersCompat(device="cuda:1")).model(
+        eval(engines.TransformersCompat(device="cuda:1")).model(
             {"path": "/monster/data/model/Qwen2.5-1.5B-Instruct"},
             label="qwen",
         ),
@@ -105,7 +105,7 @@ result = (
 )
 ```
 
-`compare(...)` takes the same `eval.engine(...).model(...)` handles used for single-model runs, so
+`compare(...)` takes the same `eval(...).model(...)` handles used for single-model runs, so
 single and compare flows share one fluent entry shape. Compare lane labels come from
 `.model(..., label="...")`; when omitted, Evalution falls back to the model path. It runs the same
 suite list on both lanes while allowing different engines and model configs on the left and right.
@@ -180,7 +180,7 @@ import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
 result = (
-    eval.engine(engines.Transformers())
+    eval(engines.Transformers())
     .model(eval.Model(path="/monster/data/model/Llama-3.2-1B-Instruct"))
     .run(benchmarks.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
     .run(benchmarks.mmlu_pro(subsets="stem.math"))

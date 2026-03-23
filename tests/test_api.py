@@ -122,7 +122,7 @@ def test_engine_runner_chains_model_and_test_runs(monkeypatch) -> None:
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     engine = FakeEngine()
-    result = evalution.engine(engine).model({"path": "/tmp/model"}).run(
+    result = evalution(engine).model({"path": "/tmp/model"}).run(
         evalution.benchmarks.gsm8k_platinum(max_rows=1)
     )
 
@@ -146,7 +146,7 @@ def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     result = (
-        evalution.engine(FakeEngine())
+        evalution(FakeEngine())
         .model({"path": "/tmp/model"}, label="llama")
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
         .result()
@@ -156,7 +156,7 @@ def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
 
 
 def test_engine_builder_requires_model_before_run() -> None:
-    builder = evalution.engine(FakeEngine())
+    builder = evalution(FakeEngine())
 
     assert not hasattr(builder, "run")
 
@@ -168,7 +168,7 @@ def test_engine_rejects_objects_that_do_not_inherit_base_engine() -> None:
             return FakeSession()
 
     try:
-        evalution.engine(InvalidEngine())
+        evalution(InvalidEngine())
     except TypeError as exc:
         assert str(exc) == "engine must inherit BaseEngine"
     else:
@@ -287,7 +287,7 @@ def test_engine_runner_calls_session_gc_between_test_runs(monkeypatch) -> None:
 
     engine = FakeEngine()
     result = (
-        evalution.engine(engine)
+        evalution(engine)
         .model({"path": "/tmp/model"})
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))

@@ -126,12 +126,6 @@ class EngineBuilder:
         )
 
 
-def engine(engine: BaseEngine) -> EngineBuilder:
-    if not isinstance(engine, BaseEngine):
-        raise TypeError("engine must inherit BaseEngine")
-    return EngineBuilder(_engine_impl=engine)
-
-
 def run(
     *,
     model: Model | dict,

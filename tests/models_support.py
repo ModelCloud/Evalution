@@ -113,7 +113,7 @@ def run_llama3_2_suite(
 ) -> tuple[Any, Any]:
     with capsys.disabled():
         result = (
-            evalution.engine(
+            evalution(
                 evalution.Transformers(
                     dtype="bfloat16",
                     attn_implementation="flash_attention_2",
@@ -146,7 +146,7 @@ def run_llama3_2_compare_suite(
     with capsys.disabled():
         result = (
             evalution.compare(
-                evalution.engine(
+                evalution(
                     evalution.Transformers(
                         dtype="bfloat16",
                         attn_implementation="flash_attention_2",
@@ -158,7 +158,7 @@ def run_llama3_2_compare_suite(
                     evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
                     label=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                 ),
-                evalution.engine(
+                evalution(
                     evalution.Transformers(
                         dtype="bfloat16",
                         attn_implementation="flash_attention_2",

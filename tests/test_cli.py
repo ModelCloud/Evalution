@@ -117,7 +117,7 @@ tests:
     assert "import evalution as eval" in captured.out
     assert "import evalution.benchmarks as benchmarks" in captured.out
     assert "import evalution.engines as engines" in captured.out
-    assert "eval.engine(engines.Transformers(" in captured.out
+    assert "eval(engines.Transformers(" in captured.out
     assert ".run(benchmarks.arc_challenge(" in captured.out
 
 
