@@ -949,7 +949,7 @@ def load_transformer_runtime(
         input_device = _resolve_input_device(model, prefer=config.device)
 
     requested_attn_implementation = (
-        attn_implementation
+        raw_attn_implementation
         or getattr(model.config, "_attn_implementation", None)
         or getattr(model.config, "attn_implementation", None)
     )
@@ -1123,6 +1123,10 @@ def _base_attn_implementation(attn_implementation: str | None) -> str | None:
     if attn_implementation.startswith("paged|"):
         return attn_implementation.split("paged|", maxsplit=1)[1]
     return attn_implementation
+
+
+def _requests_paged_attention(attn_implementation: str | None) -> bool:
+    return isinstance(attn_implementation, str) and attn_implementation.startswith("paged|")
 
 
 def _fallback_batch_size(batch_size: int) -> int:

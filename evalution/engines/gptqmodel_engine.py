@@ -16,7 +16,6 @@ from evalution.config import Model
 from evalution.engines.memory import resolve_dtype
 from evalution.engines.transformers import (
     TransformersSession,
-    _AUTO_PAGED_ATTENTION,
     _effective_attn_implementation,
     _resolve_paged_attention,
     _warn_pending_nogil_transformers_pr_once,
@@ -25,6 +24,7 @@ from evalution.engines.transformers_common import (
     _TransformersCommonConfig,
     _base_attn_implementation,
     _clone_prepare_tokenizer,
+    _requests_paged_attention,
     _resolve_input_device,
     transformers_continuous_batching_support,
 )
@@ -53,7 +53,6 @@ class GPTQModel(_TransformersCommonConfig):
     # Load quantized Hugging Face-compatible checkpoints through GPTQModel.
     backend: str = "auto"
     gptqmodel_path: str | None = _DEFAULT_GPTQMODEL_PATH
-    paged_attention: bool | str = _AUTO_PAGED_ATTENTION
     manual_eviction: bool = False
     allow_block_sharing: bool = True
     use_async_batching: bool | None = None
@@ -64,10 +63,9 @@ class GPTQModel(_TransformersCommonConfig):
     # Reuse the same paged-attention feature gating as the native transformer engine.
     def build(self, model: Model) -> TransformersSession:
         supports_continuous_batching, reason = transformers_continuous_batching_support()
-        if not supports_continuous_batching and self.paged_attention not in {False, _AUTO_PAGED_ATTENTION}:
-            get_logger().warning(
-                "gptqmodel continuous batching is unavailable: %s; falling back to standard generate()",
-                reason,
+        if not supports_continuous_batching and _requests_paged_attention(self.attn_implementation):
+            raise ValueError(
+                "paged attn_implementation requires a transformers build with continuous batching support"
             )
 
         if supports_continuous_batching:
@@ -98,9 +96,8 @@ class GPTQModelSession(TransformersSession):
         supports_continuous_batching: bool,
     ) -> GPTQModelSession:
         runtime = load_gptqmodel_runtime(config, model_config)
-        raw_attn_implementation = runtime.requested_attn_implementation
+        raw_attn_implementation = config.attn_implementation or runtime.requested_attn_implementation
         paged_attention_enabled = supports_continuous_batching and _resolve_paged_attention(
-            paged_attention=config.paged_attention,
             attn_implementation=raw_attn_implementation,
             model=runtime.model,
             input_device=runtime.input_device,
@@ -230,7 +227,7 @@ def load_gptqmodel_runtime(
         input_device = _resolve_input_device(model, prefer=config.device)
 
     requested_attn_implementation = (
-        attn_implementation
+        raw_attn_implementation
         or getattr(model.config, "_attn_implementation", None)
         or getattr(model.config, "attn_implementation", None)
     )

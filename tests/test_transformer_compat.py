@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from evalution.config import Model
 from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.engines.transformers_compat import TransformersCompat, TransformersCompatSession
@@ -37,6 +39,13 @@ def test_transformer_compat_session_describes_generate_compat_backend() -> None:
         "generation_backend": "generate_compat",
         "standard_batch_size_cap": None,
     }
+
+
+def test_transformer_compat_rejects_paged_attn_implementation() -> None:
+    with pytest.raises(ValueError, match="TransformersCompat does not support paged attn_implementation"):
+        TransformersCompat(attn_implementation="paged|flash_attention_2").build(
+            Model(path="/tmp/model")
+        )
 
 
 def test_transformer_compat_session_emulates_continuous_generation(monkeypatch) -> None:

@@ -115,8 +115,7 @@ def run_llama3_2_suite(
         result = (
             evalution.Transformers(
                 dtype="bfloat16",
-                attn_implementation="flash_attention_2",
-                paged_attention=True,
+                attn_implementation="paged|flash_attention_2",
                 device=LLAMA3_2_TRANSFORMERS_DEVICE,
                 batch_size="auto",
             )
@@ -127,9 +126,8 @@ def run_llama3_2_suite(
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
     assert result.engine["dtype"] == "bfloat16"
-    assert result.engine["attn_implementation"] == "flash_attention_2"
+    assert result.engine["attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["batch_size"] == "auto"
-    assert result.engine["paged_attention"] is True
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
@@ -146,8 +144,7 @@ def run_llama3_2_compare_suite(
             evalution.compare(
                 evalution.Transformers(
                     dtype="bfloat16",
-                    attn_implementation="flash_attention_2",
-                    paged_attention=True,
+                    attn_implementation="paged|flash_attention_2",
                     device=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                     batch_size="auto",
                 ).model(
@@ -156,8 +153,7 @@ def run_llama3_2_compare_suite(
                 ),
                 evalution.Transformers(
                     dtype="bfloat16",
-                    attn_implementation="flash_attention_2",
-                    paged_attention=True,
+                    attn_implementation="paged|flash_attention_2",
                     device=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
                     batch_size="auto",
                 ).model(
@@ -177,12 +173,10 @@ def run_llama3_2_compare_suite(
     assert result.right.model["label"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
     assert result.left.engine["dtype"] == "bfloat16"
     assert result.right.engine["dtype"] == "bfloat16"
-    assert result.left.engine["attn_implementation"] == "flash_attention_2"
-    assert result.right.engine["attn_implementation"] == "flash_attention_2"
+    assert result.left.engine["attn_implementation"] == "paged|flash_attention_2"
+    assert result.right.engine["attn_implementation"] == "paged|flash_attention_2"
     assert result.left.engine["batch_size"] == "auto"
     assert result.right.engine["batch_size"] == "auto"
-    assert result.left.engine["paged_attention"] is True
-    assert result.right.engine["paged_attention"] is True
     assert result.left.engine["device"] == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
     assert result.right.engine["device"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
     assert (

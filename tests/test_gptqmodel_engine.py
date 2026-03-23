@@ -32,7 +32,6 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.batch_size == "auto"
     assert engine.backend == "auto"
     assert engine.gptqmodel_path == "/root/gptqmodel"
-    assert engine.paged_attention == "auto"
     assert engine.manual_eviction is False
     assert engine.allow_block_sharing is True
     assert engine.use_async_batching is None
@@ -42,7 +41,6 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["batch_size"] == "auto"
     assert engine.to_dict()["backend"] == "auto"
     assert engine.to_dict()["gptqmodel_path"] == "/root/gptqmodel"
-    assert engine.to_dict()["paged_attention"] == "auto"
     assert engine.to_dict()["manual_eviction"] is False
     assert engine.to_dict()["allow_block_sharing"] is True
     assert engine.to_dict()["use_async_batching"] is None
@@ -79,6 +77,19 @@ def test_gptqmodel_session_describes_quantized_backend() -> None:
 def test_gptqmodel_engine_rejects_external_backends() -> None:
     with pytest.raises(ValueError, match="only supports native GPTQModel/HF-style backends"):
         _validate_gptqmodel_backend("vllm")
+
+
+def test_gptqmodel_rejects_paged_attn_when_continuous_batching_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "evalution.engines.gptqmodel_engine.transformers_continuous_batching_support",
+        lambda: (False, "transformers 4.55.4 is older than 4.56.0"),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="paged attn_implementation requires a transformers build with continuous batching support",
+    ):
+        GPTQModel(attn_implementation="paged|flash_attention_2").build(Model(path="/tmp/model"))
 
 
 def test_import_gptqmodel_uses_checkout_fallback(monkeypatch, tmp_path) -> None:
@@ -201,8 +212,7 @@ def test_gptqmodel_engine_can_generate_and_score_on_cuda() -> None:
     session = GPTQModel(
         device="cuda:0",
         batch_size=1,
-        attn_implementation="flash_attention_2",
-        paged_attention=True,
+        attn_implementation="paged|flash_attention_2",
     ).build(Model(path=str(_TINYLLAMA_GPTQ_MODEL)))
 
     try:

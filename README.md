@@ -45,10 +45,9 @@ import evalution.engines as engines
 result = (
     engines.Transformers(
         dtype="bfloat16",
-        attn_implementation="flash_attention_2",
+        attn_implementation="paged|flash_attention_2",
         device="cuda:0",
         batch_size="auto",
-        paged_attention="auto",
         allow_block_sharing=True,
         use_async_batching=None,
         max_new_tokens=256,
@@ -115,9 +114,8 @@ YAML usage:
 engine:
   type: Transformers
   dtype: bfloat16
-  attn_implementation: flash_attention_2
+  attn_implementation: paged|flash_attention_2
   device: cuda:0
-  paged_attention: true
 
 model:
   path: /monster/data/model/Llama-3.2-1B-Instruct
@@ -152,7 +150,7 @@ evalution emit-python evalution.yaml
 ```
 
 `engines.Transformers(...)` accepts runtime options such as `dtype`, `device`, `batch_size`,
-`paged_attention`, `attn_implementation`, and `max_new_tokens`.
+`attn_implementation`, and `max_new_tokens`.
 
 Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`,
 and scorer-specific options like `label_permutations` can be set directly on each benchmark call
