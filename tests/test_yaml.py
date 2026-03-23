@@ -109,6 +109,8 @@ tests:
     max_rows: 56
   - type: cola
     max_rows: 52
+  - type: commonsense_qa
+    max_rows: 18
   - type: copa
     max_rows: 12
   - type: arc_easy
@@ -158,6 +160,7 @@ tests:
     assert ".run(benchmarks.boolq(" in script
     assert ".run(benchmarks.cb(" in script
     assert ".run(benchmarks.cola(" in script
+    assert ".run(benchmarks.commonsense_qa(" in script
     assert ".run(benchmarks.copa(" in script
     assert ".run(benchmarks.arc_easy(" in script
     assert ".run(benchmarks.arc_challenge(" in script

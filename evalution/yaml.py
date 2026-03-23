@@ -27,6 +27,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "boolq": benchmarks.boolq,
     "cb": benchmarks.cb,
     "cola": benchmarks.cola,
+    "commonsense_qa": benchmarks.commonsense_qa,
     "copa": benchmarks.copa,
     "gsm8k": benchmarks.gsm8k,
     "gsm8k_platinum": benchmarks.gsm8k_platinum,

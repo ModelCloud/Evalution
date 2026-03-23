@@ -610,6 +610,37 @@ SUITE_SPECS = {
             prompt_substrings=("\nQuestion: Does this sentence make sense?\nAnswer:",),
         ),
     ),
+    "commonsense_qa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.commonsense_qa(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="commonsense_qa",
+        baseline={
+            "acc,ll": 0.546875,
+            "acc,ll_avg": 0.546875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "tau/commonsense_qa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D", "E"},
+            prediction_values={"A", "B", "C", "D", "E"},
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("\nA. ", "\nE. "),
+            metadata_validator=_metadata_has_choice_labels(exact_count=5),
+        ),
+    ),
     "copa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, streaming=True, max_rows=100),
         expected_name="copa",

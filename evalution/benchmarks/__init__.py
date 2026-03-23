@@ -10,6 +10,7 @@ from .base import BaseTestSuite, TestSuite
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
 from .cola import CoLA, cola
+from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .copa import COPA, copa
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
@@ -38,6 +39,7 @@ __all__ = [
     "BoolQ",
     "CB",
     "CoLA",
+    "CommonsenseQA",
     "COPA",
     "GSM8K",
     "GSM8KPlatinum",
@@ -62,6 +64,7 @@ __all__ = [
     "boolq",
     "cb",
     "cola",
+    "commonsense_qa",
     "copa",
     "choice_index_from_labels",
     "f1_for_label",
