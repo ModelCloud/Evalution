@@ -50,8 +50,8 @@ def test_rte_scores_entailment_multiple_choice_accuracy(monkeypatch) -> None:
 
     assert result.name == "rte"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "super_glue"
     assert result.metadata["dataset_name"] == "rte"

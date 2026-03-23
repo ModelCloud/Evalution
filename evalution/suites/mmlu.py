@@ -246,8 +246,8 @@ class MMLU(TestSuite):
                         "predicted_index_norm": str(outcome.normalized_best_index),
                     },
                     scores={
-                        "accuracy,loglikelihood": outcome.raw_accuracy,
-                        "accuracy,loglikelihood_norm": outcome.normalized_accuracy,
+                        "acc,ll": outcome.raw_accuracy,
+                        "acc,ll_avg": outcome.normalized_accuracy,
                     },
                     metadata={
                         "subset": leaf_subset,
@@ -263,8 +263,8 @@ class MMLU(TestSuite):
 
         denominator = max(len(sample_results), 1)
         metrics = {
-            "accuracy,loglikelihood": raw_total / denominator,
-            "accuracy,loglikelihood_norm": norm_total / denominator,
+            "acc,ll": raw_total / denominator,
+            "acc,ll_avg": norm_total / denominator,
         }
         return TestResult(
             name=task_name,

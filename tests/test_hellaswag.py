@@ -59,8 +59,8 @@ def test_hellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
 
     assert result.name == "hellaswag"
     assert result.metrics == {
-        "accuracy,loglikelihood": 0.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 0.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "Rowan/hellaswag"
     assert result.metadata["split"] == "validation"
@@ -77,8 +77,8 @@ def test_hellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
         "predicted_index_norm": "3",
     }
     assert sample.scores == {
-        "accuracy,loglikelihood": 0.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 0.0,
+        "acc,ll_avg": 1.0,
     }
     assert sample.metadata["activity_label"] == "Roof shingle removal"
     assert sample.metadata["split_type"] == "indomain"

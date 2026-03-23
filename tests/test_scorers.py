@@ -56,8 +56,8 @@ def test_choice_label_exact_match_is_strict() -> None:
 def test_label_permutation_fraction_uses_balanced_minimum() -> None:
     assert format_label_permutation_fraction(0.25) == "0.25"
     assert format_label_permutation_fraction(1.0) == "1.0"
-    assert label_permutation_metric_name(0.25) == "accuracy,label_perm_0.25"
-    assert label_permutation_metric_name(0.75) == "accuracy,label_perm_0.75"
+    assert label_permutation_metric_name(0.25) == "acc,label_perm_0.25"
+    assert label_permutation_metric_name(0.75) == "acc,label_perm_0.75"
     assert len(label_permutations_for_mode(2, 0.25)) == 2
     assert len(label_permutations_for_mode(4, 0.25)) == 6
     assert len(label_permutations_for_mode(4, 0.5)) == 12

@@ -54,8 +54,8 @@ class CoLA(BaseMultipleChoiceSuite):
     ) -> dict[str, float]:
         gold_labels = [sample.gold_index for sample in samples]
         return {
-            "mcc,loglikelihood": matthews_corrcoef(gold_labels, raw_predictions),
-            "mcc,loglikelihood_norm": matthews_corrcoef(gold_labels, normalized_predictions),
+            "mcc,ll": matthews_corrcoef(gold_labels, raw_predictions),
+            "mcc,ll_avg": matthews_corrcoef(gold_labels, normalized_predictions),
         }
 
 

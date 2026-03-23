@@ -325,7 +325,7 @@ class MMLUPro(TestSuite):
         invalid_predictions: int,
     ) -> str:
         accuracy = (
-            aggregate_scores.get("exact_match,choice-label", 0.0) / processed
+            aggregate_scores.get("em,choice_label", 0.0) / processed
             if processed
             else 0.0
         )
@@ -521,8 +521,7 @@ class MMLUPro(TestSuite):
 
         denominator = len(samples) or 1
         metrics = {
-            "exact_match,choice-label": aggregate_scores.get("exact_match,choice-label", 0.0)
-            / denominator,
+            "em,choice_label": aggregate_scores.get("em,choice_label", 0.0) / denominator,
         }
         logger.info(
             "%s: wall_times dataset_load=%.3fs generation=%.3fs scoring=%.3fs",
@@ -667,7 +666,7 @@ class MMLUPro(TestSuite):
                 "choice-text": predicted_text,
             },
             scores={
-                "exact_match,choice-label": choice_label_exact_match(predicted_label, gold_label),
+                "em,choice_label": choice_label_exact_match(predicted_label, gold_label),
             },
             metadata={
                 "question_id": prepared_sample.doc.get("question_id"),

@@ -106,7 +106,7 @@ def test_run_accepts_dict_model_and_returns_structured_results(monkeypatch) -> N
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert len(result.tests) == 1
     assert result.tests[0].name == "gsm8k_platinum_cot"
-    assert result.tests[0].metrics["accuracy,numeric"] == 1.0
+    assert result.tests[0].metrics["acc,num"] == 1.0
 
 
 def test_engine_runner_chains_model_and_test_runs(monkeypatch) -> None:
@@ -243,7 +243,7 @@ def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
 
     assert len(result.tests) == 1
     assert result.tests[0].name == "arc_challenge"
-    assert result.tests[0].metrics["accuracy,exam_score"] == 1.0
+    assert result.tests[0].metrics["acc,exam"] == 1.0
 
 
 def test_run_calls_session_gc_between_test_suites(monkeypatch) -> None:

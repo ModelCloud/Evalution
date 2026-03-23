@@ -99,7 +99,7 @@ def test_mmlu_pro_uses_subset_matched_cot_fewshots(monkeypatch) -> None:
     result = evalution.mmlu_pro(num_fewshot=1, max_rows=2, batch_size=2).evaluate(FakeSession())
 
     assert result.name == "mmlu_pro"
-    assert result.metrics == {"exact_match,choice-label": 1.0}
+    assert result.metrics == {"em,choice_label": 1.0}
     assert result.metadata["dataset_path"] == "TIGER-Lab/MMLU-Pro"
     assert result.metadata["fewshot_split"] == "validation"
     assert result.metadata["num_fewshot"] == 1
@@ -430,7 +430,7 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
         max_new_tokens=20,
     ).evaluate(BackoffSession())
 
-    assert result.metrics == {"exact_match,choice-label": 1.0}
+    assert result.metrics == {"em,choice_label": 1.0}
     assert result.samples[0].metadata["fewshot_count"] == 0
     assert result.samples[0].metadata["subset"] == "stem.math"
 

@@ -213,8 +213,8 @@ def test_gsm8k_platinum_cot_llama_uses_multiturn_chat_by_default(monkeypatch) ->
     result = suite.evaluate(session)
 
     assert result.name == "gsm8k_platinum_cot_llama"
-    assert set(result.metrics) == {"accuracy,numeric"}
-    assert result.metrics["accuracy,numeric"] == 1.0
+    assert set(result.metrics) == {"acc,num"}
+    assert result.metrics["acc,num"] == 1.0
     assert len(session.requests) == 1
     assert session.requests[0].messages is not None
     assert len(session.requests[0].messages) == 17
@@ -241,8 +241,8 @@ def test_gsm8k_platinum_scores_numeric_primary(monkeypatch) -> None:
     session = FakeSession(["I think it comes out to 12 in total."])
     result = suite.evaluate(session)
 
-    assert set(result.metrics) == {"accuracy,numeric"}
-    assert result.metrics["accuracy,numeric"] == 1.0
+    assert set(result.metrics) == {"acc,num"}
+    assert result.metrics["acc,num"] == 1.0
     assert result.samples[0].extracted["numeric-extract"] == "12"
     assert set(result.samples[0].extracted) == {"numeric-extract"}
 
@@ -282,7 +282,7 @@ def test_gsm8k_platinum_uses_engine_batch_size_by_default(monkeypatch) -> None:
     session = FakeSession(["The answer is 42."] * 5, batch_size=4)
     result = suite.evaluate(session)
 
-    assert result.metrics["accuracy,numeric"] == 1.0
+    assert result.metrics["acc,num"] == 1.0
     assert session.generate_batch_sizes == [4, 1]
 
 
@@ -307,7 +307,7 @@ def test_gsm8k_platinum_suite_batch_size_overrides_engine_default(monkeypatch) -
     session = FakeSession(["The answer is 42."] * 5, batch_size=4)
     result = suite.evaluate(session)
 
-    assert result.metrics["accuracy,numeric"] == 1.0
+    assert result.metrics["acc,num"] == 1.0
     assert session.generate_batch_sizes == [2, 2, 1]
 
 
@@ -331,7 +331,7 @@ def test_gsm8k_platinum_uses_session_batch_size_resolver(monkeypatch) -> None:
     session = FakeSession(["The answer is 42."] * 5, batch_size=99, resolved_batch_size=3)
     result = suite.evaluate(session)
 
-    assert result.metrics["accuracy,numeric"] == 1.0
+    assert result.metrics["acc,num"] == 1.0
     assert session.resolve_calls == 1
     assert session.generate_batch_sizes == [3, 2]
 

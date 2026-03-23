@@ -112,9 +112,9 @@ def test_compare_runs_same_suite_on_both_lanes_and_computes_delta(monkeypatch) -
     assert result.right.engine["name"] == "right-engine"
     assert len(result.tests) == 1
     assert result.tests[0].name == "arc_challenge"
-    assert result.tests[0].left.metrics["accuracy,exam_score"] == 1.0
-    assert result.tests[0].right.metrics["accuracy,exam_score"] == 0.0
-    metric = result.tests[0].metrics["accuracy,exam_score"]
+    assert result.tests[0].left.metrics["acc,exam"] == 1.0
+    assert result.tests[0].right.metrics["acc,exam"] == 0.0
+    metric = result.tests[0].metrics["acc,exam"]
     assert metric.left_value == 1.0
     assert metric.right_value == 0.0
     assert metric.delta == 1.0

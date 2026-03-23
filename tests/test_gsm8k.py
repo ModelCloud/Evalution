@@ -85,8 +85,8 @@ def test_gsm8k_suite_scores_numeric_primary(monkeypatch) -> None:
     result = suite.evaluate(session)
 
     assert result.name == "gsm8k_cot"
-    assert set(result.metrics) == {"accuracy,numeric"}
-    assert result.metrics["accuracy,numeric"] == 1.0
+    assert set(result.metrics) == {"acc,num"}
+    assert result.metrics["acc,num"] == 1.0
     assert result.metadata["dataset_path"] == "openai/gsm8k"
     assert result.metadata["variant"] == "cot"
     assert result.metadata["scoring_mode"] == "numeric_format_insensitive"
@@ -109,7 +109,7 @@ def test_gsm8k_suite_scores_hash_formatted_answers(monkeypatch) -> None:
     session = FakeSession(["Reasoning first\n#### 42"])
     result = suite.evaluate(session)
 
-    assert result.metrics["accuracy,numeric"] == 1.0
+    assert result.metrics["acc,num"] == 1.0
 
 
 def test_gsm8k_base_variant_omits_platinum_specific_cleaning_metadata(monkeypatch) -> None:

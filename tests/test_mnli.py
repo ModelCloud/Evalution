@@ -71,8 +71,8 @@ def test_mnli_scores_three_way_multiple_choice_accuracy(monkeypatch) -> None:
 
     assert result.name == "mnli"
     assert result.metrics == {
-        "accuracy,loglikelihood": pytest.approx(2 / 3),
-        "accuracy,loglikelihood_norm": pytest.approx(2 / 3),
+        "acc,ll": pytest.approx(2 / 3),
+        "acc,ll_avg": pytest.approx(2 / 3),
     }
     assert result.metadata["dataset_path"] == "nyu-mll/glue"
     assert result.metadata["dataset_name"] == "mnli"

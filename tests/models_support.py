@@ -252,11 +252,60 @@ def _assert_multiple_choice_loglikelihood_sample(
         "predicted_index_norm",
     }
     assert set(sample.scores) == {
-        "accuracy,loglikelihood",
-        "accuracy,loglikelihood_norm",
+        "acc,ll",
+        "acc,ll_avg",
     }
     assert "choice_logprobs" in sample.metadata
     assert "choice_logprobs_norm" in sample.metadata
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
+def _assert_multiple_choice_loglikelihood_label_perm_sample(
+    sample: Any,
+    index: int,
+    *,
+    label_permutations: float,
+    target_values: set[str] | None = None,
+    prediction_values: set[str] | None = None,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    if target_values is None:
+        assert sample.target
+    else:
+        assert sample.target in target_values
+    if prediction_values is None:
+        assert sample.prediction
+    else:
+        assert sample.prediction in prediction_values
+    label_metric_suffix = f"label_perm_{label_permutations}"
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+        f"predicted_index_{label_metric_suffix}",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+        f"accuracy,{label_metric_suffix}",
+    }
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+    assert f"choice_logprobs_{label_metric_suffix}" in sample.metadata
+    assert "label_permutation_count" in sample.metadata
+    assert sample.metadata["label_permutation_count"] > 0
     if metadata_validator is not None:
         metadata_validator(sample.metadata)
 
@@ -270,7 +319,7 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert "Q:" in sample.prompt
     assert "A:" in sample.prompt
     assert set(sample.extracted) == {"numeric-extract"}
-    assert set(sample.scores) == {"accuracy,numeric"}
+    assert set(sample.scores) == {"acc,num"}
 
 
 def _assert_arc_exam_sample(sample: Any, index: int) -> None:
@@ -285,7 +334,7 @@ def _assert_arc_exam_sample(sample: Any, index: int) -> None:
         "selected_indices",
         "selected_labels",
     }
-    assert set(sample.scores) == {"accuracy,exam_score"}
+    assert set(sample.scores) == {"acc,exam"}
     assert "choice_logprobs" in sample.metadata
     assert "selected_count" in sample.metadata
 
@@ -305,7 +354,7 @@ def _assert_mmlu_pro_sample(
     assert "Options:" in sample.prompt
     assert "Answer: Let's think step by step." in sample.prompt
     assert set(sample.extracted) == {"choice-label", "choice-text"}
-    assert set(sample.scores) == {"exact_match,choice-label"}
+    assert set(sample.scores) == {"em,choice_label"}
     subset = sample.metadata["subset"]
     assert subset
     assert sample.metadata["subset_kind"] == "leaf"
@@ -325,7 +374,7 @@ def _validate_gsm8k_like_result(test_result: Any) -> None:
     for sample in test_result.samples:
         if sample.extracted["numeric-extract"] == "[invalid]":
             invalid_predictions += 1
-        if sample.scores["accuracy,numeric"] == 1.0:
+        if sample.scores["acc,num"] == 1.0:
             numeric_matches += 1
     assert numeric_matches > 0
     assert invalid_predictions / len(test_result.samples) < 0.40
@@ -335,7 +384,7 @@ def _validate_arc_exam_result(test_result: Any) -> None:
     exact_matches = sum(
         1
         for sample in test_result.samples
-        if sample.scores["accuracy,exam_score"] == 1.0
+        if sample.scores["acc,exam"] == 1.0
     )
     assert exact_matches > 0
 
@@ -346,7 +395,7 @@ def _validate_mmlu_pro_result(test_result: Any) -> None:
     for sample in test_result.samples:
         if sample.extracted["choice-label"] == "[invalid]":
             invalid_predictions += 1
-        if sample.scores["exact_match,choice-label"] == 1.0:
+        if sample.scores["em,choice_label"] == 1.0:
             exact_matches += 1
     assert exact_matches > 0
     assert invalid_predictions / len(test_result.samples) < 0.25
@@ -407,9 +456,9 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_cot",
         baseline={
-            "accuracy,numeric": 0.38671875,
+            "acc,num": 0.38671875,
         },
-        expected_metrics=frozenset({"accuracy,numeric"}),
+        expected_metrics=frozenset({"acc,num"}),
         expected_metadata={
             "variant": "cot",
             "apply_chat_template": True,
@@ -419,7 +468,7 @@ SUITE_SPECS = {
             "num_fewshot": 8,
             "dataset_path": "openai/gsm8k",
             "scoring_mode": "numeric_format_insensitive",
-            "primary_metric": "accuracy,numeric",
+            "primary_metric": "acc,num",
         },
         expected_sample_count=128,
         sample_validator=_assert_gsm8k_sample,
@@ -436,9 +485,9 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_platinum_cot",
         baseline={
-            "accuracy,numeric": 0.390625,
+            "acc,num": 0.390625,
         },
-        expected_metrics=frozenset({"accuracy,numeric"}),
+        expected_metrics=frozenset({"acc,num"}),
         expected_metadata={
             "variant": "cot",
             "apply_chat_template": True,
@@ -447,7 +496,7 @@ SUITE_SPECS = {
             "generation_submission_mode": "continuous_refill",
             "num_fewshot": 8,
             "scoring_mode": "numeric_format_insensitive",
-            "primary_metric": "accuracy,numeric",
+            "primary_metric": "acc,num",
         },
         expected_sample_count=128,
         sample_validator=_assert_gsm8k_sample,
@@ -457,10 +506,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.boolq(batch_size=24, streaming=True, max_rows=128),
         expected_name="boolq",
         baseline={
-            "accuracy,loglikelihood": 0.6796875,
-            "accuracy,loglikelihood_norm": 0.6796875,
+            "acc,ll": 0.6796875,
+            "acc,ll_avg": 0.6796875,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "super_glue",
@@ -481,17 +530,17 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.cb(batch_size=24, streaming=True, max_rows=56),
         expected_name="cb",
         baseline={
-            "accuracy,loglikelihood": 0.5714285714285714,
-            "accuracy,loglikelihood_norm": 0.5714285714285714,
-            "f1,loglikelihood_macro": 0.39345839345839345,
-            "f1,loglikelihood_norm_macro": 0.39345839345839345,
+            "acc,ll": 0.5714285714285714,
+            "acc,ll_avg": 0.5714285714285714,
+            "f1,ll_macro": 0.39345839345839345,
+            "f1,ll_avg_macro": 0.39345839345839345,
         },
         expected_metrics=frozenset(
             {
-                "accuracy,loglikelihood",
-                "accuracy,loglikelihood_norm",
-                "f1,loglikelihood_macro",
-                "f1,loglikelihood_norm_macro",
+                "acc,ll",
+                "acc,ll_avg",
+                "f1,ll_macro",
+                "f1,ll_avg_macro",
             }
         ),
         expected_metadata={
@@ -514,17 +563,17 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.cola(batch_size=24, streaming=True, max_rows=128),
         expected_name="cola",
         baseline={
-            "accuracy,loglikelihood": 0.6484375,
-            "accuracy,loglikelihood_norm": 0.6484375,
-            "mcc,loglikelihood": 0.0,
-            "mcc,loglikelihood_norm": 0.0,
+            "acc,ll": 0.6484375,
+            "acc,ll_avg": 0.6484375,
+            "mcc,ll": 0.0,
+            "mcc,ll_avg": 0.0,
         },
         expected_metrics=frozenset(
             {
-                "accuracy,loglikelihood",
-                "accuracy,loglikelihood_norm",
-                "mcc,loglikelihood",
-                "mcc,loglikelihood_norm",
+                "acc,ll",
+                "acc,ll_avg",
+                "mcc,ll",
+                "mcc,ll_avg",
             }
         ),
         expected_metadata={
@@ -547,10 +596,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.copa(batch_size=24, streaming=True, max_rows=100),
         expected_name="copa",
         baseline={
-            "accuracy,loglikelihood": 0.74,
-            "accuracy,loglikelihood_norm": 0.68,
+            "acc,ll": 0.74,
+            "acc,ll_avg": 0.68,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "super_glue",
@@ -569,9 +618,9 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.arc_easy(batch_size=24, streaming=True, max_rows=128),
         expected_name="arc_easy",
         baseline={
-            "accuracy,exam_score": 0.6640625,
+            "acc,exam": 0.6640625,
         },
-        expected_metrics=frozenset({"accuracy,exam_score"}),
+        expected_metrics=frozenset({"acc,exam"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "allenai/ai2_arc",
@@ -592,9 +641,9 @@ SUITE_SPECS = {
         ),
         expected_name="arc_challenge",
         baseline={
-            "accuracy,exam_score": 0.40625,
+            "acc,exam": 0.40625,
         },
-        expected_metrics=frozenset({"accuracy,exam_score"}),
+        expected_metrics=frozenset({"acc,exam"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "allenai/ai2_arc",
@@ -611,10 +660,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.hellaswag(batch_size=24, streaming=True, max_rows=128),
         expected_name="hellaswag",
         baseline={
-            "accuracy,loglikelihood": 0.4375,
-            "accuracy,loglikelihood_norm": 0.5390625,
+            "acc,ll": 0.4375,
+            "acc,ll_avg": 0.5390625,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "Rowan/hellaswag",
@@ -629,6 +678,44 @@ SUITE_SPECS = {
             prompt_substrings=(":",),
         ),
     ),
+    "hellaswag_label_perm_0_25": SuiteSpec(
+        suite_factory=lambda: evalution.hellaswag(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+            label_permutations=0.25,
+        ),
+        expected_name="hellaswag",
+        baseline={
+            "acc,ll": 0.4375,
+            "acc,ll_avg": 0.5390625,
+            "acc,label_perm_0.25": 0.46875,
+        },
+        expected_metrics=frozenset(
+            {
+                "acc,ll",
+                "acc,ll_avg",
+                "acc,label_perm_0.25",
+            }
+        ),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Rowan/hellaswag",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "extra_scoring_mode": "multiple_choice_label_permutation_average",
+            "label_permutations": 0.25,
+            "label_permutation_metric": "acc,label_perm_0.25",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_label_perm_sample(
+            sample,
+            index,
+            label_permutations=0.25,
+            prompt_substrings=(":",),
+        ),
+    ),
     "mmlu_all": SuiteSpec(
         suite_factory=lambda: evalution.mmlu(
             subsets="all",
@@ -639,10 +726,10 @@ SUITE_SPECS = {
         ),
         expected_name="mmlu",
         baseline={
-            "accuracy,loglikelihood": 0.3671875,
-            "accuracy,loglikelihood_norm": 0.3671875,
+            "acc,ll": 0.3671875,
+            "acc,ll_avg": 0.3671875,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "cais/mmlu",
@@ -676,10 +763,10 @@ SUITE_SPECS = {
         ),
         expected_name="mmlu_stem",
         baseline={
-            "accuracy,loglikelihood": 0.34375,
-            "accuracy,loglikelihood_norm": 0.34375,
+            "acc,ll": 0.34375,
+            "acc,ll_avg": 0.34375,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "cais/mmlu",
@@ -708,10 +795,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.mnli(batch_size=24, streaming=True, max_rows=128),
         expected_name="mnli",
         baseline={
-            "accuracy,loglikelihood": 0.5078125,
-            "accuracy,loglikelihood_norm": 0.5078125,
+            "acc,ll": 0.5078125,
+            "acc,ll_avg": 0.5078125,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "nyu-mll/glue",
@@ -732,17 +819,17 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.mrpc(batch_size=24, streaming=True, max_rows=128),
         expected_name="mrpc",
         baseline={
-            "accuracy,loglikelihood": 0.6953125,
-            "accuracy,loglikelihood_norm": 0.6953125,
-            "f1,loglikelihood_yes": 0.8186046511627907,
-            "f1,loglikelihood_norm_yes": 0.8186046511627907,
+            "acc,ll": 0.6953125,
+            "acc,ll_avg": 0.6953125,
+            "f1,ll_yes": 0.8186046511627907,
+            "f1,ll_avg_yes": 0.8186046511627907,
         },
         expected_metrics=frozenset(
             {
-                "accuracy,loglikelihood",
-                "accuracy,loglikelihood_norm",
-                "f1,loglikelihood_yes",
-                "f1,loglikelihood_norm_yes",
+                "acc,ll",
+                "acc,ll_avg",
+                "f1,ll_yes",
+                "f1,ll_avg_yes",
             }
         ),
         expected_metadata={
@@ -769,10 +856,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.openbookqa(batch_size=24, streaming=True, max_rows=128),
         expected_name="openbookqa",
         baseline={
-            "accuracy,loglikelihood": 0.25,
-            "accuracy,loglikelihood_norm": 0.328125,
+            "acc,ll": 0.25,
+            "acc,ll_avg": 0.328125,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "allenai/openbookqa",
@@ -793,10 +880,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.piqa(batch_size=24, streaming=True, max_rows=128),
         expected_name="piqa",
         baseline={
-            "accuracy,loglikelihood": 0.71875,
-            "accuracy,loglikelihood_norm": 0.7890625,
+            "acc,ll": 0.71875,
+            "acc,ll_avg": 0.7890625,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "baber/piqa",
@@ -816,10 +903,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.qnli(batch_size=24, streaming=True, max_rows=128),
         expected_name="qnli",
         baseline={
-            "accuracy,loglikelihood": 0.4609375,
-            "accuracy,loglikelihood_norm": 0.4609375,
+            "acc,ll": 0.4609375,
+            "acc,ll_avg": 0.4609375,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "nyu-mll/glue",
@@ -840,17 +927,17 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.qqp(batch_size=24, streaming=True, max_rows=128),
         expected_name="qqp",
         baseline={
-            "accuracy,loglikelihood": 0.34375,
-            "accuracy,loglikelihood_norm": 0.34375,
-            "f1,loglikelihood_yes": 0.4615384615384615,
-            "f1,loglikelihood_norm_yes": 0.4615384615384615,
+            "acc,ll": 0.34375,
+            "acc,ll_avg": 0.34375,
+            "f1,ll_yes": 0.4615384615384615,
+            "f1,ll_avg_yes": 0.4615384615384615,
         },
         expected_metrics=frozenset(
             {
-                "accuracy,loglikelihood",
-                "accuracy,loglikelihood_norm",
-                "f1,loglikelihood_yes",
-                "f1,loglikelihood_norm_yes",
+                "acc,ll",
+                "acc,ll_avg",
+                "f1,ll_yes",
+                "f1,ll_avg_yes",
             }
         ),
         expected_metadata={
@@ -877,10 +964,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.rte(batch_size=24, streaming=True, max_rows=128),
         expected_name="rte",
         baseline={
-            "accuracy,loglikelihood": 0.625,
-            "accuracy,loglikelihood_norm": 0.625,
+            "acc,ll": 0.625,
+            "acc,ll_avg": 0.625,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "super_glue",
@@ -901,10 +988,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.sst2(batch_size=24, streaming=True, max_rows=128),
         expected_name="sst2",
         baseline={
-            "accuracy,loglikelihood": 0.5390625,
-            "accuracy,loglikelihood_norm": 0.5390625,
+            "acc,ll": 0.5390625,
+            "acc,ll_avg": 0.5390625,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "nyu-mll/glue",
@@ -925,10 +1012,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.wic(batch_size=24, streaming=True, max_rows=128),
         expected_name="wic",
         baseline={
-            "accuracy,loglikelihood": 0.5,
-            "accuracy,loglikelihood_norm": 0.5,
+            "acc,ll": 0.5,
+            "acc,ll_avg": 0.5,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "super_glue",
@@ -951,10 +1038,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.wnli(batch_size=24, streaming=True, max_rows=71),
         expected_name="wnli",
         baseline={
-            "accuracy,loglikelihood": 0.4225352112676056,
-            "accuracy,loglikelihood_norm": 0.4225352112676056,
+            "acc,ll": 0.4225352112676056,
+            "acc,ll_avg": 0.4225352112676056,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "nyu-mll/glue",
@@ -975,10 +1062,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.winogrande(batch_size=24, streaming=True, max_rows=128),
         expected_name="winogrande",
         baseline={
-            "accuracy,loglikelihood": 0.5625,
-            "accuracy,loglikelihood_norm": 0.5703125,
+            "acc,ll": 0.5625,
+            "acc,ll_avg": 0.5703125,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "winogrande",
@@ -1003,8 +1090,8 @@ SUITE_SPECS = {
             max_rows=32,
         ),
         expected_name="mmlu_pro",
-        baseline={"exact_match,choice-label": 0.125},
-        expected_metrics=frozenset({"exact_match,choice-label"}),
+        baseline={"em,choice_label": 0.125},
+        expected_metrics=frozenset({"em,choice_label"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "TIGER-Lab/MMLU-Pro",
@@ -1035,8 +1122,8 @@ SUITE_SPECS = {
             max_rows=32,
         ),
         expected_name="mmlu_pro_stem",
-        baseline={"exact_match,choice-label": 0.34375},
-        expected_metrics=frozenset({"exact_match,choice-label"}),
+        baseline={"em,choice_label": 0.34375},
+        expected_metrics=frozenset({"em,choice_label"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "TIGER-Lab/MMLU-Pro",

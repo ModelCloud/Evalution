@@ -46,8 +46,8 @@ def test_piqa_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
 
     assert result.name == "piqa"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "baber/piqa"
     assert result.metadata["split"] == "validation"
@@ -64,8 +64,8 @@ def test_piqa_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
         "predicted_index_norm": "0",
     }
     assert sample.scores == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert sample.metadata["choice_logprobs"] == [-0.4, -1.4]
     assert len(sample.metadata["choice_logprobs_norm"]) == 2
@@ -127,11 +127,11 @@ def test_piqa_can_emit_label_permutation_metric(monkeypatch) -> None:
     ).evaluate(LabelPermutationSession())
 
     assert result.metrics == {
-        "accuracy,loglikelihood": 0.0,
-        "accuracy,loglikelihood_norm": 0.0,
-        "accuracy,label_perm_0.5": 1.0,
+        "acc,ll": 0.0,
+        "acc,ll_avg": 0.0,
+        "acc,label_perm_0.5": 1.0,
     }
     assert result.metadata["label_permutations"] == 0.5
-    assert result.metadata["label_permutation_metric"] == "accuracy,label_perm_0.5"
+    assert result.metadata["label_permutation_metric"] == "acc,label_perm_0.5"
     assert result.samples[0].extracted["predicted_index_label_perm_0.5"] == "0"
     assert result.samples[0].metadata["label_permutation_count"] == 2

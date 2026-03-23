@@ -84,8 +84,8 @@ def test_mmlu_uses_subset_matched_fewshot_prompts(monkeypatch) -> None:
 
     assert result.name == "mmlu"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "cais/mmlu"
     assert result.metadata["dataset_name"] == "all"

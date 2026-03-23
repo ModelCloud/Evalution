@@ -70,7 +70,7 @@ def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
     result = suite.evaluate(session)
 
     assert result.name == "arc_challenge"
-    assert result.metrics == {"accuracy,exam_score": 1.0}
+    assert result.metrics == {"acc,exam": 1.0}
     assert result.metadata == {
         "dataset_path": "allenai/ai2_arc",
         "dataset_name": "ARC-Challenge",
@@ -119,7 +119,7 @@ def test_arc_challenge_awards_partial_credit_for_tied_top_choices(monkeypatch) -
     )
     result = suite.evaluate(session)
 
-    assert result.metrics == {"accuracy,exam_score": 0.5}
+    assert result.metrics == {"acc,exam": 0.5}
     assert result.samples[0].prediction == (
         "Planetary density will decrease. | Planetary days will become shorter."
     )
@@ -203,10 +203,10 @@ def test_arc_challenge_can_emit_label_permutation_metric(monkeypatch) -> None:
     ).evaluate(LabelPermutationSession())
 
     assert result.metrics == {
-        "accuracy,exam_score": 1.0,
-        "accuracy,label_perm_0.25": 1.0,
+        "acc,exam": 1.0,
+        "acc,label_perm_0.25": 1.0,
     }
     assert result.metadata["label_permutations"] == 0.25
-    assert result.metadata["label_permutation_metric"] == "accuracy,label_perm_0.25"
+    assert result.metadata["label_permutation_metric"] == "acc,label_perm_0.25"
     assert result.samples[0].extracted["predicted_index_label_perm_0.25"] == "2"
     assert result.samples[0].metadata["label_permutation_count"] == 6

@@ -51,8 +51,8 @@ def test_openbookqa_scores_four_way_multiple_choice_accuracy(monkeypatch) -> Non
 
     assert result.name == "openbookqa"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "allenai/openbookqa"
     assert result.metadata["dataset_name"] == "main"

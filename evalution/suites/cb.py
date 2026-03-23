@@ -57,12 +57,12 @@ class CB(BaseMultipleChoiceSuite):
         gold_labels = [sample.gold_index for sample in samples]
         label_indices = list(range(len(_CB_CHOICES)))
         return {
-            "f1,loglikelihood_macro": macro_f1(
+            "f1,ll_macro": macro_f1(
                 gold_labels,
                 raw_predictions,
                 labels=label_indices,
             ),
-            "f1,loglikelihood_norm_macro": macro_f1(
+            "f1,ll_avg_macro": macro_f1(
                 gold_labels,
                 normalized_predictions,
                 labels=label_indices,

@@ -255,8 +255,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             raw_predictions.append(outcome.raw_best_index)
             normalized_predictions.append(outcome.normalized_best_index)
             sample_scores = {
-                "accuracy,loglikelihood": outcome.raw_accuracy,
-                "accuracy,loglikelihood_norm": outcome.normalized_accuracy,
+                "acc,ll": outcome.raw_accuracy,
+                "acc,ll_avg": outcome.normalized_accuracy,
             }
             sample_extracted = {
                 "gold_index": str(sample.gold_index),
@@ -293,8 +293,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
 
         denominator = max(len(sample_results), 1)
         metrics = {
-            "accuracy,loglikelihood": raw_total / denominator,
-            "accuracy,loglikelihood_norm": norm_total / denominator,
+            "acc,ll": raw_total / denominator,
+            "acc,ll_avg": norm_total / denominator,
         }
         if label_metric_name is not None:
             metrics[label_metric_name] = label_total / denominator

@@ -56,8 +56,8 @@ def test_wic_scores_word_in_context_accuracy(monkeypatch) -> None:
 
     assert result.name == "wic"
     assert result.metrics == {
-        "accuracy,loglikelihood": 1.0,
-        "accuracy,loglikelihood_norm": 1.0,
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
     }
     assert result.metadata["dataset_path"] == "super_glue"
     assert result.metadata["dataset_name"] == "wic"

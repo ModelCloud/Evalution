@@ -70,10 +70,10 @@ def test_cb_scores_accuracy_and_macro_f1(monkeypatch) -> None:
     result = evalution.cb(max_rows=3, batch_size=7).evaluate(FakeSession())
 
     assert result.name == "cb"
-    assert result.metrics["accuracy,loglikelihood"] == pytest.approx(2 / 3)
-    assert result.metrics["accuracy,loglikelihood_norm"] == pytest.approx(2 / 3)
-    assert result.metrics["f1,loglikelihood_macro"] == pytest.approx(5 / 9)
-    assert result.metrics["f1,loglikelihood_norm_macro"] == pytest.approx(5 / 9)
+    assert result.metrics["acc,ll"] == pytest.approx(2 / 3)
+    assert result.metrics["acc,ll_avg"] == pytest.approx(2 / 3)
+    assert result.metrics["f1,ll_macro"] == pytest.approx(5 / 9)
+    assert result.metrics["f1,ll_avg_macro"] == pytest.approx(5 / 9)
     assert result.metadata["dataset_path"] == "super_glue"
     assert result.metadata["dataset_name"] == "cb"
     assert len(result.samples) == 3

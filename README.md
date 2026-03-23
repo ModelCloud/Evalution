@@ -19,7 +19,8 @@ pip install .
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
-Scoring implementation notes and scorer-module mapping live in [docs/scorers.md](docs/scorers.md).
+Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
+scorer-module mapping live in [docs/scorers.md](docs/scorers.md).
 
 Simple usage:
 
@@ -241,8 +242,23 @@ For selected multiple-choice suites, `label_permutations` can be set to any floa
 to add an extra permutation-averaged label-only metric. This does not replace the default
 benchmark score. It adds extra inference work on purpose so users can compare the benchmark-native
 score against a label-bias-mitigated alternative when option length is a concern. Metric names
-carry the exact configured fraction, for example `accuracy,label_perm_0.25`. See
-[docs/scorers.md](docs/scorers.md) for the exact math, metric names, and compute tradeoffs.
+carry the exact configured fraction, for example `acc,label_perm_0.25`. See
+[docs/scores.md](docs/scores.md) for the short-label glossary and [docs/scorers.md](docs/scorers.md)
+for the exact math, metric names, and compute tradeoffs.
+
+Metric key glossary:
+
+- `acc`: accuracy-like credit on a `0.0` to `1.0` scale for each sample, then averaged.
+- `ll`: raw summed continuation log-likelihood over the scored answer tokens.
+- `ll_avg`: average continuation log-likelihood per scored answer token to reduce length bias.
+- `exam`: ARC exam-style tie-aware partial credit.
+- `num`: numeric-answer match after numeric extraction and canonicalization.
+- `em`: exact match after the suite's task-specific extraction step.
+- `choice_label`: extracted option-label match such as `A/B/C/D`.
+- `label_perm_<fraction>`: permutation-averaged label-only accuracy using the configured fraction
+  of all label permutations.
+- `f1`: F1 score derived from the suite's predicted labels.
+- `mcc`: Matthews correlation coefficient derived from the suite's predicted labels.
 
 Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
 

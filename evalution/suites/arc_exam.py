@@ -126,7 +126,7 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
             choice_labels = sample.metadata["choice_labels"]
             selected_labels = [choice_labels[index] for index in selected_indices]
             selected_texts = [sample.choices[index] for index in selected_indices]
-            sample_scores = {"accuracy,exam_score": outcome.exam_score}
+            sample_scores = {"acc,exam": outcome.exam_score}
             sample_extracted = {
                 "gold_index": str(sample.gold_index),
                 "selected_indices": ",".join(str(index) for index in selected_indices),
@@ -161,7 +161,7 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
             )
 
         denominator = max(len(sample_results), 1)
-        metrics = {"accuracy,exam_score": total_score / denominator}
+        metrics = {"acc,exam": total_score / denominator}
         if label_metric_name is not None:
             metrics[label_metric_name] = label_total / denominator
         return TestResult(

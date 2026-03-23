@@ -3,6 +3,9 @@
 Evalution keeps benchmark orchestration under `evalution/suites/` and shared scoring logic under
 `evalution/scorers/`.
 
+For the short metric-key glossary used by runtime outputs such as `acc,ll` and `acc,exam`, see
+[scores.md](scores.md).
+
 The split is:
 
 - `evalution/suites/`: dataset loading, prompt construction, few-shot selection, request execution,
@@ -81,12 +84,12 @@ Implements:
 
 | Suite family | Scorer module | Runtime metric shape |
 | --- | --- | --- |
-| Generic multiple-choice suites | `multiple_choice.py` | `accuracy,loglikelihood`, `accuracy,loglikelihood_norm` |
-| ARC | `multiple_choice.py` | `accuracy,exam_score` |
-| Optional label-bias mitigation on multiple-choice suites | `multiple_choice.py` | `accuracy,label_perm_<fraction>` |
-| GSM8K / GSM8K-Platinum | `gsm8k.py` | `accuracy,numeric` |
+| Generic multiple-choice suites | `multiple_choice.py` | `acc,ll`, `acc,ll_avg` |
+| ARC | `multiple_choice.py` | `acc,exam` |
+| Optional label-bias mitigation on multiple-choice suites | `multiple_choice.py` | `acc,label_perm_<fraction>` |
+| GSM8K / GSM8K-Platinum | `gsm8k.py` | `acc,num` |
 | GLUE / SuperGLUE extra classification metrics | `classification.py` | `f1,...`, `mcc,...` |
-| MMLU-Pro | `choice_label.py` | `exact_match,choice-label` |
+| MMLU-Pro | `choice_label.py` | `em,choice_label` |
 
 ## `label_permutations`
 
@@ -105,10 +108,10 @@ It is additive by design:
 
 Metric names:
 
-- `label_permutations=0.25` -> `accuracy,label_perm_0.25`
-- `label_permutations=0.5` -> `accuracy,label_perm_0.5`
-- `label_permutations=0.75` -> `accuracy,label_perm_0.75`
-- `label_permutations=1.0` -> `accuracy,label_perm_1.0`
+- `label_permutations=0.25` -> `acc,label_perm_0.25`
+- `label_permutations=0.5` -> `acc,label_perm_0.5`
+- `label_permutations=0.75` -> `acc,label_perm_0.75`
+- `label_permutations=1.0` -> `acc,label_perm_1.0`
 
 ### Why this exists
 

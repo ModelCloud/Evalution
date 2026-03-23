@@ -63,10 +63,10 @@ def test_cola_scores_accuracy_and_mcc(monkeypatch) -> None:
     result = evalution.cola(max_rows=3, batch_size=4).evaluate(FakeSession())
 
     assert result.name == "cola"
-    assert result.metrics["accuracy,loglikelihood"] == pytest.approx(2 / 3)
-    assert result.metrics["accuracy,loglikelihood_norm"] == pytest.approx(2 / 3)
-    assert result.metrics["mcc,loglikelihood"] == pytest.approx(0.5)
-    assert result.metrics["mcc,loglikelihood_norm"] == pytest.approx(0.5)
+    assert result.metrics["acc,ll"] == pytest.approx(2 / 3)
+    assert result.metrics["acc,ll_avg"] == pytest.approx(2 / 3)
+    assert result.metrics["mcc,ll"] == pytest.approx(0.5)
+    assert result.metrics["mcc,ll_avg"] == pytest.approx(0.5)
     assert result.metadata["dataset_path"] == "nyu-mll/glue"
     assert result.metadata["dataset_name"] == "cola"
     assert len(result.samples) == 3

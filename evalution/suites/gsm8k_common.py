@@ -180,7 +180,7 @@ class BaseGSM8KSuite(BaseTestSuite):
 
     VARIANTS: ClassVar[dict[str, VariantSpec]]
     INCLUDE_CLEANING_STATUS: ClassVar[bool] = False
-    PRIMARY_METRIC: ClassVar[str] = "accuracy,numeric"
+    PRIMARY_METRIC: ClassVar[str] = "acc,num"
     NUMERIC_EXTRACT_KEY: ClassVar[str] = "numeric-extract"
     SCORING_MODE: ClassVar[str]
 

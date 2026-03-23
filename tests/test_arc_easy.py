@@ -58,7 +58,7 @@ def test_arc_easy_scores_original_style_exam_score(monkeypatch) -> None:
     )
 
     assert result.name == "arc_easy"
-    assert result.metrics == {"accuracy,exam_score": 1.0}
+    assert result.metrics == {"acc,exam": 1.0}
     assert result.metadata == {
         "dataset_path": "allenai/ai2_arc",
         "dataset_name": "ARC-Easy",
@@ -97,7 +97,7 @@ def test_arc_easy_awards_partial_credit_for_tied_top_choices(monkeypatch) -> Non
         )
     )
 
-    assert result.metrics == {"accuracy,exam_score": 0.5}
+    assert result.metrics == {"acc,exam": 0.5}
     assert result.samples[0].prediction == "cellular telephone | television"
     assert result.samples[0].extracted["selected_indices"] == "0,1"
     assert result.samples[0].extracted["selected_labels"] == "A,B"
