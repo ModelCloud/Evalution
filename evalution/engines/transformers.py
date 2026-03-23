@@ -23,13 +23,13 @@ from evalution.engines.transformers_common import (
     _base_attn_implementation,
     _fallback_batch_size,
     _friendly_batch_size,
+    _requests_paged_attention,
     _truncate_at_stop,
     load_transformer_runtime,
     transformers_continuous_batching_support,
 )
 from evalution.logbar import get_logger
 
-_AUTO_PAGED_ATTENTION = "auto"
 _PENDING_NOGIL_TRANSFORMERS_PR_URL = "https://github.com/huggingface/transformers/pull/44924"
 _PENDING_NOGIL_TRANSFORMERS_PR_WARNED = False
 _PENDING_NOGIL_TRANSFORMERS_PR_WARN_LOCK = threading.Lock()
@@ -40,7 +40,6 @@ _CONTINUOUS_BATCHING_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
 @dataclass(slots=True)
 class Transformers(_TransformersCommonConfig):
     # Use the modern transformers engine path that can enable paged attention and continuous batching.
-    paged_attention: bool | str = _AUTO_PAGED_ATTENTION
     manual_eviction: bool = False
     allow_block_sharing: bool = True
     use_async_batching: bool | None = None
@@ -52,16 +51,15 @@ class Transformers(_TransformersCommonConfig):
     def build(self, model: Model) -> BaseTransformerSession:
         supports_continuous_batching, reason = transformers_continuous_batching_support()
         if not supports_continuous_batching:
+            if _requests_paged_attention(self.attn_implementation):
+                raise ValueError(
+                    "paged attn_implementation requires a transformers build with continuous batching support"
+                )
             self.resolved_engine = "TransformersCompat"
             get_logger().warning(
                 "transformers continuous batching is unavailable: %s; falling back to TransformersCompat",
                 reason,
             )
-            if self.paged_attention not in {False, _AUTO_PAGED_ATTENTION}:
-                get_logger().warning(
-                    "compat fallback ignores paged-attention controls because this transformers build "
-                    "does not ship continuous batching"
-                )
             from evalution.engines.transformers_compat import TransformersCompat
 
             return TransformersCompat.from_transformers(self).build(model)
@@ -154,12 +152,8 @@ class TransformersSession(BaseTransformerSession):
     @classmethod
     def from_config(cls, config: Transformers, model_config: Model) -> TransformersSession:
         runtime = load_transformer_runtime(config, model_config)
-        raw_attn_implementation = runtime.requested_attn_implementation
-        paged_attention_config = config.paged_attention
-        if isinstance(raw_attn_implementation, str) and raw_attn_implementation.startswith("paged|"):
-            paged_attention_config = True
+        raw_attn_implementation = config.attn_implementation or runtime.requested_attn_implementation
         paged_attention_enabled = _resolve_paged_attention(
-            paged_attention=paged_attention_config,
             attn_implementation=raw_attn_implementation,
             model=runtime.model,
             input_device=runtime.input_device,
@@ -572,13 +566,11 @@ def _effective_attn_implementation(
 
 def _resolve_paged_attention(
     *,
-    paged_attention: bool | str,
     attn_implementation: str | None,
     model: Any,
     input_device: Any,
 ) -> bool:
-    normalized = _normalize_paged_attention(paged_attention)
-    if normalized is False:
+    if not _requests_paged_attention(attn_implementation):
         return False
 
     can_use_paged_attention = (
@@ -586,23 +578,9 @@ def _resolve_paged_attention(
         and callable(getattr(model, "generate_batch", None))
         and callable(getattr(model, "set_attn_implementation", None))
     )
-    if normalized == _AUTO_PAGED_ATTENTION:
-        return can_use_paged_attention and _supports_auto_paged_attention(attn_implementation)
-    if normalized and not can_use_paged_attention:
-        get_logger().warning(
-            "paged attention requested but unsupported on this session; falling back to standard generate()"
+    if not can_use_paged_attention:
+        raise ValueError(
+            "paged attn_implementation requires a CUDA model with generate_batch() and "
+            "set_attn_implementation() support"
         )
-        return False
-    return bool(normalized)
-
-
-def _normalize_paged_attention(paged_attention: bool | str) -> bool | str:
-    if paged_attention == _AUTO_PAGED_ATTENTION:
-        return _AUTO_PAGED_ATTENTION
-    if not isinstance(paged_attention, bool):
-        raise ValueError("paged_attention must be a boolean or 'auto'")
-    return paged_attention
-
-
-def _supports_auto_paged_attention(attn_implementation: str | None) -> bool:
-    return _base_attn_implementation(attn_implementation) == "flash_attention_2"
+    return True

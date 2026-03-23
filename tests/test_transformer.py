@@ -28,7 +28,6 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     engine = Transformers()
 
     assert engine.batch_size == "auto"
-    assert engine.paged_attention == "auto"
     assert engine.manual_eviction is False
     assert engine.allow_block_sharing is True
     assert engine.use_async_batching is None
@@ -36,7 +35,6 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.kv_padding_interval_size == 0
     assert engine.max_cached_graphs == 0
     assert engine.to_dict()["batch_size"] == "auto"
-    assert engine.to_dict()["paged_attention"] == "auto"
     assert engine.to_dict()["manual_eviction"] is False
     assert engine.to_dict()["allow_block_sharing"] is True
     assert engine.to_dict()["use_async_batching"] is None
@@ -89,9 +87,9 @@ def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch
     assert calls["estimate"] == 1
 
 
-def test_transformer_session_describes_auto_paged_attention_on_cuda_like_session() -> None:
+def test_transformer_session_describes_paged_attention_on_cuda_like_session() -> None:
     session = TransformersSession(
-        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(
             config=SimpleNamespace(_attn_implementation="flash_attention_2"),
@@ -100,14 +98,14 @@ def test_transformer_session_describes_auto_paged_attention_on_cuda_like_session
         ),
         tokenizer=SimpleNamespace(),
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
     )
 
     assert session.describe_execution() == {
-        "requested_attn_implementation": "flash_attention_2",
+        "requested_attn_implementation": "paged|flash_attention_2",
         "effective_attn_implementation": "paged|flash_attention_2",
         "paged_attention": True,
         "generation_backend": "continuous_batching",
@@ -249,7 +247,7 @@ def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatc
     )
 
     session = TransformersSession.from_config(
-        Transformers(device="cpu", paged_attention=False),
+        Transformers(device="cpu"),
         Model(path="/tmp/model"),
     )
 
@@ -305,7 +303,7 @@ def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch)
     )
 
     TransformersSession.from_config(
-        Transformers(device="cpu", paged_attention=False, dtype="bfloat16"),
+        Transformers(device="cpu", dtype="bfloat16"),
         Model(path="/tmp/model"),
     )
 
@@ -362,7 +360,7 @@ def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypat
     )
 
     TransformersSession.from_config(
-        Transformers(device="cpu", paged_attention=False, dtype="bfloat16"),
+        Transformers(device="cpu", dtype="bfloat16"),
         Model(path="/tmp/model"),
     )
 
@@ -432,7 +430,7 @@ def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_e
     )
 
     session = TransformersSession.from_config(
-        Transformers(device="cpu", paged_attention=False),
+        Transformers(device="cpu"),
         Model(path="/tmp/model"),
     )
 
@@ -465,11 +463,29 @@ def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_
         classmethod(lambda cls, engine: compat_engine),
     )
 
-    engine = Transformers(device="cpu", paged_attention=True)
+    engine = Transformers(device="cpu", attn_implementation="flash_attention_2")
     session = engine.build(Model(path="/tmp/model"))
 
     assert session is fake_session
     assert engine.resolved_engine == "TransformersCompat"
+
+
+def test_transformer_build_rejects_paged_attn_when_continuous_batching_is_unavailable(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "evalution.engines.transformers.transformers_continuous_batching_support",
+        lambda: (False, "transformers 4.55.4 is older than 4.56.0"),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="paged attn_implementation requires a transformers build with continuous batching support",
+    ):
+        Transformers(
+            device="cpu",
+            attn_implementation="paged|flash_attention_2",
+        ).build(Model(path="/tmp/model"))
 
 
 def test_transformer_build_warns_once_about_pending_nogil_transformers_pr(monkeypatch) -> None:
@@ -841,8 +857,7 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
     model = FakeModel()
     session = TransformersSession(
         config=Transformers(
-            attn_implementation="flash_attention_2",
-            paged_attention="auto",
+            attn_implementation="paged|flash_attention_2",
             manual_eviction=True,
             allow_block_sharing=False,
             use_async_batching=False,
@@ -854,7 +869,7 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
         model=model,
         tokenizer=FakeTokenizer(),
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
@@ -980,8 +995,7 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
 
     session = TransformersSession(
         config=Transformers(
-            attn_implementation="flash_attention_2",
-            paged_attention="auto",
+            attn_implementation="paged|flash_attention_2",
             manual_eviction=True,
             allow_block_sharing=False,
             use_async_batching=False,
@@ -993,7 +1007,7 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
@@ -1051,7 +1065,7 @@ def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> Non
             return SimpleNamespace(logits=logits)
 
     session = TransformersSession(
-        config=Transformers(batch_size=4, paged_attention=False),
+        config=Transformers(batch_size=4),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
@@ -1126,7 +1140,7 @@ def test_transformer_session_loglikelihood_reports_non_greedy_predictions() -> N
             return SimpleNamespace(logits=logits)
 
     session = TransformersSession(
-        config=Transformers(batch_size=2, paged_attention=False),
+        config=Transformers(batch_size=2),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
@@ -1185,7 +1199,7 @@ def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None
             return SimpleNamespace(logits=logits)
 
     session = TransformersSession(
-        config=Transformers(batch_size=2, paged_attention=False),
+        config=Transformers(batch_size=2),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
@@ -1244,12 +1258,12 @@ def test_transformer_session_loglikelihood_temporarily_restores_base_attention()
 
     model = FakeModel()
     session = TransformersSession(
-        config=Transformers(batch_size=2, paged_attention=True),
+        config=Transformers(batch_size=2, attn_implementation="paged|flash_attention_2"),
         model_config=Model(path="/tmp/model"),
         model=model,
         tokenizer=FakeTokenizer(),
         input_device=torch.device("cpu"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
@@ -1342,12 +1356,12 @@ def test_transformer_session_reuses_continuous_batching_manager_for_matching_sig
     )
 
     session = TransformersSession(
-        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
@@ -1444,12 +1458,12 @@ def test_transformer_session_rebuilds_continuous_batching_manager_when_signature
     )
 
     session = TransformersSession(
-        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
@@ -1542,23 +1556,23 @@ def test_transformer_sessions_do_not_share_continuous_batching_managers(monkeypa
     )
 
     left_session = TransformersSession(
-        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
         model_config=Model(path="/tmp/model-left"),
         model=FakeModel(tag="left"),
         tokenizer=FakeTokenizer(),
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
     )
     right_session = TransformersSession(
-        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
         model_config=Model(path="/tmp/model-right"),
         model=FakeModel(tag="right"),
         tokenizer=FakeTokenizer(),
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
@@ -1881,13 +1895,13 @@ def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batchi
     prepare_tokenizer = PrepareTokenizer()
     model = BlockingPagedModel()
     session = TransformersSession(
-        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
         model_config=Model(path="/tmp/model"),
         model=model,
         tokenizer=GenerateTokenizer(),
         prepare_tokenizer=prepare_tokenizer,
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="flash_attention_2",
+        requested_attn_implementation="paged|flash_attention_2",
         effective_attn_implementation="paged|flash_attention_2",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
@@ -1943,12 +1957,12 @@ def test_transformer_session_falls_back_to_standard_generate_when_paged_generati
         set_attn_implementation=lambda value: None,
     )
     session = TransformersSession(
-        config=Transformers(attn_implementation="sdpa", paged_attention=True),
+        config=Transformers(attn_implementation="paged|sdpa"),
         model_config=Model(path="/tmp/model"),
         model=model,
         tokenizer=SimpleNamespace(),
         input_device=SimpleNamespace(type="cuda"),
-        requested_attn_implementation="sdpa",
+        requested_attn_implementation="paged|sdpa",
         effective_attn_implementation="paged|sdpa",
         paged_attention_enabled=True,
         generation_backend="continuous_batching",

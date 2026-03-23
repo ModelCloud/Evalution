@@ -11,6 +11,7 @@ from evalution.config import Model
 from evalution.engines.transformers_common import (
     BaseTransformerSession,
     _TransformersCommonConfig,
+    _requests_paged_attention,
     load_transformer_runtime,
 )
 
@@ -21,6 +22,8 @@ class TransformersCompat(_TransformersCommonConfig):
 
     # Build the compatibility session that emulates the continuous-refill API on top of standard generate().
     def build(self, model: Model) -> BaseTransformerSession:
+        if _requests_paged_attention(self.attn_implementation):
+            raise ValueError("TransformersCompat does not support paged attn_implementation")
         self.resolved_engine = "TransformersCompat"
         return TransformersCompatSession.from_config(self, model)
 
