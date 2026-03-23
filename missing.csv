@@ -89,7 +89,6 @@ kbl,65,kbl/bar_exam/civil/kbl_bar_exam_em_civil_2012.yaml,kbl/bar_exam/civil/kbl
 kmmlu,250,kmmlu/cot_hard/kmmlu_cot_hard_accounting.yaml,kmmlu/cot_hard/kmmlu_cot_hard_agricultural_sciences.yaml
 kobest,6,kobest/kobest_boolq.yaml,kobest/kobest_copa.yaml
 kormedmcqa,5,kormedmcqa/dentist.yaml,kormedmcqa/doctor.yaml
-lambada_cloze,2,lambada_cloze/lambada_openai_cloze.yaml,lambada_cloze/lambada_standard_cloze.yaml
 lambada_multilingual,5,lambada_multilingual/lambada_mt_de.yaml,lambada_multilingual/lambada_mt_en.yaml
 lambada_multilingual_stablelm,7,lambada_multilingual_stablelm/lambada_mt_stablelm_de.yaml,lambada_multilingual_stablelm/lambada_mt_stablelm_en.yaml
 libra,22,libra/librusec_history.yaml,libra/librusec_mhqa.yaml

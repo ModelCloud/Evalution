@@ -1180,6 +1180,34 @@ SUITE_SPECS = {
             metadata_validator=_metadata_fields_truthy("text", "target_token"),
         ),
     ),
+    "lambada_openai_cloze": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_cloze(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="lambada_openai_cloze",
+        baseline={
+            "acc,ll": 0.0234375,
+            "ppl,ll": 2083.3316223968745,
+        },
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/lambada_openai",
+            "dataset_name": "default",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+            "prompt_variant": "cloze",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix=" ____. ->",
+            metadata_validator=_metadata_fields_truthy("text", "target_token", "prompt_variant"),
+        ),
+    ),
     "lambada_standard": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_standard(batch_size=24, streaming=True, max_rows=128),
         expected_name="lambada_standard",
@@ -1200,6 +1228,34 @@ SUITE_SPECS = {
             sample,
             index,
             metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_standard_cloze": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_standard_cloze(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="lambada_standard_cloze",
+        baseline={
+            "acc,ll": 0.015625,
+            "ppl,ll": 4921.9734842680955,
+        },
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "cimec/lambada",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+            "prompt_variant": "cloze",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix=" ____. ->",
+            metadata_validator=_metadata_fields_truthy("text", "target_token", "prompt_variant"),
         ),
     ),
     "medmcqa": SuiteSpec(
