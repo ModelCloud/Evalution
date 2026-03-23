@@ -31,7 +31,13 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    container:
+      image: 10.0.13.31:5000/nvidia/cuda:${{ matrix.cuda }}-ubuntu22.04_0206
+      volumes:
+        - /monster/ci/env/entrypoint.sh:/entrypoint.sh
+        - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
+        - /monster/ci/uv:/opt/uv
+        - /monster/ci/env:/opt/env
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
