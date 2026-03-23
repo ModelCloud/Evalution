@@ -197,6 +197,16 @@ the compatibility engine explicitly.
 
 Evalution currently ships the following built-in suites:
 
+Evalution aims to align each built-in suite's default split, prompting shape, and scoring logic as
+closely as practical with the original benchmark paper and any released reference code from the
+benchmark authors. Users should compare scores across different LLM evaluation projects with care:
+some frameworks do not match the original benchmark scoring exactly, which can make headline
+numbers look comparable when they are not. This matters most for researchers reporting results in
+papers or otherwise making cross-project claims. Reported scores are also affected by runtime and
+numerics details such as hardware behavior, dtype and normalization choices, kernel differences,
+and attention or matmul approximation and accumulation behavior. Even with the same benchmark
+logic, those implementation details can shift results.
+
 | Suite | Hugging Face dataset | Default split | Scoring | Original benchmark |
 | --- | --- | --- | --- | --- |
 | `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
