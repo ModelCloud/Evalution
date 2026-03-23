@@ -9,8 +9,9 @@ import inspect
 import sys
 import threading
 from collections.abc import Iterable, Iterator
-from contextlib import contextmanager, suppress
+from contextlib import contextmanager, nullcontext, suppress
 from dataclasses import dataclass, field
+from functools import wraps
 from itertools import chain, islice
 from typing import Any
 
@@ -32,6 +33,8 @@ _AUTO_PAGED_ATTENTION = "auto"
 _PENDING_NOGIL_TRANSFORMERS_PR_URL = "https://github.com/huggingface/transformers/pull/44924"
 _PENDING_NOGIL_TRANSFORMERS_PR_WARNED = False
 _PENDING_NOGIL_TRANSFORMERS_PR_WARN_LOCK = threading.Lock()
+# Serialize the one-time Evalution-side stop-gap patch for transformers continuous batching.
+_CONTINUOUS_BATCHING_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
 
 
 @dataclass(slots=True)
@@ -85,6 +88,55 @@ def _warn_pending_nogil_transformers_pr_once() -> None:
         "and concurrent model loading until that PR ships: %s",
         _PENDING_NOGIL_TRANSFORMERS_PR_URL,
     )
+
+
+def _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManager: Any) -> None:
+    """Apply Evalution's local continuous-batching CUDA-device stop-gap exactly once.
+
+    The upstream manager performs its real paged-attention work on a background thread, not on
+    the caller thread that constructs or starts the manager. CUDA's "current device" is
+    thread-local, so wrapping Evalution's outer generate call would not affect the manager's
+    worker thread. We therefore patch the manager entrypoint that actually runs on that worker.
+
+    This is intentionally local to Evalution instead of /root/transformers because it is only a
+    stop-gap while upstream no-GIL / multi-manager fixes are still settling. The wrapper makes
+    device-global CUDA APIs such as graph creation, stream synchronization, and graph pool setup
+    observe the manager model's device on that specific worker thread.
+
+    Important limitation: this assumes one effective CUDA device per manager thread. It is a good
+    fit for the current Evalution compare case where each lane owns one model/device. It is not a
+    general fix for a single process driving one model across several CUDA devices directly.
+    """
+    run_generation_loop = getattr(ContinuousBatchingManager, "_run_generation_loop", None)
+    if not callable(run_generation_loop):
+        return
+
+    with _CONTINUOUS_BATCHING_CUDA_CONTEXT_PATCH_LOCK:
+        current = getattr(ContinuousBatchingManager, "_run_generation_loop", None)
+        # Another session may have patched the class first; avoid wrapping the same method twice.
+        if not callable(current) or getattr(current, "__evalution_cuda_context_patch__", False):
+            return
+
+        @wraps(current)
+        def _wrapped_run_generation_loop(self: Any, *args: Any, **kwargs: Any) -> Any:
+            import torch
+
+            model_device = getattr(getattr(self, "model", None), "device", None)
+            # The manager loop is the first code that runs on the background generation thread.
+            # Enter the model's CUDA device here so any current-device CUDA calls made deeper in
+            # transformers resolve against the manager's model instead of whatever device happened
+            # to be current on that thread previously.
+            maybe_device = (
+                torch.cuda.device(model_device)
+                if getattr(model_device, "type", None) == "cuda"
+                else nullcontext()
+            )
+            with maybe_device:
+                return current(self, *args, **kwargs)
+
+        # Mark the wrapper so repeated manager construction in the same process stays idempotent.
+        _wrapped_run_generation_loop.__evalution_cuda_context_patch__ = True
+        ContinuousBatchingManager._run_generation_loop = _wrapped_run_generation_loop
 
 
 @dataclass(slots=True)
@@ -356,6 +408,7 @@ class TransformerSession(BaseTransformerSession):
     ) -> Any:
         from transformers import ContinuousBatchingManager
 
+        _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManager)
         generation_config = self._build_generation_config([request])
 
         with self._state_lock:

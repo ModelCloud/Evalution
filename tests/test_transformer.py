@@ -533,6 +533,71 @@ def test_transformer_build_skips_pending_nogil_pr_warning_when_gil_is_enabled(mo
     assert warnings == []
 
 
+def test_transformer_monkey_patches_continuous_batching_generation_loop_once(monkeypatch) -> None:
+    import evalution.engines.transformer as transformer_module
+
+    entered_devices: list[object] = []
+    calls: list[str] = []
+
+    class FakeCudaDeviceContext:
+        def __init__(self, device: object) -> None:
+            self.device = device
+
+        def __enter__(self) -> None:
+            entered_devices.append(self.device)
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            del exc_type, exc, tb
+            return False
+
+    class FakeContinuousBatchingManager:
+        def __init__(self) -> None:
+            self.model = SimpleNamespace(device=SimpleNamespace(type="cuda", index=3))
+
+        def _run_generation_loop(self) -> str:
+            calls.append("run")
+            return "ok"
+
+    original = FakeContinuousBatchingManager._run_generation_loop
+    monkeypatch.setattr(torch.cuda, "device", lambda device: FakeCudaDeviceContext(device))
+
+    # The stop-gap is class-level because the real continuous-batching work runs on the manager
+    # thread. Re-applying it should therefore keep a single stable wrapper on that entrypoint.
+    transformer_module._patch_continuous_batching_manager_cuda_context_once(FakeContinuousBatchingManager)
+    patched = FakeContinuousBatchingManager._run_generation_loop
+    transformer_module._patch_continuous_batching_manager_cuda_context_once(FakeContinuousBatchingManager)
+
+    assert patched is not original
+    assert FakeContinuousBatchingManager._run_generation_loop is patched
+    assert patched.__wrapped__ is original
+
+    manager = FakeContinuousBatchingManager()
+    assert manager._run_generation_loop() == "ok"
+    assert entered_devices == [manager.model.device]
+    assert calls == ["run"]
+
+
+def test_transformer_monkey_patch_skips_cuda_context_for_cpu_manager(monkeypatch) -> None:
+    import evalution.engines.transformer as transformer_module
+
+    class FakeContinuousBatchingManager:
+        def __init__(self) -> None:
+            self.model = SimpleNamespace(device=SimpleNamespace(type="cpu"))
+
+        def _run_generation_loop(self) -> str:
+            return "ok"
+
+    def fail_if_called(device: object) -> object:
+        raise AssertionError(f"torch.cuda.device should not be used for CPU manager: {device!r}")
+
+    monkeypatch.setattr(torch.cuda, "device", fail_if_called)
+    # CPU sessions should keep the original control flow and never touch CUDA state.
+    transformer_module._patch_continuous_batching_manager_cuda_context_once(FakeContinuousBatchingManager)
+
+    manager = FakeContinuousBatchingManager()
+    assert manager._run_generation_loop() == "ok"
+
+
 def test_transformer_session_prepare_requests_batches_tokenization() -> None:
     class FakePrepareTokenizer:
         def __init__(self) -> None:
