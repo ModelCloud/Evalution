@@ -13,7 +13,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-mrpc_module = importlib.import_module("evalution.suites.mrpc")
+mrpc_module = importlib.import_module("evalution.benchmarks.mrpc")
 
 
 class FakeSession:
@@ -64,7 +64,7 @@ def test_mrpc_scores_accuracy_and_positive_class_f1(monkeypatch) -> None:
     )
     monkeypatch.setattr(mrpc_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.mrpc(max_rows=3, batch_size=5).evaluate(FakeSession())
+    result = evalution.benchmarks.mrpc(max_rows=3, batch_size=5).evaluate(FakeSession())
 
     assert result.name == "mrpc"
     assert result.metrics["acc,ll"] == pytest.approx(2 / 3)

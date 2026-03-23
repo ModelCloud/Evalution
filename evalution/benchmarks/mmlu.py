@@ -20,9 +20,9 @@ from evalution.scorers.multiple_choice import (
     choice_logprobs_norm,
     multiple_choice_outcome,
 )
-from evalution.suites.base import TestSuite
-from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
-from evalution.suites.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
+from evalution.benchmarks.base import TestSuite
+from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
+from evalution.benchmarks.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
 
 _MMLU_LABELS = ["A", "B", "C", "D"]
 _MMLU_SUBSET_TREE = {

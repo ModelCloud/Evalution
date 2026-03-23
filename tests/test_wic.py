@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-wic_module = importlib.import_module("evalution.suites.wic")
+wic_module = importlib.import_module("evalution.benchmarks.wic")
 
 
 class FakeSession:
@@ -52,7 +52,7 @@ def test_wic_scores_word_in_context_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(wic_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.wic(max_rows=1, batch_size=7).evaluate(FakeSession())
+    result = evalution.benchmarks.wic(max_rows=1, batch_size=7).evaluate(FakeSession())
 
     assert result.name == "wic"
     assert result.metrics == {

@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-openbookqa_module = importlib.import_module("evalution.suites.openbookqa")
+openbookqa_module = importlib.import_module("evalution.benchmarks.openbookqa")
 
 
 class FakeSession:
@@ -47,7 +47,7 @@ def test_openbookqa_scores_four_way_multiple_choice_accuracy(monkeypatch) -> Non
     )
     monkeypatch.setattr(openbookqa_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.openbookqa(max_rows=1, batch_size=7).evaluate(FakeSession())
+    result = evalution.benchmarks.openbookqa(max_rows=1, batch_size=7).evaluate(FakeSession())
 
     assert result.name == "openbookqa"
     assert result.metrics == {
@@ -118,7 +118,7 @@ def test_openbookqa_can_emit_label_permutation_metric(monkeypatch) -> None:
                 )
             return outputs
 
-    result = evalution.openbookqa(
+    result = evalution.benchmarks.openbookqa(
         max_rows=1,
         batch_size=7,
         label_permutations=0.25,

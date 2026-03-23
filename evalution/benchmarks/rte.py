@@ -10,7 +10,7 @@ from typing import Any
 
 from datasets import load_dataset
 
-from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 
 def _rte_prompt(premise: str, hypothesis: str) -> str:

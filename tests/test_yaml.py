@@ -13,7 +13,7 @@ import evalution
 from evalution import yaml as evalution_yaml
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
-gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
+gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 
 
 class FakeEngine(BaseEngine):
@@ -149,30 +149,31 @@ tests:
     )
 
     assert "import evalution as eval" in script
+    assert "import evalution.benchmarks as benchmarks" in script
     assert "import evalution.engines as engines" in script
     assert "eval.engine(engines.Transformers(" in script
     assert ".model(eval.Model(" in script
-    assert ".run(eval.gsm8k_platinum(" in script
-    assert ".run(eval.boolq(" in script
-    assert ".run(eval.cb(" in script
-    assert ".run(eval.cola(" in script
-    assert ".run(eval.copa(" in script
-    assert ".run(eval.arc_easy(" in script
-    assert ".run(eval.arc_challenge(" in script
-    assert ".run(eval.hellaswag(" in script
-    assert ".run(eval.mmlu(" in script
-    assert ".run(eval.mmlu_pro(" in script
-    assert ".run(eval.mnli(" in script
-    assert ".run(eval.mrpc(" in script
-    assert ".run(eval.openbookqa(" in script
-    assert ".run(eval.piqa(" in script
-    assert ".run(eval.qnli(" in script
-    assert ".run(eval.qqp(" in script
-    assert ".run(eval.rte(" in script
-    assert ".run(eval.sst2(" in script
-    assert ".run(eval.wic(" in script
-    assert ".run(eval.wnli(" in script
-    assert ".run(eval.winogrande(" in script
+    assert ".run(benchmarks.gsm8k_platinum(" in script
+    assert ".run(benchmarks.boolq(" in script
+    assert ".run(benchmarks.cb(" in script
+    assert ".run(benchmarks.cola(" in script
+    assert ".run(benchmarks.copa(" in script
+    assert ".run(benchmarks.arc_easy(" in script
+    assert ".run(benchmarks.arc_challenge(" in script
+    assert ".run(benchmarks.hellaswag(" in script
+    assert ".run(benchmarks.mmlu(" in script
+    assert ".run(benchmarks.mmlu_pro(" in script
+    assert ".run(benchmarks.mnli(" in script
+    assert ".run(benchmarks.mrpc(" in script
+    assert ".run(benchmarks.openbookqa(" in script
+    assert ".run(benchmarks.piqa(" in script
+    assert ".run(benchmarks.qnli(" in script
+    assert ".run(benchmarks.qqp(" in script
+    assert ".run(benchmarks.rte(" in script
+    assert ".run(benchmarks.sst2(" in script
+    assert ".run(benchmarks.wic(" in script
+    assert ".run(benchmarks.wnli(" in script
+    assert ".run(benchmarks.winogrande(" in script
 
 
 def test_run_yaml_requires_tests_section() -> None:

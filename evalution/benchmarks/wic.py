@@ -10,7 +10,7 @@ from typing import Any
 
 from datasets import load_dataset
 
-from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 
 def _wic_target_word(doc: dict[str, Any]) -> str:

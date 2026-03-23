@@ -26,12 +26,13 @@ Simple usage:
 
 ```python
 import evalution as eval
+import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
 result = (
     eval.engine(engines.Transformers())
     .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
-    .run(eval.gsm8k_platinum())
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -39,6 +40,7 @@ Advanced usage:
 
 ```python
 import evalution as eval
+import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
 result = (
@@ -60,7 +62,7 @@ result = (
         )
     )
     .run(
-        eval.gsm8k_platinum(
+        benchmarks.gsm8k_platinum(
             variant="cot",
             apply_chat_template=True,
             max_new_tokens=96,
@@ -69,7 +71,7 @@ result = (
         )
     )
     .run(
-        eval.arc_challenge(
+        benchmarks.arc_challenge(
             batch_size=64,
             max_rows=128,
         )
@@ -84,6 +86,8 @@ Compare usage:
 
 ```python
 import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
 
 result = (
     eval.compare(
@@ -96,8 +100,8 @@ result = (
             label="qwen",
         ),
     )
-    .run(eval.gsm8k_platinum(max_rows=128))
-    .run(eval.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum(max_rows=128))
+    .run(benchmarks.arc_challenge(max_rows=128))
 )
 ```
 
@@ -153,16 +157,16 @@ evalution emit-python evalution.yaml
 `engines.Transformers(...)` accepts runtime options such as `dtype`, `device`, `batch_size`,
 `paged_attention`, `attn_implementation`, and `max_new_tokens`.
 
-Per-suite options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`, and
-scorer-specific options like `label_permutations` can be set directly on each suite call or in each
-YAML `tests` entry.
+Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`,
+and scorer-specific options like `label_permutations` can be set directly on each benchmark call
+or in each YAML `tests` entry.
 
 ## Subset Selection
 
-Subset-aware suites use a `subsets` selector instead of suite-specific selector names.
+Subset-aware benchmarks use a `subsets` selector instead of benchmark-specific selector names.
 Currently this applies to `mmlu` and `mmlu_pro`.
 
-- `subsets: all` runs the full suite.
+- `subsets: all` runs the full benchmark.
 - `subsets: stem` runs the full `stem` subtree.
 - `subsets: stem.math` or `subsets: stem.abstract_algebra` runs a single leaf path.
 - `subsets: [stem, humanities]` runs the union of multiple selections.
@@ -172,13 +176,14 @@ Python:
 
 ```python
 import evalution as eval
+import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
 result = (
     eval.engine(engines.Transformers())
     .model(eval.Model(path="/monster/data/model/Llama-3.2-1B-Instruct"))
-    .run(eval.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
-    .run(eval.mmlu_pro(subsets="stem.math"))
+    .run(benchmarks.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
+    .run(benchmarks.mmlu_pro(subsets="stem.math"))
 )
 ```
 
@@ -199,9 +204,9 @@ tests:
 Use `engines.TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you
 want the compatibility engine explicitly.
 
-## Supported Suites
+## Supported Benchmarks
 
-Evalution currently ships the following built-in suites:
+Evalution currently ships the following built-in benchmarks:
 
 Evalution aims to align each built-in suite's default split, prompting shape, and scoring logic as
 closely as practical with the original benchmark paper and any released reference code from the

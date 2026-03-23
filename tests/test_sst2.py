@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-sst2_module = importlib.import_module("evalution.suites.sst2")
+sst2_module = importlib.import_module("evalution.benchmarks.sst2")
 
 
 class FakeSession:
@@ -52,7 +52,7 @@ def test_sst2_scores_sentiment_multiple_choice_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(sst2_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.sst2(max_rows=2, batch_size=4).evaluate(FakeSession())
+    result = evalution.benchmarks.sst2(max_rows=2, batch_size=4).evaluate(FakeSession())
 
     assert result.name == "sst2"
     assert result.metrics == {

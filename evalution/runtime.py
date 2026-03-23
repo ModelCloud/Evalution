@@ -21,7 +21,7 @@ from evalution.logbar import (
     use_logging_context,
 )
 from evalution.results import RunResult
-from evalution.suites.base import TestSuite
+from evalution.benchmarks.base import TestSuite
 
 
 @dataclass(slots=True)

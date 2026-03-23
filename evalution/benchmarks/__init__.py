@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
+from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .base import BaseTestSuite, TestSuite
@@ -28,7 +29,6 @@ from .sst2 import SST2, sst2
 from .wic import WiC, wic
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
-from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
 
 __all__ = [
     "ARCEasy",

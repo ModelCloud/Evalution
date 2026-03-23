@@ -476,7 +476,7 @@ def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[di
 
 SUITE_SPECS = {
     "gsm8k": SuiteSpec(
-        suite_factory=lambda: evalution.gsm8k(
+        suite_factory=lambda: evalution.benchmarks.gsm8k(
             variant="cot",
             apply_chat_template=True,
             batch_size=24,
@@ -505,7 +505,7 @@ SUITE_SPECS = {
         result_validator=_validate_gsm8k_like_result,
     ),
     "gsm8k_platinum": SuiteSpec(
-        suite_factory=lambda: evalution.gsm8k_platinum(
+        suite_factory=lambda: evalution.benchmarks.gsm8k_platinum(
             variant="cot",
             apply_chat_template=True,
             batch_size=24,
@@ -533,7 +533,7 @@ SUITE_SPECS = {
         result_validator=_validate_gsm8k_like_result,
     ),
     "boolq": SuiteSpec(
-        suite_factory=lambda: evalution.boolq(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.boolq(batch_size=24, streaming=True, max_rows=128),
         expected_name="boolq",
         baseline={
             "acc,ll": 0.6796875,
@@ -557,7 +557,7 @@ SUITE_SPECS = {
         ),
     ),
     "cb": SuiteSpec(
-        suite_factory=lambda: evalution.cb(batch_size=24, streaming=True, max_rows=56),
+        suite_factory=lambda: evalution.benchmarks.cb(batch_size=24, streaming=True, max_rows=56),
         expected_name="cb",
         baseline={
             "acc,ll": 0.5714285714285714,
@@ -590,7 +590,7 @@ SUITE_SPECS = {
         ),
     ),
     "cola": SuiteSpec(
-        suite_factory=lambda: evalution.cola(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.cola(batch_size=24, streaming=True, max_rows=128),
         expected_name="cola",
         baseline={
             "acc,ll": 0.6484375,
@@ -623,7 +623,7 @@ SUITE_SPECS = {
         ),
     ),
     "copa": SuiteSpec(
-        suite_factory=lambda: evalution.copa(batch_size=24, streaming=True, max_rows=100),
+        suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, streaming=True, max_rows=100),
         expected_name="copa",
         baseline={
             "acc,ll": 0.74,
@@ -645,7 +645,7 @@ SUITE_SPECS = {
         ),
     ),
     "arc_easy": SuiteSpec(
-        suite_factory=lambda: evalution.arc_easy(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.arc_easy(batch_size=24, streaming=True, max_rows=128),
         expected_name="arc_easy",
         baseline={
             "acc,exam": 0.6640625,
@@ -664,7 +664,7 @@ SUITE_SPECS = {
         result_validator=_validate_arc_exam_result,
     ),
     "arc_challenge": SuiteSpec(
-        suite_factory=lambda: evalution.arc_challenge(
+        suite_factory=lambda: evalution.benchmarks.arc_challenge(
             batch_size=24,
             streaming=True,
             max_rows=128,
@@ -687,7 +687,7 @@ SUITE_SPECS = {
         result_validator=_validate_arc_exam_result,
     ),
     "arc_challenge_label_perm_0_25": SuiteSpec(
-        suite_factory=lambda: evalution.arc_challenge(
+        suite_factory=lambda: evalution.benchmarks.arc_challenge(
             batch_size=24,
             streaming=True,
             max_rows=128,
@@ -724,7 +724,7 @@ SUITE_SPECS = {
         result_validator=_validate_arc_exam_result,
     ),
     "hellaswag": SuiteSpec(
-        suite_factory=lambda: evalution.hellaswag(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.hellaswag(batch_size=24, streaming=True, max_rows=128),
         expected_name="hellaswag",
         baseline={
             "acc,ll": 0.4375,
@@ -746,7 +746,7 @@ SUITE_SPECS = {
         ),
     ),
     "hellaswag_label_perm_0_25": SuiteSpec(
-        suite_factory=lambda: evalution.hellaswag(
+        suite_factory=lambda: evalution.benchmarks.hellaswag(
             batch_size=24,
             streaming=True,
             max_rows=128,
@@ -784,7 +784,7 @@ SUITE_SPECS = {
         ),
     ),
     "mmlu_all": SuiteSpec(
-        suite_factory=lambda: evalution.mmlu(
+        suite_factory=lambda: evalution.benchmarks.mmlu(
             subsets="all",
             num_fewshot=5,
             batch_size=24,
@@ -821,7 +821,7 @@ SUITE_SPECS = {
         ),
     ),
     "mmlu_stem": SuiteSpec(
-        suite_factory=lambda: evalution.mmlu(
+        suite_factory=lambda: evalution.benchmarks.mmlu(
             subsets="stem",
             num_fewshot=5,
             batch_size=24,
@@ -859,7 +859,7 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "mnli": SuiteSpec(
-        suite_factory=lambda: evalution.mnli(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.mnli(batch_size=24, streaming=True, max_rows=128),
         expected_name="mnli",
         baseline={
             "acc,ll": 0.5078125,
@@ -883,7 +883,7 @@ SUITE_SPECS = {
         ),
     ),
     "mrpc": SuiteSpec(
-        suite_factory=lambda: evalution.mrpc(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.mrpc(batch_size=24, streaming=True, max_rows=128),
         expected_name="mrpc",
         baseline={
             "acc,ll": 0.6953125,
@@ -920,7 +920,7 @@ SUITE_SPECS = {
         ),
     ),
     "openbookqa": SuiteSpec(
-        suite_factory=lambda: evalution.openbookqa(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.openbookqa(batch_size=24, streaming=True, max_rows=128),
         expected_name="openbookqa",
         baseline={
             "acc,ll": 0.25,
@@ -944,7 +944,7 @@ SUITE_SPECS = {
         ),
     ),
     "openbookqa_label_perm_0_25": SuiteSpec(
-        suite_factory=lambda: evalution.openbookqa(
+        suite_factory=lambda: evalution.benchmarks.openbookqa(
             batch_size=24,
             streaming=True,
             max_rows=128,
@@ -978,7 +978,7 @@ SUITE_SPECS = {
         ),
     ),
     "piqa": SuiteSpec(
-        suite_factory=lambda: evalution.piqa(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.piqa(batch_size=24, streaming=True, max_rows=128),
         expected_name="piqa",
         baseline={
             "acc,ll": 0.71875,
@@ -1001,7 +1001,7 @@ SUITE_SPECS = {
         ),
     ),
     "qnli": SuiteSpec(
-        suite_factory=lambda: evalution.qnli(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.qnli(batch_size=24, streaming=True, max_rows=128),
         expected_name="qnli",
         baseline={
             "acc,ll": 0.4609375,
@@ -1025,7 +1025,7 @@ SUITE_SPECS = {
         ),
     ),
     "qqp": SuiteSpec(
-        suite_factory=lambda: evalution.qqp(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.qqp(batch_size=24, streaming=True, max_rows=128),
         expected_name="qqp",
         baseline={
             "acc,ll": 0.34375,
@@ -1062,7 +1062,7 @@ SUITE_SPECS = {
         ),
     ),
     "rte": SuiteSpec(
-        suite_factory=lambda: evalution.rte(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.rte(batch_size=24, streaming=True, max_rows=128),
         expected_name="rte",
         baseline={
             "acc,ll": 0.625,
@@ -1086,7 +1086,7 @@ SUITE_SPECS = {
         ),
     ),
     "sst2": SuiteSpec(
-        suite_factory=lambda: evalution.sst2(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.sst2(batch_size=24, streaming=True, max_rows=128),
         expected_name="sst2",
         baseline={
             "acc,ll": 0.5390625,
@@ -1110,7 +1110,7 @@ SUITE_SPECS = {
         ),
     ),
     "wic": SuiteSpec(
-        suite_factory=lambda: evalution.wic(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.wic(batch_size=24, streaming=True, max_rows=128),
         expected_name="wic",
         baseline={
             "acc,ll": 0.5,
@@ -1136,7 +1136,7 @@ SUITE_SPECS = {
         ),
     ),
     "wnli": SuiteSpec(
-        suite_factory=lambda: evalution.wnli(batch_size=24, streaming=True, max_rows=71),
+        suite_factory=lambda: evalution.benchmarks.wnli(batch_size=24, streaming=True, max_rows=71),
         expected_name="wnli",
         baseline={
             "acc,ll": 0.4225352112676056,
@@ -1160,7 +1160,7 @@ SUITE_SPECS = {
         ),
     ),
     "winogrande": SuiteSpec(
-        suite_factory=lambda: evalution.winogrande(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.winogrande(batch_size=24, streaming=True, max_rows=128),
         expected_name="winogrande",
         baseline={
             "acc,ll": 0.5625,
@@ -1182,7 +1182,7 @@ SUITE_SPECS = {
         ),
     ),
     "mmlu_pro_all": SuiteSpec(
-        suite_factory=lambda: evalution.mmlu_pro(
+        suite_factory=lambda: evalution.benchmarks.mmlu_pro(
             subsets="all",
             num_fewshot=5,
             batch_size=4,
@@ -1214,7 +1214,7 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "mmlu_pro_stem": SuiteSpec(
-        suite_factory=lambda: evalution.mmlu_pro(
+        suite_factory=lambda: evalution.benchmarks.mmlu_pro(
             subsets="stem",
             num_fewshot=5,
             batch_size=4,

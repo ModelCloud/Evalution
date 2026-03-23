@@ -65,7 +65,7 @@ def test_cli_run_executes_yaml_and_prints_json(monkeypatch, tmp_path, capsys) ->
             }
         ]
     )
-    gsm8k_module = __import__("evalution.suites.gsm8k_platinum", fromlist=["load_dataset"])
+    gsm8k_module = __import__("evalution.benchmarks.gsm8k_platinum", fromlist=["load_dataset"])
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
     monkeypatch.setitem(evalution_yaml._ENGINE_FACTORIES, "fake", FakeEngine)
 
@@ -115,9 +115,10 @@ tests:
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "import evalution as eval" in captured.out
+    assert "import evalution.benchmarks as benchmarks" in captured.out
     assert "import evalution.engines as engines" in captured.out
     assert "eval.engine(engines.Transformers(" in captured.out
-    assert ".run(eval.arc_challenge(" in captured.out
+    assert ".run(benchmarks.arc_challenge(" in captured.out
 
 
 def test_cli_run_can_write_json_to_output_file(monkeypatch, tmp_path) -> None:
@@ -130,7 +131,7 @@ def test_cli_run_can_write_json_to_output_file(monkeypatch, tmp_path) -> None:
             }
         ]
     )
-    gsm8k_module = __import__("evalution.suites.gsm8k_platinum", fromlist=["load_dataset"])
+    gsm8k_module = __import__("evalution.benchmarks.gsm8k_platinum", fromlist=["load_dataset"])
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
     monkeypatch.setitem(evalution_yaml._ENGINE_FACTORIES, "fake", FakeEngine)
 

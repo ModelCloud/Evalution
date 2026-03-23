@@ -17,8 +17,8 @@ from evalution.engines.base import (
     LoglikelihoodOutput,
 )
 
-gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
-arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
+gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
+arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challenge")
 
 
 class FakeEngine(BaseEngine):
@@ -98,7 +98,7 @@ def test_run_accepts_dict_model_and_returns_structured_results(monkeypatch) -> N
     result = evalution.run(
         model={"path": "/tmp/model"},
         engine=FakeEngine(),
-        tests=[evalution.gsm8k_platinum(max_rows=1)],
+        tests=[evalution.benchmarks.gsm8k_platinum(max_rows=1)],
     )
 
     assert result.model["path"] == "/tmp/model"
@@ -123,7 +123,7 @@ def test_engine_runner_chains_model_and_test_runs(monkeypatch) -> None:
 
     engine = FakeEngine()
     result = evalution.engine(engine).model({"path": "/tmp/model"}).run(
-        evalution.gsm8k_platinum(max_rows=1)
+        evalution.benchmarks.gsm8k_platinum(max_rows=1)
     )
 
     assert result.model["path"] == "/tmp/model"
@@ -148,7 +148,7 @@ def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
     result = (
         evalution.engine(FakeEngine())
         .model({"path": "/tmp/model"}, label="llama")
-        .run(evalution.gsm8k_platinum(max_rows=1))
+        .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
         .result()
     )
 
@@ -196,7 +196,7 @@ def test_run_rejects_engines_that_return_non_session_objects(monkeypatch) -> Non
         evalution.run(
             model={"path": "/tmp/model"},
             engine=InvalidEngine(),
-            tests=[evalution.gsm8k_platinum(max_rows=1)],
+            tests=[evalution.benchmarks.gsm8k_platinum(max_rows=1)],
         )
     except TypeError as exc:
         assert str(exc) == "engine.build(model) must return a BaseInferenceSession"
@@ -238,7 +238,7 @@ def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
     result = evalution.run(
         model={"path": "/tmp/model"},
         engine=engine,
-        tests=[evalution.arc_challenge(max_rows=1)],
+        tests=[evalution.benchmarks.arc_challenge(max_rows=1)],
     )
 
     assert len(result.tests) == 1
@@ -263,8 +263,8 @@ def test_run_calls_session_gc_between_test_suites(monkeypatch) -> None:
         model={"path": "/tmp/model"},
         engine=engine,
         tests=[
-            evalution.gsm8k_platinum(max_rows=1),
-            evalution.gsm8k_platinum(max_rows=1),
+            evalution.benchmarks.gsm8k_platinum(max_rows=1),
+            evalution.benchmarks.gsm8k_platinum(max_rows=1),
         ],
     )
 
@@ -289,8 +289,8 @@ def test_engine_runner_calls_session_gc_between_test_runs(monkeypatch) -> None:
     result = (
         evalution.engine(engine)
         .model({"path": "/tmp/model"})
-        .run(evalution.gsm8k_platinum(max_rows=1))
-        .run(evalution.gsm8k_platinum(max_rows=1))
+        .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
+        .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
     )
 
     assert len(result.tests) == 2

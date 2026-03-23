@@ -13,7 +13,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-cb_module = importlib.import_module("evalution.suites.cb")
+cb_module = importlib.import_module("evalution.benchmarks.cb")
 
 
 class FakeSession:
@@ -67,7 +67,7 @@ def test_cb_scores_accuracy_and_macro_f1(monkeypatch) -> None:
     )
     monkeypatch.setattr(cb_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.cb(max_rows=3, batch_size=7).evaluate(FakeSession())
+    result = evalution.benchmarks.cb(max_rows=3, batch_size=7).evaluate(FakeSession())
 
     assert result.name == "cb"
     assert result.metrics["acc,ll"] == pytest.approx(2 / 3)

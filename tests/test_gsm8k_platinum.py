@@ -21,13 +21,13 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.scorers.gsm8k import INVALID_ANSWER
 from evalution.scorers.gsm8k import extract_format_insensitive_numeric_answer
 from evalution.scorers.gsm8k import extract_gsm8k_platinum_reference_answer
-from evalution.suites.execution import AUTO_BATCH_PREVIEW_ROWS
-from evalution.suites.execution import PreparedSample
-from evalution.suites.execution import _prefetch_executor
-from evalution.suites.execution import iter_prefetched_batches
-from evalution.suites.execution import iter_prefetched_samples
+from evalution.benchmarks.execution import AUTO_BATCH_PREVIEW_ROWS
+from evalution.benchmarks.execution import PreparedSample
+from evalution.benchmarks.execution import _prefetch_executor
+from evalution.benchmarks.execution import iter_prefetched_batches
+from evalution.benchmarks.execution import iter_prefetched_samples
 
-gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
+gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 
 _BOXED_RE = pcre.compile(r"\\boxed\{(?:\\text\{)?([^\\{}]+)\}")
 _PLATINUM_REFERENCE_NUMBER_RE = pcre.compile(r"-?[0-9.]*[0-9]")
@@ -204,7 +204,7 @@ def test_gsm8k_platinum_cot_llama_uses_multiturn_chat_by_default(monkeypatch) ->
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot_llama",
         max_rows=1,
         apply_chat_template=True,
@@ -233,7 +233,7 @@ def test_gsm8k_platinum_scores_numeric_primary(monkeypatch) -> None:
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         max_rows=1,
         apply_chat_template=False,
@@ -275,7 +275,7 @@ def test_gsm8k_platinum_uses_engine_batch_size_by_default(monkeypatch) -> None:
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
     )
@@ -299,7 +299,7 @@ def test_gsm8k_platinum_suite_batch_size_overrides_engine_default(monkeypatch) -
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
         batch_size=2,
@@ -324,7 +324,7 @@ def test_gsm8k_platinum_uses_session_batch_size_resolver(monkeypatch) -> None:
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
     )
@@ -349,7 +349,7 @@ def test_gsm8k_platinum_uses_bounded_preview_for_auto_batch_size_resolution(monk
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
     )
@@ -379,7 +379,7 @@ def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> No
 
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", fake_load_dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
         streaming=True,
@@ -405,7 +405,7 @@ def test_gsm8k_platinum_prefetches_remaining_streaming_batches_on_background_thr
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
         streaming=True,
@@ -442,7 +442,7 @@ def test_gsm8k_platinum_streaming_prefetch_and_generation_respect_resolved_batch
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
         streaming=True,
@@ -479,7 +479,7 @@ def test_gsm8k_platinum_streaming_uses_continuous_generation_to_refill_slots(
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
         streaming=True,
@@ -519,7 +519,7 @@ def test_gsm8k_platinum_skips_auto_batch_preview_when_suite_batch_size_is_fixed(
     )
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k_platinum(
+    suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
         streaming=True,

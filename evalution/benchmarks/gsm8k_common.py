@@ -16,8 +16,8 @@ from evalution.scorers.gsm8k import (
     extract_format_insensitive_numeric_answer,
     numbers_equal,
 )
-from evalution.suites.base import BaseTestSuite
-from evalution.suites.execution import PreparedSample
+from evalution.benchmarks.base import BaseTestSuite
+from evalution.benchmarks.execution import PreparedSample
 
 GSM8KVariant = Literal["base", "cot", "cot_llama", "cot_zeroshot", "default"]
 

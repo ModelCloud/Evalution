@@ -14,8 +14,8 @@ from typing import Any
 from evalution.engines.base import GenerationOutput, InferenceSession
 from evalution.logbar import get_logger, manual_progress
 from evalution.results import SampleResult, TestResult
-from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
-from evalution.suites.execution import (
+from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
+from evalution.benchmarks.execution import (
     AUTO_BATCH_PREVIEW_ROWS,
     PreparedSample,
     collect_preview_samples,

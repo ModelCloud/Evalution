@@ -13,7 +13,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-qqp_module = importlib.import_module("evalution.suites.qqp")
+qqp_module = importlib.import_module("evalution.benchmarks.qqp")
 
 
 class FakeSession:
@@ -64,7 +64,7 @@ def test_qqp_scores_accuracy_and_positive_class_f1(monkeypatch) -> None:
     )
     monkeypatch.setattr(qqp_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.qqp(max_rows=3, batch_size=4).evaluate(FakeSession())
+    result = evalution.benchmarks.qqp(max_rows=3, batch_size=4).evaluate(FakeSession())
 
     assert result.name == "qqp"
     assert result.metrics["acc,ll"] == pytest.approx(2 / 3)

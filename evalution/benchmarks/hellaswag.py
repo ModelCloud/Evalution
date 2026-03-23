@@ -11,7 +11,7 @@ from typing import Any
 import pcre
 from datasets import load_dataset
 
-from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 _BRACKET_ARTIFACT_PATTERN = pcre.compile(r"\[.*?\]")
 

@@ -13,7 +13,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-cola_module = importlib.import_module("evalution.suites.cola")
+cola_module = importlib.import_module("evalution.benchmarks.cola")
 
 
 class FakeSession:
@@ -60,7 +60,7 @@ def test_cola_scores_accuracy_and_mcc(monkeypatch) -> None:
     )
     monkeypatch.setattr(cola_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.cola(max_rows=3, batch_size=4).evaluate(FakeSession())
+    result = evalution.benchmarks.cola(max_rows=3, batch_size=4).evaluate(FakeSession())
 
     assert result.name == "cola"
     assert result.metrics["acc,ll"] == pytest.approx(2 / 3)

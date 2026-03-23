@@ -1,6 +1,6 @@
 # Scorers
 
-Evalution keeps benchmark orchestration under `evalution/suites/` and shared scoring logic under
+Evalution keeps benchmark orchestration under `evalution/benchmarks/` and shared scoring logic under
 `evalution/scorers/`.
 
 For the short metric-key glossary used by runtime outputs such as `acc,ll` and `acc,exam`, see
@@ -8,7 +8,7 @@ For the short metric-key glossary used by runtime outputs such as `acc,ll` and `
 
 The split is:
 
-- `evalution/suites/`: dataset loading, prompt construction, few-shot selection, request execution,
+- `evalution/benchmarks/`: dataset loading, prompt construction, few-shot selection, request execution,
   and result packaging.
 - `evalution/scorers/`: score math, canonical answer extraction, benchmark-specific parser rules,
   and reusable metric helpers.

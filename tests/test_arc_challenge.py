@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
+arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challenge")
 
 
 class FakeSession:
@@ -58,7 +58,7 @@ def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(max_rows=1, batch_size=7)
+    suite = evalution.benchmarks.arc_challenge(max_rows=1, batch_size=7)
     session = FakeSession(
         [
             LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=5),
@@ -108,7 +108,7 @@ def test_arc_challenge_awards_partial_credit_for_tied_top_choices(monkeypatch) -
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(max_rows=1, batch_size=7)
+    suite = evalution.benchmarks.arc_challenge(max_rows=1, batch_size=7)
     session = FakeSession(
         [
             LoglikelihoodOutput(logprob=-0.4, is_greedy=False, token_count=5),
@@ -138,7 +138,7 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
 
     monkeypatch.setattr(arc_challenge_module, "load_dataset", fake_load_dataset)
 
-    suite = evalution.arc_challenge(
+    suite = evalution.benchmarks.arc_challenge(
         max_rows=1,
         batch_size=7,
         streaming=True,
@@ -196,7 +196,7 @@ def test_arc_challenge_can_emit_label_permutation_metric(monkeypatch) -> None:
                 )
             return outputs
 
-    result = evalution.arc_challenge(
+    result = evalution.benchmarks.arc_challenge(
         max_rows=1,
         batch_size=7,
         label_permutations=0.25,

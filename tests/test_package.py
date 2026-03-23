@@ -8,6 +8,7 @@ import evalution
 
 def test_package_import() -> None:
     assert evalution is not None
+    assert evalution.benchmarks is not None
     assert evalution.engines is not None
     assert evalution.BaseEngine is not None
     assert evalution.BaseInferenceSession is not None
@@ -19,50 +20,62 @@ def test_package_import() -> None:
     assert evalution.engines.TransformersCompat is not None
 
 
-def test_package_exports_arc_challenge_suite() -> None:
-    assert evalution.ARCChallenge is not None
-    assert callable(evalution.arc_challenge)
-    assert evalution.ARCEasy is not None
-    assert callable(evalution.arc_easy)
-    assert evalution.BoolQ is not None
-    assert callable(evalution.boolq)
-    assert evalution.CB is not None
-    assert callable(evalution.cb)
-    assert evalution.CoLA is not None
-    assert callable(evalution.cola)
-    assert evalution.COPA is not None
-    assert callable(evalution.copa)
-    assert evalution.HellaSwag is not None
-    assert callable(evalution.hellaswag)
-    assert evalution.MMLU is not None
-    assert callable(evalution.mmlu)
-    assert evalution.MMLUPro is not None
-    assert callable(evalution.mmlu_pro)
-    assert evalution.MNLI is not None
-    assert callable(evalution.mnli)
-    assert evalution.MRPC is not None
-    assert callable(evalution.mrpc)
-    assert evalution.OpenBookQA is not None
-    assert callable(evalution.openbookqa)
-    assert evalution.PIQA is not None
-    assert callable(evalution.piqa)
-    assert evalution.QNLI is not None
-    assert callable(evalution.qnli)
-    assert evalution.QQP is not None
-    assert callable(evalution.qqp)
-    assert evalution.RTE is not None
-    assert callable(evalution.rte)
-    assert evalution.SST2 is not None
-    assert callable(evalution.sst2)
-    assert evalution.WiC is not None
-    assert callable(evalution.wic)
-    assert evalution.WNLI is not None
-    assert callable(evalution.wnli)
-    assert evalution.WinoGrande is not None
-    assert callable(evalution.winogrande)
-    assert callable(evalution.f1_for_label)
-    assert callable(evalution.matthews_corrcoef)
-    assert callable(evalution.macro_f1)
+def test_package_exports_benchmarks_namespace() -> None:
+    assert evalution.benchmarks.ARCChallenge is not None
+    assert callable(evalution.benchmarks.arc_challenge)
+    assert evalution.benchmarks.ARCEasy is not None
+    assert callable(evalution.benchmarks.arc_easy)
+    assert evalution.benchmarks.BoolQ is not None
+    assert callable(evalution.benchmarks.boolq)
+    assert evalution.benchmarks.CB is not None
+    assert callable(evalution.benchmarks.cb)
+    assert evalution.benchmarks.CoLA is not None
+    assert callable(evalution.benchmarks.cola)
+    assert evalution.benchmarks.COPA is not None
+    assert callable(evalution.benchmarks.copa)
+    assert evalution.benchmarks.HellaSwag is not None
+    assert callable(evalution.benchmarks.hellaswag)
+    assert evalution.benchmarks.MMLU is not None
+    assert callable(evalution.benchmarks.mmlu)
+    assert evalution.benchmarks.MMLUPro is not None
+    assert callable(evalution.benchmarks.mmlu_pro)
+    assert evalution.benchmarks.MNLI is not None
+    assert callable(evalution.benchmarks.mnli)
+    assert evalution.benchmarks.MRPC is not None
+    assert callable(evalution.benchmarks.mrpc)
+    assert evalution.benchmarks.OpenBookQA is not None
+    assert callable(evalution.benchmarks.openbookqa)
+    assert evalution.benchmarks.PIQA is not None
+    assert callable(evalution.benchmarks.piqa)
+    assert evalution.benchmarks.QNLI is not None
+    assert callable(evalution.benchmarks.qnli)
+    assert evalution.benchmarks.QQP is not None
+    assert callable(evalution.benchmarks.qqp)
+    assert evalution.benchmarks.RTE is not None
+    assert callable(evalution.benchmarks.rte)
+    assert evalution.benchmarks.SST2 is not None
+    assert callable(evalution.benchmarks.sst2)
+    assert evalution.benchmarks.WiC is not None
+    assert callable(evalution.benchmarks.wic)
+    assert evalution.benchmarks.WNLI is not None
+    assert callable(evalution.benchmarks.wnli)
+    assert evalution.benchmarks.WinoGrande is not None
+    assert callable(evalution.benchmarks.winogrande)
+    assert callable(evalution.benchmarks.f1_for_label)
+    assert callable(evalution.benchmarks.matthews_corrcoef)
+    assert callable(evalution.benchmarks.macro_f1)
+
+
+def test_package_does_not_flatten_benchmarks_into_top_level_namespace() -> None:
+    assert not hasattr(evalution, "arc_challenge")
+    assert not hasattr(evalution, "arc_easy")
+    assert not hasattr(evalution, "gsm8k")
+    assert not hasattr(evalution, "mmlu")
+    assert not hasattr(evalution, "ARCChallenge")
+    assert not hasattr(evalution, "ARCEasy")
+    assert not hasattr(evalution, "GSM8K")
+    assert not hasattr(evalution, "MMLU")
+    assert not hasattr(evalution, "f1_for_label")
 
 
 def test_package_exports_fluent_runtime_api() -> None:

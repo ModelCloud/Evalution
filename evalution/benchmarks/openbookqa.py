@@ -10,8 +10,8 @@ from typing import Any
 
 from datasets import load_dataset
 
-from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
-from evalution.suites.multiple_choice_utils import choice_index_from_labels, question_answer_prompt
+from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.benchmarks.multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 
 
 @dataclass(slots=True)

@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import BaseEngine, BaseInferenceSession, LoglikelihoodOutput
 
-arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
+arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challenge")
 
 
 class FakeEngine(BaseEngine):
@@ -102,7 +102,7 @@ def test_compare_runs_same_suite_on_both_lanes_and_computes_delta(monkeypatch) -
 
     result = (
         evalution.compare(left_lane, right_lane)
-        .run(evalution.arc_challenge(max_rows=1))
+        .run(evalution.benchmarks.arc_challenge(max_rows=1))
         .result()
     )
 
@@ -136,8 +136,8 @@ def test_run_compare_calls_gc_between_shared_suite_list(monkeypatch) -> None:
         left_lane,
         right_lane,
         tests=[
-            evalution.arc_challenge(max_rows=1),
-            evalution.arc_challenge(max_rows=1),
+            evalution.benchmarks.arc_challenge(max_rows=1),
+            evalution.benchmarks.arc_challenge(max_rows=1),
         ],
     )
 
@@ -158,7 +158,7 @@ def test_compare_defaults_lane_names_to_model_paths_when_labels_are_omitted(monk
             evalution.engine(left_engine).model({"path": "/tmp/left-model"}),
             evalution.engine(right_engine).model({"path": "/tmp/right-model"}),
         )
-        .run(evalution.arc_challenge(max_rows=1))
+        .run(evalution.benchmarks.arc_challenge(max_rows=1))
         .result()
     )
 

@@ -11,33 +11,10 @@ from typing import Any
 
 import yaml
 
+import evalution.benchmarks as benchmarks
 from evalution.config import Model
 from evalution.engines import GPTQModel, Transformers, TransformersCompat
 from evalution.runtime import EvaluationRun, engine as build_engine
-from evalution.suites import (
-    arc_challenge,
-    arc_easy,
-    boolq,
-    cb,
-    cola,
-    copa,
-    gsm8k,
-    gsm8k_platinum,
-    hellaswag,
-    mmlu,
-    mmlu_pro,
-    mnli,
-    mrpc,
-    openbookqa,
-    piqa,
-    qnli,
-    qqp,
-    rte,
-    sst2,
-    wic,
-    wnli,
-    winogrande,
-)
 
 _ENGINE_FACTORIES: dict[str, Any] = {
     "gptqmodel": GPTQModel,
@@ -45,28 +22,28 @@ _ENGINE_FACTORIES: dict[str, Any] = {
     "transformerscompat": TransformersCompat,
 }
 _TEST_FACTORIES: dict[str, Any] = {
-    "arc_challenge": arc_challenge,
-    "arc_easy": arc_easy,
-    "boolq": boolq,
-    "cb": cb,
-    "cola": cola,
-    "copa": copa,
-    "gsm8k": gsm8k,
-    "gsm8k_platinum": gsm8k_platinum,
-    "hellaswag": hellaswag,
-    "mmlu": mmlu,
-    "mmlu_pro": mmlu_pro,
-    "mnli": mnli,
-    "mrpc": mrpc,
-    "openbookqa": openbookqa,
-    "piqa": piqa,
-    "qnli": qnli,
-    "qqp": qqp,
-    "rte": rte,
-    "sst2": sst2,
-    "wic": wic,
-    "wnli": wnli,
-    "winogrande": winogrande,
+    "arc_challenge": benchmarks.arc_challenge,
+    "arc_easy": benchmarks.arc_easy,
+    "boolq": benchmarks.boolq,
+    "cb": benchmarks.cb,
+    "cola": benchmarks.cola,
+    "copa": benchmarks.copa,
+    "gsm8k": benchmarks.gsm8k,
+    "gsm8k_platinum": benchmarks.gsm8k_platinum,
+    "hellaswag": benchmarks.hellaswag,
+    "mmlu": benchmarks.mmlu,
+    "mmlu_pro": benchmarks.mmlu_pro,
+    "mnli": benchmarks.mnli,
+    "mrpc": benchmarks.mrpc,
+    "openbookqa": benchmarks.openbookqa,
+    "piqa": benchmarks.piqa,
+    "qnli": benchmarks.qnli,
+    "qqp": benchmarks.qqp,
+    "rte": benchmarks.rte,
+    "sst2": benchmarks.sst2,
+    "wic": benchmarks.wic,
+    "wnli": benchmarks.wnli,
+    "winogrande": benchmarks.winogrande,
 }
 
 
@@ -97,6 +74,7 @@ def python_from_yaml(source: str | Path) -> str:
         engine_alias = engine_name
     lines = [
         "import evalution as eval",
+        "import evalution.benchmarks as benchmarks",
         "import evalution.engines as engines",
         "",
         "result = (",
@@ -107,7 +85,7 @@ def python_from_yaml(source: str | Path) -> str:
         test_mapping = _coerce_named_mapping(test_spec, label="test")
         test_name = _extract_name(test_mapping, label="test")
         lines.append(
-            f"    .run({_emit_call(f'eval.{test_name}', _mapping_without_name(test_mapping), indent='    ')})"
+            f"    .run({_emit_call(f'benchmarks.{test_name}', _mapping_without_name(test_mapping), indent='    ')})"
         )
     lines.append(")")
     return "\n".join(lines)

@@ -11,7 +11,7 @@ from typing import Any
 from datasets import load_dataset
 
 from evalution.scorers.classification import matthews_corrcoef
-from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 
 def _cola_prompt(sentence: str) -> str:

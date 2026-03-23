@@ -10,7 +10,7 @@ from typing import Any
 
 from datasets import load_dataset
 
-from evalution.suites.arc_exam import BaseARCExamSuite
+from evalution.benchmarks.arc_exam import BaseARCExamSuite
 
 
 @dataclass(slots=True)

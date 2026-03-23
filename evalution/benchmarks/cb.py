@@ -11,7 +11,7 @@ from typing import Any
 from datasets import load_dataset
 
 from evalution.scorers.classification import macro_f1
-from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 _CB_CHOICES = ["True", "False", "Neither"]
 

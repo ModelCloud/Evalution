@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput, GenerationRequest
 
-mmlu_pro_module = importlib.import_module("evalution.suites.mmlu_pro")
+mmlu_pro_module = importlib.import_module("evalution.benchmarks.mmlu_pro")
 
 
 class FakeSession:
@@ -96,7 +96,7 @@ def test_mmlu_pro_uses_subset_matched_cot_fewshots(monkeypatch) -> None:
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu_pro(num_fewshot=1, max_rows=2, batch_size=2).evaluate(FakeSession())
+    result = evalution.benchmarks.mmlu_pro(num_fewshot=1, max_rows=2, batch_size=2).evaluate(FakeSession())
 
     assert result.name == "mmlu_pro"
     assert result.metrics == {"em,choice_label": 1.0}
@@ -187,7 +187,7 @@ def test_mmlu_pro_subset_leaf_filter_uses_canonical_path_name(monkeypatch) -> No
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu_pro(
+    result = evalution.benchmarks.mmlu_pro(
         subsets="stem.computer_science",
         num_fewshot=1,
         batch_size=1,
@@ -296,7 +296,7 @@ def test_mmlu_pro_subset_node_filter_uses_distinct_result_name(monkeypatch) -> N
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu_pro(subsets="stem", num_fewshot=1, batch_size=2).evaluate(StemSession())
+    result = evalution.benchmarks.mmlu_pro(subsets="stem", num_fewshot=1, batch_size=2).evaluate(StemSession())
 
     assert result.name == "mmlu_pro_stem"
     assert result.metadata["subsets"] == ["stem"]
@@ -423,7 +423,7 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu_pro(
+    result = evalution.benchmarks.mmlu_pro(
         subsets="stem.math",
         num_fewshot=2,
         batch_size=1,
@@ -531,7 +531,7 @@ def test_mmlu_pro_subsets_list_combines_multiple_paths(monkeypatch) -> None:
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
 
-    result = evalution.mmlu_pro(
+    result = evalution.benchmarks.mmlu_pro(
         subsets=["stem.computer_science", "humanities.law"],
         num_fewshot=1,
         batch_size=2,

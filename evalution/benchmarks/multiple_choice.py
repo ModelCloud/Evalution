@@ -25,8 +25,8 @@ from evalution.scorers.multiple_choice import (
     multiple_choice_outcome,
     normalize_label_permutation_fraction,
 )
-from evalution.suites.base import TestSuite
-from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
+from evalution.benchmarks.base import TestSuite
+from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 
 
 @dataclass(slots=True)

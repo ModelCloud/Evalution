@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-winogrande_module = importlib.import_module("evalution.suites.winogrande")
+winogrande_module = importlib.import_module("evalution.benchmarks.winogrande")
 
 
 class FakeSession:
@@ -42,7 +42,7 @@ def test_winogrande_scores_cloze_multiple_choice_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(winogrande_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.winogrande(max_rows=1, batch_size=5).evaluate(FakeSession())
+    result = evalution.benchmarks.winogrande(max_rows=1, batch_size=5).evaluate(FakeSession())
 
     assert result.name == "winogrande"
     assert result.metrics == {

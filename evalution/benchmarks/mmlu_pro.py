@@ -17,9 +17,9 @@ from evalution.engines.base import GenerationOutput, GenerationRequest, Inferenc
 from evalution.logbar import get_logger, manual_progress
 from evalution.results import SampleResult, TestResult
 from evalution.scorers.choice_label import choice_label_exact_match
-from evalution.suites.base import TestSuite
-from evalution.suites.data import limit_docs, load_suite_dataset
-from evalution.suites.execution import (
+from evalution.benchmarks.base import TestSuite
+from evalution.benchmarks.data import limit_docs, load_suite_dataset
+from evalution.benchmarks.execution import (
     AUTO_BATCH_PREVIEW_ROWS,
     PreparedSample,
     collect_preview_samples,
@@ -29,7 +29,7 @@ from evalution.suites.execution import (
     prepare_batch_for_session,
     session_batch_size,
 )
-from evalution.suites.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
+from evalution.benchmarks.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
 
 _INVALID_CHOICE = "[invalid]"
 _OPTION_LABELS = tuple("ABCDEFGHIJKLMNOP")

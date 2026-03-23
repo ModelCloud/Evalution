@@ -15,9 +15,9 @@ from evalution.engines.base import GenerationOutput
 from evalution.scorers.gsm8k import INVALID_ANSWER
 from evalution.scorers.gsm8k import extract_format_insensitive_numeric_answer
 from evalution.scorers.gsm8k import extract_gsm8k_reference_answer
-from evalution.suites import base as base_suite_module
+from evalution.benchmarks import base as base_suite_module
 
-gsm8k_module = importlib.import_module("evalution.suites.gsm8k")
+gsm8k_module = importlib.import_module("evalution.benchmarks.gsm8k")
 
 _REFERENCE_ANS_RE = pcre.compile(r"#### (\-?[0-9\.\,]+)")
 
@@ -80,7 +80,7 @@ def test_gsm8k_suite_scores_numeric_primary(monkeypatch) -> None:
     )
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k(max_rows=1)
+    suite = evalution.benchmarks.gsm8k(max_rows=1)
     session = FakeSession(["The answer is 42."])
     result = suite.evaluate(session)
 
@@ -105,7 +105,7 @@ def test_gsm8k_suite_scores_hash_formatted_answers(monkeypatch) -> None:
     )
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k(max_rows=1)
+    suite = evalution.benchmarks.gsm8k(max_rows=1)
     session = FakeSession(["Reasoning first\n#### 42"])
     result = suite.evaluate(session)
 
@@ -123,7 +123,7 @@ def test_gsm8k_base_variant_omits_platinum_specific_cleaning_metadata(monkeypatc
     )
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    suite = evalution.gsm8k(
+    suite = evalution.benchmarks.gsm8k(
         variant="base",
         max_rows=1,
     )
@@ -177,7 +177,7 @@ def test_gsm8k_logs_executed_rows_and_warns_on_short_generation(monkeypatch) -> 
     fake_logger = FakeLogger()
     monkeypatch.setattr(base_suite_module, "get_logger", lambda: fake_logger)
 
-    suite = evalution.gsm8k(max_rows=2, batch_size=2)
+    suite = evalution.benchmarks.gsm8k(max_rows=2, batch_size=2)
     result = suite.evaluate(ShortOutputSession())
 
     assert len(result.samples) == 1

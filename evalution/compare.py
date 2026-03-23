@@ -15,7 +15,7 @@ from typing import Any
 from evalution.logbar import create_split_pane_logging_session, get_logger, render_compare_summary_table
 from evalution.results import CompareMetricResult, CompareRunResult, CompareTestResult
 from evalution.runtime import EvaluationRun
-from evalution.suites.base import TestSuite
+from evalution.benchmarks.base import TestSuite
 
 
 @dataclass(slots=True)

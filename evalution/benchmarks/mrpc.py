@@ -11,7 +11,7 @@ from typing import Any
 from datasets import load_dataset
 
 from evalution.scorers.classification import f1_for_label
-from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 
 def _mrpc_prompt(sentence1: str, sentence2: str) -> str:

@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-arc_easy_module = importlib.import_module("evalution.suites.arc_easy")
+arc_easy_module = importlib.import_module("evalution.benchmarks.arc_easy")
 
 
 class FakeSession:
@@ -46,7 +46,7 @@ def _dataset() -> Dataset:
 def test_arc_easy_scores_original_style_exam_score(monkeypatch) -> None:
     monkeypatch.setattr(arc_easy_module, "load_dataset", lambda *args, **kwargs: _dataset())
 
-    result = evalution.arc_easy(max_rows=1, batch_size=9).evaluate(
+    result = evalution.benchmarks.arc_easy(max_rows=1, batch_size=9).evaluate(
         FakeSession(
             [
                 LoglikelihoodOutput(logprob=-0.1, is_greedy=True, token_count=1),
@@ -86,7 +86,7 @@ def test_arc_easy_scores_original_style_exam_score(monkeypatch) -> None:
 def test_arc_easy_awards_partial_credit_for_tied_top_choices(monkeypatch) -> None:
     monkeypatch.setattr(arc_easy_module, "load_dataset", lambda *args, **kwargs: _dataset())
 
-    result = evalution.arc_easy(max_rows=1, batch_size=9).evaluate(
+    result = evalution.benchmarks.arc_easy(max_rows=1, batch_size=9).evaluate(
         FakeSession(
             [
                 LoglikelihoodOutput(logprob=-0.1, is_greedy=True, token_count=1),

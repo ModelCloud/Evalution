@@ -20,9 +20,9 @@ from evalution.scorers.multiple_choice import (
     choice_logprobs,
     exam_score_outcome,
 )
-from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
-from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
-from evalution.suites.multiple_choice_utils import choice_index_from_labels, question_answer_prompt
+from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
+from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.benchmarks.multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 
 
 @dataclass(slots=True)

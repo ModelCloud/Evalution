@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-piqa_module = importlib.import_module("evalution.suites.piqa")
+piqa_module = importlib.import_module("evalution.benchmarks.piqa")
 
 
 class FakeSession:
@@ -42,7 +42,7 @@ def test_piqa_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(piqa_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.piqa(max_rows=1, batch_size=4).evaluate(FakeSession())
+    result = evalution.benchmarks.piqa(max_rows=1, batch_size=4).evaluate(FakeSession())
 
     assert result.name == "piqa"
     assert result.metrics == {
@@ -120,7 +120,7 @@ def test_piqa_can_emit_label_permutation_metric(monkeypatch) -> None:
                 )
             return outputs
 
-    result = evalution.piqa(
+    result = evalution.benchmarks.piqa(
         max_rows=1,
         batch_size=4,
         label_permutations=0.5,

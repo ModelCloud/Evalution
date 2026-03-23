@@ -12,7 +12,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
-copa_module = importlib.import_module("evalution.suites.copa")
+copa_module = importlib.import_module("evalution.benchmarks.copa")
 
 
 class FakeSession:
@@ -44,7 +44,7 @@ def test_copa_scores_causal_multiple_choice_accuracy(monkeypatch) -> None:
     )
     monkeypatch.setattr(copa_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    result = evalution.copa(max_rows=1, batch_size=6).evaluate(FakeSession())
+    result = evalution.benchmarks.copa(max_rows=1, batch_size=6).evaluate(FakeSession())
 
     assert result.name == "copa"
     assert result.metrics == {
