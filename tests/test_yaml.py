@@ -160,6 +160,8 @@ tests:
     max_rows: 52
   - type: commonsense_qa
     max_rows: 18
+  - type: coqa
+    max_rows: 16
   - type: copa
     max_rows: 12
   - type: ethics_cm
@@ -264,6 +266,7 @@ tests:
     assert ".run(benchmarks.cb(" in script
     assert ".run(benchmarks.cola(" in script
     assert ".run(benchmarks.commonsense_qa(" in script
+    assert ".run(benchmarks.coqa(" in script
     assert ".run(benchmarks.copa(" in script
     assert ".run(benchmarks.ethics_cm(" in script
     assert ".run(benchmarks.ethics_deontology(" in script

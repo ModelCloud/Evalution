@@ -589,6 +589,26 @@ def _assert_nq_open_sample(sample: Any, index: int) -> None:
     assert sample.metadata["answer_aliases"]
 
 
+def _assert_coqa_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Story: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["source"]
+    assert sample.metadata["conversation_index"] >= 0
+    assert sample.metadata["turn_index"] >= 1
+    assert sample.metadata["turn_count"] >= sample.metadata["turn_index"]
+    assert sample.metadata["history_turns"] == sample.metadata["turn_index"] - 1
+    assert sample.metadata["question"]
+    assert isinstance(sample.metadata["answer_start"], int)
+    assert isinstance(sample.metadata["answer_end"], int)
+    assert sample.prompt.count("\nQuestion: ") == sample.metadata["history_turns"] + 1
+    assert sample.prompt.count("\nAnswer:") == sample.metadata["history_turns"] + 1
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -2248,6 +2268,27 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=_assert_nq_open_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "coqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.coqa(batch_size=16, max_rows=32),
+        expected_name="coqa",
+        baseline={
+            "em": 0.3125,
+            "f1": 0.46814123376623373,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "coqa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+            "prompt_mode": "gold_history_conversation",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_coqa_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "wic": SuiteSpec(

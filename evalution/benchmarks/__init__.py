@@ -29,6 +29,7 @@ from .boolq import BoolQ, boolq
 from .cb import CB, cb
 from .cola import CoLA, cola
 from .commonsense_qa import CommonsenseQA, commonsense_qa
+from .coqa import CoQA, coqa
 from .copa import COPA, copa
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
@@ -98,6 +99,7 @@ __all__ = [
     "CB",
     "CoLA",
     "CommonsenseQA",
+    "CoQA",
     "COPA",
     "GSM8K",
     "GSM8KPlatinum",
@@ -167,6 +169,7 @@ __all__ = [
     "cb",
     "cola",
     "commonsense_qa",
+    "coqa",
     "copa",
     "ethics_cm",
     "ethics_deontology",

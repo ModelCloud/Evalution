@@ -48,6 +48,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "cb": benchmarks.cb,
     "cola": benchmarks.cola,
     "commonsense_qa": benchmarks.commonsense_qa,
+    "coqa": benchmarks.coqa,
     "copa": benchmarks.copa,
     "ethics_cm": benchmarks.ethics_cm,
     "ethics_deontology": benchmarks.ethics_deontology,

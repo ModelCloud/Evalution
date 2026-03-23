@@ -241,6 +241,7 @@ logic, those implementation details can shift results.
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
 | `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
+| `coqa` | Generated conversational QA exact match and token-overlap F1 with gold history turns | CoQA `reddy2019coqa` |
 | `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `ethics_deontology` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
@@ -350,6 +351,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `c4`: C4 `raffel2020exploring`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
+- `coqa`: CoQA `reddy2019coqa`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
@@ -542,6 +544,16 @@ The current built-in suite coverage maps to these benchmark citations:
   title = {CommonsenseQA: A Question Answering Challenge Targeting Commonsense Knowledge},
   author = {Alon Talmor and Jonathan Herzig and Nicholas Lourie and Jonathan Berant},
   booktitle = {Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers)},
+  year = {2019},
+}
+
+# CoQA
+@article{reddy2019coqa,
+  title = {CoQA: A Conversational Question Answering Challenge},
+  author = {Siva Reddy and Danqi Chen and Christopher D. Manning},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume = {7},
+  pages = {249--266},
   year = {2019},
 }
 
