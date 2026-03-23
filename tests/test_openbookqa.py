@@ -69,3 +69,67 @@ def test_openbookqa_scores_four_way_multiple_choice_accuracy(monkeypatch) -> Non
     }
     assert sample.metadata["id"] == "obqa-1"
     assert sample.metadata["choice_labels"] == ["A", "B", "C", "D"]
+
+
+def test_openbookqa_can_emit_label_permutation_metric(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "id": "obqa-1",
+                "question_stem": "Which material conducts electricity best?",
+                "choices": {
+                    "text": ["wool", "plastic", "copper", "wood"],
+                    "label": ["A", "B", "C", "D"],
+                },
+                "answerKey": "C",
+            }
+        ]
+    )
+    monkeypatch.setattr(openbookqa_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    class LabelPermutationSession:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def loglikelihood(self, requests, *, batch_size=None):
+            assert batch_size == 7
+            self.calls += 1
+            if self.calls == 1:
+                assert len(requests) == 4
+                return [
+                    LoglikelihoodOutput(logprob=-2.5, is_greedy=False, token_count=1),
+                    LoglikelihoodOutput(logprob=-1.9, is_greedy=False, token_count=1),
+                    LoglikelihoodOutput(logprob=-0.2, is_greedy=True, token_count=1),
+                    LoglikelihoodOutput(logprob=-3.0, is_greedy=False, token_count=1),
+                ]
+
+            assert len(requests) == 24
+            gold_text = "copper"
+            outputs = []
+            for request in requests:
+                label = request.continuation.strip()
+                is_gold_label = f"{label}. {gold_text}" in request.context
+                outputs.append(
+                    LoglikelihoodOutput(
+                        logprob=-0.1 if is_gold_label else -1.5,
+                        is_greedy=is_gold_label,
+                        token_count=1,
+                    )
+                )
+            return outputs
+
+    result = evalution.openbookqa(
+        max_rows=1,
+        batch_size=7,
+        label_permutations=0.25,
+    ).evaluate(LabelPermutationSession())
+
+    assert result.metrics == {
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
+        "acc,label_perm:0.25": 1.0,
+    }
+    assert result.metadata["label_permutations"] == 0.25
+    assert result.metadata["label_permutation_metric"] == "acc,label_perm:0.25"
+    assert result.samples[0].extracted["predicted_index_label_perm:0.25"] == "2"
+    assert result.samples[0].metadata["label_permutation_count"] == 6

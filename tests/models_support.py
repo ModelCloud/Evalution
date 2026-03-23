@@ -289,7 +289,7 @@ def _assert_multiple_choice_loglikelihood_label_perm_sample(
         assert sample.prediction
     else:
         assert sample.prediction in prediction_values
-    label_metric_suffix = f"label_perm_{label_permutations}"
+    label_metric_suffix = f"label_perm:{label_permutations}"
     assert set(sample.extracted) == {
         "gold_index",
         "predicted_index",
@@ -299,7 +299,7 @@ def _assert_multiple_choice_loglikelihood_label_perm_sample(
     assert set(sample.scores) == {
         "acc,ll",
         "acc,ll_avg",
-        f"accuracy,{label_metric_suffix}",
+        f"acc,{label_metric_suffix}",
     }
     assert "choice_logprobs" in sample.metadata
     assert "choice_logprobs_norm" in sample.metadata
@@ -337,6 +337,36 @@ def _assert_arc_exam_sample(sample: Any, index: int) -> None:
     assert set(sample.scores) == {"acc,exam"}
     assert "choice_logprobs" in sample.metadata
     assert "selected_count" in sample.metadata
+
+
+def _assert_arc_exam_label_perm_sample(
+    sample: Any,
+    index: int,
+    *,
+    label_permutations: float,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    label_metric_suffix = f"label_perm:{label_permutations}"
+    assert set(sample.extracted) == {
+        "gold_index",
+        "selected_indices",
+        "selected_labels",
+        f"predicted_index_{label_metric_suffix}",
+    }
+    assert set(sample.scores) == {
+        "acc,exam",
+        f"acc,{label_metric_suffix}",
+    }
+    assert "choice_logprobs" in sample.metadata
+    assert f"choice_logprobs_{label_metric_suffix}" in sample.metadata
+    assert "selected_count" in sample.metadata
+    assert "label_permutation_count" in sample.metadata
+    assert sample.metadata["label_permutation_count"] > 0
 
 
 def _assert_mmlu_pro_sample(
@@ -656,6 +686,43 @@ SUITE_SPECS = {
         sample_validator=_assert_arc_exam_sample,
         result_validator=_validate_arc_exam_result,
     ),
+    "arc_challenge_label_perm_0_25": SuiteSpec(
+        suite_factory=lambda: evalution.arc_challenge(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+            label_permutations=0.25,
+        ),
+        expected_name="arc_challenge",
+        baseline={
+            "acc,exam": 0.40625,
+            "acc,label_perm:0.25": 0.515625,
+        },
+        expected_metrics=frozenset(
+            {
+                "acc,exam",
+                "acc,label_perm:0.25",
+            }
+        ),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "allenai/ai2_arc",
+            "dataset_name": "ARC-Challenge",
+            "split": "test",
+            "scoring_mode": "multiple_choice_exam_score",
+            "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
+            "extra_scoring_mode": "multiple_choice_label_permutation_average",
+            "label_permutations": 0.25,
+            "label_permutation_metric": "acc,label_perm:0.25",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_arc_exam_label_perm_sample(
+            sample,
+            index,
+            label_permutations=0.25,
+        ),
+        result_validator=_validate_arc_exam_result,
+    ),
     "hellaswag": SuiteSpec(
         suite_factory=lambda: evalution.hellaswag(batch_size=24, streaming=True, max_rows=128),
         expected_name="hellaswag",
@@ -689,13 +756,13 @@ SUITE_SPECS = {
         baseline={
             "acc,ll": 0.4375,
             "acc,ll_avg": 0.5390625,
-            "acc,label_perm_0.25": 0.46875,
+            "acc,label_perm:0.25": 0.46875,
         },
         expected_metrics=frozenset(
             {
                 "acc,ll",
                 "acc,ll_avg",
-                "acc,label_perm_0.25",
+                "acc,label_perm:0.25",
             }
         ),
         expected_metadata={
@@ -706,7 +773,7 @@ SUITE_SPECS = {
             "scoring_mode": "multiple_choice_loglikelihood",
             "extra_scoring_mode": "multiple_choice_label_permutation_average",
             "label_permutations": 0.25,
-            "label_permutation_metric": "acc,label_perm_0.25",
+            "label_permutation_metric": "acc,label_perm:0.25",
         },
         expected_sample_count=128,
         sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_label_perm_sample(
@@ -871,6 +938,40 @@ SUITE_SPECS = {
         sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
             sample,
             index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "openbookqa_label_perm_0_25": SuiteSpec(
+        suite_factory=lambda: evalution.openbookqa(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+            label_permutations=0.25,
+        ),
+        expected_name="openbookqa",
+        baseline={
+            "acc,ll": 0.25,
+            "acc,ll_avg": 0.328125,
+            "acc,label_perm:0.25": 0.59375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg", "acc,label_perm:0.25"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "allenai/openbookqa",
+            "dataset_name": "main",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "extra_scoring_mode": "multiple_choice_label_permutation_average",
+            "label_permutations": 0.25,
+            "label_permutation_metric": "acc,label_perm:0.25",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_label_perm_sample(
+            sample,
+            index,
+            label_permutations=0.25,
             prompt_prefix="Question: ",
             prompt_suffix="\nAnswer:",
             metadata_validator=_metadata_has_choice_labels(exact_count=4),

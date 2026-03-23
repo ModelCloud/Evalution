@@ -204,9 +204,9 @@ def test_arc_challenge_can_emit_label_permutation_metric(monkeypatch) -> None:
 
     assert result.metrics == {
         "acc,exam": 1.0,
-        "acc,label_perm_0.25": 1.0,
+        "acc,label_perm:0.25": 1.0,
     }
     assert result.metadata["label_permutations"] == 0.25
-    assert result.metadata["label_permutation_metric"] == "acc,label_perm_0.25"
-    assert result.samples[0].extracted["predicted_index_label_perm_0.25"] == "2"
+    assert result.metadata["label_permutation_metric"] == "acc,label_perm:0.25"
+    assert result.samples[0].extracted["predicted_index_label_perm:0.25"] == "2"
     assert result.samples[0].metadata["label_permutation_count"] == 6

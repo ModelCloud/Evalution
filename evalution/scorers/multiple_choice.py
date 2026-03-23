@@ -163,7 +163,7 @@ def label_permutation_metric_name(fraction: float | int | str | None) -> str:
     canonical_fraction = normalize_label_permutation_fraction(fraction)
     if canonical_fraction == 0.0:
         raise ValueError("label_permutations=0.0 disables the extra label-permutation metric")
-    return f"acc,label_perm_{format_label_permutation_fraction(canonical_fraction)}"
+    return f"acc,label_perm:{format_label_permutation_fraction(canonical_fraction)}"
 
 
 def label_permutations_for_mode(

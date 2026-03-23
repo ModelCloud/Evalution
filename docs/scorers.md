@@ -86,7 +86,7 @@ Implements:
 | --- | --- | --- |
 | Generic multiple-choice suites | `multiple_choice.py` | `acc,ll`, `acc,ll_avg` |
 | ARC | `multiple_choice.py` | `acc,exam` |
-| Optional label-bias mitigation on multiple-choice suites | `multiple_choice.py` | `acc,label_perm_<fraction>` |
+| Optional label-bias mitigation on multiple-choice suites | `multiple_choice.py` | `acc,label_perm:<fraction>` |
 | GSM8K / GSM8K-Platinum | `gsm8k.py` | `acc,num` |
 | GLUE / SuperGLUE extra classification metrics | `classification.py` | `f1,...`, `mcc,...` |
 | MMLU-Pro | `choice_label.py` | `em,choice_label` |
@@ -108,10 +108,10 @@ It is additive by design:
 
 Metric names:
 
-- `label_permutations=0.25` -> `acc,label_perm_0.25`
-- `label_permutations=0.5` -> `acc,label_perm_0.5`
-- `label_permutations=0.75` -> `acc,label_perm_0.75`
-- `label_permutations=1.0` -> `acc,label_perm_1.0`
+- `label_permutations=0.25` -> `acc,label_perm:0.25`
+- `label_permutations=0.5` -> `acc,label_perm:0.5`
+- `label_permutations=0.75` -> `acc,label_perm:0.75`
+- `label_permutations=1.0` -> `acc,label_perm:1.0`
 
 ### Why this exists
 
