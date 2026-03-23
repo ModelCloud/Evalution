@@ -53,6 +53,9 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.headqa_es)
     assert evalution.benchmarks.HellaSwag is not None
     assert callable(evalution.benchmarks.hellaswag)
+    assert evalution.benchmarks.LAMBADA is not None
+    assert callable(evalution.benchmarks.lambada_openai)
+    assert callable(evalution.benchmarks.lambada_standard)
     assert evalution.benchmarks.MedMCQA is not None
     assert callable(evalution.benchmarks.medmcqa)
     assert evalution.benchmarks.MedQA is not None

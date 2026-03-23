@@ -26,6 +26,7 @@ from .hendrycks_ethics import (
 )
 from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
+from .lambada import LAMBADA, lambada_openai, lambada_standard
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mmlu import MMLU, mmlu
@@ -40,6 +41,7 @@ from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .rte import RTE, rte
 from .sciq import SciQ, sciq
+from .single_continuation import BaseSingleContinuationSuite, SingleContinuationSample
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .wic import WiC, wic
@@ -52,6 +54,7 @@ __all__ = [
     "ARCChallenge",
     "BABI",
     "BaseMultipleChoiceSuite",
+    "BaseSingleContinuationSuite",
     "BaseTestSuite",
     "BoolQ",
     "CB",
@@ -63,6 +66,7 @@ __all__ = [
     "HendrycksEthics",
     "HEADQA",
     "HellaSwag",
+    "LAMBADA",
     "MedMCQA",
     "MedQA",
     "MMLU",
@@ -76,6 +80,7 @@ __all__ = [
     "QQP",
     "RTE",
     "SciQ",
+    "SingleContinuationSample",
     "SWAG",
     "SST2",
     "TestSuite",
@@ -105,6 +110,8 @@ __all__ = [
     "headqa_en",
     "headqa_es",
     "hellaswag",
+    "lambada_openai",
+    "lambada_standard",
     "medmcqa",
     "medqa_4options",
     "macro_f1",

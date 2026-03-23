@@ -236,6 +236,8 @@ logic, those implementation details can shift results.
 | `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_en` | `EleutherAI/headqa` / `en` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | `EleutherAI/headqa` / `es` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `lambada_openai` | `EleutherAI/lambada_openai` / `default` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_standard` | `cimec/lambada` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `medmcqa` | `openlifescienceai/medmcqa` | `validation` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
 | `medqa_4options` | `GBaker/MedQA-USMLE-4-options-hf` | `test` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
 | `mmlu` | `cais/mmlu` / `<subsets>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
@@ -273,6 +275,7 @@ Metric key glossary:
 - `exam`: ARC exam-style tie-aware partial credit.
 - `num`: numeric-answer match after numeric extraction and canonicalization.
 - `em`: exact match after the suite's task-specific extraction step.
+- `ppl`: perplexity from exponentiated negative mean continuation log-likelihood. Lower is better.
 - `choice_label`: extracted option-label match such as `A/B/C/D`.
 - `label_perm:<fraction>`: permutation-averaged label-only accuracy using the configured fraction
   of all label permutations.
@@ -313,6 +316,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
+- `lambada_openai`, `lambada_standard`: LAMBADA `paperno2016lambada`
 - `medmcqa`: MedMCQA `pmlr-v174-pal22a`
 - `medqa_4options`: MedQA `jin2020disease`
 - `mmlu`: MMLU `hendryckstest2021`
@@ -436,6 +440,15 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {David Vilares and Carlos G{\'o}mez-Rodr{\'i}guez},
   booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
   year = {2019},
+}
+
+# LAMBADA
+@misc{paperno2016lambada,
+  title = {The LAMBADA dataset: Word prediction requiring a broad discourse context},
+  author = {Denis Paperno and Germ{\'a}n Kruszewski and Angeliki Lazaridou and Quan Ngoc Pham and Raffaella Bernardi and Sandro Pezzelle and Marco Baroni and Gemma Boleda and Raquel Fern{\'a}ndez},
+  publisher = {Zenodo},
+  doi = {10.5281/zenodo.2630551},
+  year = {2016},
 }
 
 # MedMCQA

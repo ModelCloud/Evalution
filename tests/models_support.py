@@ -385,6 +385,40 @@ def _assert_generated_exact_match_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_single_continuation_loglikelihood_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target.startswith(" ")
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "greedy_match",
+        "token_count",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "ppl,ll",
+    }
+    assert "logprob" in sample.metadata
+    assert "token_count" in sample.metadata
+    assert "is_greedy" in sample.metadata
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -468,6 +502,14 @@ def _metadata_field_in(field: str, allowed_values: set[str]) -> Callable[[dict[s
 def _metadata_field_truthy(field: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata[field]
+
+    return validate
+
+
+def _metadata_fields_truthy(*fields: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        for field in fields:
+            assert metadata[field]
 
     return validate
 
@@ -1114,6 +1156,50 @@ SUITE_SPECS = {
             prompt_prefix="Question: ",
             prompt_suffix="\nAnswer:",
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "lambada_openai": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai(batch_size=24, streaming=True, max_rows=128),
+        expected_name="lambada_openai",
+        baseline={
+            "acc,ll": 0.5703125,
+            "ppl,ll": 6.5496755370042115,
+        },
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/lambada_openai",
+            "dataset_name": "default",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_standard": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_standard(batch_size=24, streaming=True, max_rows=128),
+        expected_name="lambada_standard",
+        baseline={
+            "acc,ll": 0.484375,
+            "ppl,ll": 11.26453696980533,
+        },
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "cimec/lambada",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
         ),
     ),
     "medmcqa": SuiteSpec(
