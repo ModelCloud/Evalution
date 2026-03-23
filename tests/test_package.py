@@ -30,6 +30,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.arc_challenge)
     assert evalution.benchmarks.ARCEasy is not None
     assert callable(evalution.benchmarks.arc_easy)
+    assert evalution.benchmarks.BABI is not None
+    assert callable(evalution.benchmarks.babi)
     assert evalution.benchmarks.BoolQ is not None
     assert callable(evalution.benchmarks.boolq)
     assert evalution.benchmarks.CB is not None

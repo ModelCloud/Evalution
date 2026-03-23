@@ -357,6 +357,34 @@ def _assert_arc_exam_label_perm_sample(
     assert sample.metadata["label_permutation_count"] > 0
 
 
+def _assert_generated_exact_match_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "target-stripped",
+    }
+    assert set(sample.scores) == {"em"}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -463,6 +491,37 @@ def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[di
 
 
 SUITE_SPECS = {
+    "babi": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.babi(
+            batch_size=24,
+            max_new_tokens=16,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="babi",
+        baseline={
+            "em": 0.0,
+        },
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/babi",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_prefix="Passage: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("Question: ",),
+            metadata_validator=_metadata_field_truthy("task"),
+        ),
+    ),
     "gsm8k": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.gsm8k(
             variant="cot",

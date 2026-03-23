@@ -220,6 +220,7 @@ logic, those implementation details can shift results.
 | `anli_r3` | `facebook/anli` | `test_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
+| `babi` | `Muennighoff/babi` | `test` | Generated exact match | bAbI `weston2015towards` |
 | `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `cola` | `nyu-mll/glue` / `cola` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
@@ -295,6 +296,7 @@ The current built-in suite coverage maps to these benchmark citations:
 
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
+- `babi`: bAbI `weston2015towards`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
@@ -317,6 +319,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Yixin Nie and Adina Williams and Emily Dinan and Mohit Bansal and Jason Weston and Douwe Kiela},
   booktitle = {Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics},
   year = {2020},
+}
+
+# bAbI
+@article{weston2015towards,
+  title = {Towards AI-Complete Question Answering: A Set of Prerequisite Toy Tasks},
+  author = {Jason Weston and Antoine Bordes and Sumit Chopra and Alexander M. Rush and Bart van Merri{\"e}nboer and Armand Joulin and Tomas Mikolov},
+  journal = {arXiv preprint arXiv:1502.05698},
+  year = {2015},
 }
 
 # GSM8K-Platinum

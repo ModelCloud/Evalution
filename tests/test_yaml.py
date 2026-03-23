@@ -107,6 +107,8 @@ tests:
     max_rows: 18
   - type: anli_r3
     max_rows: 18
+  - type: babi
+    max_rows: 18
   - type: gsm8k_platinum
     max_rows: 128
   - type: boolq
@@ -169,6 +171,7 @@ tests:
     assert ".run(benchmarks.anli_r1(" in script
     assert ".run(benchmarks.anli_r2(" in script
     assert ".run(benchmarks.anli_r3(" in script
+    assert ".run(benchmarks.babi(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.boolq(" in script
     assert ".run(benchmarks.cb(" in script
