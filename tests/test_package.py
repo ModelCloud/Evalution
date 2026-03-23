@@ -30,6 +30,20 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.arc_challenge)
     assert evalution.benchmarks.ARCEasy is not None
     assert callable(evalution.benchmarks.arc_easy)
+    assert evalution.benchmarks.Arithmetic is not None
+    for factory_name in (
+        "arithmetic_1dc",
+        "arithmetic_2da",
+        "arithmetic_2dm",
+        "arithmetic_2ds",
+        "arithmetic_3da",
+        "arithmetic_3ds",
+        "arithmetic_4da",
+        "arithmetic_4ds",
+        "arithmetic_5da",
+        "arithmetic_5ds",
+    ):
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.ASDiv is not None
     assert evalution.benchmarks.ASDivCoTLlama is not None
     assert callable(evalution.benchmarks.asdiv)

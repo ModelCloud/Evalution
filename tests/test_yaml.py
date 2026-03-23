@@ -14,6 +14,18 @@ from evalution import yaml as evalution_yaml
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
+_ARITHMETIC_TASKS = [
+    "arithmetic_1dc",
+    "arithmetic_2da",
+    "arithmetic_2dm",
+    "arithmetic_2ds",
+    "arithmetic_3da",
+    "arithmetic_3ds",
+    "arithmetic_4da",
+    "arithmetic_4ds",
+    "arithmetic_5da",
+    "arithmetic_5ds",
+]
 
 
 class FakeEngine(BaseEngine):
@@ -241,6 +253,23 @@ tests:
     assert ".run(benchmarks.wic(" in script
     assert ".run(benchmarks.wnli(" in script
     assert ".run(benchmarks.winogrande(" in script
+
+
+def test_python_from_yaml_emits_arithmetic_variants() -> None:
+    task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _ARITHMETIC_TASKS)
+    script = evalution.python_from_yaml(
+        f"""
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+{task_lines}
+"""
+    )
+
+    for task in _ARITHMETIC_TASKS:
+        assert f".run(benchmarks.{task}(" in script
 
 
 def test_run_yaml_requires_tests_section() -> None:

@@ -7,6 +7,19 @@ from evalution.scorers.classification import f1_for_label, macro_f1, matthews_co
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
+from .arithmetic import (
+    Arithmetic,
+    arithmetic_1dc,
+    arithmetic_2da,
+    arithmetic_2dm,
+    arithmetic_2ds,
+    arithmetic_3da,
+    arithmetic_3ds,
+    arithmetic_4da,
+    arithmetic_4ds,
+    arithmetic_5da,
+    arithmetic_5ds,
+)
 from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
 from .base import BaseTestSuite, TestSuite
@@ -54,6 +67,7 @@ __all__ = [
     "ANLI",
     "ARCEasy",
     "ARCChallenge",
+    "Arithmetic",
     "ASDiv",
     "ASDivCoTLlama",
     "BABI",
@@ -97,6 +111,16 @@ __all__ = [
     "anli_r3",
     "arc_easy",
     "arc_challenge",
+    "arithmetic_1dc",
+    "arithmetic_2da",
+    "arithmetic_2dm",
+    "arithmetic_2ds",
+    "arithmetic_3da",
+    "arithmetic_3ds",
+    "arithmetic_4da",
+    "arithmetic_4ds",
+    "arithmetic_5da",
+    "arithmetic_5ds",
     "asdiv",
     "asdiv_cot_llama",
     "babi",

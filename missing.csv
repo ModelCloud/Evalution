@@ -16,7 +16,6 @@ arabic_leaderboard_light,152,arabic_leaderboard_light/arabic_leaderboard_alghafa
 arabicmmlu,46,arabicmmlu/arabicmmlu_accounting_university.yaml,arabicmmlu/arabicmmlu_arabic_language_general.yaml
 aradice,109,aradice/ArabicMMLU/EGY/AraDiCE_ArabicMMLU.yaml,aradice/ArabicMMLU/EGY/AraDiCE_ArabicMMLU_high_humanities_history.yaml
 arc_mt,12,arc_mt/arc_challenge_mt_da.yaml,arc_mt/arc_challenge_mt_de.yaml
-arithmetic,10,arithmetic/arithmetic_1dc.yaml,arithmetic/arithmetic_2da.yaml
 babilong,22,babilong/babilong.yaml,babilong/babilong_longctx.yaml
 bangla,5,bangla/bangla_boolqa.yaml,bangla/bangla_commonsenseqa.yaml
 basque_bench,26,basque_bench/arc_eu_challenge.yaml,basque_bench/arc_eu_easy.yaml

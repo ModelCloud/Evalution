@@ -57,6 +57,18 @@ MMLU_PRO_STEM_SUBSETS = {
     "stem.math",
     "stem.physics",
 }
+ARITHMETIC_TASKS = (
+    "arithmetic_1dc",
+    "arithmetic_2da",
+    "arithmetic_2dm",
+    "arithmetic_2ds",
+    "arithmetic_3da",
+    "arithmetic_3ds",
+    "arithmetic_4da",
+    "arithmetic_4ds",
+    "arithmetic_5da",
+    "arithmetic_5ds",
+)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -325,6 +337,23 @@ def _assert_asdiv_cot_llama_sample(sample: Any, index: int) -> None:
     assert sample.metadata["formula"]
 
 
+def _assert_arithmetic_sample(sample: Any, index: int, *, task_name: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target.startswith(" ")
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "greedy_match",
+        "token_count",
+    }
+    assert set(sample.scores) == {"acc,ll"}
+    assert sample.metadata["variant"] == task_name
+    assert sample.metadata["source_file"].startswith("data/")
+    assert sample.metadata["raw_context"]
+    assert sample.metadata["raw_completion"]
+
+
 def _assert_arc_exam_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -547,6 +576,34 @@ def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[di
         assert len(metadata["choice_texts"]) == 4
 
     return validate
+
+
+def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline={
+            "acc,ll": baseline,
+        },
+        expected_metrics=frozenset({"acc,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/arithmetic",
+            "dataset_name": task_name,
+            "split": "validation",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, task_name=task_name: _assert_arithmetic_sample(
+            sample,
+            index,
+            task_name=task_name,
+        ),
+    )
 
 
 SUITE_SPECS = {
@@ -1899,6 +1956,20 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
 }
+
+for _task_name, _baseline in {
+    "arithmetic_1dc": 0.2421875,
+    "arithmetic_2da": 1.0,
+    "arithmetic_2dm": 0.625,
+    "arithmetic_2ds": 0.609375,
+    "arithmetic_3da": 0.78125,
+    "arithmetic_3ds": 0.640625,
+    "arithmetic_4da": 0.4453125,
+    "arithmetic_4ds": 0.1953125,
+    "arithmetic_5da": 0.203125,
+    "arithmetic_5ds": 0.3203125,
+}.items():
+    SUITE_SPECS[_task_name] = _arithmetic_suite_spec(_task_name, _baseline)
 
 
 def run_suite_spec(
