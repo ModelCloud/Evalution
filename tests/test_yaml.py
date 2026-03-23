@@ -294,6 +294,20 @@ tests:
     max_rows: 18
   - type: wikitext
     max_rows: 8
+  - type: winogender_all
+    max_rows: 16
+  - type: winogender_female
+    max_rows: 16
+  - type: winogender_gotcha
+    max_rows: 16
+  - type: winogender_gotcha_female
+    max_rows: 16
+  - type: winogender_gotcha_male
+    max_rows: 16
+  - type: winogender_male
+    max_rows: 16
+  - type: winogender_neutral
+    max_rows: 16
   - type: wsc273
     max_rows: 14
   - type: wnli
@@ -397,6 +411,13 @@ tests:
     assert ".run(benchmarks.wic(" in script
     assert ".run(benchmarks.webqs(" in script
     assert ".run(benchmarks.wikitext(" in script
+    assert ".run(benchmarks.winogender_all(" in script
+    assert ".run(benchmarks.winogender_female(" in script
+    assert ".run(benchmarks.winogender_gotcha(" in script
+    assert ".run(benchmarks.winogender_gotcha_female(" in script
+    assert ".run(benchmarks.winogender_gotcha_male(" in script
+    assert ".run(benchmarks.winogender_male(" in script
+    assert ".run(benchmarks.winogender_neutral(" in script
     assert ".run(benchmarks.wsc273(" in script
     assert ".run(benchmarks.wnli(" in script
     assert ".run(benchmarks.winogrande(" in script

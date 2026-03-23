@@ -104,6 +104,15 @@ XWINOGRAD_TASKS = (
     "xwinograd_ru",
     "xwinograd_zh",
 )
+WINOGENDER_TASKS = (
+    "winogender_all",
+    "winogender_female",
+    "winogender_gotcha",
+    "winogender_gotcha_female",
+    "winogender_gotcha_male",
+    "winogender_male",
+    "winogender_neutral",
+)
 BLIMP_INTEGRATION_SUBSETS = (
     "adjunct_island",
     "anaphor_gender_agreement",
@@ -481,6 +490,39 @@ def _assert_xwinograd_sample(sample: Any, index: int, *, language: str) -> None:
     assert sample.metadata["blank_index"] >= 0
     assert len(sample.metadata["choice_texts"]) == 2
     assert sample.metadata["choice_labels"] == ["A", "B"]
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_winogender_sample(
+    sample: Any,
+    index: int,
+    *,
+    variant: str,
+    gender: str | None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt.endswith("' refers to the")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["sentid"]
+    assert sample.metadata["sentence"]
+    assert sample.metadata["pronoun"]
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert sample.metadata["gender"] in {"male", "female", "neutral"}
+    if gender is not None:
+        assert sample.metadata["gender"] == gender
+    assert isinstance(sample.metadata["gotcha"], bool)
     assert "choice_logprobs" in sample.metadata
     assert "choice_logprobs_norm" in sample.metadata
 
@@ -3012,6 +3054,130 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="zh"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_all": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_all(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_all",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "all",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="all", gender=None),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_female": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_female(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_female",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "all",
+            "split": "test",
+            "gender_filter": "female",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="all", gender="female"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_gotcha": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_gotcha",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "gotcha",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="gotcha", gender=None),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_gotcha_female": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha_female(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_gotcha_female",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "gotcha",
+            "split": "test",
+            "gender_filter": "female",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="gotcha", gender="female"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_gotcha_male": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha_male(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_gotcha_male",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "gotcha",
+            "split": "test",
+            "gender_filter": "male",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="gotcha", gender="male"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_male": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_male(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_male",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "all",
+            "split": "test",
+            "gender_filter": "male",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="all", gender="male"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_neutral": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_neutral(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_neutral",
+        baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.65625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "all",
+            "split": "test",
+            "gender_filter": "neutral",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="all", gender="neutral"),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "c4": SuiteSpec(

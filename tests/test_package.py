@@ -169,6 +169,15 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.webqs)
     assert evalution.benchmarks.WikiText is not None
     assert callable(evalution.benchmarks.wikitext)
+    assert evalution.benchmarks.WinoGender is not None
+    assert callable(evalution.benchmarks.winogender)
+    assert callable(evalution.benchmarks.winogender_all)
+    assert callable(evalution.benchmarks.winogender_female)
+    assert callable(evalution.benchmarks.winogender_gotcha)
+    assert callable(evalution.benchmarks.winogender_gotcha_female)
+    assert callable(evalution.benchmarks.winogender_gotcha_male)
+    assert callable(evalution.benchmarks.winogender_male)
+    assert callable(evalution.benchmarks.winogender_neutral)
     assert evalution.benchmarks.WSC273 is not None
     assert callable(evalution.benchmarks.wsc273)
     assert evalution.benchmarks.WNLI is not None

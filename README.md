@@ -317,6 +317,13 @@ logic, those implementation details can shift results.
 | `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
 | `wikitext` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | WikiText-2 `merity2016pointer` |
+| `winogender_all` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_female` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_gotcha` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_gotcha_female` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_gotcha_male` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_male` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_neutral` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
 | `wsc273` | Partial-evaluation multiple-choice log-likelihood, raw + length-normalized accuracy | WSC273 `levesque2012winograd` |
 | `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
@@ -419,6 +426,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `swag`: SWAG `zellers2018swagaf`
 - `webqs`: WebQuestions `berant-etal-2013-semantic`
 - `wikitext`: WikiText-2 `merity2016pointer`
+- `winogender_all`, `winogender_female`, `winogender_gotcha`, `winogender_gotcha_female`, `winogender_gotcha_male`, `winogender_male`, `winogender_neutral`: WinoGender `rudinger2018winogender`
 - `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 - `xcopa_et`, `xcopa_ht`, `xcopa_id`, `xcopa_it`, `xcopa_qu`, `xcopa_sw`, `xcopa_ta`, `xcopa_th`, `xcopa_tr`, `xcopa_vi`, `xcopa_zh`: XCOPA `ponti2020xcopa`
@@ -829,6 +837,14 @@ The current built-in suite coverage maps to these benchmark citations:
   eprint = {1609.07843},
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
+}
+
+# WinoGender
+@inproceedings{rudinger2018winogender,
+  title = {Gender Bias in Coreference Resolution},
+  author = {Rachel Rudinger and Jason Naradowsky and Brian Leonard and Benjamin Van Durme},
+  booktitle = {Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies},
+  year = {2018},
 }
 
 # WSC273

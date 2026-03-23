@@ -84,6 +84,7 @@ from .triviaqa import TriviaQA, triviaqa
 from .wic import WiC, wic
 from .webqs import WebQS, webqs
 from .wikitext import WikiText, wikitext
+from .winogender import WinoGender, winogender, winogender_all, winogender_female, winogender_gotcha, winogender_gotcha_female, winogender_gotcha_male, winogender_male, winogender_neutral
 from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
@@ -158,6 +159,7 @@ __all__ = [
     "WiC",
     "WebQS",
     "WikiText",
+    "WinoGender",
     "WSC273",
     "WNLI",
     "WinoGrande",
@@ -255,6 +257,14 @@ __all__ = [
     "wic",
     "webqs",
     "wikitext",
+    "winogender",
+    "winogender_all",
+    "winogender_female",
+    "winogender_gotcha",
+    "winogender_gotcha_female",
+    "winogender_gotcha_male",
+    "winogender_male",
+    "winogender_neutral",
     "wsc273",
     "wnli",
     "winogrande",
