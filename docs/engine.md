@@ -108,27 +108,27 @@ Requirements:
 - keep behavior compatible with `generate(...)`
 
 If the backend does not support real continuous batching, emulate it with fixed batches. That is
-how `TransformerCompat` works today. The suite runtime depends on the method shape, not on a
+how `TransformersCompat` works today. The suite runtime depends on the method shape, not on a
 specific batching implementation.
 
 ## Built-in Transformers Engines
 
 Evalution ships three Hugging Face-compatible engines:
 
-- `Transformer()`: the modern backend
-- `TransformerCompat()`: the compatibility backend
+- `Transformers()`: the modern backend
+- `TransformersCompat()`: the compatibility backend
 - `GPTQModel()`: the quantized GPTQModel backend
 
-`Transformer()` defaults batching, paged attention, dtype resolution, and attention selection to
+`Transformers()` defaults batching, paged attention, dtype resolution, and attention selection to
 auto behavior. On compatible CUDA `transformers` setups it can switch to paged continuous batching
 for `flash_attention_2`.
 
 If the installed `transformers` build predates the first release that includes
-`generation/continuous_batching` (`4.56.0`), `Transformer()` falls back to
-`TransformerCompat()`. `TransformerCompat()` also remains available as the explicit fixed-batch
+`generation/continuous_batching` (`4.56.0`), `Transformers()` falls back to
+`TransformersCompat()`. `TransformersCompat()` also remains available as the explicit fixed-batch
 execution path.
 
-The modern `Transformer(...)` engine also exposes the upstream continuous batching manager knobs
+The modern `Transformers(...)` engine also exposes the upstream continuous batching manager knobs
 `manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
 `kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned manager alive
 while stop strings and sampling settings stay compatible, then tears it down on `gc()` between
@@ -317,9 +317,9 @@ Once the engine is implemented:
 
 Use these as concrete examples:
 
-- `evalution/engines/transformer.py`: modern `transformers` backend with paged attention and
+- `evalution/engines/transformers.py`: modern `transformers` backend with paged attention and
   continuous batching
-- `evalution/engines/transformer_compat.py`: fixed-batch compatibility backend that still emulates
+- `evalution/engines/transformers_compat.py`: fixed-batch compatibility backend that still emulates
   the continuous generation API
 - `evalution/engines/transformers_common.py`: shared request preparation, generation, and scoring
   helpers for the two transformer backends

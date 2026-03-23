@@ -9,11 +9,11 @@ from types import SimpleNamespace
 
 from evalution.config import Model
 from evalution.engines.base import GenerationOutput, GenerationRequest
-from evalution.engines.transformer_compat import TransformerCompat, TransformerCompatSession
+from evalution.engines.transformers_compat import TransformersCompat, TransformersCompatSession
 
 
 def test_transformer_compat_defaults_batch_size_to_auto() -> None:
-    engine = TransformerCompat()
+    engine = TransformersCompat()
 
     assert engine.batch_size == "auto"
     assert engine.to_dict()["batch_size"] == "auto"
@@ -21,8 +21,8 @@ def test_transformer_compat_defaults_batch_size_to_auto() -> None:
 
 
 def test_transformer_compat_session_describes_generate_compat_backend() -> None:
-    session = TransformerCompatSession(
-        config=TransformerCompat(),
+    session = TransformersCompatSession(
+        config=TransformersCompat(),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(dtype="bfloat16"),
         tokenizer=SimpleNamespace(),
@@ -40,8 +40,8 @@ def test_transformer_compat_session_describes_generate_compat_backend() -> None:
 
 
 def test_transformer_compat_session_emulates_continuous_generation(monkeypatch) -> None:
-    session = TransformerCompatSession(
-        config=TransformerCompat(batch_size=2),
+    session = TransformersCompatSession(
+        config=TransformersCompat(batch_size=2),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(dtype="bfloat16"),
         tokenizer=SimpleNamespace(),
@@ -61,7 +61,7 @@ def test_transformer_compat_session_emulates_continuous_generation(monkeypatch) 
         ]
 
     monkeypatch.setattr(
-        TransformerCompatSession,
+        TransformersCompatSession,
         "_generate_standard",
         fake_generate,
     )

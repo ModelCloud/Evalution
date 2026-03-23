@@ -11,8 +11,8 @@ def test_package_import() -> None:
     assert evalution.BaseEngine is not None
     assert evalution.BaseInferenceSession is not None
     assert evalution.GPTQModel is not None
-    assert evalution.Transformer is not None
-    assert evalution.TransformerCompat is not None
+    assert evalution.Transformers is not None
+    assert evalution.TransformersCompat is not None
 
 
 def test_package_exports_arc_challenge_suite() -> None:

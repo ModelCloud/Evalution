@@ -20,12 +20,12 @@ from evalution.engines.base import (
     LoglikelihoodRequest,
     RollingLoglikelihoodRequest,
 )
-from evalution.engines.transformer import Transformer, TransformerSession
-from evalution.engines.transformer_compat import TransformerCompat
+from evalution.engines.transformers import Transformers, TransformersSession
+from evalution.engines.transformers_compat import TransformersCompat
 
 
 def test_transformer_defaults_batch_size_to_auto() -> None:
-    engine = Transformer()
+    engine = Transformers()
 
     assert engine.batch_size == "auto"
     assert engine.paged_attention == "auto"
@@ -46,8 +46,8 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
 
 
 def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch) -> None:
-    session = TransformerSession(
-        config=Transformer(batch_size="auto"),
+    session = TransformersSession(
+        config=Transformers(batch_size="auto"),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(dtype="bfloat16"),
         tokenizer=SimpleNamespace(),
@@ -68,7 +68,7 @@ def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch
     calls = {"estimate": 0}
 
     monkeypatch.setattr(
-        TransformerSession,
+        TransformersSession,
         "_batch_size_stats",
         lambda self, batch: stats,
     )
@@ -79,7 +79,7 @@ def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch
         return 16
 
     monkeypatch.setattr(
-        TransformerSession,
+        TransformersSession,
         "_estimate_auto_batch_size",
         fake_estimate,
     )
@@ -90,8 +90,8 @@ def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch
 
 
 def test_transformer_session_describes_auto_paged_attention_on_cuda_like_session() -> None:
-    session = TransformerSession(
-        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+    session = TransformersSession(
+        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(
             config=SimpleNamespace(_attn_implementation="flash_attention_2"),
@@ -131,8 +131,8 @@ def test_transformer_session_gc_clears_caches_and_releases_cuda_allocator(monkey
         lambda: ipc_collect_calls.__setitem__("count", ipc_collect_calls["count"] + 1),
     )
 
-    session = TransformerSession(
-        config=Transformer(),
+    session = TransformersSession(
+        config=Transformers(),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(dtype="bfloat16"),
         tokenizer=SimpleNamespace(),
@@ -180,8 +180,8 @@ def test_transformer_session_gc_stops_continuous_batching_manager(monkeypatch) -
             self.stop_calls += 1
 
     manager = FakeContinuousBatchingManager()
-    session = TransformerSession(
-        config=Transformer(manual_eviction=True),
+    session = TransformersSession(
+        config=Transformers(manual_eviction=True),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(dtype="bfloat16"),
         tokenizer=SimpleNamespace(),
@@ -248,8 +248,8 @@ def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatc
         lambda **kwargs: None,
     )
 
-    session = TransformerSession.from_config(
-        Transformer(device="cpu", paged_attention=False),
+    session = TransformersSession.from_config(
+        Transformers(device="cpu", paged_attention=False),
         Model(path="/tmp/model"),
     )
 
@@ -304,8 +304,8 @@ def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch)
         lambda **kwargs: None,
     )
 
-    TransformerSession.from_config(
-        Transformer(device="cpu", paged_attention=False, dtype="bfloat16"),
+    TransformersSession.from_config(
+        Transformers(device="cpu", paged_attention=False, dtype="bfloat16"),
         Model(path="/tmp/model"),
     )
 
@@ -361,8 +361,8 @@ def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypat
         lambda **kwargs: None,
     )
 
-    TransformerSession.from_config(
-        Transformer(device="cpu", paged_attention=False, dtype="bfloat16"),
+    TransformersSession.from_config(
+        Transformers(device="cpu", paged_attention=False, dtype="bfloat16"),
         Model(path="/tmp/model"),
     )
 
@@ -431,8 +431,8 @@ def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_e
         lambda **kwargs: None,
     )
 
-    session = TransformerSession.from_config(
-        Transformer(device="cpu", paged_attention=False),
+    session = TransformersSession.from_config(
+        Transformers(device="cpu", paged_attention=False),
         Model(path="/tmp/model"),
     )
 
@@ -456,24 +456,24 @@ def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_
     compat_engine = FakeCompatEngine()
 
     monkeypatch.setattr(
-        "evalution.engines.transformer.transformers_continuous_batching_support",
+        "evalution.engines.transformers.transformers_continuous_batching_support",
         lambda: (False, "transformers 4.55.4 is older than 4.56.0"),
     )
     monkeypatch.setattr(
-        TransformerCompat,
-        "from_transformer",
+        TransformersCompat,
+        "from_transformers",
         classmethod(lambda cls, engine: compat_engine),
     )
 
-    engine = Transformer(device="cpu", paged_attention=True)
+    engine = Transformers(device="cpu", paged_attention=True)
     session = engine.build(Model(path="/tmp/model"))
 
     assert session is fake_session
-    assert engine.resolved_engine == "TransformerCompat"
+    assert engine.resolved_engine == "TransformersCompat"
 
 
 def test_transformer_build_warns_once_about_pending_nogil_transformers_pr(monkeypatch) -> None:
-    import evalution.engines.transformer as transformer_module
+    import evalution.engines.transformers as transformer_module
 
     warnings: list[tuple[str, tuple[object, ...]]] = []
 
@@ -484,19 +484,19 @@ def test_transformer_build_warns_once_about_pending_nogil_transformers_pr(monkey
     fake_session = object()
 
     monkeypatch.setattr(
-        "evalution.engines.transformer.transformers_continuous_batching_support",
+        "evalution.engines.transformers.transformers_continuous_batching_support",
         lambda: (True, "ok"),
     )
     monkeypatch.setattr(
-        TransformerSession,
+        TransformersSession,
         "from_config",
         classmethod(lambda cls, engine, model_config: fake_session),
     )
-    monkeypatch.setattr("evalution.engines.transformer.get_logger", lambda: FakeLogger())
+    monkeypatch.setattr("evalution.engines.transformers.get_logger", lambda: FakeLogger())
     monkeypatch.setattr(transformer_module, "_PENDING_NOGIL_TRANSFORMERS_PR_WARNED", False)
     monkeypatch.setattr(sys, "_is_gil_enabled", lambda: False, raising=False)
 
-    engine = Transformer(device="cpu")
+    engine = Transformers(device="cpu")
 
     assert engine.build(Model(path="/tmp/model")) is fake_session
     assert engine.build(Model(path="/tmp/model")) is fake_session
@@ -506,7 +506,7 @@ def test_transformer_build_warns_once_about_pending_nogil_transformers_pr(monkey
 
 
 def test_transformer_build_skips_pending_nogil_pr_warning_when_gil_is_enabled(monkeypatch) -> None:
-    import evalution.engines.transformer as transformer_module
+    import evalution.engines.transformers as transformer_module
 
     warnings: list[tuple[str, tuple[object, ...]]] = []
 
@@ -517,24 +517,24 @@ def test_transformer_build_skips_pending_nogil_pr_warning_when_gil_is_enabled(mo
     fake_session = object()
 
     monkeypatch.setattr(
-        "evalution.engines.transformer.transformers_continuous_batching_support",
+        "evalution.engines.transformers.transformers_continuous_batching_support",
         lambda: (True, "ok"),
     )
     monkeypatch.setattr(
-        TransformerSession,
+        TransformersSession,
         "from_config",
         classmethod(lambda cls, engine, model_config: fake_session),
     )
-    monkeypatch.setattr("evalution.engines.transformer.get_logger", lambda: FakeLogger())
+    monkeypatch.setattr("evalution.engines.transformers.get_logger", lambda: FakeLogger())
     monkeypatch.setattr(transformer_module, "_PENDING_NOGIL_TRANSFORMERS_PR_WARNED", False)
     monkeypatch.setattr(sys, "_is_gil_enabled", lambda: True, raising=False)
 
-    assert Transformer(device="cpu").build(Model(path="/tmp/model")) is fake_session
+    assert Transformers(device="cpu").build(Model(path="/tmp/model")) is fake_session
     assert warnings == []
 
 
 def test_transformer_monkey_patches_continuous_batching_generation_loop_once(monkeypatch) -> None:
-    import evalution.engines.transformer as transformer_module
+    import evalution.engines.transformers as transformer_module
 
     entered_devices: list[object] = []
     calls: list[str] = []
@@ -578,7 +578,7 @@ def test_transformer_monkey_patches_continuous_batching_generation_loop_once(mon
 
 
 def test_transformer_monkey_patch_skips_cuda_context_for_cpu_manager(monkeypatch) -> None:
-    import evalution.engines.transformer as transformer_module
+    import evalution.engines.transformers as transformer_module
 
     class FakeContinuousBatchingManager:
         def __init__(self) -> None:
@@ -599,7 +599,7 @@ def test_transformer_monkey_patch_skips_cuda_context_for_cpu_manager(monkeypatch
 
 
 def test_transformer_monkey_patch_skips_manager_without_generation_loop(monkeypatch) -> None:
-    import evalution.engines.transformer as transformer_module
+    import evalution.engines.transformers as transformer_module
 
     class FakeContinuousBatchingManager:
         pass
@@ -636,8 +636,8 @@ def test_transformer_session_prepare_requests_batches_tokenization() -> None:
             return f"chat::{messages[0]['content']}"
 
     prepare_tokenizer = FakePrepareTokenizer()
-    session = TransformerSession(
-        config=Transformer(),
+    session = TransformersSession(
+        config=Transformers(),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(dtype="bfloat16"),
         tokenizer=SimpleNamespace(),
@@ -699,8 +699,8 @@ def test_transformer_session_generate_reuses_pretokenized_requests() -> None:
             return torch.tensor([[1, 2, 3, 4, 5]], dtype=torch.long)
 
     tokenizer = FakeTokenizer()
-    session = TransformerSession(
-        config=Transformer(),
+    session = TransformersSession(
+        config=Transformers(),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=tokenizer,
@@ -839,8 +839,8 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
     )
 
     model = FakeModel()
-    session = TransformerSession(
-        config=Transformer(
+    session = TransformersSession(
+        config=Transformers(
             attn_implementation="flash_attention_2",
             paged_attention="auto",
             manual_eviction=True,
@@ -973,8 +973,8 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
     monkeypatch.setattr(transformers, "ContinuousBatchingConfig", FakeContinuousBatchingConfig)
     monkeypatch.setattr(transformers, "ContinuousBatchingManager", FakeContinuousBatchingManager)
 
-    session = TransformerSession(
-        config=Transformer(
+    session = TransformersSession(
+        config=Transformers(
             attn_implementation="flash_attention_2",
             paged_attention="auto",
             manual_eviction=True,
@@ -1045,8 +1045,8 @@ def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> Non
                     logits[row, position, next_token] = 3.0
             return SimpleNamespace(logits=logits)
 
-    session = TransformerSession(
-        config=Transformer(batch_size=4, paged_attention=False),
+    session = TransformersSession(
+        config=Transformers(batch_size=4, paged_attention=False),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
@@ -1120,8 +1120,8 @@ def test_transformer_session_loglikelihood_reports_non_greedy_predictions() -> N
             logits[0, 0, 9] = 5.0
             return SimpleNamespace(logits=logits)
 
-    session = TransformerSession(
-        config=Transformer(batch_size=2, paged_attention=False),
+    session = TransformersSession(
+        config=Transformers(batch_size=2, paged_attention=False),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
@@ -1179,8 +1179,8 @@ def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None
                     logits[row, position, next_token] = 3.0
             return SimpleNamespace(logits=logits)
 
-    session = TransformerSession(
-        config=Transformer(batch_size=2, paged_attention=False),
+    session = TransformersSession(
+        config=Transformers(batch_size=2, paged_attention=False),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
@@ -1238,8 +1238,8 @@ def test_transformer_session_loglikelihood_temporarily_restores_base_attention()
             return SimpleNamespace(logits=logits)
 
     model = FakeModel()
-    session = TransformerSession(
-        config=Transformer(batch_size=2, paged_attention=True),
+    session = TransformersSession(
+        config=Transformers(batch_size=2, paged_attention=True),
         model_config=Model(path="/tmp/model"),
         model=model,
         tokenizer=FakeTokenizer(),
@@ -1336,8 +1336,8 @@ def test_transformer_session_reuses_continuous_batching_manager_for_matching_sig
         FakeContinuousBatchingManager,
     )
 
-    session = TransformerSession(
-        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+    session = TransformersSession(
+        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
@@ -1438,8 +1438,8 @@ def test_transformer_session_rebuilds_continuous_batching_manager_when_signature
         FakeContinuousBatchingManager,
     )
 
-    session = TransformerSession(
-        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+    session = TransformersSession(
+        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=FakeTokenizer(),
@@ -1536,8 +1536,8 @@ def test_transformer_sessions_do_not_share_continuous_batching_managers(monkeypa
         FakeContinuousBatchingManager,
     )
 
-    left_session = TransformerSession(
-        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+    left_session = TransformersSession(
+        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
         model_config=Model(path="/tmp/model-left"),
         model=FakeModel(tag="left"),
         tokenizer=FakeTokenizer(),
@@ -1547,8 +1547,8 @@ def test_transformer_sessions_do_not_share_continuous_batching_managers(monkeypa
         paged_attention_enabled=True,
         generation_backend="continuous_batching",
     )
-    right_session = TransformerSession(
-        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+    right_session = TransformersSession(
+        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
         model_config=Model(path="/tmp/model-right"),
         model=FakeModel(tag="right"),
         tokenizer=FakeTokenizer(),
@@ -1641,8 +1641,8 @@ def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_
             return torch.tensor([[1, 2, 3, 4, 5]], dtype=torch.long)
 
     tokenizer = BlockingTokenizer()
-    session = TransformerSession(
-        config=Transformer(),
+    session = TransformersSession(
+        config=Transformers(),
         model_config=Model(path="/tmp/model"),
         model=FakeModel(),
         tokenizer=tokenizer,
@@ -1740,8 +1740,8 @@ def test_transformer_session_serializes_generate_calls() -> None:
                     self._active_calls -= 1
 
     model = BlockingModel()
-    session = TransformerSession(
-        config=Transformer(),
+    session = TransformersSession(
+        config=Transformers(),
         model_config=Model(path="/tmp/model"),
         model=model,
         tokenizer=FakeTokenizer(),
@@ -1875,8 +1875,8 @@ def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batchi
 
     prepare_tokenizer = PrepareTokenizer()
     model = BlockingPagedModel()
-    session = TransformerSession(
-        config=Transformer(attn_implementation="flash_attention_2", paged_attention="auto"),
+    session = TransformersSession(
+        config=Transformers(attn_implementation="flash_attention_2", paged_attention="auto"),
         model_config=Model(path="/tmp/model"),
         model=model,
         tokenizer=GenerateTokenizer(),
@@ -1937,8 +1937,8 @@ def test_transformer_session_falls_back_to_standard_generate_when_paged_generati
         config=SimpleNamespace(_attn_implementation="sdpa"),
         set_attn_implementation=lambda value: None,
     )
-    session = TransformerSession(
-        config=Transformer(attn_implementation="sdpa", paged_attention=True),
+    session = TransformersSession(
+        config=Transformers(attn_implementation="sdpa", paged_attention=True),
         model_config=Model(path="/tmp/model"),
         model=model,
         tokenizer=SimpleNamespace(),
@@ -1965,8 +1965,8 @@ def test_transformer_session_falls_back_to_standard_generate_when_paged_generati
             for request in batch
         ]
 
-    monkeypatch.setattr(TransformerSession, "_generate_paged", fake_generate_paged)
-    monkeypatch.setattr(TransformerSession, "_generate_standard", fake_generate_standard)
+    monkeypatch.setattr(TransformersSession, "_generate_paged", fake_generate_paged)
+    monkeypatch.setattr(TransformersSession, "_generate_standard", fake_generate_standard)
 
     outputs = session.generate(requests, batch_size=4)
 

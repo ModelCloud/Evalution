@@ -15,8 +15,8 @@ from evalution.engines import (
     BaseEngine,
     BaseInferenceSession,
     GPTQModel,
-    Transformer,
-    TransformerCompat,
+    Transformers,
+    TransformersCompat,
 )
 from evalution.logbar import get_logger
 from evalution.results import (
@@ -123,8 +123,8 @@ __all__ = [
     "SampleResult",
     "TestSuite",
     "TestResult",
-    "Transformer",
-    "TransformerCompat",
+    "Transformers",
+    "TransformersCompat",
     "WNLI",
     "arc_easy",
     "arc_challenge",

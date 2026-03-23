@@ -114,7 +114,7 @@ def run_llama3_2_suite(
     with capsys.disabled():
         result = (
             evalution.engine(
-                evalution.Transformer(
+                evalution.Transformers(
                     dtype="bfloat16",
                     attn_implementation="flash_attention_2",
                     paged_attention=True,
@@ -147,7 +147,7 @@ def run_llama3_2_compare_suite(
         result = (
             evalution.compare(
                 evalution.engine(
-                    evalution.Transformer(
+                    evalution.Transformers(
                         dtype="bfloat16",
                         attn_implementation="flash_attention_2",
                         paged_attention=True,
@@ -159,7 +159,7 @@ def run_llama3_2_compare_suite(
                     label=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                 ),
                 evalution.engine(
-                    evalution.Transformer(
+                    evalution.Transformers(
                         dtype="bfloat16",
                         attn_implementation="flash_attention_2",
                         paged_attention=True,

@@ -96,7 +96,7 @@ def test_python_from_yaml_emits_fluent_python_api() -> None:
     script = evalution.python_from_yaml(
         """
 engine:
-  type: Transformer
+  type: Transformers
   dtype: bfloat16
 model:
   path: /tmp/model
@@ -149,7 +149,7 @@ tests:
     )
 
     assert "import evalution as eval" in script
-    assert "eval.engine(eval.Transformer(" in script
+    assert "eval.engine(eval.Transformers(" in script
     assert ".model(eval.Model(" in script
     assert ".run(eval.gsm8k_platinum(" in script
     assert ".run(eval.boolq(" in script
@@ -179,7 +179,7 @@ def test_run_yaml_requires_tests_section() -> None:
         evalution.run_yaml(
             """
 engine:
-  type: Transformer
+  type: Transformers
 model:
   path: /tmp/model
 """
@@ -194,7 +194,7 @@ def test_python_from_yaml_emits_transformer_compat_name() -> None:
     script = evalution.python_from_yaml(
         """
 engine:
-  type: TransformerCompat
+  type: TransformersCompat
 model:
   path: /tmp/model
 tests:
@@ -203,7 +203,7 @@ tests:
 """
     )
 
-    assert "eval.engine(eval.TransformerCompat(" in script
+    assert "eval.engine(eval.TransformersCompat(" in script
 
 
 def test_python_from_yaml_emits_gptqmodel_name() -> None:

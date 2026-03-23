@@ -5,13 +5,13 @@
 
 from .base import BaseEngine, BaseInferenceSession
 from .gptqmodel_engine import GPTQModel
-from .transformer import Transformer
-from .transformer_compat import TransformerCompat
+from .transformers import Transformers
+from .transformers_compat import TransformersCompat
 
 __all__ = [
     "BaseEngine",
     "BaseInferenceSession",
     "GPTQModel",
-    "Transformer",
-    "TransformerCompat",
+    "Transformers",
+    "TransformersCompat",
 ]

@@ -14,8 +14,8 @@ from typing import Any
 
 from evalution.config import Model
 from evalution.engines.memory import resolve_dtype
-from evalution.engines.transformer import (
-    TransformerSession,
+from evalution.engines.transformers import (
+    TransformersSession,
     _AUTO_PAGED_ATTENTION,
     _effective_attn_implementation,
     _resolve_paged_attention,
@@ -62,7 +62,7 @@ class GPTQModel(_TransformersCommonConfig):
     max_cached_graphs: int = 0
 
     # Reuse the same paged-attention feature gating as the native transformer engine.
-    def build(self, model: Model) -> TransformerSession:
+    def build(self, model: Model) -> TransformersSession:
         supports_continuous_batching, reason = transformers_continuous_batching_support()
         if not supports_continuous_batching and self.paged_attention not in {False, _AUTO_PAGED_ATTENTION}:
             get_logger().warning(
@@ -82,7 +82,7 @@ class GPTQModel(_TransformersCommonConfig):
 
 
 @dataclass(slots=True)
-class GPTQModelSession(TransformerSession):
+class GPTQModelSession(TransformersSession):
     # Keep the GPTQModel wrapper alive so quantized kernels and metadata outlive the inner HF model.
     model_wrapper: Any | None = field(default=None, repr=False)
     resolved_backend: str | None = None
@@ -194,18 +194,17 @@ def load_gptqmodel_runtime(
 
     load_kwargs = {
         **model_config.model_kwargs,
-        **config.load_kwargs,
         "revision": model_config.revision,
     }
-    if "dtype" not in load_kwargs and "torch_dtype" in load_kwargs:
-        load_kwargs["dtype"] = load_kwargs["torch_dtype"]
     resolved_dtype = resolve_dtype(config.dtype)
-    if resolved_dtype is not None:
+    if resolved_dtype is not None and (
+        config.dtype != "auto" or ("dtype" not in load_kwargs and "torch_dtype" not in load_kwargs)
+    ):
         load_kwargs["dtype"] = resolved_dtype
-    if "dtype" in load_kwargs:
+    if config.dtype != "auto" and "dtype" in load_kwargs:
         load_kwargs.pop("torch_dtype", None)
 
-    raw_attn_implementation = config.attention_impl or config.attn_implementation
+    raw_attn_implementation = config.attn_implementation
     attn_implementation = _base_attn_implementation(raw_attn_implementation)
     if attn_implementation is not None:
         load_kwargs["attn_implementation"] = attn_implementation
