@@ -515,6 +515,21 @@ def _assert_wikitext_sample(sample: Any, index: int) -> None:
     assert sample.metadata["token_count"] >= 1
 
 
+def _assert_c4_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target == "[document]"
+    assert sample.prediction == "[rolling-loglikelihood]"
+    assert set(sample.extracted) == {"token_count", "word_count", "byte_count"}
+    assert set(sample.scores) == {"word_perplexity", "byte_perplexity", "bits_per_byte"}
+    assert sample.metadata["text_preview"]
+    assert sample.metadata["text_char_count"] > 0
+    assert sample.metadata["url"]
+    assert sample.metadata["timestamp"]
+    assert "logprob" in sample.metadata
+    assert sample.metadata["token_count"] >= 1
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -2137,6 +2152,27 @@ SUITE_SPECS = {
         },
         expected_sample_count=128,
         sample_validator=_assert_webqs_sample,
+    ),
+    "c4": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.c4(batch_size=1, max_rows=32),
+        expected_name="c4",
+        baseline={
+            "word_perplexity": 44.857430232245065,
+            "byte_perplexity": 1.914216519142986,
+            "bits_per_byte": 0.9367540238818579,
+        },
+        expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "allenai/c4",
+            "dataset_name": "en",
+            "split": "validation",
+            "scoring_mode": "rolling_loglikelihood_perplexity",
+            "primary_metric": "word_perplexity",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_c4_sample,
+        abs_tolerance=0.05,
     ),
     "wikitext": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wikitext(batch_size=1, max_rows=62),

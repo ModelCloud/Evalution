@@ -54,6 +54,9 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.asdiv_cot_llama)
     assert evalution.benchmarks.BABI is not None
     assert callable(evalution.benchmarks.babi)
+    assert evalution.benchmarks.BaseRollingPerplexitySuite is not None
+    assert evalution.benchmarks.C4 is not None
+    assert callable(evalution.benchmarks.c4)
     assert evalution.benchmarks.BoolQ is not None
     assert callable(evalution.benchmarks.boolq)
     assert evalution.benchmarks.CB is not None
@@ -113,6 +116,7 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.qqp)
     assert evalution.benchmarks.RACE is not None
     assert callable(evalution.benchmarks.race)
+    assert evalution.benchmarks.RollingPerplexitySample is not None
     assert evalution.benchmarks.RTE is not None
     assert callable(evalution.benchmarks.rte)
     assert evalution.benchmarks.SciQ is not None

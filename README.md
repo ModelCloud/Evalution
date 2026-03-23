@@ -236,6 +236,7 @@ logic, those implementation details can shift results.
 | `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
 | `babi` | Generated exact match | bAbI `weston2015towards` |
+| `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
@@ -342,6 +343,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
+- `c4`: C4 `raffel2020exploring`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
@@ -412,6 +414,18 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Jason Weston and Antoine Bordes and Sumit Chopra and Alexander M. Rush and Bart van Merri{\"e}nboer and Armand Joulin and Tomas Mikolov},
   journal = {arXiv preprint arXiv:1502.05698},
   year = {2015},
+}
+
+# C4
+@article{raffel2020exploring,
+  title = {Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer},
+  author = {Colin Raffel and Noam Shazeer and Adam Roberts and Katherine Lee and Sharan Narang and Michael Matena and Yanqi Zhou and Wei Li and Peter J. Liu},
+  journal = {Journal of Machine Learning Research},
+  volume = {21},
+  number = {140},
+  pages = {1--67},
+  year = {2020},
+  url = {https://jmlr.org/papers/v21/20-074.html},
 }
 
 # GSM8K-Platinum

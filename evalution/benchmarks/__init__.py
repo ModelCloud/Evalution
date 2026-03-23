@@ -24,6 +24,7 @@ from .arithmetic import (
 from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
 from .base import BaseTestSuite, TestSuite
+from .c4 import C4, c4
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
 from .cola import CoLA, cola
@@ -61,6 +62,7 @@ from .pubmedqa import PubMedQA, pubmedqa
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .race import RACE, race
+from .rolling_perplexity import BaseRollingPerplexitySuite, RollingPerplexitySample
 from .rte import RTE, rte
 from .sciq import SciQ, sciq
 from .siqa import SIQA, siqa
@@ -83,9 +85,11 @@ __all__ = [
     "ASDiv",
     "ASDivCoTLlama",
     "BABI",
+    "BaseRollingPerplexitySuite",
     "BaseMultipleChoiceSuite",
     "BaseSingleContinuationSuite",
     "BaseTestSuite",
+    "C4",
     "BoolQ",
     "CB",
     "CoLA",
@@ -115,6 +119,7 @@ __all__ = [
     "QNLI",
     "QQP",
     "RACE",
+    "RollingPerplexitySample",
     "RTE",
     "SciQ",
     "SIQA",
@@ -149,6 +154,7 @@ __all__ = [
     "asdiv",
     "asdiv_cot_llama",
     "babi",
+    "c4",
     "boolq",
     "cb",
     "cola",
