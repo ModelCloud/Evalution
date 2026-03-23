@@ -83,6 +83,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.lambada_standard_cloze)
     assert evalution.benchmarks.LogiQA is not None
     assert callable(evalution.benchmarks.logiqa)
+    assert evalution.benchmarks.MathQA is not None
+    assert callable(evalution.benchmarks.mathqa)
     assert evalution.benchmarks.MedMCQA is not None
     assert callable(evalution.benchmarks.medmcqa)
     assert evalution.benchmarks.MedQA is not None

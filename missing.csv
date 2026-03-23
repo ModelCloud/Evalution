@@ -95,7 +95,6 @@ logiqa2,2,logiqa2/logieval.yaml,logiqa2/logiqa2.yaml
 longbench,48,longbench/2wikimqa.yaml,longbench/2wikimqa_e.yaml
 longbench2,26,longbench2/academic_multi_doc.yaml,longbench2/academic_single.yaml
 mastermind,6,mastermind/mastermind_24_easy.yaml,mastermind/mastermind_24_hard.yaml
-mathqa,1,mathqa/mathqa.yaml,
 mbpp,4,mbpp/mbpp.yaml,mbpp/mbpp_instruct.yaml
 mc_taco,1,mc_taco/default.yaml,
 med_concepts_qa,21,med_concepts_qa/med_concepts_qa_atc_easy.yaml,med_concepts_qa/med_concepts_qa_atc_hard.yaml

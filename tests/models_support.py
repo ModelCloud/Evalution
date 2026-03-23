@@ -1481,6 +1481,30 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
+    "mathqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mathqa(batch_size=24, max_rows=128),
+        expected_name="mathqa",
+        baseline={
+            "acc,ll": 0.359375,
+            "acc,ll_avg": 0.3515625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "math_qa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_choice_labels(exact_count=5),
+        ),
+    ),
     "medmcqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, streaming=True, max_rows=128),
         expected_name="medmcqa",
