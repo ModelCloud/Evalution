@@ -66,8 +66,7 @@ result = (
     )
     .run(
         eval.arc_challenge(
-            apply_chat_template=True,
-            max_new_tokens=8,
+            batch_size=64,
             max_rows=128,
         )
     )
@@ -126,8 +125,7 @@ tests:
     batch_size: 64
     max_rows: 128
   - type: arc_challenge
-    apply_chat_template: true
-    max_new_tokens: 8
+    batch_size: 64
     max_rows: 128
 ```
 
@@ -201,7 +199,7 @@ Evalution currently ships the following built-in suites:
 
 | Suite | Hugging Face dataset | Default split | Scoring | Original benchmark |
 | --- | --- | --- | --- | --- |
-| `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Generated label exact match, choice-text fallback | ARC `clark2018arc` |
+| `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ARC `clark2018arc` |
 | `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
@@ -223,6 +221,9 @@ Evalution currently ships the following built-in suites:
 | `wic` | `super_glue` / `wic` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `wnli` | `nyu-mll/glue` / `wnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `winogrande` | `winogrande` / `winogrande_xl` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
+
+`arc_challenge`: choose among answer options and score the
+question as an exam item, including partial credit when multiple top-scoring choices tie.
 
 Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
 

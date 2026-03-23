@@ -10,29 +10,21 @@ import importlib
 from datasets import Dataset
 
 import evalution
-from evalution.engines.base import GenerationOutput
+from evalution.engines.base import LoglikelihoodOutput
 
 arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
 
 
 class FakeSession:
-    def __init__(self, responses: list[str]) -> None:
-        self.responses = responses
+    def __init__(self, outputs: list[LoglikelihoodOutput]) -> None:
+        self.outputs = outputs
         self.requests = []
 
-    def generate(self, requests, *, batch_size=None):
-        del batch_size
+    def loglikelihood(self, requests, *, batch_size=None):
+        assert batch_size == 7
+        assert len(requests) == 4
         self.requests.extend(requests)
-        return [
-            GenerationOutput(
-                prompt=request.prompt if request.prompt is not None else str(request.messages),
-                text=response,
-            )
-            for request, response in zip(requests, self.responses, strict=True)
-        ]
-
-    def close(self) -> None:
-        return None
+        return self.outputs
 
 
 def _dataset() -> Dataset:
@@ -59,79 +51,81 @@ def _dataset() -> Dataset:
     )
 
 
-def test_arc_challenge_suite_scores_choice_labels_and_records_metadata(monkeypatch) -> None:
+def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
     monkeypatch.setattr(
         arc_challenge_module,
         "load_dataset",
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(max_rows=1)
-    session = FakeSession(["The answer is C."])
+    suite = evalution.arc_challenge(max_rows=1, batch_size=7)
+    session = FakeSession(
+        [
+            LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=5),
+            LoglikelihoodOutput(logprob=-1.1, is_greedy=False, token_count=6),
+            LoglikelihoodOutput(logprob=-0.2, is_greedy=True, token_count=6),
+            LoglikelihoodOutput(logprob=-1.0, is_greedy=False, token_count=6),
+        ]
+    )
     result = suite.evaluate(session)
 
     assert result.name == "arc_challenge"
-    assert result.metrics["exact_match,choice-label"] == 1.0
-    assert result.metrics["exact_match,choice-text"] == 1.0
-    assert result.metadata["dataset_path"] == "allenai/ai2_arc"
-    assert result.metadata["dataset_name"] == "ARC-Challenge"
-    assert result.metadata["apply_chat_template"] is False
-    assert result.samples[0].target == "C. Planetary days will become shorter."
-    assert result.samples[0].metadata["id"] == "Mercury_7175875"
-    assert result.samples[0].metadata["answer_label"] == "C"
-    assert result.samples[0].metadata["choices"][2]["text"] == "Planetary days will become shorter."
-    assert "Answer with the correct choice label." in session.requests[0].prompt
+    assert result.metrics == {"accuracy,exam_score": 1.0}
+    assert result.metadata == {
+        "dataset_path": "allenai/ai2_arc",
+        "dataset_name": "ARC-Challenge",
+        "split": "test",
+        "streaming": False,
+        "scoring_mode": "multiple_choice_exam_score",
+        "scoring_reference": "arc_original_code_tie_aware",
+    }
+
+    sample = result.samples[0]
+    assert sample.prompt == (
+        "Question: An astronomer observes that a planet rotates faster after a meteorite "
+        "impact. Which is the most likely effect of this increase in rotation?\nAnswer:"
+    )
+    assert sample.target == "Planetary days will become shorter."
+    assert sample.prediction == "Planetary days will become shorter."
+    assert sample.extracted == {
+        "gold_index": "2",
+        "selected_indices": "2",
+        "selected_labels": "C",
+    }
+    assert sample.metadata["id"] == "Mercury_7175875"
+    assert sample.metadata["choice_labels"] == ["A", "B", "C", "D"]
+    assert sample.metadata["choice_logprobs"] == [-1.3, -1.1, -0.2, -1.0]
+    assert sample.metadata["selected_count"] == 1
+    assert session.requests[0].context.endswith("\nAnswer:")
+    assert session.requests[0].continuation == " Planetary density will decrease."
+    assert session.requests[2].continuation == " Planetary days will become shorter."
 
 
-def test_arc_challenge_chat_template_uses_single_user_message(monkeypatch) -> None:
+def test_arc_challenge_awards_partial_credit_for_tied_top_choices(monkeypatch) -> None:
     monkeypatch.setattr(
         arc_challenge_module,
         "load_dataset",
         lambda *args, **kwargs: _dataset(),
     )
 
-    suite = evalution.arc_challenge(
-        max_rows=1,
-        apply_chat_template=True,
+    suite = evalution.arc_challenge(max_rows=1, batch_size=7)
+    session = FakeSession(
+        [
+            LoglikelihoodOutput(logprob=-0.4, is_greedy=False, token_count=5),
+            LoglikelihoodOutput(logprob=-1.1, is_greedy=False, token_count=6),
+            LoglikelihoodOutput(logprob=-0.4, is_greedy=True, token_count=6),
+            LoglikelihoodOutput(logprob=-1.0, is_greedy=False, token_count=6),
+        ]
     )
-    session = FakeSession(["C"])
     result = suite.evaluate(session)
 
-    assert result.metrics["exact_match,choice-label"] == 1.0
-    assert session.requests[0].prompt is None
-    assert session.requests[0].messages == [
-        {
-            "role": "user",
-            "content": (
-                "Question: An astronomer observes that a planet rotates faster after a meteorite "
-                "impact. Which is the most likely effect of this increase in rotation?\n"
-                "Choices:\n"
-                "A. Planetary density will decrease.\n"
-                "B. Planetary years will become longer.\n"
-                "C. Planetary days will become shorter.\n"
-                "D. Planetary gravity will become stronger.\n"
-                "Answer with the correct choice label.\n"
-                "Answer:"
-            ),
-        }
-    ]
-
-
-def test_arc_challenge_falls_back_to_choice_text_matching(monkeypatch) -> None:
-    monkeypatch.setattr(
-        arc_challenge_module,
-        "load_dataset",
-        lambda *args, **kwargs: _dataset(),
+    assert result.metrics == {"accuracy,exam_score": 0.5}
+    assert result.samples[0].prediction == (
+        "Planetary density will decrease. | Planetary days will become shorter."
     )
-
-    suite = evalution.arc_challenge(max_rows=1)
-    session = FakeSession(["Planetary days will become shorter."])
-    result = suite.evaluate(session)
-
-    assert result.metrics["exact_match,choice-label"] == 1.0
-    assert result.metrics["exact_match,choice-text"] == 1.0
-    assert result.samples[0].extracted["choice-label"] == "C"
-    assert result.samples[0].extracted["choice-text"] == "Planetary days will become shorter."
+    assert result.samples[0].extracted["selected_indices"] == "0,2"
+    assert result.samples[0].extracted["selected_labels"] == "A,C"
+    assert result.samples[0].metadata["selected_count"] == 2
 
 
 def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> None:
@@ -146,28 +140,19 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
 
     suite = evalution.arc_challenge(
         max_rows=1,
+        batch_size=7,
         streaming=True,
     )
-    session = FakeSession(["C"])
+    session = FakeSession(
+        [
+            LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=5),
+            LoglikelihoodOutput(logprob=-1.1, is_greedy=False, token_count=6),
+            LoglikelihoodOutput(logprob=-0.2, is_greedy=True, token_count=6),
+            LoglikelihoodOutput(logprob=-1.0, is_greedy=False, token_count=6),
+        ]
+    )
     result = suite.evaluate(session)
 
     assert result.metadata["streaming"] is True
     assert calls
     assert calls[0]["streaming"] is True
-
-
-def test_arc_challenge_marks_unparseable_predictions_invalid(monkeypatch) -> None:
-    monkeypatch.setattr(
-        arc_challenge_module,
-        "load_dataset",
-        lambda *args, **kwargs: _dataset(),
-    )
-
-    suite = evalution.arc_challenge(max_rows=1)
-    session = FakeSession(["I am not sure."])
-    result = suite.evaluate(session)
-
-    assert result.metrics["exact_match,choice-label"] == 0.0
-    assert result.metrics["exact_match,choice-text"] == 0.0
-    assert result.samples[0].extracted["choice-label"] == "[invalid]"
-    assert result.samples[0].extracted["choice-text"] == "[invalid]"

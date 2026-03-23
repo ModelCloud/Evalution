@@ -5,257 +5,147 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-import pcre
 from datasets import load_dataset
 
-from evalution.engines.base import GenerationOutput, GenerationRequest
-from evalution.results import SampleResult
-from evalution.suites.base import BaseTestSuite
-from evalution.suites.execution import PreparedSample
-
-_INVALID_CHOICE = "[invalid]"
-_STOP_STRINGS = ("</s>", "<|im_end|>", "<|eot_id|>")
-_NON_ALNUM_PATTERN = pcre.compile(r"[^a-z0-9]+")
-_CHOICE_LABEL_PATTERNS = (
-    pcre.compile(r"(?i)\banswer(?:\s+is)?\s*[:\-]?\s*\(?([A-Z0-9])\)?\b"),
-    pcre.compile(r"(?i)\b(?:option|choice)\s*\(?([A-Z0-9])\)?\b"),
-    pcre.compile(r"^\s*\(?([A-Z0-9])\)?(?:[\)\].:\-]|$)"),
-)
-
-
-@dataclass(frozen=True, slots=True)
-class ChoiceOption:
-    label: str
-    text: str
-
-
-def _normalize_choice_label(label: Any) -> str:
-    return str(label).strip().upper()
-
-
-def _normalize_choice_text(text: Any) -> str:
-    normalized = _NON_ALNUM_PATTERN.sub(" ", str(text).lower())
-    return normalized.strip()
-
-
-def _choice_options(doc: dict[str, Any]) -> list[ChoiceOption]:
-    choices = doc.get("choices") or {}
-    labels = choices.get("label") or []
-    texts = choices.get("text") or []
-    if len(labels) != len(texts):
-        raise ValueError("ARC-Challenge choices must provide matching label/text lists")
-    return [
-        ChoiceOption(
-            label=_normalize_choice_label(label),
-            text=str(text).strip(),
-        )
-        for label, text in zip(labels, texts, strict=True)
-    ]
-
-
-def _correct_choice(doc: dict[str, Any]) -> ChoiceOption:
-    options = _choice_options(doc)
-    option_by_label = {option.label: option for option in options}
-    answer_label = _normalize_choice_label(doc.get("answerKey"))
-    if answer_label not in option_by_label:
-        raise ValueError(f"ARC-Challenge answerKey {answer_label!r} is not present in choices")
-    return option_by_label[answer_label]
-
-
-def _choice_block(doc: dict[str, Any]) -> str:
-    return "\n".join(f"{option.label}. {option.text}" for option in _choice_options(doc))
-
-
-def _prompt_text(doc: dict[str, Any]) -> str:
-    return (
-        f"Question: {doc['question']}\n"
-        f"Choices:\n{_choice_block(doc)}\n"
-        "Answer with the correct choice label.\n"
-        "Answer:"
-    )
-
-
-# Prefer explicit answer markers, then fall back to a leading label token.
-def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
-    response = text or ""
-    for pattern in _CHOICE_LABEL_PATTERNS:
-        for match in pattern.findall(response):
-            candidate = _normalize_choice_label(match)
-            if candidate in valid_labels:
-                return candidate
-
-    candidate = _normalize_choice_label(response)
-    if candidate in valid_labels:
-        return candidate
-    return _INVALID_CHOICE
-
-
-# Only infer a label from answer text when exactly one option text matches.
-def _extract_choice_label_from_text(text: str, options: list[ChoiceOption]) -> str:
-    normalized_response = _normalize_choice_text(text)
-    if not normalized_response:
-        return _INVALID_CHOICE
-
-    normalized_options = [
-        (option.label, option.text, _normalize_choice_text(option.text))
-        for option in options
-    ]
-    exact_matches = [
-        label
-        for label, _text, normalized_text in normalized_options
-        if normalized_text and normalized_text == normalized_response
-    ]
-    if len(exact_matches) == 1:
-        return exact_matches[0]
-
-    contained_matches = [
-        (label, len(normalized_text))
-        for label, _text, normalized_text in normalized_options
-        if normalized_text and normalized_text in normalized_response
-    ]
-    if not contained_matches:
-        return _INVALID_CHOICE
-
-    contained_matches.sort(key=lambda item: item[1], reverse=True)
-    if len(contained_matches) > 1 and contained_matches[0][1] == contained_matches[1][1]:
-        return _INVALID_CHOICE
-    return contained_matches[0][0]
+from evalution.engines.base import InferenceSession, LoglikelihoodRequest
+from evalution.logbar import get_logger
+from evalution.results import SampleResult, TestResult
+from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
+from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
+from evalution.suites.multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 
 
 @dataclass(slots=True)
-class ARCChallenge(BaseTestSuite):
+class ARCChallenge(BaseMultipleChoiceSuite):
+    # Score ARC-Challenge as a multiple-choice exam, matching the original ARC release logic.
     dataset_path: str = "allenai/ai2_arc"
     dataset_name: str | None = "ARC-Challenge"
     split: str = "test"
-    apply_chat_template: bool = False
-    max_new_tokens: int = 8
-    do_sample: bool = False
-    temperature: float = 0.0
 
-    # Use the Hugging Face datasets loader for the ARC-Challenge benchmark.
     def dataset_loader(self) -> Any:
         return load_dataset
 
     def task_name(self) -> str:
         return "arc_challenge"
 
-    # Show label accuracy and invalid parses in the live progress title.
-    def score_progress_title(
-        self,
-        *,
-        processed: int,
-        aggregate_scores: dict[str, float],
-        invalid_predictions: int,
-    ) -> str:
-        accuracy = (
-            aggregate_scores.get("exact_match,choice-label", 0.0) / processed
-            if processed
-            else 0.0
-        )
-        return (
-            f"{self.task_name()}: scoring "
-            f"accuracy={accuracy:.4f} "
-            f"invalid={invalid_predictions}"
+    def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        labels = list(doc["choices"]["label"])
+        texts = list(doc["choices"]["text"])
+        return MultipleChoiceSample(
+            index=index,
+            prompt=question_answer_prompt(doc["question"]),
+            choices=texts,
+            gold_index=choice_index_from_labels(labels, doc["answerKey"]),
+            metadata={"id": doc["id"], "choice_labels": labels},
         )
 
-    def result_metadata(
-        self,
-        *,
-        generation_submission_mode: str,
-    ) -> dict[str, Any]:
+    def result_metadata(self) -> dict[str, Any]:
         return {
-            **self.base_result_metadata(
-                generation_submission_mode=generation_submission_mode,
-            ),
-            "apply_chat_template": self.apply_chat_template,
+            "dataset_path": self.dataset_path,
+            "dataset_name": self.dataset_name,
+            "split": self.split,
+            "streaming": self.streaming,
+            "scoring_mode": "multiple_choice_exam_score",
+            "scoring_reference": "arc_original_code_tie_aware",
         }
 
-    def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
-        for index, doc in enumerate(docs):
-            correct_choice = _correct_choice(doc)
-            yield PreparedSample(
-                index=index,
-                doc=doc,
-                target=f"{correct_choice.label}. {correct_choice.text}",
-                request=self._build_request(doc),
+    def evaluate(self, session: InferenceSession) -> TestResult:
+        task_name = self.task_name()
+        logger = get_logger()
+        loaded_docs, _dataset_load_wall_s = load_suite_dataset(
+            self.dataset_loader(),
+            task_name=task_name,
+            dataset_path=self.dataset_path,
+            dataset_name=self.dataset_name,
+            split=self.split,
+            cache_dir=self.cache_dir,
+            streaming=self.streaming,
+        )
+
+        docs = limit_docs(loaded_docs, self.max_rows)
+        if not isinstance(docs, list):
+            docs = list(docs)
+
+        total = doc_count(
+            docs,
+            loaded_docs=loaded_docs,
+            max_rows=self.max_rows,
+            split=self.split,
+        )
+        logger.info("%s: evaluating %d sample(s)", task_name, total)
+
+        samples = [self.build_sample(doc, index=index) for index, doc in enumerate(docs)]
+        requests: list[LoglikelihoodRequest] = []
+        request_to_choice: list[tuple[int, int]] = []
+        for sample in samples:
+            for choice_index, choice in enumerate(sample.choices):
+                requests.append(
+                    LoglikelihoodRequest(
+                        context=sample.prompt,
+                        continuation=self.continuation_for_choice(choice),
+                    )
+                )
+                request_to_choice.append((sample.index, choice_index))
+
+        outputs = session.loglikelihood(requests, batch_size=self.batch_size)
+        logger.info("%s: executed %d/%d sample(s)", task_name, len(samples), total)
+
+        sample_choice_scores: dict[int, list[tuple[float, int]]] = defaultdict(list)
+        for (sample_index, choice_index), output in zip(request_to_choice, outputs, strict=True):
+            sample_choice_scores[sample_index].append((output.logprob, choice_index))
+
+        sample_results: list[SampleResult] = []
+        total_score = 0.0
+        for sample in samples:
+            choice_scores = sorted(sample_choice_scores[sample.index], key=lambda item: item[1])
+            max_choice_score = max(score for score, _choice_index in choice_scores)
+            selected_indices = [
+                choice_index
+                for score, choice_index in choice_scores
+                if score == max_choice_score
+            ]
+            question_score = (
+                1.0 / len(selected_indices)
+                if sample.gold_index in selected_indices
+                else 0.0
+            )
+            total_score += question_score
+            choice_labels = sample.metadata["choice_labels"]
+            selected_labels = [choice_labels[index] for index in selected_indices]
+            selected_texts = [sample.choices[index] for index in selected_indices]
+            sample_results.append(
+                SampleResult(
+                    index=sample.index,
+                    prompt=sample.prompt,
+                    target=sample.choices[sample.gold_index],
+                    prediction=" | ".join(selected_texts),
+                    extracted={
+                        "gold_index": str(sample.gold_index),
+                        "selected_indices": ",".join(str(index) for index in selected_indices),
+                        "selected_labels": ",".join(selected_labels),
+                    },
+                    scores={"accuracy,exam_score": question_score},
+                    metadata={
+                        **sample.metadata,
+                        "choice_logprobs": [score for score, _choice_index in choice_scores],
+                        "selected_count": len(selected_indices),
+                    },
+                )
             )
 
-    def score_sample(
-        self,
-        prepared_sample: PreparedSample,
-        output: GenerationOutput,
-    ) -> SampleResult:
-        options = _choice_options(prepared_sample.doc)
-        option_by_label = {option.label: option for option in options}
-        correct_choice = _correct_choice(prepared_sample.doc)
-
-        predicted_label = _extract_choice_label(output.text, set(option_by_label))
-        if predicted_label == _INVALID_CHOICE:
-            predicted_label = _extract_choice_label_from_text(output.text, options)
-        predicted_text = (
-            option_by_label[predicted_label].text
-            if predicted_label in option_by_label
-            else _INVALID_CHOICE
+        denominator = max(len(sample_results), 1)
+        metrics = {"accuracy,exam_score": total_score / denominator}
+        return TestResult(
+            name=task_name,
+            metrics=metrics,
+            samples=sample_results,
+            metadata=self.result_metadata(),
         )
 
-        scores = {
-            "exact_match,choice-label": float(predicted_label == correct_choice.label),
-            "exact_match,choice-text": float(
-                _normalize_choice_text(predicted_text) == _normalize_choice_text(correct_choice.text)
-            ),
-        }
-        return SampleResult(
-            index=prepared_sample.index,
-            prompt=output.prompt,
-            target=prepared_sample.target,
-            prediction=output.text,
-            extracted={
-                "choice-label": predicted_label,
-                "choice-text": predicted_text,
-            },
-            scores=scores,
-            metadata=self._sample_metadata(prepared_sample.doc),
-        )
 
-    def invalid_prediction_count(self, sample: SampleResult) -> int:
-        return int(sample.extracted["choice-label"] == _INVALID_CHOICE)
-
-    def _build_request(self, doc: dict[str, Any]) -> GenerationRequest:
-        prompt = _prompt_text(doc)
-        if self.apply_chat_template:
-            return GenerationRequest(
-                messages=[{"role": "user", "content": prompt}],
-                stop=list(_STOP_STRINGS),
-                max_new_tokens=self.max_new_tokens,
-                do_sample=self.do_sample,
-                temperature=self.temperature,
-            )
-        return GenerationRequest(
-            prompt=prompt,
-            stop=list(_STOP_STRINGS),
-            max_new_tokens=self.max_new_tokens,
-            do_sample=self.do_sample,
-            temperature=self.temperature,
-        )
-
-    def _sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
-        correct_choice = _correct_choice(doc)
-        return {
-            "id": doc.get("id"),
-            "answer_label": correct_choice.label,
-            "choices": [
-                {
-                    "label": option.label,
-                    "text": option.text,
-                }
-                for option in _choice_options(doc)
-            ],
-        }
-
-
-# Convenience constructor mirroring the public suite factory style.
 def arc_challenge(**kwargs: Any) -> ARCChallenge:
     return ARCChallenge(**kwargs)
