@@ -213,52 +213,52 @@ numerics details such as hardware behavior, dtype and normalization choices, ker
 and attention or matmul approximation and accumulation behavior. Even with the same benchmark
 logic, those implementation details can shift results.
 
-| Suite | Hugging Face dataset | Default split | Scoring | Original benchmark |
-| --- | --- | --- | --- | --- |
-| `anli_r1` | `facebook/anli` | `test_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `anli_r2` | `facebook/anli` | `test_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `anli_r3` | `facebook/anli` | `test_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
-| `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
-| `asdiv` | `EleutherAI/asdiv` | `validation` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
-| `asdiv_cot_llama` | `EleutherAI/asdiv` | `validation` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
-| `babi` | `Muennighoff/babi` | `test` | Generated exact match | bAbI `weston2015towards` |
-| `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
-| `cola` | `nyu-mll/glue` / `cola` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
-| `commonsense_qa` | `tau/commonsense_qa` | `validation` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
-| `copa` | `super_glue` / `copa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `ethics_cm` | `EleutherAI/hendrycks_ethics` / `commonsense` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_deontology` | `EleutherAI/hendrycks_ethics` / `deontology` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_justice` | `EleutherAI/hendrycks_ethics` / `justice` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_utilitarianism` | `EleutherAI/hendrycks_ethics` / `utilitarianism` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_virtue` | `EleutherAI/hendrycks_ethics` / `virtue` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `gsm8k` | `openai/gsm8k` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
-| `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
-| `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
-| `headqa_en` | `EleutherAI/headqa` / `en` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
-| `headqa_es` | `EleutherAI/headqa` / `es` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
-| `lambada_openai` | `EleutherAI/lambada_openai` / `default` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_openai_cloze` | `EleutherAI/lambada_openai` / `default` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_standard` | `cimec/lambada` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_standard_cloze` | `cimec/lambada` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `medmcqa` | `openlifescienceai/medmcqa` | `validation` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
-| `medqa_4options` | `GBaker/MedQA-USMLE-4-options-hf` | `test` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
-| `mmlu` | `cais/mmlu` / `<subsets>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
-| `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<subsets>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
-| `mnli` | `nyu-mll/glue` / `mnli` | `validation_matched` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `mrpc` | `nyu-mll/glue` / `mrpc` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
-| `openbookqa` | `allenai/openbookqa` / `main` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
-| `piqa` | `baber/piqa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
-| `qnli` | `nyu-mll/glue` / `qnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `qqp` | `nyu-mll/glue` / `qqp` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
-| `rte` | `super_glue` / `rte` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `sciq` | `allenai/sciq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
-| `swag` | `swag` / `regular` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
-| `sst2` | `nyu-mll/glue` / `sst2` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `wic` | `super_glue` / `wic` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `wnli` | `nyu-mll/glue` / `wnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `winogrande` | `winogrande` / `winogrande_xl` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
+| Suite | Scoring | Original benchmark |
+| --- | --- | --- |
+| `anli_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `anli_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
+| `arc_easy` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
+| `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
+| `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
+| `babi` | Generated exact match | bAbI `weston2015towards` |
+| `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
+| `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
+| `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
+| `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_deontology` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_justice` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_utilitarianism` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_virtue` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
+| `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
+| `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
+| `medqa_4options` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
+| `mmlu` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
+| `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
+| `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
+| `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
+| `qnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `rte` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `sciq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
+| `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
+| `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
 
 `arc_challenge` and `arc_easy`: choose among answer options and score the question as an exam
 item, including partial credit when multiple top-scoring choices tie.
