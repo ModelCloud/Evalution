@@ -140,6 +140,8 @@ tests:
     max_rows: 18
   - type: lambada_standard_cloze
     max_rows: 18
+  - type: logiqa
+    max_rows: 18
   - type: medmcqa
     max_rows: 18
   - type: medqa_4options
@@ -226,6 +228,7 @@ tests:
     assert ".run(benchmarks.lambada_openai_cloze(" in script
     assert ".run(benchmarks.lambada_standard(" in script
     assert ".run(benchmarks.lambada_standard_cloze(" in script
+    assert ".run(benchmarks.logiqa(" in script
     assert ".run(benchmarks.medmcqa(" in script
     assert ".run(benchmarks.medqa_4options(" in script
     assert ".run(benchmarks.boolq(" in script

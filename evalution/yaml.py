@@ -62,6 +62,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "lambada_openai_cloze": benchmarks.lambada_openai_cloze,
     "lambada_standard": benchmarks.lambada_standard,
     "lambada_standard_cloze": benchmarks.lambada_standard_cloze,
+    "logiqa": benchmarks.logiqa,
     "medmcqa": benchmarks.medmcqa,
     "medqa_4options": benchmarks.medqa_4options,
     "mmlu": benchmarks.mmlu,

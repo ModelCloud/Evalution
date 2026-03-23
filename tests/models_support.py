@@ -1457,6 +1457,30 @@ SUITE_SPECS = {
             metadata_validator=_metadata_fields_truthy("text", "target_token", "prompt_variant"),
         ),
     ),
+    "logiqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.logiqa(batch_size=24, max_rows=128),
+        expected_name="logiqa",
+        baseline={
+            "acc,ll": 0.1875,
+            "acc,ll_avg": 0.34375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "EleutherAI/logiqa",
+            "dataset_name": "logiqa",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Passage: ",
+            prompt_substrings=("\nQuestion: ", "\nChoices:\n", "\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
     "medmcqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, streaming=True, max_rows=128),
         expected_name="medmcqa",

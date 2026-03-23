@@ -43,6 +43,7 @@ from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
 from .lambada import LAMBADA, lambada_openai, lambada_standard
 from .lambada_cloze import LAMBADACloze, lambada_openai_cloze, lambada_standard_cloze
+from .logiqa import LogiQA, logiqa
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mmlu import MMLU, mmlu
@@ -89,6 +90,7 @@ __all__ = [
     "HellaSwag",
     "LAMBADA",
     "LAMBADACloze",
+    "LogiQA",
     "MedMCQA",
     "MedQA",
     "MMLU",
@@ -152,6 +154,7 @@ __all__ = [
     "lambada_openai_cloze",
     "lambada_standard",
     "lambada_standard_cloze",
+    "logiqa",
     "medmcqa",
     "medqa_4options",
     "macro_f1",

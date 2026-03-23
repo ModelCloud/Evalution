@@ -255,6 +255,7 @@ logic, those implementation details can shift results.
 | `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
 | `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
 | `medqa_4options` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
 | `mmlu` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
@@ -338,6 +339,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
+- `logiqa`: LogiQA `liu2020logiqa`
 - `medmcqa`: MedMCQA `pmlr-v174-pal22a`
 - `medqa_4options`: MedQA `jin2020disease`
 - `mmlu`: MMLU `hendryckstest2021`
@@ -512,6 +514,16 @@ The current built-in suite coverage maps to these benchmark citations:
   publisher = {Zenodo},
   doi = {10.5281/zenodo.2630551},
   year = {2016},
+}
+
+# LogiQA
+@misc{liu2020logiqa,
+  title = {LogiQA: A Challenge Dataset for Machine Reading Comprehension with Logical Reasoning},
+  author = {Jian Liu and Leyang Cui and Hanmeng Liu and Dandan Huang and Yile Wang and Yue Zhang},
+  year = {2020},
+  eprint = {2007.08124},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
 }
 
 # MedMCQA
