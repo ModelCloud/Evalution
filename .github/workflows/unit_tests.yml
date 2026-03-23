@@ -91,6 +91,8 @@ jobs:
             echo "::error::tests/ directory not found."
             exit 1
           fi
+          
+          uv pip install pytest
 
           mkdir -p artifacts
           pytest --durations=0 tests --junitxml=artifacts/unit-tests.xml
