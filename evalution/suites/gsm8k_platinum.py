@@ -10,9 +10,9 @@ from typing import Any
 
 from datasets import load_dataset
 
+from evalution.scorers.gsm8k import gsm8k_platinum_numeric_target
 from evalution.suites.gsm8k_common import BaseGSM8KSuite, GSM8KVariant
 from evalution.suites.gsm8k_common import build_variant_specs as _build_variant_specs
-from evalution.suites.gsm8k_common import gsm8k_platinum_numeric_target
 
 GSM8KPlatinumVariant = GSM8KVariant
 _VARIANTS = _build_variant_specs("gsm8k_platinum")

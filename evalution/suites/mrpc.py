@@ -10,7 +10,7 @@ from typing import Any
 
 from datasets import load_dataset
 
-from evalution.suites.classification_metrics import f1_for_label
+from evalution.scorers.classification import f1_for_label
 from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 

@@ -10,7 +10,7 @@ from typing import Any
 
 from datasets import load_dataset
 
-from evalution.suites.classification_metrics import matthews_corrcoef
+from evalution.scorers.classification import matthews_corrcoef
 from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 

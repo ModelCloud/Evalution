@@ -10,7 +10,7 @@ from typing import Any
 
 from datasets import load_dataset
 
-from evalution.suites.classification_metrics import macro_f1
+from evalution.scorers.classification import macro_f1
 from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 _CB_CHOICES = ["True", "False", "Neither"]

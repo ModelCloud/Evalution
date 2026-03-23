@@ -54,6 +54,24 @@ class HellaSwag(BaseMultipleChoiceSuite):
             },
         )
 
+    # The optional label-permutation scorer keeps HellaSwag as an explicit completion choice task
+    # instead of scoring raw ending text directly, which helps separate label priors from ending length.
+    def label_prompt(
+        self,
+        sample: MultipleChoiceSample,
+        *,
+        choice_order: tuple[int, ...],
+        labels: tuple[str, ...],
+    ) -> str:
+        lines = [
+            f"Context: {sample.prompt}",
+            "Question: Which ending best continues the context?",
+        ]
+        for label, choice_index in zip(labels, choice_order, strict=True):
+            lines.append(f"{label}. {sample.choices[choice_index]}")
+        lines.append("Answer:")
+        return "\n".join(lines)
+
 
 # Mirror the public suite factory style used by the rest of the package.
 def hellaswag(**kwargs: Any) -> HellaSwag:

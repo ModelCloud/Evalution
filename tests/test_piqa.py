@@ -69,3 +69,69 @@ def test_piqa_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
     }
     assert sample.metadata["choice_logprobs"] == [-0.4, -1.4]
     assert len(sample.metadata["choice_logprobs_norm"]) == 2
+
+
+def test_piqa_can_emit_label_permutation_metric(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "goal": "Chill a drink quickly",
+                "sol1": "Put the bottle in the freezer for a short time.",
+                "sol2": "Leave the bottle near a warm oven.",
+                "label": 0,
+            }
+        ]
+    )
+    monkeypatch.setattr(piqa_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    class LabelPermutationSession:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def loglikelihood(self, requests, *, batch_size=None):
+            assert batch_size == 4
+            self.calls += 1
+            if self.calls == 1:
+                assert len(requests) == 2
+                return [
+                    LoglikelihoodOutput(logprob=-0.8, is_greedy=False, token_count=6),
+                    LoglikelihoodOutput(logprob=-0.4, is_greedy=True, token_count=6),
+                ]
+
+            assert len(requests) == 4
+            assert requests[0].context == (
+                "Question: Chill a drink quickly\n"
+                "Options:\n"
+                "A. Put the bottle in the freezer for a short time.\n"
+                "B. Leave the bottle near a warm oven.\n"
+                "Answer:"
+            )
+            gold_text = "Put the bottle in the freezer for a short time."
+            outputs = []
+            for request in requests:
+                label = request.continuation.strip()
+                is_gold_label = f"{label}. {gold_text}" in request.context
+                outputs.append(
+                    LoglikelihoodOutput(
+                        logprob=-0.1 if is_gold_label else -1.2,
+                        is_greedy=is_gold_label,
+                        token_count=1,
+                    )
+                )
+            return outputs
+
+    result = evalution.piqa(
+        max_rows=1,
+        batch_size=4,
+        label_permutations=0.5,
+    ).evaluate(LabelPermutationSession())
+
+    assert result.metrics == {
+        "accuracy,loglikelihood": 0.0,
+        "accuracy,loglikelihood_norm": 0.0,
+        "accuracy,label_perm_0.5": 1.0,
+    }
+    assert result.metadata["label_permutations"] == 0.5
+    assert result.metadata["label_permutation_metric"] == "accuracy,label_perm_0.5"
+    assert result.samples[0].extracted["predicted_index_label_perm_0.5"] == "0"
+    assert result.samples[0].metadata["label_permutation_count"] == 2

@@ -8,7 +8,6 @@ from .arc_challenge import ARCChallenge, arc_challenge
 from .base import BaseTestSuite, TestSuite
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
-from .classification_metrics import f1_for_label, macro_f1, matthews_corrcoef
 from .cola import CoLA, cola
 from .copa import COPA, copa
 from .gsm8k import GSM8K, gsm8k
@@ -29,6 +28,7 @@ from .sst2 import SST2, sst2
 from .wic import WiC, wic
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
+from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
 
 __all__ = [
     "ARCEasy",

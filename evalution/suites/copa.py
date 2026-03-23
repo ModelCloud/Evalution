@@ -54,8 +54,32 @@ class COPA(BaseMultipleChoiceSuite):
                 _copa_choice_text(doc["choice2"]),
             ],
             gold_index=int(doc["label"]),
-            metadata={"idx": int(doc["idx"]), "question": doc["question"]},
+            metadata={
+                "idx": int(doc["idx"]),
+                "question": doc["question"],
+                "premise": doc["premise"].strip(),
+                "raw_choices": [doc["choice1"].strip(), doc["choice2"].strip()],
+            },
         )
+
+    # The optional label-permutation scorer rewrites COPA as an explicit labeled-choice question
+    # so it can score `A/B` labels while preserving cause-versus-effect semantics.
+    def label_prompt(
+        self,
+        sample: MultipleChoiceSample,
+        *,
+        choice_order: tuple[int, ...],
+        labels: tuple[str, ...],
+    ) -> str:
+        relation = "cause" if sample.metadata["question"] == "cause" else "effect"
+        lines = [
+            f"Premise: {sample.metadata['premise']}",
+            f"Question: Which option is the more likely {relation}?",
+        ]
+        for label, choice_index in zip(labels, choice_order, strict=True):
+            lines.append(f"{label}. {sample.metadata['raw_choices'][choice_index]}")
+        lines.append("Answer:")
+        return "\n".join(lines)
 
 
 # Mirror the public suite factory style used by the rest of the package.

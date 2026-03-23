@@ -14,6 +14,12 @@ from datasets import load_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger
 from evalution.results import SampleResult, TestResult
+from evalution.scorers.multiple_choice import (
+    build_choice_scores,
+    choice_logprobs,
+    choice_logprobs_norm,
+    multiple_choice_outcome,
+)
 from evalution.suites.base import TestSuite
 from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
 from evalution.suites.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
@@ -215,33 +221,33 @@ class MMLU(TestSuite):
         for index, doc in enumerate(sample_docs):
             start = index * len(_MMLU_LABELS)
             choice_outputs = outputs[start : start + len(_MMLU_LABELS)]
-            choice_logprobs = [output.logprob for output in choice_outputs]
-            choice_logprobs_norm = [
-                output.logprob / max(output.token_count, 1)
-                for output in choice_outputs
-            ]
-            raw_best = max(range(len(choice_logprobs)), key=choice_logprobs.__getitem__)
-            norm_best = max(range(len(choice_logprobs_norm)), key=choice_logprobs_norm.__getitem__)
+            choice_scores = build_choice_scores(
+                (
+                    choice_index,
+                    output.logprob,
+                    output.token_count,
+                )
+                for choice_index, output in enumerate(choice_outputs)
+            )
             gold_index = int(doc["answer"])
-            raw_score = 1.0 if raw_best == gold_index else 0.0
-            norm_score = 1.0 if norm_best == gold_index else 0.0
-            raw_total += raw_score
-            norm_total += norm_score
+            outcome = multiple_choice_outcome(choice_scores, gold_index)
+            raw_total += outcome.raw_accuracy
+            norm_total += outcome.normalized_accuracy
             leaf_subset = _MMLU_SUBSETS.leaf_subset(doc["subject"])
             sample_results.append(
                 SampleResult(
                     index=index,
                     prompt=prompts[index],
                     target=_MMLU_LABELS[gold_index],
-                    prediction=_MMLU_LABELS[norm_best],
+                    prediction=_MMLU_LABELS[outcome.normalized_best_index],
                     extracted={
                         "gold_index": str(gold_index),
-                        "predicted_index": str(raw_best),
-                        "predicted_index_norm": str(norm_best),
+                        "predicted_index": str(outcome.raw_best_index),
+                        "predicted_index_norm": str(outcome.normalized_best_index),
                     },
                     scores={
-                        "accuracy,loglikelihood": raw_score,
-                        "accuracy,loglikelihood_norm": norm_score,
+                        "accuracy,loglikelihood": outcome.raw_accuracy,
+                        "accuracy,loglikelihood_norm": outcome.normalized_accuracy,
                     },
                     metadata={
                         "subset": leaf_subset,
@@ -249,8 +255,8 @@ class MMLU(TestSuite):
                         "subset_kind": "leaf",
                         "subset_value": str(doc["subject"]),
                         "choice_texts": list(doc["choices"]),
-                        "choice_logprobs": choice_logprobs,
-                        "choice_logprobs_norm": choice_logprobs_norm,
+                        "choice_logprobs": choice_logprobs(choice_scores),
+                        "choice_logprobs_norm": choice_logprobs_norm(choice_scores),
                     },
                 )
             )

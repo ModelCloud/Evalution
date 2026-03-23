@@ -18,14 +18,14 @@ from datasets import Dataset
 
 import evalution
 from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.scorers.gsm8k import INVALID_ANSWER
+from evalution.scorers.gsm8k import extract_format_insensitive_numeric_answer
+from evalution.scorers.gsm8k import extract_gsm8k_platinum_reference_answer
 from evalution.suites.execution import AUTO_BATCH_PREVIEW_ROWS
 from evalution.suites.execution import PreparedSample
 from evalution.suites.execution import _prefetch_executor
 from evalution.suites.execution import iter_prefetched_batches
 from evalution.suites.execution import iter_prefetched_samples
-from evalution.suites.gsm8k_common import INVALID_ANSWER
-from evalution.suites.gsm8k_common import extract_format_insensitive_numeric_answer
-from evalution.suites.gsm8k_common import extract_gsm8k_platinum_reference_answer
 
 gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
 

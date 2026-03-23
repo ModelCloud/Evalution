@@ -46,8 +46,29 @@ class WinoGrande(BaseMultipleChoiceSuite):
             prompt=prefix,
             choices=choices,
             gold_index=int(doc["answer"]) - 1,
-            metadata={"sentence": doc["sentence"]},
+            metadata={
+                "sentence": doc["sentence"],
+                "option_texts": [doc["option1"], doc["option2"]],
+            },
         )
+
+    # The optional label-permutation scorer rewrites WinoGrande back into an explicit blank-filling
+    # question so label scoring compares the candidate fillers rather than the raw continuation length.
+    def label_prompt(
+        self,
+        sample: MultipleChoiceSample,
+        *,
+        choice_order: tuple[int, ...],
+        labels: tuple[str, ...],
+    ) -> str:
+        lines = [
+            f"Sentence: {sample.metadata['sentence']}",
+            "Question: Which option best fills the blank?",
+        ]
+        for label, choice_index in zip(labels, choice_order, strict=True):
+            lines.append(f"{label}. {sample.metadata['option_texts'][choice_index]}")
+        lines.append("Answer:")
+        return "\n".join(lines)
 
 
 # Mirror the public suite factory style used by the rest of the package.

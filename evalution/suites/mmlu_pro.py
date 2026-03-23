@@ -16,6 +16,7 @@ from datasets import load_dataset
 from evalution.engines.base import GenerationOutput, GenerationRequest, InferenceSession
 from evalution.logbar import get_logger, manual_progress
 from evalution.results import SampleResult, TestResult
+from evalution.scorers.choice_label import choice_label_exact_match
 from evalution.suites.base import TestSuite
 from evalution.suites.data import limit_docs, load_suite_dataset
 from evalution.suites.execution import (
@@ -666,7 +667,7 @@ class MMLUPro(TestSuite):
                 "choice-text": predicted_text,
             },
             scores={
-                "exact_match,choice-label": float(predicted_label == gold_label),
+                "exact_match,choice-label": choice_label_exact_match(predicted_label, gold_label),
             },
             metadata={
                 "question_id": prepared_sample.doc.get("question_id"),

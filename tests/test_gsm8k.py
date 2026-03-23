@@ -12,10 +12,10 @@ import pcre
 
 import evalution
 from evalution.engines.base import GenerationOutput
+from evalution.scorers.gsm8k import INVALID_ANSWER
+from evalution.scorers.gsm8k import extract_format_insensitive_numeric_answer
+from evalution.scorers.gsm8k import extract_gsm8k_reference_answer
 from evalution.suites import base as base_suite_module
-from evalution.suites.gsm8k_common import INVALID_ANSWER
-from evalution.suites.gsm8k_common import extract_format_insensitive_numeric_answer
-from evalution.suites.gsm8k_common import extract_gsm8k_reference_answer
 
 gsm8k_module = importlib.import_module("evalution.suites.gsm8k")
 

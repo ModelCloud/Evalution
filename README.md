@@ -19,6 +19,7 @@ pip install .
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
+Scoring implementation notes and scorer-module mapping live in [docs/scorers.md](docs/scorers.md).
 
 Simple usage:
 
@@ -149,8 +150,9 @@ evalution emit-python evalution.yaml
 `Transformers(...)` accepts runtime options such as `dtype`, `device`, `batch_size`,
 `paged_attention`, `attn_implementation`, and `max_new_tokens`.
 
-Per-suite options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, and `max_rows`
-can be set directly on each suite call or in each YAML `tests` entry.
+Per-suite options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`, and
+scorer-specific options like `label_permutations` can be set directly on each suite call or in each
+YAML `tests` entry.
 
 ## Subset Selection
 
@@ -234,6 +236,13 @@ logic, those implementation details can shift results.
 
 `arc_challenge` and `arc_easy`: choose among answer options and score the question as an exam
 item, including partial credit when multiple top-scoring choices tie.
+
+For selected multiple-choice suites, `label_permutations` can be set to any float in `[0.0, 1.0]`
+to add an extra permutation-averaged label-only metric. This does not replace the default
+benchmark score. It adds extra inference work on purpose so users can compare the benchmark-native
+score against a label-bias-mitigated alternative when option length is a concern. Metric names
+carry the exact configured fraction, for example `accuracy,label_perm_0.25`. See
+[docs/scorers.md](docs/scorers.md) for the exact math, metric names, and compute tradeoffs.
 
 Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
 

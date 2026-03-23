@@ -13,6 +13,18 @@ from typing import Any
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger
 from evalution.results import SampleResult, TestResult
+from evalution.scorers.multiple_choice import (
+    ChoiceScore,
+    build_choice_score,
+    choice_labels,
+    choice_logprobs,
+    choice_logprobs_norm,
+    label_permutation_metric_name,
+    label_permutation_outcome,
+    label_permutations_for_mode,
+    multiple_choice_outcome,
+    normalize_label_permutation_fraction,
+)
 from evalution.suites.base import TestSuite
 from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
 
@@ -37,6 +49,9 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     batch_size: int | None = None
     cache_dir: str | None = None
     streaming: bool = False
+    # Optional extra label-only scorer that averages over a subset of label permutations to reduce
+    # fixed-label priors without replacing the benchmark-native score. Use any float in [0.0, 1.0].
+    label_permutations: float = 0.0
 
     # Return the callable used to fetch the underlying dataset rows.
     @abstractmethod
@@ -57,15 +72,39 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     def continuation_for_choice(self, choice: str) -> str:
         return choice if choice[:1].isspace() else f" {choice}"
 
+    # Control how each option-label continuation is appended when the optional label-permutation scorer is enabled.
+    def continuation_for_choice_label(self, label: str) -> str:
+        return f" {label}"
+
+    # Build the prompt used by the optional label-permutation scorer. The default keeps the original prompt
+    # stem, lists labeled options, and asks for just the label. Suites with special semantics can override it.
+    def label_prompt(
+        self,
+        sample: MultipleChoiceSample,
+        *,
+        choice_order: tuple[int, ...],
+        labels: tuple[str, ...],
+    ) -> str:
+        prompt_stem = sample.prompt.rstrip()
+        if prompt_stem.endswith("Answer:"):
+            prompt_stem = prompt_stem[: -len("Answer:")].rstrip()
+        lines = [prompt_stem, "Options:"]
+        for label, choice_index in zip(labels, choice_order, strict=True):
+            lines.append(f"{label}. {sample.choices[choice_index]}")
+        lines.append("Answer:")
+        return "\n".join(lines)
+
     # Report suite-level metadata that is stable across all samples in the run.
     def result_metadata(self) -> dict[str, Any]:
-        return {
+        metadata = {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
             "streaming": self.streaming,
             "scoring_mode": "multiple_choice_loglikelihood",
         }
+        metadata.update(self._label_permutation_metadata())
+        return metadata
 
     # Allow concrete suites to publish extra aggregate metrics without reimplementing the shared scoring loop.
     def extra_metrics(
@@ -77,6 +116,76 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     ) -> dict[str, float]:
         del samples, raw_predictions, normalized_predictions
         return {}
+
+    def _resolved_label_permutations(self) -> float:
+        return normalize_label_permutation_fraction(self.label_permutations)
+
+    def _label_permutation_metadata(self) -> dict[str, Any]:
+        resolved_mode = self._resolved_label_permutations()
+        if resolved_mode == 0.0:
+            return {}
+        return {
+            "extra_scoring_mode": "multiple_choice_label_permutation_average",
+            "label_permutations": resolved_mode,
+            "label_permutation_metric": label_permutation_metric_name(resolved_mode),
+        }
+
+    def _label_permutation_scores(
+        self,
+        session: InferenceSession,
+        *,
+        samples: list[MultipleChoiceSample],
+    ) -> tuple[str | None, dict[int, Any]]:
+        resolved_mode = self._resolved_label_permutations()
+        if resolved_mode == 0.0:
+            return None, {}
+
+        requests: list[LoglikelihoodRequest] = []
+        request_map: list[tuple[int, int, int]] = []
+        sample_permutations: dict[int, list[tuple[int, ...]]] = {}
+        for sample in samples:
+            sample_labels = choice_labels(len(sample.choices))
+            permutations = label_permutations_for_mode(len(sample.choices), resolved_mode)
+            sample_permutations[sample.index] = permutations
+            for permutation_index, permutation in enumerate(permutations):
+                prompt = self.label_prompt(
+                    sample,
+                    choice_order=permutation,
+                    labels=sample_labels,
+                )
+                for label_index, label in enumerate(sample_labels):
+                    requests.append(
+                        LoglikelihoodRequest(
+                            context=prompt,
+                            continuation=self.continuation_for_choice_label(label),
+                        )
+                    )
+                    request_map.append((sample.index, permutation_index, label_index))
+
+        # This second scoring pass is intentionally opt-in because every extra permutation multiplies
+        # label-token scoring requests by `permutation_count * choice_count`.
+        outputs = session.loglikelihood(requests, batch_size=self.batch_size)
+        sample_scores: dict[int, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+        for (sample_index, permutation_index, _label_index), output in zip(
+            request_map,
+            outputs,
+            strict=True,
+        ):
+            sample_scores[sample_index][permutation_index].append(output.logprob)
+
+        outcomes: dict[int, Any] = {}
+        for sample in samples:
+            permutations = sample_permutations[sample.index]
+            permutation_label_logprobs = [
+                sample_scores[sample.index][permutation_index]
+                for permutation_index in range(len(permutations))
+            ]
+            outcomes[sample.index] = label_permutation_outcome(
+                permutations=permutations,
+                permutation_label_logprobs=permutation_label_logprobs,
+                gold_index=sample.gold_index,
+            )
+        return label_permutation_metric_name(resolved_mode), outcomes
 
     # Execute the shared dataset loading, flattened choice scoring, and accuracy aggregation flow.
     def evaluate(self, session: InferenceSession) -> TestResult:
@@ -120,52 +229,65 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         outputs = session.loglikelihood(requests, batch_size=self.batch_size)
         logger.info("%s: executed %d/%d sample(s)", task_name, len(samples), total)
 
-        sample_choice_scores: dict[int, list[tuple[float, float, int]]] = defaultdict(list)
+        label_metric_name, label_outcomes = self._label_permutation_scores(session, samples=samples)
+
+        sample_choice_scores: dict[int, list[ChoiceScore]] = defaultdict(list)
         for (sample_index, choice_index), output in zip(request_to_choice, outputs, strict=True):
-            # Track both raw and length-normalized scores so suites can expose `acc` and `acc_norm`.
             sample_choice_scores[sample_index].append(
-                (
-                    output.logprob,
-                    output.logprob / max(output.token_count, 1),
-                    choice_index,
+                build_choice_score(
+                    choice_index=choice_index,
+                    logprob=output.logprob,
+                    token_count=output.token_count,
                 )
             )
 
         sample_results: list[SampleResult] = []
         raw_total = 0.0
         norm_total = 0.0
+        label_total = 0.0
         raw_predictions: list[int] = []
         normalized_predictions: list[int] = []
         for sample in samples:
-            choice_scores = sorted(sample_choice_scores[sample.index], key=lambda item: item[2])
-            raw_best = max(choice_scores, key=lambda item: item[0])[2]
-            norm_best = max(choice_scores, key=lambda item: item[1])[2]
-            raw_score = 1.0 if raw_best == sample.gold_index else 0.0
-            norm_score = 1.0 if norm_best == sample.gold_index else 0.0
-            raw_total += raw_score
-            norm_total += norm_score
-            raw_predictions.append(raw_best)
-            normalized_predictions.append(norm_best)
+            choice_scores = sorted(sample_choice_scores[sample.index], key=lambda item: item.index)
+            outcome = multiple_choice_outcome(choice_scores, sample.gold_index)
+            raw_total += outcome.raw_accuracy
+            norm_total += outcome.normalized_accuracy
+            raw_predictions.append(outcome.raw_best_index)
+            normalized_predictions.append(outcome.normalized_best_index)
+            sample_scores = {
+                "accuracy,loglikelihood": outcome.raw_accuracy,
+                "accuracy,loglikelihood_norm": outcome.normalized_accuracy,
+            }
+            sample_extracted = {
+                "gold_index": str(sample.gold_index),
+                "predicted_index": str(outcome.raw_best_index),
+                "predicted_index_norm": str(outcome.normalized_best_index),
+            }
+            sample_metadata = {
+                **sample.metadata,
+                "choice_logprobs": choice_logprobs(choice_scores),
+                "choice_logprobs_norm": choice_logprobs_norm(choice_scores),
+            }
+            if label_metric_name is not None:
+                label_outcome = label_outcomes[sample.index]
+                label_total += label_outcome.accuracy
+                sample_scores[label_metric_name] = label_outcome.accuracy
+                sample_extracted[f"predicted_index_{label_metric_name.split(',', maxsplit=1)[1]}"] = str(
+                    label_outcome.predicted_index
+                )
+                sample_metadata[f"choice_logprobs_{label_metric_name.split(',', maxsplit=1)[1]}"] = list(
+                    label_outcome.averaged_choice_logprobs
+                )
+                sample_metadata["label_permutation_count"] = label_outcome.permutation_count
             sample_results.append(
                 SampleResult(
                     index=sample.index,
                     prompt=sample.prompt,
                     target=sample.choices[sample.gold_index],
-                    prediction=sample.choices[norm_best],
-                    extracted={
-                        "gold_index": str(sample.gold_index),
-                        "predicted_index": str(raw_best),
-                        "predicted_index_norm": str(norm_best),
-                    },
-                    scores={
-                        "accuracy,loglikelihood": raw_score,
-                        "accuracy,loglikelihood_norm": norm_score,
-                    },
-                    metadata={
-                        **sample.metadata,
-                        "choice_logprobs": [score for score, _norm, _index in choice_scores],
-                        "choice_logprobs_norm": [norm for _score, norm, _index in choice_scores],
-                    },
+                    prediction=sample.choices[outcome.normalized_best_index],
+                    extracted=sample_extracted,
+                    scores=sample_scores,
+                    metadata=sample_metadata,
                 )
             )
 
@@ -174,6 +296,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             "accuracy,loglikelihood": raw_total / denominator,
             "accuracy,loglikelihood_norm": norm_total / denominator,
         }
+        if label_metric_name is not None:
+            metrics[label_metric_name] = label_total / denominator
         metrics.update(
             self.extra_metrics(
                 samples=samples,

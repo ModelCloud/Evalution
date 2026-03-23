@@ -14,6 +14,12 @@ from datasets import load_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger
 from evalution.results import SampleResult, TestResult
+from evalution.scorers.multiple_choice import (
+    ChoiceScore,
+    build_choice_score,
+    choice_logprobs,
+    exam_score_outcome,
+)
 from evalution.suites.data import doc_count, limit_docs, load_suite_dataset
 from evalution.suites.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from evalution.suites.multiple_choice_utils import choice_index_from_labels, question_answer_prompt
@@ -45,7 +51,7 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
         )
 
     def result_metadata(self) -> dict[str, Any]:
-        return {
+        metadata = {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
@@ -53,6 +59,8 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
             "scoring_mode": "multiple_choice_exam_score",
             "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
         }
+        metadata.update(self._label_permutation_metadata())
+        return metadata
 
     def evaluate(self, session: InferenceSession) -> TestResult:
         task_name = self.task_name()
@@ -95,51 +103,67 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
         outputs = session.loglikelihood(requests, batch_size=self.batch_size)
         logger.info("%s: executed %d/%d sample(s)", task_name, len(samples), total)
 
-        sample_choice_scores: dict[int, list[tuple[float, int]]] = defaultdict(list)
+        label_metric_name, label_outcomes = self._label_permutation_scores(session, samples=samples)
+
+        sample_choice_scores: dict[int, list[ChoiceScore]] = defaultdict(list)
         for (sample_index, choice_index), output in zip(request_to_choice, outputs, strict=True):
-            sample_choice_scores[sample_index].append((output.logprob, choice_index))
+            sample_choice_scores[sample_index].append(
+                build_choice_score(
+                    choice_index=choice_index,
+                    logprob=output.logprob,
+                    token_count=output.token_count,
+                )
+            )
 
         sample_results: list[SampleResult] = []
         total_score = 0.0
+        label_total = 0.0
         for sample in samples:
-            choice_scores = sorted(sample_choice_scores[sample.index], key=lambda item: item[1])
-            max_choice_score = max(score for score, _choice_index in choice_scores)
-            selected_indices = [
-                choice_index
-                for score, choice_index in choice_scores
-                if score == max_choice_score
-            ]
-            question_score = (
-                1.0 / len(selected_indices)
-                if sample.gold_index in selected_indices
-                else 0.0
-            )
-            total_score += question_score
+            choice_scores = sorted(sample_choice_scores[sample.index], key=lambda item: item.index)
+            outcome = exam_score_outcome(choice_scores, sample.gold_index)
+            selected_indices = list(outcome.selected_indices)
+            total_score += outcome.exam_score
             choice_labels = sample.metadata["choice_labels"]
             selected_labels = [choice_labels[index] for index in selected_indices]
             selected_texts = [sample.choices[index] for index in selected_indices]
+            sample_scores = {"accuracy,exam_score": outcome.exam_score}
+            sample_extracted = {
+                "gold_index": str(sample.gold_index),
+                "selected_indices": ",".join(str(index) for index in selected_indices),
+                "selected_labels": ",".join(selected_labels),
+            }
+            sample_metadata = {
+                **sample.metadata,
+                "choice_logprobs": choice_logprobs(choice_scores),
+                "selected_count": len(selected_indices),
+            }
+            if label_metric_name is not None:
+                label_outcome = label_outcomes[sample.index]
+                label_total += label_outcome.accuracy
+                sample_scores[label_metric_name] = label_outcome.accuracy
+                sample_extracted[f"predicted_index_{label_metric_name.split(',', maxsplit=1)[1]}"] = str(
+                    label_outcome.predicted_index
+                )
+                sample_metadata[f"choice_logprobs_{label_metric_name.split(',', maxsplit=1)[1]}"] = list(
+                    label_outcome.averaged_choice_logprobs
+                )
+                sample_metadata["label_permutation_count"] = label_outcome.permutation_count
             sample_results.append(
                 SampleResult(
                     index=sample.index,
                     prompt=sample.prompt,
                     target=sample.choices[sample.gold_index],
                     prediction=" | ".join(selected_texts),
-                    extracted={
-                        "gold_index": str(sample.gold_index),
-                        "selected_indices": ",".join(str(index) for index in selected_indices),
-                        "selected_labels": ",".join(selected_labels),
-                    },
-                    scores={"accuracy,exam_score": question_score},
-                    metadata={
-                        **sample.metadata,
-                        "choice_logprobs": [score for score, _choice_index in choice_scores],
-                        "selected_count": len(selected_indices),
-                    },
+                    extracted=sample_extracted,
+                    scores=sample_scores,
+                    metadata=sample_metadata,
                 )
             )
 
         denominator = max(len(sample_results), 1)
         metrics = {"accuracy,exam_score": total_score / denominator}
+        if label_metric_name is not None:
+            metrics[label_metric_name] = label_total / denominator
         return TestResult(
             name=task_name,
             metrics=metrics,
