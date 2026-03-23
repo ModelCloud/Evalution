@@ -4,6 +4,7 @@
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
 from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
+from .anli import ANLI, anli_r1, anli_r2, anli_r3
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .base import BaseTestSuite, TestSuite
@@ -34,6 +35,7 @@ from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
 
 __all__ = [
+    "ANLI",
     "ARCEasy",
     "ARCChallenge",
     "BaseMultipleChoiceSuite",
@@ -63,6 +65,9 @@ __all__ = [
     "WiC",
     "WNLI",
     "WinoGrande",
+    "anli_r1",
+    "anli_r2",
+    "anli_r3",
     "arc_easy",
     "arc_challenge",
     "boolq",

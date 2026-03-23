@@ -215,6 +215,9 @@ logic, those implementation details can shift results.
 
 | Suite | Hugging Face dataset | Default split | Scoring | Original benchmark |
 | --- | --- | --- | --- | --- |
+| `anli_r1` | `facebook/anli` | `test_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `anli_r2` | `facebook/anli` | `test_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `anli_r3` | `facebook/anli` | `test_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
@@ -290,6 +293,7 @@ original benchmark papers below.
 
 The current built-in suite coverage maps to these benchmark citations:
 
+- `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
@@ -306,6 +310,14 @@ The current built-in suite coverage maps to these benchmark citations:
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 
 ```bibtex
+
+# ANLI
+@inproceedings{nie-etal-2020-adversarial,
+  title = {Adversarial NLI: A New Benchmark for Natural Language Understanding},
+  author = {Yixin Nie and Adina Williams and Emily Dinan and Mohit Bansal and Jason Weston and Douwe Kiela},
+  booktitle = {Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics},
+  year = {2020},
+}
 
 # GSM8K-Platinum
 @article{vendrow2025largelanguagemodelbenchmarks,

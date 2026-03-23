@@ -22,6 +22,10 @@ def test_package_import() -> None:
 
 
 def test_package_exports_benchmarks_namespace() -> None:
+    assert evalution.benchmarks.ANLI is not None
+    assert callable(evalution.benchmarks.anli_r1)
+    assert callable(evalution.benchmarks.anli_r2)
+    assert callable(evalution.benchmarks.anli_r3)
     assert evalution.benchmarks.ARCChallenge is not None
     assert callable(evalution.benchmarks.arc_challenge)
     assert evalution.benchmarks.ARCEasy is not None

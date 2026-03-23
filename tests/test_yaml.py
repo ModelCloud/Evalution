@@ -101,6 +101,12 @@ engine:
 model:
   path: /tmp/model
 tests:
+  - type: anli_r1
+    max_rows: 18
+  - type: anli_r2
+    max_rows: 18
+  - type: anli_r3
+    max_rows: 18
   - type: gsm8k_platinum
     max_rows: 128
   - type: boolq
@@ -160,6 +166,9 @@ tests:
     assert "engines.Transformers(" in script
     assert "eval(engines." not in script
     assert ".model(eval.Model(" in script
+    assert ".run(benchmarks.anli_r1(" in script
+    assert ".run(benchmarks.anli_r2(" in script
+    assert ".run(benchmarks.anli_r3(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.boolq(" in script
     assert ".run(benchmarks.cb(" in script
