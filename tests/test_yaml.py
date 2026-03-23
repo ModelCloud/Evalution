@@ -131,6 +131,9 @@ tests:
     max_rows: 18
   - type: c4
     max_rows: 8
+  - type: ceval
+    subset: accountant
+    max_rows: 18
   - type: gsm8k_platinum
     max_rows: 128
   - type: headqa_en
@@ -298,6 +301,7 @@ tests:
     assert ".run(benchmarks.babi(" in script
     assert ".run(benchmarks.blimp(" in script
     assert ".run(benchmarks.c4(" in script
+    assert ".run(benchmarks.ceval(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.headqa_en(" in script
     assert ".run(benchmarks.headqa_es(" in script

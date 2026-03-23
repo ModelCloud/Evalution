@@ -26,6 +26,7 @@ from .babi import BABI, babi
 from .base import BaseTestSuite, TestSuite
 from .blimp import BLiMP, BLIMP_SUBSETS, blimp
 from .c4 import C4, c4
+from .ceval import CEVAL_SUBSETS, CEval, ceval
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
 from .cola import CoLA, cola
@@ -103,6 +104,8 @@ __all__ = [
     "BaseSingleContinuationSuite",
     "BaseTestSuite",
     "C4",
+    "CEVAL_SUBSETS",
+    "CEval",
     "BoolQ",
     "CB",
     "CoLA",
@@ -179,6 +182,7 @@ __all__ = [
     "babi",
     "blimp",
     "c4",
+    "ceval",
     "boolq",
     "cb",
     "cola",

@@ -238,6 +238,7 @@ logic, those implementation details can shift results.
 | `babi` | Generated exact match | bAbI `weston2015towards` |
 | `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
 | `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
+| `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
@@ -373,6 +374,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `babi`: bAbI `weston2015towards`
 - `blimp`: BLiMP `warstadt2020blimp`
 - `c4`: C4 `raffel2020exploring`
+- `ceval`: C-Eval `huang2023ceval`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
@@ -477,6 +479,15 @@ The current built-in suite coverage maps to these benchmark citations:
   pages = {1--67},
   year = {2020},
   url = {https://jmlr.org/papers/v21/20-074.html},
+}
+
+# C-Eval
+@article{huang2023ceval,
+  title = {C-Eval: A Multi-Level Multi-Discipline Chinese Evaluation Suite for Foundation Models},
+  author = {Yuzhen Huang and Yidong Wang and Chunyang Wang and Lei Chen and Xiaonan Luo and Yuxin Tang and Zhilin Yang and Qianqian Wang and Cheng Li and Weijian Yin and others},
+  journal = {arXiv preprint arXiv:2305.08322},
+  year = {2023},
+  url = {https://arxiv.org/abs/2305.08322},
 }
 
 # GSM8K-Platinum

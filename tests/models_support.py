@@ -110,6 +110,12 @@ COPAL_ID_TASKS = (
     "copal_id_standard",
     "copal_id_colloquial",
 )
+CEVAL_TASKS = (
+    "ceval_accountant",
+    "ceval_computer_network",
+    "ceval_high_school_physics",
+    "ceval_law",
+)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -862,6 +868,15 @@ def _metadata_question_and_variant(variant: str) -> Callable[[dict[str, Any]], N
     return validate
 
 
+def _metadata_ceval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["answer_label"] in {"A", "B", "C", "D"}
+        assert len(metadata["raw_choices"]) == 4
+
+    return validate
+
+
 def _metadata_sentence_has_blank(metadata: dict[str, Any]) -> None:
     assert " _ " in metadata["sentence"]
 
@@ -1042,6 +1057,42 @@ def _blimp_suite_spec(
             subset=subset,
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _ceval_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+    expected_sample_count: int,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.ceval(
+            subset=subset,
+            batch_size=24,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name=f"ceval_{subset}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "ceval/ceval-exam",
+            "dataset_name": subset,
+            "split": "val",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=expected_sample_count,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\n答案：",
+            metadata_validator=_metadata_ceval_subset(subset),
+        ),
+        abs_tolerance=2 / expected_sample_count,
     )
 
 
@@ -3087,6 +3138,46 @@ for _subset, _baseline in {
     SUITE_SPECS[f"blimp_{_subset.lower()}"] = _blimp_suite_spec(
         subset=_subset,
         baseline=_baseline,
+    )
+
+for _subset, _baseline, _sample_count in (
+    (
+        "accountant",
+        {
+            "acc,ll": 0.3125,
+            "acc,ll_avg": 0.3125,
+        },
+        32,
+    ),
+    (
+        "computer_network",
+        {
+            "acc,ll": 0.2631578947368421,
+            "acc,ll_avg": 0.2631578947368421,
+        },
+        19,
+    ),
+    (
+        "high_school_physics",
+        {
+            "acc,ll": 0.47368421052631576,
+            "acc,ll_avg": 0.47368421052631576,
+        },
+        19,
+    ),
+    (
+        "law",
+        {
+            "acc,ll": 0.3333333333333333,
+            "acc,ll_avg": 0.3333333333333333,
+        },
+        24,
+    ),
+):
+    SUITE_SPECS[f"ceval_{_subset}"] = _ceval_suite_spec(
+        subset=_subset,
+        baseline=_baseline,
+        expected_sample_count=_sample_count,
     )
 
 

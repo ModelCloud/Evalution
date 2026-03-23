@@ -30,7 +30,6 @@ blimp_nl,85,blimp_nl/adpositional_phrases__argument_r_extraction.yaml,blimp_nl/a
 cabbq,11,cabbq/cabbq.yaml,cabbq/cabbq_age.yaml
 careqa,4,careqa/careqa_en.yaml,careqa/careqa_es.yaml
 catalan_bench,43,catalan_bench/arc_ca_challenge.yaml,catalan_bench/arc_ca_easy.yaml
-ceval,53,ceval/ceval-valid_accountant.yaml,ceval/ceval-valid_advanced_mathematics.yaml
 chartqa,3,chartqa/chartqa.yaml,chartqa/chartqa_llama.yaml
 click,14,click/click.yaml,click/click_cul/click_cul_economy.yaml
 cmmlu,68,cmmlu/cmmlu_agronomy.yaml,cmmlu/cmmlu_anatomy.yaml

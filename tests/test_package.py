@@ -60,6 +60,9 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.BaseRollingPerplexitySuite is not None
     assert evalution.benchmarks.C4 is not None
     assert callable(evalution.benchmarks.c4)
+    assert evalution.benchmarks.CEval is not None
+    assert evalution.benchmarks.CEVAL_SUBSETS
+    assert callable(evalution.benchmarks.ceval)
     assert evalution.benchmarks.BoolQ is not None
     assert callable(evalution.benchmarks.boolq)
     assert evalution.benchmarks.CB is not None

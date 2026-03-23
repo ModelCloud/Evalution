@@ -45,6 +45,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "babi": benchmarks.babi,
     "blimp": benchmarks.blimp,
     "c4": benchmarks.c4,
+    "ceval": benchmarks.ceval,
     "boolq": benchmarks.boolq,
     "cb": benchmarks.cb,
     "cola": benchmarks.cola,
