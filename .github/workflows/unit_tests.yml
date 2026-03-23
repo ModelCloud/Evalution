@@ -92,7 +92,7 @@ jobs:
             exit 1
           fi
           
-          uv pip install pytest
+          uv pip install -U pytest datasets
 
           mkdir -p artifacts
           pytest --durations=0 tests --junitxml=artifacts/unit-tests.xml
