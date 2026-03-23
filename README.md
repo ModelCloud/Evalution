@@ -215,6 +215,9 @@ logic, those implementation details can shift results.
 
 | Suite | Scoring | Original benchmark |
 | --- | --- | --- |
+| `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
+| `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
+| `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
 | `anli_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
@@ -321,6 +324,7 @@ original benchmark papers below.
 The current built-in suite coverage maps to these benchmark citations:
 
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
+- `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
 - `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
@@ -345,6 +349,31 @@ The current built-in suite coverage maps to these benchmark citations:
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 
 ```bibtex
+
+# AIME
+@dataset{aime_1983_2024,
+  author = {Hemish Veeraboina},
+  title = {AIME Problem Set 1983-2024},
+  year = {2024},
+  publisher = {Kaggle},
+  url = {https://www.kaggle.com/datasets/hemishveeraboina/aime-problem-set-1983-2024},
+}
+
+@dataset{aime_2024,
+  author = {Maxwell Jia},
+  title = {AIME Problem Set 2024},
+  year = {2024},
+  publisher = {Hugging Face},
+  url = {https://huggingface.co/datasets/Maxwell-Jia/AIME_2024},
+}
+
+@dataset{aime_2025,
+  author = {math-ai},
+  title = {AIME Problem Set 2025},
+  year = {2025},
+  publisher = {Hugging Face},
+  url = {https://huggingface.co/datasets/math-ai/aime25},
+}
 
 # ANLI
 @inproceedings{nie-etal-2020-adversarial,

@@ -7,7 +7,6 @@ afrimmlu,177,afrimmlu/direct/afrimmlu.yaml,afrimmlu/direct/prompt_1/afrimmlu_dir
 afrixnli,265,afrixnli/anli prompt/en-direct/afrixnli_en_direct_amh.yaml,afrixnli/anli prompt/en-direct/afrixnli_en_direct_eng.yaml
 afrobench,1818,afrobench/adr/afridiacritics.yaml,afrobench/adr/prompt_1/afridiacritics_bbj.yaml
 agieval,25,agieval/agieval.yaml,agieval/agieval_cn.yaml
-aime,3,aime/aime.yaml,aime/aime24.yaml
 alghafa,2,alghafa/copa_ar/copa_ar.yaml,alghafa/piqa_ar/piqa_ar.yaml
 arab_culture,18,arab_culture/arab_culture_algeria.yaml,arab_culture/arab_culture_egypt.yaml
 arab_culture_completion,18,arab_culture_completion/arab_culture_completion_algeria.yaml,arab_culture_completion/arab_culture_completion_egypt.yaml

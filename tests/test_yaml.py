@@ -14,6 +14,7 @@ from evalution import yaml as evalution_yaml
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
+_AIME_TASKS = ["aime", "aime24", "aime25"]
 _ARITHMETIC_TASKS = [
     "arithmetic_1dc",
     "arithmetic_2da",
@@ -269,6 +270,23 @@ tests:
     )
 
     for task in _ARITHMETIC_TASKS:
+        assert f".run(benchmarks.{task}(" in script
+
+
+def test_python_from_yaml_emits_aime_variants() -> None:
+    task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _AIME_TASKS)
+    script = evalution.python_from_yaml(
+        f"""
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+{task_lines}
+"""
+    )
+
+    for task in _AIME_TASKS:
         assert f".run(benchmarks.{task}(" in script
 
 

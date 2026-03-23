@@ -4,6 +4,7 @@
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
 from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
+from .aime import AIME, aime, aime24, aime25
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
@@ -65,6 +66,7 @@ from .winogrande import WinoGrande, winogrande
 
 __all__ = [
     "ANLI",
+    "AIME",
     "ARCEasy",
     "ARCChallenge",
     "Arithmetic",
@@ -106,6 +108,9 @@ __all__ = [
     "WiC",
     "WNLI",
     "WinoGrande",
+    "aime",
+    "aime24",
+    "aime25",
     "anli_r1",
     "anli_r2",
     "anli_r3",

@@ -22,6 +22,9 @@ _ENGINE_FACTORIES: dict[str, Any] = {
     "transformerscompat": TransformersCompat,
 }
 _TEST_FACTORIES: dict[str, Any] = {
+    "aime": benchmarks.aime,
+    "aime24": benchmarks.aime24,
+    "aime25": benchmarks.aime25,
     "anli_r1": benchmarks.anli_r1,
     "anli_r2": benchmarks.anli_r2,
     "anli_r3": benchmarks.anli_r3,

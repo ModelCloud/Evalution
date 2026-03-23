@@ -57,6 +57,7 @@ MMLU_PRO_STEM_SUBSETS = {
     "stem.math",
     "stem.physics",
 }
+AIME_TASKS = ("aime", "aime24", "aime25")
 ARITHMETIC_TASKS = (
     "arithmetic_1dc",
     "arithmetic_2da",
@@ -337,6 +338,22 @@ def _assert_asdiv_cot_llama_sample(sample: Any, index: int) -> None:
     assert sample.metadata["formula"]
 
 
+def _assert_aime_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "answer-extract",
+        "prediction-normalized",
+        "target-normalized",
+    }
+    assert set(sample.scores) == {"em"}
+    assert sample.metadata["problem_id"]
+
+
 def _assert_arithmetic_sample(sample: Any, index: int, *, task_name: str) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Question: ")
@@ -606,7 +623,57 @@ def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
     )
 
 
+def _aime_suite_spec(
+    task_name: str,
+    *,
+    dataset_path: str,
+    split: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            batch_size=24,
+            max_new_tokens=512,
+            streaming=True,
+            max_rows=30,
+        ),
+        expected_name=task_name,
+        baseline={"em": baseline},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": dataset_path,
+            "dataset_name": None,
+            "split": split,
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_math_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=30,
+        sample_validator=_assert_aime_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 SUITE_SPECS = {
+    "aime": _aime_suite_spec(
+        "aime",
+        dataset_path="gneubig/aime-1983-2024",
+        split="train",
+        baseline=0.06666666666666667,
+    ),
+    "aime24": _aime_suite_spec(
+        "aime24",
+        dataset_path="Maxwell-Jia/AIME_2024",
+        split="train",
+        baseline=0.03333333333333333,
+    ),
+    "aime25": _aime_suite_spec(
+        "aime25",
+        dataset_path="math-ai/aime25",
+        split="test",
+        baseline=0.0,
+    ),
     "asdiv": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, streaming=True, max_rows=128),
         expected_name="asdiv",
