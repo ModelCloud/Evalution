@@ -117,6 +117,7 @@ Evalution ships two Hugging Face-backed engines:
 
 - `Transformers()`: the modern backend
 - `TransformersCompat()`: the compatibility backend
+- `GPTQModelEngine()`: the quantized GPTQModel backend
 
 `Transformers()` defaults batching, paged attention, dtype resolution, and attention selection to
 auto behavior. On compatible CUDA `transformers` setups it can switch to paged continuous batching
@@ -132,6 +133,10 @@ The modern `Transformers(...)` engine also exposes the upstream continuous batch
 `kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned manager alive
 while stop strings and sampling settings stay compatible, then tears it down on `gc()` between
 suites or on `close()`.
+
+`GPTQModelEngine()` reuses the same fixed-batch generation and token-scoring session contract as
+`TransformersCompat()`, but it loads quantized checkpoints through GPTQModel's native loader and
+surfaces the resolved quantized runtime backend in execution metadata.
 
 ## Log-Likelihood Requirements
 

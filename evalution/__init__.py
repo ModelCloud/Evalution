@@ -11,7 +11,13 @@ import sys
 from evalution._banner import ASCII_LOGO, get_startup_banner
 from evalution.compare import CompareRun, compare, run_compare
 from evalution.config import Model
-from evalution.engines import BaseEngine, BaseInferenceSession, Transformer, TransformerCompat
+from evalution.engines import (
+    BaseEngine,
+    BaseInferenceSession,
+    GPTQModelEngine,
+    Transformer,
+    TransformerCompat,
+)
 from evalution.logbar import get_logger
 from evalution.results import (
     CompareMetricResult,
@@ -99,6 +105,7 @@ __all__ = [
     "EvaluationRun",
     "GSM8K",
     "GSM8KPlatinum",
+    "GPTQModelEngine",
     "HellaSwag",
     "MMLU",
     "MMLUPro",

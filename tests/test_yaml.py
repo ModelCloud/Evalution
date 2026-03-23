@@ -204,3 +204,20 @@ tests:
     )
 
     assert "eval.engine(eval.TransformersCompat(" in script
+
+
+def test_python_from_yaml_emits_gptqmodel_engine_alias() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: gptqmodel
+  backend: auto
+model:
+  path: /tmp/model
+tests:
+  - type: gsm8k_platinum
+    max_rows: 8
+"""
+    )
+
+    assert "eval.engine(eval.GPTQModelEngine(" in script

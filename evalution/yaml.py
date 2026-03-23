@@ -12,7 +12,7 @@ from typing import Any
 import yaml
 
 from evalution.config import Model
-from evalution.engines import Transformer, TransformerCompat
+from evalution.engines import GPTQModelEngine, Transformer, TransformerCompat
 from evalution.runtime import EvaluationRun, engine as build_engine
 from evalution.suites import (
     arc_challenge,
@@ -40,6 +40,8 @@ from evalution.suites import (
 )
 
 _ENGINE_FACTORIES: dict[str, Any] = {
+    "gptqmodel": GPTQModelEngine,
+    "gptqmodel_engine": GPTQModelEngine,
     "transformer": Transformer,
     "transformers": Transformer,
     "transformer_compat": TransformerCompat,
@@ -90,6 +92,8 @@ def python_from_yaml(source: str | Path) -> str:
 
     if engine_name in {"transformer", "transformers"}:
         engine_alias = "Transformers"
+    elif engine_name in {"gptqmodel", "gptqmodel_engine"}:
+        engine_alias = "GPTQModelEngine"
     elif engine_name in {"transformer_compat", "transformers_compat"}:
         engine_alias = "TransformersCompat"
     else:
