@@ -47,6 +47,7 @@ from .logiqa import LogiQA, logiqa
 from .mathqa import MathQA, mathqa
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
+from .mc_taco import MCTACO, mc_taco
 from .mmlu import MMLU, mmlu
 from .mmlu_pro import MMLUPro, mmlu_pro
 from .mnli import MNLI, mnli
@@ -97,6 +98,7 @@ __all__ = [
     "MathQA",
     "MedMCQA",
     "MedQA",
+    "MCTACO",
     "MMLU",
     "MMLUPro",
     "MNLI",
@@ -164,6 +166,7 @@ __all__ = [
     "mathqa",
     "medmcqa",
     "medqa_4options",
+    "mc_taco",
     "macro_f1",
     "matthews_corrcoef",
     "mmlu",

@@ -85,6 +85,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.logiqa)
     assert evalution.benchmarks.MathQA is not None
     assert callable(evalution.benchmarks.mathqa)
+    assert evalution.benchmarks.MCTACO is not None
+    assert callable(evalution.benchmarks.mc_taco)
     assert evalution.benchmarks.MedMCQA is not None
     assert callable(evalution.benchmarks.medmcqa)
     assert evalution.benchmarks.MedQA is not None

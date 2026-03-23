@@ -96,7 +96,6 @@ longbench,48,longbench/2wikimqa.yaml,longbench/2wikimqa_e.yaml
 longbench2,26,longbench2/academic_multi_doc.yaml,longbench2/academic_single.yaml
 mastermind,6,mastermind/mastermind_24_easy.yaml,mastermind/mastermind_24_hard.yaml
 mbpp,4,mbpp/mbpp.yaml,mbpp/mbpp_instruct.yaml
-mc_taco,1,mc_taco/default.yaml,
 med_concepts_qa,21,med_concepts_qa/med_concepts_qa_atc_easy.yaml,med_concepts_qa/med_concepts_qa_atc_hard.yaml
 med_prescriptions,2,med_prescriptions/med_prescriptions_easy.yaml,med_prescriptions/med_prescriptions_hard.yaml
 med_text_classification,2,med_text_classification/med_text_classification_easy.yaml,med_text_classification/med_text_classification_hard.yaml

@@ -1505,6 +1505,40 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=5),
         ),
     ),
+    "mc_taco": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mc_taco(batch_size=24, max_rows=128),
+        expected_name="mc_taco",
+        baseline={
+            "acc,ll": 0.609375,
+            "acc,ll_avg": 0.609375,
+            "f1,ll_yes": 0.596774193548387,
+            "f1,ll_avg_yes": 0.596774193548387,
+        },
+        expected_metrics=frozenset(
+            {
+                "acc,ll",
+                "acc,ll_avg",
+                "f1,ll_yes",
+                "f1,ll_avg_yes",
+            }
+        ),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CogComp/mc_taco",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"no", "yes"},
+            prediction_values={"no", "yes"},
+            prompt_substrings=("\nQuestion: ", "\nAnswer: ", "\nPlausible:"),
+            metadata_validator=_metadata_field_truthy("category"),
+        ),
+    ),
     "medmcqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, streaming=True, max_rows=128),
         expected_name="medmcqa",

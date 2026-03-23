@@ -257,6 +257,7 @@ logic, those implementation details can shift results.
 | `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
 | `mathqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MathQA `amini2019mathqa` |
+| `mc_taco` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | MC-TACO `zhou2019mctaco` |
 | `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
 | `medqa_4options` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
 | `mmlu` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
@@ -344,6 +345,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
 - `logiqa`: LogiQA `liu2020logiqa`
 - `mathqa`: MathQA `amini2019mathqa`
+- `mc_taco`: MC-TACO `zhou2019mctaco`
 - `medmcqa`: MedMCQA `pmlr-v174-pal22a`
 - `medqa_4options`: MedQA `jin2020disease`
 - `mmlu`: MMLU `hendryckstest2021`
@@ -540,6 +542,14 @@ The current built-in suite coverage maps to these benchmark citations:
   eprint = {1905.13319},
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
+}
+
+# MC-TACO
+@inproceedings{zhou2019mctaco,
+  title = {Going on a vacation takes longer than going for a walk: A Study of Temporal Commonsense Understanding},
+  author = {Ben Zhou and Daniel Khashabi and Qiang Ning and Dan Roth},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing},
+  year = {2019},
 }
 
 # MedMCQA
