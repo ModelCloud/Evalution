@@ -55,6 +55,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.hellaswag)
     assert evalution.benchmarks.MedMCQA is not None
     assert callable(evalution.benchmarks.medmcqa)
+    assert evalution.benchmarks.MedQA is not None
+    assert callable(evalution.benchmarks.medqa_4options)
     assert evalution.benchmarks.MMLU is not None
     assert callable(evalution.benchmarks.mmlu)
     assert evalution.benchmarks.MMLUPro is not None

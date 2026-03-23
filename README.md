@@ -237,6 +237,7 @@ logic, those implementation details can shift results.
 | `headqa_en` | `EleutherAI/headqa` / `en` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | `EleutherAI/headqa` / `es` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `medmcqa` | `openlifescienceai/medmcqa` | `validation` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
+| `medqa_4options` | `GBaker/MedQA-USMLE-4-options-hf` | `test` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
 | `mmlu` | `cais/mmlu` / `<subsets>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
 | `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<subsets>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | `nyu-mll/glue` / `mnli` | `validation_matched` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
@@ -313,6 +314,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
 - `medmcqa`: MedMCQA `pmlr-v174-pal22a`
+- `medqa_4options`: MedQA `jin2020disease`
 - `mmlu`: MMLU `hendryckstest2021`
 - `mmlu_pro`: MMLU-Pro `wang2024mmlupro`
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
@@ -442,6 +444,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Ankit Pal and Logesh Kumar Umapathi and Malaikannan Sankarasubbu},
   booktitle = {Proceedings of the Conference on Health, Inference, and Learning},
   year = {2022},
+}
+
+# MedQA
+@article{jin2020disease,
+  title = {What Disease does this Patient Have? A Large-scale Open Domain Question Answering Dataset from Medical Exams},
+  author = {Di Jin and Eileen Pan and Nassim Oufattole and Wei-Hung Weng and Hanyi Fang and Peter Szolovits},
+  journal = {arXiv preprint arXiv:2009.13081},
+  year = {2020},
 }
 
 # OpenBookQA

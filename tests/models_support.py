@@ -1143,6 +1143,33 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
+    "medqa_4options": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.medqa_4options(batch_size=24, streaming=True, max_rows=128),
+        expected_name="medqa_4options",
+        baseline={
+            "acc,ll": 0.4140625,
+            "acc,ll_avg": 0.4140625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "GBaker/MedQA-USMLE-4-options-hf",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("\nA. ", "\nD. "),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
     "mmlu_all": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.mmlu(
             subsets="all",
