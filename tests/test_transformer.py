@@ -17,6 +17,7 @@ from evalution.config import Model
 from evalution.engines.base import (
     GenerationOutput,
     GenerationRequest,
+    LoglikelihoodOutput,
     LoglikelihoodRequest,
     RollingLoglikelihoodRequest,
 )
@@ -1099,6 +1100,173 @@ def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> Non
     assert outputs[1].token_count == 1
     assert outputs[1].is_greedy is True
     assert outputs[1].logprob == pytest.approx(expected_token_logprob, abs=1e-6)
+
+
+def test_transformer_session_loglikelihood_context_uses_tokenizer_default_special_tokens() -> None:
+    class FakeTokenizer:
+        bos_token_id = 99
+        eos_token_id = 1
+        pad_token_id = 0
+        padding_side = "left"
+
+        def __call__(self, prompt, *, add_special_tokens=True, **kwargs):
+            del kwargs
+            base_ids = {
+                "ctx": [11, 12],
+                "<bos>ctx": [99, 11, 12],
+                " target": [13],
+            }[prompt]
+            input_ids = list(base_ids)
+            if add_special_tokens and (not input_ids or input_ids[0] != self.bos_token_id):
+                input_ids = [self.bos_token_id] + input_ids
+            return {"input_ids": input_ids}
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del skip_special_tokens
+            if isinstance(token_ids, int):
+                token_ids = [token_ids]
+            if list(token_ids) == [self.bos_token_id]:
+                return "<bos>"
+            raise AssertionError(f"unexpected token ids: {token_ids}")
+
+    session = TransformersSession(
+        config=Transformers(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    prefix_ids, target_ids, metadata = session._prepare_loglikelihood_request(
+        LoglikelihoodRequest(
+            context="ctx",
+            continuation=" target",
+            metadata={"row": 1},
+        )
+    )
+    explicit_prefix_ids, explicit_target_ids, _explicit_metadata = session._prepare_loglikelihood_request(
+        LoglikelihoodRequest(
+            context="<bos>ctx",
+            continuation=" target",
+        )
+    )
+
+    assert prefix_ids == [99, 11, 12]
+    assert target_ids == [13]
+    assert metadata == {"row": 1}
+    assert explicit_prefix_ids == [99, 11, 12]
+    assert explicit_target_ids == [13]
+
+
+def test_transformer_session_loglikelihood_right_pads_batches_without_attention_mask() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "left"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+
+        def __call__(self, *, input_ids, attention_mask=None):
+            assert attention_mask is None
+            assert input_ids.tolist() == [
+                [5, 6, 7, 8],
+                [1, 4, 0, 0],
+            ]
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            for row in range(batch_size):
+                for position in range(sequence_length - 1):
+                    next_token = int(input_ids[row, position + 1].item())
+                    logits[row, position, next_token] = 3.0
+            return SimpleNamespace(logits=logits)
+
+    session = TransformersSession(
+        config=Transformers(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(
+                context_input_ids=[5, 6],
+                continuation_input_ids=[7, 8],
+            ),
+            LoglikelihoodRequest(
+                context_input_ids=[1],
+                continuation_input_ids=[4],
+            ),
+        ],
+        batch_size=2,
+    )
+
+    expected_token_logprob = float(
+        torch.log_softmax(
+            torch.tensor([3.0] + ([-2.0] * 15), dtype=torch.float32),
+            dim=0,
+        )[0].item()
+    )
+
+    assert len(outputs) == 2
+    assert outputs[0].logprob == pytest.approx(expected_token_logprob * 2, abs=1e-6)
+    assert outputs[1].logprob == pytest.approx(expected_token_logprob, abs=1e-6)
+
+
+def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before_scoring(
+    monkeypatch,
+) -> None:
+    session = TransformersSession(
+        config=Transformers(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(),
+        tokenizer=SimpleNamespace(eos_token_id=1),
+        input_device=torch.device("cpu"),
+    )
+    observed_chunk_order: list[int] = []
+
+    def fake_prepare(self, request):
+        return [], list(request.metadata["token_ids"]), dict(request.metadata)
+
+    def fake_score(self, chunks, *, batch_size):
+        assert batch_size == 2
+        observed_chunk_order[:] = [chunk.request_index for chunk in chunks]
+        return [
+            LoglikelihoodOutput(
+                logprob=float(chunk.request_index),
+                is_greedy=True,
+                token_count=chunk.score_count,
+                metadata=dict(chunk.metadata),
+            )
+            for chunk in chunks
+        ]
+
+    monkeypatch.setattr(
+        TransformersSession,
+        "_prepare_loglikelihood_request",
+        fake_prepare,
+    )
+    monkeypatch.setattr(
+        TransformersSession,
+        "_score_chunks",
+        fake_score,
+    )
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(metadata={"token_ids": [3, 4, 5]}),
+            LoglikelihoodRequest(metadata={"token_ids": [7, 8, 9, 10, 11]}),
+            LoglikelihoodRequest(metadata={"token_ids": [2]}),
+        ],
+        batch_size=2,
+    )
+
+    assert observed_chunk_order == [1, 0, 2]
+    assert [output.logprob for output in outputs] == [0.0, 1.0, 2.0]
 
 
 def test_transformer_session_loglikelihood_reports_non_greedy_predictions() -> None:
