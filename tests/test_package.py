@@ -58,6 +58,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.rte)
     assert evalution.benchmarks.SciQ is not None
     assert callable(evalution.benchmarks.sciq)
+    assert evalution.benchmarks.SWAG is not None
+    assert callable(evalution.benchmarks.swag)
     assert evalution.benchmarks.SST2 is not None
     assert callable(evalution.benchmarks.sst2)
     assert evalution.benchmarks.WiC is not None

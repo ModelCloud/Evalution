@@ -235,6 +235,7 @@ logic, those implementation details can shift results.
 | `qqp` | `nyu-mll/glue` / `qqp` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `rte` | `super_glue` / `rte` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `sciq` | `allenai/sciq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
+| `swag` | `swag` / `regular` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
 | `sst2` | `nyu-mll/glue` / `sst2` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `wic` | `super_glue` / `wic` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `wnli` | `nyu-mll/glue` / `wnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
@@ -301,6 +302,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
 - `piqa`: PIQA `bisk2020piqa`
 - `sciq`: SciQ `welbl2017crowdsourcing`
+- `swag`: SWAG `zellers2018swagaf`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 
 ```bibtex
@@ -399,6 +401,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Johannes Welbl and Nelson F. Liu and Matt Gardner},
   booktitle = {Proceedings of the 3rd Workshop on Noisy User-generated Text},
   year = {2017},
+}
+
+# SWAG
+@inproceedings{zellers2018swagaf,
+  title = {SWAG: A Large-Scale Adversarial Dataset for Grounded Commonsense Inference},
+  author = {Rowan Zellers and Yonatan Bisk and Roy Schwartz and Yejin Choi},
+  booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
+  year = {2018},
 }
 
 # WinoGrande

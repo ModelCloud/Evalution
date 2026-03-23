@@ -161,7 +161,6 @@ spanish_bench,29,spanish_bench/cocoteros_es.yaml,spanish_bench/copa_es.yaml
 squad_completion,1,squad_completion/squad_completion.yaml,
 squadv2,1,squadv2/squadv2.yaml,
 storycloze,2,storycloze/storycloze_2016.yaml,storycloze/storycloze_2018.yaml
-swag,1,swag/swag.yaml,
 swde,1,swde/swde.yaml,
 tmlu,32,tmlu/default/tmlu_AST_biology.yaml,tmlu/default/tmlu_AST_chemistry.yaml
 tmmluplus,72,tmmluplus/default/tmmluplus_accounting.yaml,tmmluplus/default/tmmluplus_administrative_law.yaml

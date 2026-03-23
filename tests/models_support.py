@@ -1127,6 +1127,28 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
+    "swag": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.swag(batch_size=24, streaming=True, max_rows=128),
+        expected_name="swag",
+        baseline={
+            "acc,ll": 0.4921875,
+            "acc,ll_avg": 0.625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "swag",
+            "dataset_name": "regular",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
     "sst2": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.sst2(batch_size=24, streaming=True, max_rows=128),
         expected_name="sst2",

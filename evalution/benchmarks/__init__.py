@@ -27,6 +27,7 @@ from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .rte import RTE, rte
 from .sciq import SciQ, sciq
+from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .wic import WiC, wic
 from .wnli import WNLI, wnli
@@ -56,6 +57,7 @@ __all__ = [
     "QQP",
     "RTE",
     "SciQ",
+    "SWAG",
     "SST2",
     "TestSuite",
     "WiC",
@@ -85,6 +87,7 @@ __all__ = [
     "qqp",
     "rte",
     "sciq",
+    "swag",
     "question_answer_prompt",
     "sst2",
     "wic",
