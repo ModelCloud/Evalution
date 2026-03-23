@@ -134,9 +134,10 @@ The modern `Transformers(...)` engine also exposes the upstream continuous batch
 while stop strings and sampling settings stay compatible, then tears it down on `gc()` between
 suites or on `close()`.
 
-`GPTQModelEngine()` reuses the same fixed-batch generation and token-scoring session contract as
-`TransformersCompat()`, but it loads quantized checkpoints through GPTQModel's native loader and
-surfaces the resolved quantized runtime backend in execution metadata.
+`GPTQModelEngine()` loads quantized checkpoints through GPTQModel's native loader, then reuses the
+same shared generation, scoring, and paged continuous-batching path as the built-in transformer
+engines when the loaded quantized model exposes the required HF hooks. It also surfaces the
+resolved quantized runtime backend in execution metadata.
 
 ## Log-Likelihood Requirements
 

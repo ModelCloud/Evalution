@@ -32,9 +32,23 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.batch_size == "auto"
     assert engine.backend == "auto"
     assert engine.gptqmodel_path == "/root/gptqmodel"
+    assert engine.paged_attention == "auto"
+    assert engine.manual_eviction is False
+    assert engine.allow_block_sharing is True
+    assert engine.use_async_batching is None
+    assert engine.q_padding_interval_size == 0
+    assert engine.kv_padding_interval_size == 0
+    assert engine.max_cached_graphs == 0
     assert engine.to_dict()["batch_size"] == "auto"
     assert engine.to_dict()["backend"] == "auto"
     assert engine.to_dict()["gptqmodel_path"] == "/root/gptqmodel"
+    assert engine.to_dict()["paged_attention"] == "auto"
+    assert engine.to_dict()["manual_eviction"] is False
+    assert engine.to_dict()["allow_block_sharing"] is True
+    assert engine.to_dict()["use_async_batching"] is None
+    assert engine.to_dict()["q_padding_interval_size"] == 0
+    assert engine.to_dict()["kv_padding_interval_size"] == 0
+    assert engine.to_dict()["max_cached_graphs"] == 0
 
 
 def test_gptqmodel_session_describes_quantized_backend() -> None:
@@ -184,9 +198,12 @@ def test_load_gptqmodel_runtime_uses_quantized_loader(monkeypatch) -> None:
     reason="CUDA is required for the GPTQModel engine integration test",
 )
 def test_gptqmodel_engine_can_generate_and_score_on_cuda() -> None:
-    session = GPTQModelEngine(device="cuda:0", batch_size=1).build(
-        Model(path=str(_TINYLLAMA_GPTQ_MODEL))
-    )
+    session = GPTQModelEngine(
+        device="cuda:0",
+        batch_size=1,
+        attn_implementation="flash_attention_2",
+        paged_attention=True,
+    ).build(Model(path=str(_TINYLLAMA_GPTQ_MODEL)))
 
     try:
         outputs = session.generate(
@@ -218,7 +235,9 @@ def test_gptqmodel_engine_can_generate_and_score_on_cuda() -> None:
     assert math.isfinite(scores[0].logprob)
     assert session.input_device.type == "cuda"
     execution = session.describe_execution()
-    assert execution["generation_backend"] == "gptqmodel_generate"
+    assert execution["generation_backend"] == "continuous_batching"
+    assert execution["effective_attn_implementation"] == "paged|flash_attention_2"
+    assert execution["paged_attention"] is True
     assert execution["quant_method"] == "gptq"
     assert execution["runtime_format"] is not None
     assert execution["quantized_backend"] is not None
