@@ -273,6 +273,7 @@ logic, those implementation details can shift results.
 | `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
 | `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `wsc273` | Partial-evaluation multiple-choice log-likelihood, raw + length-normalized accuracy | WSC273 `levesque2012winograd` |
 | `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
 
@@ -352,6 +353,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `sciq`: SciQ `welbl2017crowdsourcing`
 - `siqa`: Social IQA `sap2019social`
 - `swag`: SWAG `zellers2018swagaf`
+- `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 
 ```bibtex
@@ -584,6 +586,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Rowan Zellers and Yonatan Bisk and Roy Schwartz and Yejin Choi},
   booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
   year = {2018},
+}
+
+# WSC273
+@inproceedings{levesque2012winograd,
+  title = {The Winograd Schema Challenge},
+  author = {Hector Levesque and Ernest Davis and Leora Morgenstern},
+  booktitle = {Thirteenth International Conference on the Principles of Knowledge Representation and Reasoning},
+  year = {2012},
 }
 
 # WinoGrande

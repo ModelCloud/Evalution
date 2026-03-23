@@ -204,6 +204,8 @@ tests:
     max_rows: 22
   - type: wic
     max_rows: 14
+  - type: wsc273
+    max_rows: 14
   - type: wnli
     max_rows: 12
   - type: winogrande
@@ -261,6 +263,7 @@ tests:
     assert ".run(benchmarks.swag(" in script
     assert ".run(benchmarks.sst2(" in script
     assert ".run(benchmarks.wic(" in script
+    assert ".run(benchmarks.wsc273(" in script
     assert ".run(benchmarks.wnli(" in script
     assert ".run(benchmarks.winogrande(" in script
 

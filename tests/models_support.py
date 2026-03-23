@@ -1979,6 +1979,29 @@ SUITE_SPECS = {
             metadata_validator=_metadata_field_truthy("word"),
         ),
     ),
+    "wsc273": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.wsc273(batch_size=24, max_rows=128),
+        expected_name="wsc273",
+        baseline={
+            "acc,ll": 0.7734375,
+            "acc,ll_avg": 0.7734375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "winograd_wsc",
+            "dataset_name": "wsc273",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_has_choice_labels(exact_count=2),
+        ),
+    ),
     "wnli": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wnli(batch_size=24, streaming=True, max_rows=71),
         expected_name="wnli",
