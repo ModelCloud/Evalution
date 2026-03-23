@@ -90,15 +90,12 @@ class _TransformersCommonConfig(BaseEngine):
     # Hold the load and generation controls shared by both transformer engine variants.
     dtype: str | None = "auto"
     attn_implementation: str | None = None
-    attention_impl: str | None = None
     device: str | None = None
     device_map: str | dict[str, Any] | None = None
     batch_size: int | str = _AUTO_BATCH_SIZE
     max_new_tokens: int = 256
     trust_remote_code: bool | None = None
     padding_side: str = "left"
-    load_kwargs: dict[str, Any] = field(default_factory=dict)
-    generation_kwargs: dict[str, Any] = field(default_factory=dict)
     resolved_engine: str | None = field(default=None, init=False)
 
     # Keep engine serialization stable across runtime APIs and test assertions.
@@ -601,7 +598,6 @@ class BaseTransformerSession(BaseInferenceSession):
         )
         do_sample = any(request.do_sample for request in batch)
         generation_kwargs = {
-            **self.config.generation_kwargs,
             "do_sample": do_sample,
             "max_new_tokens": max_new_tokens,
             "pad_token_id": self.tokenizer.pad_token_id,
@@ -896,18 +892,17 @@ def load_transformer_runtime(
 
     load_kwargs = {
         **model_config.model_kwargs,
-        **config.load_kwargs,
         "revision": model_config.revision,
         "trust_remote_code": trust_remote_code,
     }
-    if "dtype" not in load_kwargs and "torch_dtype" in load_kwargs:
-        load_kwargs["dtype"] = load_kwargs["torch_dtype"]
     resolved_dtype = resolve_dtype(config.dtype)
-    if resolved_dtype is not None:
+    if resolved_dtype is not None and (
+        config.dtype != "auto" or ("dtype" not in load_kwargs and "torch_dtype" not in load_kwargs)
+    ):
         load_kwargs["dtype"] = resolved_dtype
-    if "dtype" in load_kwargs:
+    if config.dtype != "auto" and "dtype" in load_kwargs:
         load_kwargs.pop("torch_dtype", None)
-    raw_attn_implementation = config.attention_impl or config.attn_implementation
+    raw_attn_implementation = config.attn_implementation
     attn_implementation = _base_attn_implementation(raw_attn_implementation)
     if attn_implementation is not None:
         load_kwargs["attn_implementation"] = attn_implementation

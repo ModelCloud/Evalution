@@ -4,7 +4,14 @@
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
 from .base import BaseEngine, BaseInferenceSession
-from .transformer import Transformer
-from .transformer_compat import TransformerCompat
+from .gptqmodel_engine import GPTQModel
+from .transformers import Transformers
+from .transformers_compat import TransformersCompat
 
-__all__ = ["BaseEngine", "BaseInferenceSession", "Transformer", "TransformerCompat"]
+__all__ = [
+    "BaseEngine",
+    "BaseInferenceSession",
+    "GPTQModel",
+    "Transformers",
+    "TransformersCompat",
+]

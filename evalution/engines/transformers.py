@@ -38,7 +38,7 @@ _CONTINUOUS_BATCHING_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
 
 
 @dataclass(slots=True)
-class Transformer(_TransformersCommonConfig):
+class Transformers(_TransformersCommonConfig):
     # Use the modern transformers engine path that can enable paged attention and continuous batching.
     paged_attention: bool | str = _AUTO_PAGED_ATTENTION
     manual_eviction: bool = False
@@ -52,9 +52,9 @@ class Transformer(_TransformersCommonConfig):
     def build(self, model: Model) -> BaseTransformerSession:
         supports_continuous_batching, reason = transformers_continuous_batching_support()
         if not supports_continuous_batching:
-            self.resolved_engine = "TransformerCompat"
+            self.resolved_engine = "TransformersCompat"
             get_logger().warning(
-                "transformer continuous batching is unavailable: %s; falling back to TransformerCompat",
+                "transformers continuous batching is unavailable: %s; falling back to TransformersCompat",
                 reason,
             )
             if self.paged_attention not in {False, _AUTO_PAGED_ATTENTION}:
@@ -62,13 +62,13 @@ class Transformer(_TransformersCommonConfig):
                     "compat fallback ignores paged-attention controls because this transformers build "
                     "does not ship continuous batching"
                 )
-            from evalution.engines.transformer_compat import TransformerCompat
+            from evalution.engines.transformers_compat import TransformersCompat
 
-            return TransformerCompat.from_transformer(self).build(model)
+            return TransformersCompat.from_transformers(self).build(model)
 
         _warn_pending_nogil_transformers_pr_once()
-        self.resolved_engine = "Transformer"
-        return TransformerSession.from_config(self, model)
+        self.resolved_engine = "Transformers"
+        return TransformersSession.from_config(self, model)
 
 
 def _warn_pending_nogil_transformers_pr_once() -> None:
@@ -143,7 +143,7 @@ def _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManag
 
 
 @dataclass(slots=True)
-class TransformerSession(BaseTransformerSession):
+class TransformersSession(BaseTransformerSession):
     # Keep the session-owned continuous batching manager alive while request settings stay compatible.
     continuous_batching_manager: Any | None = field(default=None, repr=False)
     continuous_batching_signature: tuple[Any, ...] | None = field(default=None, repr=False)
@@ -152,7 +152,7 @@ class TransformerSession(BaseTransformerSession):
     continuous_batching_request_counter: int = field(default=0, repr=False)
 
     @classmethod
-    def from_config(cls, config: Transformer, model_config: Model) -> TransformerSession:
+    def from_config(cls, config: Transformers, model_config: Model) -> TransformersSession:
         runtime = load_transformer_runtime(config, model_config)
         raw_attn_implementation = runtime.requested_attn_implementation
         paged_attention_config = config.paged_attention
@@ -170,7 +170,7 @@ class TransformerSession(BaseTransformerSession):
         )
         generation_backend = "continuous_batching" if paged_attention_enabled else "generate"
         get_logger().info(
-            "transformer attention requested=%s effective=%s backend=%s paged_attention=%s",
+            "transformers attention requested=%s effective=%s backend=%s paged_attention=%s",
             raw_attn_implementation,
             effective_attn_implementation,
             generation_backend,

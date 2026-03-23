@@ -16,42 +16,39 @@ from evalution.engines.transformers_common import (
 
 
 @dataclass(slots=True)
-class TransformerCompat(_TransformersCommonConfig):
+class TransformersCompat(_TransformersCommonConfig):
     # Use the fixed-batch compatibility engine for transformers releases that predate continuous batching.
 
     # Build the compatibility session that emulates the continuous-refill API on top of standard generate().
     def build(self, model: Model) -> BaseTransformerSession:
-        self.resolved_engine = "TransformerCompat"
-        return TransformerCompatSession.from_config(self, model)
+        self.resolved_engine = "TransformersCompat"
+        return TransformersCompatSession.from_config(self, model)
 
     @classmethod
-    def from_transformer(cls, engine: object) -> TransformerCompat:
+    def from_transformers(cls, engine: object) -> TransformersCompat:
         # Copy only the shared controls from the modern engine when auto-falling back to compat mode.
         return cls(
             dtype=getattr(engine, "dtype", "auto"),
             attn_implementation=getattr(engine, "attn_implementation", None),
-            attention_impl=getattr(engine, "attention_impl", None),
             device=getattr(engine, "device", None),
             device_map=getattr(engine, "device_map", None),
             batch_size=getattr(engine, "batch_size", "auto"),
             max_new_tokens=getattr(engine, "max_new_tokens", 256),
             trust_remote_code=getattr(engine, "trust_remote_code", None),
             padding_side=getattr(engine, "padding_side", "left"),
-            load_kwargs=dict(getattr(engine, "load_kwargs", {})),
-            generation_kwargs=dict(getattr(engine, "generation_kwargs", {})),
         )
 
 
 @dataclass(slots=True)
-class TransformerCompatSession(BaseTransformerSession):
+class TransformersCompatSession(BaseTransformerSession):
     # Run the shared transformer session logic without paged attention or an upstream batching manager.
 
     @classmethod
     def from_config(
         cls,
-        config: TransformerCompat,
+        config: TransformersCompat,
         model_config: Model,
-    ) -> TransformerCompatSession:
+    ) -> TransformersCompatSession:
         runtime = load_transformer_runtime(config, model_config)
         return cls(
             config=config,

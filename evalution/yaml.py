@@ -12,7 +12,7 @@ from typing import Any
 import yaml
 
 from evalution.config import Model
-from evalution.engines import Transformer, TransformerCompat
+from evalution.engines import GPTQModel, Transformers, TransformersCompat
 from evalution.runtime import EvaluationRun, engine as build_engine
 from evalution.suites import (
     arc_challenge,
@@ -40,10 +40,9 @@ from evalution.suites import (
 )
 
 _ENGINE_FACTORIES: dict[str, Any] = {
-    "transformer": Transformer,
-    "transformers": Transformer,
-    "transformer_compat": TransformerCompat,
-    "transformers_compat": TransformerCompat,
+    "gptqmodel": GPTQModel,
+    "transformers": Transformers,
+    "transformerscompat": TransformersCompat,
 }
 _TEST_FACTORIES: dict[str, Any] = {
     "arc_challenge": arc_challenge,
@@ -82,15 +81,17 @@ def run_yaml(source: str | Path) -> EvaluationRun:
 def python_from_yaml(source: str | Path) -> str:
     spec = _load_yaml_spec(source)
     engine_spec = _coerce_named_mapping(spec.get("engine"), label="engine")
-    engine_name = _extract_name(engine_spec, label="engine")
+    engine_name = _normalize_engine_name(_extract_name(engine_spec, label="engine"))
     model_spec = _coerce_named_mapping(spec.get("model"), label="model")
     test_specs = spec.get("tests")
     if not isinstance(test_specs, list) or not test_specs:
         raise TypeError("tests must be a non-empty list of test suite mappings")
 
-    if engine_name in {"transformer", "transformers"}:
+    if engine_name == "transformers":
         engine_alias = "Transformers"
-    elif engine_name in {"transformer_compat", "transformers_compat"}:
+    elif engine_name == "gptqmodel":
+        engine_alias = "GPTQModel"
+    elif engine_name == "transformerscompat":
         engine_alias = "TransformersCompat"
     else:
         engine_alias = engine_name
@@ -140,7 +141,7 @@ def _load_yaml_spec(source: str | Path) -> dict[str, Any]:
 
 def _build_engine(spec: Any) -> object:
     mapping = _coerce_named_mapping(spec, label="engine")
-    engine_name = _extract_name(mapping, label="engine")
+    engine_name = _normalize_engine_name(_extract_name(mapping, label="engine"))
     factory = _ENGINE_FACTORIES.get(engine_name)
     if factory is None:
         raise KeyError(f"unknown engine type: {engine_name!r}")
@@ -179,6 +180,10 @@ def _extract_name(mapping: dict[str, Any], *, label: str) -> str:
     if not isinstance(raw_name, str) or not raw_name:
         raise KeyError(f"{label} must define a non-empty 'type' or 'name'")
     return raw_name
+
+
+def _normalize_engine_name(name: str) -> str:
+    return name.strip().lower()
 
 
 def _mapping_without_name(mapping: dict[str, Any]) -> dict[str, Any]:

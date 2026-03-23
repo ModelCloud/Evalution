@@ -108,15 +108,16 @@ Requirements:
 - keep behavior compatible with `generate(...)`
 
 If the backend does not support real continuous batching, emulate it with fixed batches. That is
-how `TransformerCompat` works today. The suite runtime depends on the method shape, not on a
+how `TransformersCompat` works today. The suite runtime depends on the method shape, not on a
 specific batching implementation.
 
 ## Built-in Transformers Engines
 
-Evalution ships two Hugging Face-backed engines:
+Evalution ships three Hugging Face-compatible engines:
 
 - `Transformers()`: the modern backend
 - `TransformersCompat()`: the compatibility backend
+- `GPTQModel()`: the quantized GPTQModel backend
 
 `Transformers()` defaults batching, paged attention, dtype resolution, and attention selection to
 auto behavior. On compatible CUDA `transformers` setups it can switch to paged continuous batching
@@ -132,6 +133,12 @@ The modern `Transformers(...)` engine also exposes the upstream continuous batch
 `kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned manager alive
 while stop strings and sampling settings stay compatible, then tears it down on `gc()` between
 suites or on `close()`.
+
+`GPTQModel()` loads quantized checkpoints through GPTQModel's native loader, then reuses the
+same shared generation, scoring, and paged continuous-batching path as the built-in transformer
+engines when the loaded quantized model exposes the required HF hooks. It also surfaces the
+resolved quantized runtime backend in execution metadata.
+
 
 ## Log-Likelihood Requirements
 
@@ -310,9 +317,9 @@ Once the engine is implemented:
 
 Use these as concrete examples:
 
-- `evalution/engines/transformer.py`: modern `transformers` backend with paged attention and
+- `evalution/engines/transformers.py`: modern `transformers` backend with paged attention and
   continuous batching
-- `evalution/engines/transformer_compat.py`: fixed-batch compatibility backend that still emulates
+- `evalution/engines/transformers_compat.py`: fixed-batch compatibility backend that still emulates
   the continuous generation API
 - `evalution/engines/transformers_common.py`: shared request preparation, generation, and scoring
   helpers for the two transformer backends

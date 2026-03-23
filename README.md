@@ -109,7 +109,7 @@ YAML usage:
 
 ```yaml
 engine:
-  type: transformers
+  type: Transformers
   dtype: bfloat16
   attn_implementation: flash_attention_2
   device: cuda:0
@@ -192,7 +192,7 @@ tests:
     num_fewshot: 5
 ```
 
-Use `TransformersCompat()` in Python or `engine.type: transformer_compat` in YAML when you want
+Use `TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you want
 the compatibility engine explicitly.
 
 ## Supported Suites
