@@ -19,9 +19,10 @@ class FakeEngine(BaseEngine):
     def __init__(self, *, choice_index: int, name: str) -> None:
         self.session = FakeSession(choice_index=choice_index)
         self.name = name
+        self.model_config = None
 
     def build(self, model):
-        self.model = model
+        self.model_config = model
         return self.session
 
     def to_dict(self):
@@ -97,8 +98,8 @@ def test_compare_runs_same_suite_on_both_lanes_and_computes_delta(monkeypatch) -
     monkeypatch.setattr(arc_challenge_module, "load_dataset", lambda *args, **kwargs: _dataset())
     left_engine = FakeEngine(choice_index=2, name="left-engine")
     right_engine = FakeEngine(choice_index=0, name="right-engine")
-    left_lane = evalution(left_engine).model({"path": "/tmp/left-model"}, label="model_a")
-    right_lane = evalution(right_engine).model({"path": "/tmp/right-model"}, label="model_b")
+    left_lane = left_engine.model({"path": "/tmp/left-model"}, label="model_a")
+    right_lane = right_engine.model({"path": "/tmp/right-model"}, label="model_b")
 
     result = (
         evalution.compare(left_lane, right_lane)
@@ -129,8 +130,8 @@ def test_run_compare_calls_gc_between_shared_suite_list(monkeypatch) -> None:
     monkeypatch.setattr(arc_challenge_module, "load_dataset", lambda *args, **kwargs: _dataset())
     left_engine = FakeEngine(choice_index=2, name="left-engine")
     right_engine = FakeEngine(choice_index=2, name="right-engine")
-    left_lane = evalution(left_engine).model({"path": "/tmp/left-model"}, label="model_a")
-    right_lane = evalution(right_engine).model({"path": "/tmp/right-model"}, label="model_b")
+    left_lane = left_engine.model({"path": "/tmp/left-model"}, label="model_a")
+    right_lane = right_engine.model({"path": "/tmp/right-model"}, label="model_b")
 
     result = evalution.run_compare(
         left_lane,
@@ -155,8 +156,8 @@ def test_compare_defaults_lane_names_to_model_paths_when_labels_are_omitted(monk
 
     result = (
         evalution.compare(
-            evalution(left_engine).model({"path": "/tmp/left-model"}),
-            evalution(right_engine).model({"path": "/tmp/right-model"}),
+            left_engine.model({"path": "/tmp/left-model"}),
+            right_engine.model({"path": "/tmp/right-model"}),
         )
         .run(evalution.benchmarks.arc_challenge(max_rows=1))
         .result()

@@ -13,8 +13,8 @@ import yaml
 
 import evalution.benchmarks as benchmarks
 from evalution.config import Model
-from evalution.engines import GPTQModel, Transformers, TransformersCompat
-from evalution.runtime import EngineBuilder, EvaluationRun
+from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat
+from evalution.runtime import EvaluationRun
 
 _ENGINE_FACTORIES: dict[str, Any] = {
     "gptqmodel": GPTQModel,
@@ -49,9 +49,7 @@ _TEST_FACTORIES: dict[str, Any] = {
 
 def run_yaml(source: str | Path) -> EvaluationRun:
     spec = _load_yaml_spec(source)
-    evaluation = EngineBuilder(_engine_impl=_build_engine(spec["engine"])).model(
-        _build_model(spec["model"])
-    )
+    evaluation = _build_engine(spec["engine"]).model(_build_model(spec["model"]))
     for test in _build_tests(spec["tests"]):
         evaluation.run(test)
     return evaluation
@@ -80,7 +78,7 @@ def python_from_yaml(source: str | Path) -> str:
         "import evalution.engines as engines",
         "",
         "result = (",
-        f"    eval({_emit_call(f'engines.{engine_alias}', _mapping_without_name(engine_spec), indent='    ')})",
+        f"    {_emit_call(f'engines.{engine_alias}', _mapping_without_name(engine_spec), indent='    ')}",
         f"    .model({_emit_call('eval.Model', model_spec, indent='    ')})",
     ]
     for test_spec in test_specs:
@@ -120,7 +118,7 @@ def _load_yaml_spec(source: str | Path) -> dict[str, Any]:
     return loaded
 
 
-def _build_engine(spec: Any) -> object:
+def _build_engine(spec: Any) -> BaseEngine:
     mapping = _coerce_named_mapping(spec, label="engine")
     engine_name = _normalize_engine_name(_extract_name(mapping, label="engine"))
     factory = _ENGINE_FACTORIES.get(engine_name)

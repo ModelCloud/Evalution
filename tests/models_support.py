@@ -113,14 +113,12 @@ def run_llama3_2_suite(
 ) -> tuple[Any, Any]:
     with capsys.disabled():
         result = (
-            evalution(
-                evalution.Transformers(
-                    dtype="bfloat16",
-                    attn_implementation="flash_attention_2",
-                    paged_attention=True,
-                    device=LLAMA3_2_TRANSFORMERS_DEVICE,
-                    batch_size="auto",
-                )
+            evalution.Transformers(
+                dtype="bfloat16",
+                attn_implementation="flash_attention_2",
+                paged_attention=True,
+                device=LLAMA3_2_TRANSFORMERS_DEVICE,
+                batch_size="auto",
             )
             .model(evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)))
             .run(suite)
@@ -146,26 +144,22 @@ def run_llama3_2_compare_suite(
     with capsys.disabled():
         result = (
             evalution.compare(
-                evalution(
-                    evalution.Transformers(
-                        dtype="bfloat16",
-                        attn_implementation="flash_attention_2",
-                        paged_attention=True,
-                        device=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
-                        batch_size="auto",
-                    )
+                evalution.Transformers(
+                    dtype="bfloat16",
+                    attn_implementation="flash_attention_2",
+                    paged_attention=True,
+                    device=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
+                    batch_size="auto",
                 ).model(
                     evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
                     label=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                 ),
-                evalution(
-                    evalution.Transformers(
-                        dtype="bfloat16",
-                        attn_implementation="flash_attention_2",
-                        paged_attention=True,
-                        device=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
-                        batch_size="auto",
-                    )
+                evalution.Transformers(
+                    dtype="bfloat16",
+                    attn_implementation="flash_attention_2",
+                    paged_attention=True,
+                    device=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
+                    batch_size="auto",
                 ).model(
                     evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
                     label=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,

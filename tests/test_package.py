@@ -8,7 +8,7 @@ import evalution
 
 def test_package_import() -> None:
     assert evalution is not None
-    assert callable(evalution)
+    assert not callable(evalution)
     assert evalution.benchmarks is not None
     assert evalution.engines is not None
     assert evalution.BaseEngine is not None
@@ -70,7 +70,7 @@ def test_package_exports_benchmarks_namespace() -> None:
 def test_package_does_not_flatten_benchmarks_into_top_level_namespace() -> None:
     assert not hasattr(evalution, "arc_challenge")
     assert not hasattr(evalution, "arc_easy")
-    assert not hasattr(evalution, "engine")
+    assert not hasattr(evalution, "EngineBuilder")
     assert not hasattr(evalution, "gsm8k")
     assert not hasattr(evalution, "mmlu")
     assert not hasattr(evalution, "ARCChallenge")
@@ -87,15 +87,15 @@ def test_package_exports_fluent_runtime_api() -> None:
     assert callable(evalution.python_from_yaml)
 
 
-def test_package_call_starts_engine_builder() -> None:
+def test_engine_model_starts_evaluation_run() -> None:
     class DummyEngine(evalution.BaseEngine):
         def build(self, model):
             del model
-            raise AssertionError("builder creation should not build a session")
+            raise AssertionError("evaluation creation should not build a session")
 
-    builder = evalution(DummyEngine())
+    evaluation = DummyEngine().model({"path": "/tmp/model"})
 
-    assert isinstance(builder, evalution.EngineBuilder)
+    assert isinstance(evaluation, evalution.EvaluationRun)
 
 
 def test_package_exposes_cli_entrypoint() -> None:

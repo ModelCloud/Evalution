@@ -18,7 +18,7 @@ gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_plat
 
 class FakeEngine(BaseEngine):
     def build(self, model):
-        self.model = model
+        self.model_config = model
         return FakeSession()
 
     def to_dict(self):
@@ -151,7 +151,8 @@ tests:
     assert "import evalution as eval" in script
     assert "import evalution.benchmarks as benchmarks" in script
     assert "import evalution.engines as engines" in script
-    assert "eval(engines.Transformers(" in script
+    assert "engines.Transformers(" in script
+    assert "eval(engines." not in script
     assert ".model(eval.Model(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.boolq(" in script
@@ -205,7 +206,8 @@ tests:
 """
     )
 
-    assert "eval(engines.TransformersCompat(" in script
+    assert "engines.TransformersCompat(" in script
+    assert "eval(engines." not in script
 
 
 def test_python_from_yaml_emits_gptqmodel_name() -> None:
@@ -222,4 +224,5 @@ tests:
 """
     )
 
-    assert "eval(engines.GPTQModel(" in script
+    assert "engines.GPTQModel(" in script
+    assert "eval(engines." not in script

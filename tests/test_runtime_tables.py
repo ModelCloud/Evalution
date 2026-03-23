@@ -19,9 +19,10 @@ gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_plat
 class FakeEngine(BaseEngine):
     def __init__(self) -> None:
         self.session = FakeSession()
+        self.model_config = None
 
     def build(self, model):
-        self.model = model
+        self.model_config = model
         return self.session
 
     def to_dict(self):

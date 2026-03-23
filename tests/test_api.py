@@ -24,9 +24,10 @@ arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challen
 class FakeEngine(BaseEngine):
     def __init__(self) -> None:
         self.session = FakeSession()
+        self.model_config = None
 
     def build(self, model):
-        self.model = model
+        self.model_config = model
         return self.session
 
     def to_dict(self):
@@ -122,9 +123,7 @@ def test_engine_runner_chains_model_and_test_runs(monkeypatch) -> None:
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     engine = FakeEngine()
-    result = evalution(engine).model({"path": "/tmp/model"}).run(
-        evalution.benchmarks.gsm8k_platinum(max_rows=1)
-    )
+    result = engine.model({"path": "/tmp/model"}).run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
 
     assert result.model["path"] == "/tmp/model"
     assert result.engine["name"] == "fake"
@@ -146,7 +145,7 @@ def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     result = (
-        evalution(FakeEngine())
+        FakeEngine()
         .model({"path": "/tmp/model"}, label="llama")
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
         .result()
@@ -155,24 +154,10 @@ def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
     assert result.model["label"] == "llama"
 
 
-def test_engine_builder_requires_model_before_run() -> None:
-    builder = evalution(FakeEngine())
+def test_engine_requires_model_before_run() -> None:
+    engine = FakeEngine()
 
-    assert not hasattr(builder, "run")
-
-
-def test_engine_rejects_objects_that_do_not_inherit_base_engine() -> None:
-    class InvalidEngine:
-        def build(self, model):
-            del model
-            return FakeSession()
-
-    try:
-        evalution(InvalidEngine())
-    except TypeError as exc:
-        assert str(exc) == "engine must inherit BaseEngine"
-    else:
-        raise AssertionError("expected invalid engine to raise TypeError")
+    assert not hasattr(engine, "run")
 
 
 def test_run_rejects_engines_that_return_non_session_objects(monkeypatch) -> None:
@@ -287,7 +272,7 @@ def test_engine_runner_calls_session_gc_between_test_runs(monkeypatch) -> None:
 
     engine = FakeEngine()
     result = (
-        evalution(engine)
+        engine
         .model({"path": "/tmp/model"})
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))

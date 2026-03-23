@@ -115,17 +115,6 @@ class EvaluationRun:
         return use_logging_context(self._logging_context)
 
 
-@dataclass(slots=True)
-class EngineBuilder:
-    _engine_impl: BaseEngine
-
-    def model(self, model: Model | dict, *, label: str | None = None) -> EvaluationRun:
-        return EvaluationRun(
-            _engine_impl=self._engine_impl,
-            _model_config=model_with_label(coerce_model(model), label=label),
-        )
-
-
 def run(
     *,
     model: Model | dict,
@@ -135,7 +124,7 @@ def run(
     if not isinstance(engine, BaseEngine):
         raise TypeError("engine must inherit BaseEngine")
 
-    evaluation = EngineBuilder(_engine_impl=engine).model(model)
+    evaluation = engine.model(model)
     try:
         for test in tests:
             evaluation.run(test)

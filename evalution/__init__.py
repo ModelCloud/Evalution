@@ -7,7 +7,6 @@
 
 from contextlib import redirect_stdout
 import sys
-from types import ModuleType
 
 from . import benchmarks
 from . import engines
@@ -30,16 +29,9 @@ from evalution.results import (
     SampleResult,
     TestResult,
 )
-from evalution.runtime import EngineBuilder, EvaluationRun, run
+from evalution.runtime import EvaluationRun, run
 from evalution.version import __version__
 from evalution.yaml import python_from_yaml, run_yaml
-
-
-class _EvalutionModule(ModuleType):
-    def __call__(self, engine_impl: BaseEngine) -> EngineBuilder:
-        if not isinstance(engine_impl, BaseEngine):
-            raise TypeError("engine must inherit BaseEngine")
-        return EngineBuilder(_engine_impl=engine_impl)
 
 __all__ = [
     "BaseEngine",
@@ -48,7 +40,6 @@ __all__ = [
     "CompareRun",
     "CompareRunResult",
     "CompareTestResult",
-    "EngineBuilder",
     "EvaluationRun",
     "GPTQModel",
     "Model",
@@ -70,10 +61,8 @@ __all__ = [
 with redirect_stdout(sys.stderr):
     get_logger().info(
         "\n%s",
-        get_startup_banner(
+    get_startup_banner(
             ASCII_LOGO,
             evalution_version=__version__,
         ),
     )
-
-sys.modules[__name__].__class__ = _EvalutionModule
