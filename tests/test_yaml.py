@@ -107,6 +107,10 @@ tests:
     max_rows: 18
   - type: anli_r3
     max_rows: 18
+  - type: asdiv
+    max_rows: 18
+  - type: asdiv_cot_llama
+    max_rows: 18
   - type: babi
     max_rows: 18
   - type: gsm8k_platinum
@@ -197,6 +201,8 @@ tests:
     assert ".run(benchmarks.anli_r1(" in script
     assert ".run(benchmarks.anli_r2(" in script
     assert ".run(benchmarks.anli_r3(" in script
+    assert ".run(benchmarks.asdiv(" in script
+    assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.headqa_en(" in script

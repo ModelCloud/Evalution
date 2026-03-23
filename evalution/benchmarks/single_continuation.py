@@ -52,6 +52,9 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
     def continuation_for_target(self, target: str) -> str:
         return target if target[:1].isspace() else f" {target}"
 
+    def include_perplexity(self) -> bool:
+        return True
+
     def result_metadata(self) -> dict[str, Any]:
         return {
             "dataset_path": self.dataset_path,
@@ -101,10 +104,14 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
         sample_results: list[SampleResult] = []
         accuracy_total = 0.0
         logprob_total = 0.0
+        include_perplexity = self.include_perplexity()
         for sample, output in zip(samples, outputs, strict=True):
             greedy_match = 1.0 if output.is_greedy else 0.0
             accuracy_total += greedy_match
             logprob_total += output.logprob
+            scores = {"acc,ll": greedy_match}
+            if include_perplexity:
+                scores["ppl,ll"] = math.exp(-output.logprob)
             sample_results.append(
                 SampleResult(
                     index=sample.index,
@@ -115,10 +122,7 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
                         "greedy_match": str(int(greedy_match)),
                         "token_count": str(output.token_count),
                     },
-                    scores={
-                        "acc,ll": greedy_match,
-                        "ppl,ll": math.exp(-output.logprob),
-                    },
+                    scores=scores,
                     metadata={
                         **sample.metadata,
                         "logprob": output.logprob,
@@ -129,11 +133,10 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
             )
 
         denominator = max(len(sample_results), 1)
-        # Match lm-eval's loglikelihood perplexity aggregation: exp(-mean(document_logprob)).
-        metrics = {
-            "acc,ll": accuracy_total / denominator,
-            "ppl,ll": math.exp(-(logprob_total / denominator)),
-        }
+        metrics = {"acc,ll": accuracy_total / denominator}
+        if include_perplexity:
+            # Match lm-eval's loglikelihood perplexity aggregation: exp(-mean(document_logprob)).
+            metrics["ppl,ll"] = math.exp(-(logprob_total / denominator))
         return TestResult(
             name=task_name,
             metrics=metrics,

@@ -220,6 +220,8 @@ logic, those implementation details can shift results.
 | `anli_r3` | `facebook/anli` | `test_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
+| `asdiv` | `EleutherAI/asdiv` | `validation` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
+| `asdiv_cot_llama` | `EleutherAI/asdiv` | `validation` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
 | `babi` | `Muennighoff/babi` | `test` | Generated exact match | bAbI `weston2015towards` |
 | `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
@@ -310,6 +312,7 @@ The current built-in suite coverage maps to these benchmark citations:
 
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
+- `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
@@ -370,6 +373,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Peter Clark and Isaac Cowhey and Oren Etzioni and Tushar Khot and Ashish Sabharwal and Carissa Schoenick and Oyvind Tafjord},
   journal = {arXiv preprint arXiv:1803.05457},
   year = {2018},
+}
+
+# ASDiv
+@article{miao2021diverse,
+  title = {A Diverse Corpus for Evaluating and Developing English Math Word Problem Solvers},
+  author = {Shen-Yun Miao and Chao-Chun Liang and Keh-Yih Su},
+  journal = {arXiv preprint arXiv:2106.15772},
+  year = {2021},
 }
 
 # PIQA

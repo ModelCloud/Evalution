@@ -310,6 +310,21 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert set(sample.scores) == {"acc,num"}
 
 
+def _assert_asdiv_cot_llama_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert "<|start_header_id|>user<|end_header_id|>" in sample.prompt
+    assert "Given the following problem" in sample.prompt
+    assert "Problem: " in sample.prompt
+    assert 'The final answer is [answer]' in sample.prompt
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert set(sample.scores) == {"acc,num"}
+    assert sample.metadata["solution_type"]
+    assert sample.metadata["formula"]
+
+
 def _assert_arc_exam_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -393,6 +408,8 @@ def _assert_single_continuation_loglikelihood_sample(
     prompt_suffix: str | None = None,
     prompt_substrings: tuple[str, ...] = (),
     metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+    expected_scores: frozenset[str] = frozenset({"acc,ll", "ppl,ll"}),
+    require_leading_space_target: bool = True,
 ) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -402,16 +419,16 @@ def _assert_single_continuation_loglikelihood_sample(
         assert sample.prompt.endswith(prompt_suffix)
     for expected in prompt_substrings:
         assert expected in sample.prompt
-    assert sample.target.startswith(" ")
+    if require_leading_space_target:
+        assert sample.target.startswith(" ")
+    else:
+        assert sample.target
     assert sample.prediction
     assert set(sample.extracted) == {
         "greedy_match",
         "token_count",
     }
-    assert set(sample.scores) == {
-        "acc,ll",
-        "ppl,ll",
-    }
+    assert set(sample.scores) == expected_scores
     assert "logprob" in sample.metadata
     assert "token_count" in sample.metadata
     assert "is_greedy" in sample.metadata
@@ -533,6 +550,64 @@ def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[di
 
 
 SUITE_SPECS = {
+    "asdiv": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, streaming=True, max_rows=128),
+        expected_name="asdiv",
+        baseline={
+            "acc,ll": 0.0625,
+        },
+        expected_metrics=frozenset({"acc,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/asdiv",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=("\nQuestion:", "\nAnswer:"),
+            metadata_validator=_metadata_fields_truthy(
+                "body",
+                "question",
+                "answer",
+                "solution_type",
+                "formula",
+            ),
+            expected_scores=frozenset({"acc,ll"}),
+            require_leading_space_target=False,
+        ),
+    ),
+    "asdiv_cot_llama": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.asdiv_cot_llama(
+            apply_chat_template=True,
+            batch_size=24,
+            max_new_tokens=96,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="asdiv_cot_llama",
+        baseline={
+            "acc,num": 0.8984375,
+        },
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "cot_llama",
+            "apply_chat_template": True,
+            "fewshot_as_multiturn": True,
+            "streaming": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 8,
+            "dataset_path": "EleutherAI/asdiv",
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_asdiv_cot_llama_sample,
+        result_validator=_validate_gsm8k_like_result,
+    ),
     "babi": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.babi(
             batch_size=24,

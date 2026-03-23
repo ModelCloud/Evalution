@@ -7,6 +7,7 @@ from evalution.scorers.classification import f1_for_label, macro_f1, matthews_co
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
+from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
 from .base import BaseTestSuite, TestSuite
 from .boolq import BoolQ, boolq
@@ -53,6 +54,8 @@ __all__ = [
     "ANLI",
     "ARCEasy",
     "ARCChallenge",
+    "ASDiv",
+    "ASDivCoTLlama",
     "BABI",
     "BaseMultipleChoiceSuite",
     "BaseSingleContinuationSuite",
@@ -94,6 +97,8 @@ __all__ = [
     "anli_r3",
     "arc_easy",
     "arc_challenge",
+    "asdiv",
+    "asdiv_cot_llama",
     "babi",
     "boolq",
     "cb",

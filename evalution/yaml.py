@@ -27,6 +27,8 @@ _TEST_FACTORIES: dict[str, Any] = {
     "anli_r3": benchmarks.anli_r3,
     "arc_challenge": benchmarks.arc_challenge,
     "arc_easy": benchmarks.arc_easy,
+    "asdiv": benchmarks.asdiv,
+    "asdiv_cot_llama": benchmarks.asdiv_cot_llama,
     "babi": benchmarks.babi,
     "boolq": benchmarks.boolq,
     "cb": benchmarks.cb,
