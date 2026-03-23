@@ -32,7 +32,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: 10.0.13.31:5000/nvidia/cuda:${{ matrix.cuda }}-ubuntu22.04_0206
+      image: 10.0.13.31:5000/nvidia/cuda:${{ env.CUDA_VERSION }}-ubuntu22.04_0206
       volumes:
         - /monster/ci/env/entrypoint.sh:/entrypoint.sh
         - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
