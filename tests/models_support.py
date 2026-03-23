@@ -936,6 +936,54 @@ SUITE_SPECS = {
             prompt_substrings=(":",),
         ),
     ),
+    "headqa_en": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.headqa_en(batch_size=24, streaming=True, max_rows=128),
+        expected_name="headqa_en",
+        baseline={
+            "acc,ll": 0.3671875,
+            "acc,ll_avg": 0.421875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/headqa",
+            "dataset_name": "en",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "headqa_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.headqa_es(batch_size=24, streaming=True, max_rows=128),
+        expected_name="headqa_es",
+        baseline={
+            "acc,ll": 0.25,
+            "acc,ll_avg": 0.296875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/headqa",
+            "dataset_name": "es",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
     "mmlu_all": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.mmlu(
             subsets="all",

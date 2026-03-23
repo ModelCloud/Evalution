@@ -35,6 +35,8 @@ _TEST_FACTORIES: dict[str, Any] = {
     "copa": benchmarks.copa,
     "gsm8k": benchmarks.gsm8k,
     "gsm8k_platinum": benchmarks.gsm8k_platinum,
+    "headqa_en": benchmarks.headqa_en,
+    "headqa_es": benchmarks.headqa_es,
     "hellaswag": benchmarks.hellaswag,
     "mmlu": benchmarks.mmlu,
     "mmlu_pro": benchmarks.mmlu_pro,

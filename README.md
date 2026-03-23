@@ -229,6 +229,8 @@ logic, those implementation details can shift results.
 | `gsm8k` | `openai/gsm8k` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
 | `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
+| `headqa_en` | `EleutherAI/headqa` / `en` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `headqa_es` | `EleutherAI/headqa` / `es` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `mmlu` | `cais/mmlu` / `<subsets>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
 | `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<subsets>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | `nyu-mll/glue` / `mnli` | `validation_matched` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
@@ -302,6 +304,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
+- `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
 - `mmlu`: MMLU `hendryckstest2021`
 - `mmlu_pro`: MMLU-Pro `wang2024mmlupro`
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
@@ -405,6 +408,14 @@ The current built-in suite coverage maps to these benchmark citations:
 @inproceedings{zellers2019hellaswag,
   title = {HellaSwag: Can a Machine Really Finish Your Sentence?},
   author = {Rowan Zellers and Ari Holtzman and Yonatan Bisk and Ali Farhadi and Yejin Choi},
+  booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
+  year = {2019},
+}
+
+# HEAD-QA
+@inproceedings{vilares-gomez-rodriguez-2019-head,
+  title = {HEAD-QA: A Healthcare Dataset for Complex Reasoning},
+  author = {David Vilares and Carlos G{\'o}mez-Rodr{\'i}guez},
   booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
   year = {2019},
 }

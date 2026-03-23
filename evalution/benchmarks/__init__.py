@@ -16,6 +16,7 @@ from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .copa import COPA, copa
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
+from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
 from .mmlu import MMLU, mmlu
 from .mmlu_pro import MMLUPro, mmlu_pro
@@ -49,6 +50,7 @@ __all__ = [
     "COPA",
     "GSM8K",
     "GSM8KPlatinum",
+    "HEADQA",
     "HellaSwag",
     "MMLU",
     "MMLUPro",
@@ -82,6 +84,8 @@ __all__ = [
     "f1_for_label",
     "gsm8k",
     "gsm8k_platinum",
+    "headqa_en",
+    "headqa_es",
     "hellaswag",
     "macro_f1",
     "matthews_corrcoef",

@@ -42,6 +42,9 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.commonsense_qa)
     assert evalution.benchmarks.COPA is not None
     assert callable(evalution.benchmarks.copa)
+    assert evalution.benchmarks.HEADQA is not None
+    assert callable(evalution.benchmarks.headqa_en)
+    assert callable(evalution.benchmarks.headqa_es)
     assert evalution.benchmarks.HellaSwag is not None
     assert callable(evalution.benchmarks.hellaswag)
     assert evalution.benchmarks.MMLU is not None
