@@ -10,7 +10,12 @@ import importlib
 from datasets import Dataset
 
 import evalution
-from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
+from evalution.engines.base import (
+    BaseEngine,
+    BaseInferenceSession,
+    GenerationOutput,
+    LoglikelihoodOutput,
+)
 
 gsm8k_platinum_module = importlib.import_module("evalution.suites.gsm8k_platinum")
 arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
@@ -32,6 +37,7 @@ class FakeSession(BaseInferenceSession):
     def __init__(self) -> None:
         self.gc_calls = 0
         self.close_calls = 0
+        self.loglikelihood_outputs: list[LoglikelihoodOutput] | None = None
 
     def generate(self, requests, *, batch_size=None):
         del batch_size
@@ -53,8 +59,11 @@ class FakeSession(BaseInferenceSession):
         }
 
     def loglikelihood(self, requests, *, batch_size=None):
-        del requests, batch_size
-        raise NotImplementedError
+        del batch_size
+        if self.loglikelihood_outputs is None:
+            raise NotImplementedError
+        assert len(requests) == len(self.loglikelihood_outputs)
+        return self.loglikelihood_outputs
 
     def loglikelihood_rolling(self, requests, *, batch_size=None):
         del requests, batch_size
@@ -219,12 +228,11 @@ def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
     )
     monkeypatch.setattr(arc_challenge_module, "load_dataset", lambda *args, **kwargs: dataset)
     engine = FakeEngine()
-    engine.session.generate = lambda requests, *, batch_size=None: [
-        GenerationOutput(
-            prompt=request.prompt if request.prompt is not None else str(request.messages),
-            text="The answer is C.",
-        )
-        for request in requests
+    engine.session.loglikelihood_outputs = [
+        LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=5),
+        LoglikelihoodOutput(logprob=-1.1, is_greedy=False, token_count=6),
+        LoglikelihoodOutput(logprob=-0.2, is_greedy=True, token_count=6),
+        LoglikelihoodOutput(logprob=-1.0, is_greedy=False, token_count=6),
     ]
 
     result = evalution.run(
@@ -235,7 +243,7 @@ def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
 
     assert len(result.tests) == 1
     assert result.tests[0].name == "arc_challenge"
-    assert result.tests[0].metrics["exact_match,choice-label"] == 1.0
+    assert result.tests[0].metrics["accuracy,exam_score"] == 1.0
 
 
 def test_run_calls_session_gc_between_test_suites(monkeypatch) -> None:

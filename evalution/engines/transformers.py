@@ -258,7 +258,7 @@ class TransformersSession(BaseTransformerSession):
     def gc(self) -> None:
         with self._generation_lock:
             self._stop_continuous_batching_manager()
-        super().gc()
+        super(TransformersSession, self).gc()
 
     # Stop paged generation state before tearing down the model and tokenizer.
     def close(self) -> None:

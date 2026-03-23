@@ -276,19 +276,21 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     }
 
 
-def _assert_arc_challenge_sample(sample: Any, index: int) -> None:
+def _assert_arc_exam_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
     assert sample.target
     assert sample.prediction
-    assert "<|start_header_id|>user<|end_header_id|>" in sample.prompt
-    assert "Question:" in sample.prompt
-    assert "Choices:" in sample.prompt
-    assert set(sample.extracted) == {"choice-label", "choice-text"}
-    assert set(sample.scores) == {
-        "exact_match,choice-label",
-        "exact_match,choice-text",
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert set(sample.extracted) == {
+        "gold_index",
+        "selected_indices",
+        "selected_labels",
     }
+    assert set(sample.scores) == {"accuracy,exam_score"}
+    assert "choice_logprobs" in sample.metadata
+    assert "selected_count" in sample.metadata
 
 
 def _assert_mmlu_pro_sample(
@@ -332,13 +334,13 @@ def _validate_gsm8k_like_result(test_result: Any) -> None:
     assert invalid_predictions / len(test_result.samples) < 0.40
 
 
-def _validate_arc_challenge_result(test_result: Any) -> None:
-    invalid_predictions = sum(
+def _validate_arc_exam_result(test_result: Any) -> None:
+    exact_matches = sum(
         1
         for sample in test_result.samples
-        if sample.extracted["choice-label"] == "[invalid]"
+        if sample.scores["accuracy,exam_score"] == 1.0
     )
-    assert invalid_predictions / len(test_result.samples) < 0.75
+    assert exact_matches > 0
 
 
 def _validate_mmlu_pro_result(test_result: Any) -> None:
@@ -568,50 +570,43 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.arc_easy(batch_size=24, streaming=True, max_rows=128),
         expected_name="arc_easy",
         baseline={
-            "accuracy,loglikelihood": 0.6640625,
-            "accuracy,loglikelihood_norm": 0.6484375,
+            "accuracy,exam_score": 0.6640625,
         },
-        expected_metrics=frozenset({"accuracy,loglikelihood", "accuracy,loglikelihood_norm"}),
+        expected_metrics=frozenset({"accuracy,exam_score"}),
         expected_metadata={
             "streaming": True,
             "dataset_path": "allenai/ai2_arc",
             "dataset_name": "ARC-Easy",
-            "split": "validation",
-            "scoring_mode": "multiple_choice_loglikelihood",
+            "split": "test",
+            "scoring_mode": "multiple_choice_exam_score",
+            "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
         },
         expected_sample_count=128,
-        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
-            sample,
-            index,
-            prompt_prefix="Question: ",
-            prompt_suffix="\nAnswer:",
-            metadata_validator=_metadata_has_choice_labels(min_count=2),
-        ),
+        sample_validator=_assert_arc_exam_sample,
+        result_validator=_validate_arc_exam_result,
     ),
     "arc_challenge": SuiteSpec(
         suite_factory=lambda: evalution.arc_challenge(
-            apply_chat_template=True,
             batch_size=24,
-            max_new_tokens=8,
             streaming=True,
             max_rows=128,
         ),
         expected_name="arc_challenge",
         baseline={
-            "exact_match,choice-label": 0.4765625,
-            "exact_match,choice-text": 0.4765625,
+            "accuracy,exam_score": 0.40625,
         },
-        expected_metrics=frozenset({"exact_match,choice-label", "exact_match,choice-text"}),
+        expected_metrics=frozenset({"accuracy,exam_score"}),
         expected_metadata={
-            "apply_chat_template": True,
             "streaming": True,
-            "generation_submission_mode": "continuous_refill",
             "dataset_path": "allenai/ai2_arc",
             "dataset_name": "ARC-Challenge",
+            "split": "test",
+            "scoring_mode": "multiple_choice_exam_score",
+            "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
         },
         expected_sample_count=128,
-        sample_validator=_assert_arc_challenge_sample,
-        result_validator=_validate_arc_challenge_result,
+        sample_validator=_assert_arc_exam_sample,
+        result_validator=_validate_arc_exam_result,
     ),
     "hellaswag": SuiteSpec(
         suite_factory=lambda: evalution.hellaswag(batch_size=24, streaming=True, max_rows=128),

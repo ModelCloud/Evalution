@@ -138,7 +138,7 @@ class GPTQModelSession(TransformersSession):
 
     # Surface GPTQModel-specific runtime details in addition to the shared transformer execution data.
     def describe_execution(self) -> dict[str, Any]:
-        execution = super().describe_execution()
+        execution = super(GPTQModelSession, self).describe_execution()
         execution.update(
             {
                 "quantized_backend": self.resolved_backend,
@@ -156,7 +156,7 @@ class GPTQModelSession(TransformersSession):
                     with self._state_lock:
                         with suppress(Exception):
                             del self.model_wrapper
-        super().close()
+        super(GPTQModelSession, self).close()
 
 
 # Load the tokenizer through transformers for Evalution's shared session logic, then attach the

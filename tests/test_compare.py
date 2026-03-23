@@ -10,14 +10,14 @@ import importlib
 from datasets import Dataset
 
 import evalution
-from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
+from evalution.engines.base import BaseEngine, BaseInferenceSession, LoglikelihoodOutput
 
 arc_challenge_module = importlib.import_module("evalution.suites.arc_challenge")
 
 
 class FakeEngine(BaseEngine):
-    def __init__(self, *, text: str, name: str) -> None:
-        self.session = FakeSession(text=text)
+    def __init__(self, *, choice_index: int, name: str) -> None:
+        self.session = FakeSession(choice_index=choice_index)
         self.name = name
 
     def build(self, model):
@@ -29,37 +29,38 @@ class FakeEngine(BaseEngine):
 
 
 class FakeSession(BaseInferenceSession):
-    def __init__(self, *, text: str) -> None:
-        self.text = text
+    def __init__(self, *, choice_index: int) -> None:
+        self.choice_index = choice_index
         self.gc_calls = 0
         self.close_calls = 0
 
     def generate(self, requests, *, batch_size=None):
-        del batch_size
-        return [
-            GenerationOutput(
-                prompt=request.prompt if request.prompt is not None else str(request.messages),
-                text=self.text,
-            )
-            for request in requests
-        ]
-
-    def describe_execution(self):
-        return {"generation_backend": "fake"}
-
-    def loglikelihood(self, requests, *, batch_size=None):
         del requests, batch_size
         raise NotImplementedError
+
+    def describe_execution(self):
+        return {"loglikelihood_backend": "fake"}
+
+    def loglikelihood(self, requests, *, batch_size=None):
+        del batch_size
+        outputs = []
+        for request_index, _request in enumerate(requests):
+            outputs.append(
+                LoglikelihoodOutput(
+                    logprob=-0.1 if request_index == self.choice_index else -1.0,
+                    is_greedy=request_index == self.choice_index,
+                    token_count=1,
+                )
+            )
+        return outputs
 
     def loglikelihood_rolling(self, requests, *, batch_size=None):
         del requests, batch_size
         raise NotImplementedError
 
     def generate_continuous(self, requests, *, batch_size=None):
-        request_items = list(requests)
-        outputs = self.generate([request for _, request in request_items], batch_size=batch_size)
-        for (item_id, _request), output in zip(request_items, outputs, strict=True):
-            yield item_id, output
+        del requests, batch_size
+        raise NotImplementedError
 
     def gc(self) -> None:
         self.gc_calls += 1
@@ -94,8 +95,8 @@ def _dataset() -> Dataset:
 
 def test_compare_runs_same_suite_on_both_lanes_and_computes_delta(monkeypatch) -> None:
     monkeypatch.setattr(arc_challenge_module, "load_dataset", lambda *args, **kwargs: _dataset())
-    left_engine = FakeEngine(text="The answer is C.", name="left-engine")
-    right_engine = FakeEngine(text="The answer is A.", name="right-engine")
+    left_engine = FakeEngine(choice_index=2, name="left-engine")
+    right_engine = FakeEngine(choice_index=0, name="right-engine")
     left_lane = evalution.engine(left_engine).model({"path": "/tmp/left-model"}, label="model_a")
     right_lane = evalution.engine(right_engine).model({"path": "/tmp/right-model"}, label="model_b")
 
@@ -111,9 +112,9 @@ def test_compare_runs_same_suite_on_both_lanes_and_computes_delta(monkeypatch) -
     assert result.right.engine["name"] == "right-engine"
     assert len(result.tests) == 1
     assert result.tests[0].name == "arc_challenge"
-    assert result.tests[0].left.metrics["exact_match,choice-label"] == 1.0
-    assert result.tests[0].right.metrics["exact_match,choice-label"] == 0.0
-    metric = result.tests[0].metrics["exact_match,choice-label"]
+    assert result.tests[0].left.metrics["accuracy,exam_score"] == 1.0
+    assert result.tests[0].right.metrics["accuracy,exam_score"] == 0.0
+    metric = result.tests[0].metrics["accuracy,exam_score"]
     assert metric.left_value == 1.0
     assert metric.right_value == 0.0
     assert metric.delta == 1.0
@@ -126,8 +127,8 @@ def test_compare_runs_same_suite_on_both_lanes_and_computes_delta(monkeypatch) -
 
 def test_run_compare_calls_gc_between_shared_suite_list(monkeypatch) -> None:
     monkeypatch.setattr(arc_challenge_module, "load_dataset", lambda *args, **kwargs: _dataset())
-    left_engine = FakeEngine(text="The answer is C.", name="left-engine")
-    right_engine = FakeEngine(text="The answer is C.", name="right-engine")
+    left_engine = FakeEngine(choice_index=2, name="left-engine")
+    right_engine = FakeEngine(choice_index=2, name="right-engine")
     left_lane = evalution.engine(left_engine).model({"path": "/tmp/left-model"}, label="model_a")
     right_lane = evalution.engine(right_engine).model({"path": "/tmp/right-model"}, label="model_b")
 
@@ -149,8 +150,8 @@ def test_run_compare_calls_gc_between_shared_suite_list(monkeypatch) -> None:
 
 def test_compare_defaults_lane_names_to_model_paths_when_labels_are_omitted(monkeypatch) -> None:
     monkeypatch.setattr(arc_challenge_module, "load_dataset", lambda *args, **kwargs: _dataset())
-    left_engine = FakeEngine(text="The answer is C.", name="left-engine")
-    right_engine = FakeEngine(text="The answer is C.", name="right-engine")
+    left_engine = FakeEngine(choice_index=2, name="left-engine")
+    right_engine = FakeEngine(choice_index=2, name="right-engine")
 
     result = (
         evalution.compare(
