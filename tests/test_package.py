@@ -10,7 +10,8 @@ def test_package_import() -> None:
     assert evalution is not None
     assert evalution.BaseEngine is not None
     assert evalution.BaseInferenceSession is not None
-    assert evalution.GPTQModelEngine is not None
+    assert evalution.GPTQModel is not None
+    assert evalution.Transformer is not None
     assert evalution.TransformerCompat is not None
 
 
@@ -64,8 +65,6 @@ def test_package_exports_fluent_runtime_api() -> None:
     assert callable(evalution.compare)
     assert callable(evalution.engine)
     assert callable(evalution.run_compare)
-    assert evalution.Transformers is evalution.Transformer
-    assert evalution.TransformersCompat is evalution.TransformerCompat
     assert callable(evalution.run_yaml)
     assert callable(evalution.python_from_yaml)
 

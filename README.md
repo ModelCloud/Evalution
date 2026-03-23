@@ -26,7 +26,7 @@ Simple usage:
 import evalution as eval
 
 result = (
-    eval.engine(eval.Transformers())
+    eval.engine(eval.Transformer())
     .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
     .run(eval.gsm8k_platinum())
 )
@@ -39,7 +39,7 @@ import evalution as eval
 
 result = (
     eval.engine(
-        eval.Transformers(
+        eval.Transformer(
             dtype="bfloat16",
             attn_implementation="flash_attention_2",
             device="cuda:0",
@@ -84,11 +84,11 @@ import evalution as eval
 
 result = (
     eval.compare(
-        eval.engine(eval.Transformers(dtype="bfloat16", device="cuda:0")).model(
+        eval.engine(eval.Transformer(dtype="bfloat16", device="cuda:0")).model(
             {"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
             label="llama",
         ),
-        eval.engine(eval.TransformersCompat(device="cuda:1")).model(
+        eval.engine(eval.TransformerCompat(device="cuda:1")).model(
             {"path": "/monster/data/model/Qwen2.5-1.5B-Instruct"},
             label="qwen",
         ),
@@ -109,7 +109,7 @@ YAML usage:
 
 ```yaml
 engine:
-  type: transformers
+  type: Transformer
   dtype: bfloat16
   attn_implementation: flash_attention_2
   device: cuda:0
@@ -148,7 +148,7 @@ evalution run evalution.yaml --output result.json
 evalution emit-python evalution.yaml
 ```
 
-`Transformers(...)` accepts runtime options such as `dtype`, `device`, `batch_size`,
+`Transformer(...)` accepts runtime options such as `dtype`, `device`, `batch_size`,
 `paged_attention`, `attn_implementation`, and `max_new_tokens`.
 
 Per-suite options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, and `max_rows`
@@ -171,7 +171,7 @@ Python:
 import evalution as eval
 
 result = (
-    eval.engine(eval.Transformers())
+    eval.engine(eval.Transformer())
     .model(eval.Model(path="/monster/data/model/Llama-3.2-1B-Instruct"))
     .run(eval.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
     .run(eval.mmlu_pro(subsets="stem.math"))
@@ -192,7 +192,7 @@ tests:
     num_fewshot: 5
 ```
 
-Use `TransformersCompat()` in Python or `engine.type: transformer_compat` in YAML when you want
+Use `TransformerCompat()` in Python or `engine.type: TransformerCompat` in YAML when you want
 the compatibility engine explicitly.
 
 ## Supported Suites

@@ -113,31 +113,32 @@ specific batching implementation.
 
 ## Built-in Transformers Engines
 
-Evalution ships two Hugging Face-backed engines:
+Evalution ships three Hugging Face-compatible engines:
 
-- `Transformers()`: the modern backend
-- `TransformersCompat()`: the compatibility backend
-- `GPTQModelEngine()`: the quantized GPTQModel backend
+- `Transformer()`: the modern backend
+- `TransformerCompat()`: the compatibility backend
+- `GPTQModel()`: the quantized GPTQModel backend
 
-`Transformers()` defaults batching, paged attention, dtype resolution, and attention selection to
+`Transformer()` defaults batching, paged attention, dtype resolution, and attention selection to
 auto behavior. On compatible CUDA `transformers` setups it can switch to paged continuous batching
 for `flash_attention_2`.
 
 If the installed `transformers` build predates the first release that includes
-`generation/continuous_batching` (`4.56.0`), `Transformers()` falls back to
-`TransformersCompat()`. `TransformersCompat()` also remains available as the explicit fixed-batch
+`generation/continuous_batching` (`4.56.0`), `Transformer()` falls back to
+`TransformerCompat()`. `TransformerCompat()` also remains available as the explicit fixed-batch
 execution path.
 
-The modern `Transformers(...)` engine also exposes the upstream continuous batching manager knobs
+The modern `Transformer(...)` engine also exposes the upstream continuous batching manager knobs
 `manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
 `kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned manager alive
 while stop strings and sampling settings stay compatible, then tears it down on `gc()` between
 suites or on `close()`.
 
-`GPTQModelEngine()` loads quantized checkpoints through GPTQModel's native loader, then reuses the
+`GPTQModel()` loads quantized checkpoints through GPTQModel's native loader, then reuses the
 same shared generation, scoring, and paged continuous-batching path as the built-in transformer
 engines when the loaded quantized model exposes the required HF hooks. It also surfaces the
 resolved quantized runtime backend in execution metadata.
+
 
 ## Log-Likelihood Requirements
 

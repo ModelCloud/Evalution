@@ -49,7 +49,7 @@ class _LoadedGPTQModelRuntime:
 
 
 @dataclass(slots=True)
-class GPTQModelEngine(_TransformersCommonConfig):
+class GPTQModel(_TransformersCommonConfig):
     # Load quantized Hugging Face-compatible checkpoints through GPTQModel.
     backend: str = "auto"
     gptqmodel_path: str | None = _DEFAULT_GPTQMODEL_PATH
@@ -73,7 +73,7 @@ class GPTQModelEngine(_TransformersCommonConfig):
         if supports_continuous_batching:
             _warn_pending_nogil_transformers_pr_once()
 
-        self.resolved_engine = "GPTQModelEngine"
+        self.resolved_engine = "GPTQModel"
         return GPTQModelSession.from_config(
             self,
             model,
@@ -92,7 +92,7 @@ class GPTQModelSession(TransformerSession):
     @classmethod
     def from_config(
         cls,
-        config: GPTQModelEngine,
+        config: GPTQModel,
         model_config: Model,
         *,
         supports_continuous_batching: bool,
@@ -162,7 +162,7 @@ class GPTQModelSession(TransformerSession):
 # Load the tokenizer through transformers for Evalution's shared session logic, then attach the
 # already-initialized inner HF model returned by GPTQModel.
 def load_gptqmodel_runtime(
-    config: GPTQModelEngine,
+    config: GPTQModel,
     model_config: Model,
 ) -> _LoadedGPTQModelRuntime:
     import torch
@@ -298,7 +298,7 @@ def _normalize_gptqmodel_backend(backend: Any) -> str:
 def _validate_gptqmodel_backend(backend: str) -> None:
     if backend in _UNSUPPORTED_GPTQMODEL_BACKENDS:
         raise ValueError(
-            "GPTQModelEngine only supports native GPTQModel/HF-style backends; "
+            "GPTQModel only supports native GPTQModel/HF-style backends; "
             "vllm, sglang, and mlx are incompatible with Evalution scoring"
         )
 

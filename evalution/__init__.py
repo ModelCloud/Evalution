@@ -14,7 +14,7 @@ from evalution.config import Model
 from evalution.engines import (
     BaseEngine,
     BaseInferenceSession,
-    GPTQModelEngine,
+    GPTQModel,
     Transformer,
     TransformerCompat,
 )
@@ -105,7 +105,7 @@ __all__ = [
     "EvaluationRun",
     "GSM8K",
     "GSM8KPlatinum",
-    "GPTQModelEngine",
+    "GPTQModel",
     "HellaSwag",
     "MMLU",
     "MMLUPro",
@@ -125,8 +125,6 @@ __all__ = [
     "TestResult",
     "Transformer",
     "TransformerCompat",
-    "Transformers",
-    "TransformersCompat",
     "WNLI",
     "arc_easy",
     "arc_challenge",
@@ -163,9 +161,6 @@ __all__ = [
     "winogrande",
     "__version__",
 ]
-
-Transformers = Transformer
-TransformersCompat = TransformerCompat
 
 with redirect_stdout(sys.stderr):
     get_logger().info(

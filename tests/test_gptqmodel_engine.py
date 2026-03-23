@@ -16,7 +16,7 @@ import torch
 from evalution.config import Model
 from evalution.engines.base import GenerationRequest, LoglikelihoodRequest
 from evalution.engines.gptqmodel_engine import (
-    GPTQModelEngine,
+    GPTQModel,
     GPTQModelSession,
     _import_gptqmodel,
     _validate_gptqmodel_backend,
@@ -27,7 +27,7 @@ _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-
 
 
 def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
-    engine = GPTQModelEngine()
+    engine = GPTQModel()
 
     assert engine.batch_size == "auto"
     assert engine.backend == "auto"
@@ -53,7 +53,7 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
 
 def test_gptqmodel_session_describes_quantized_backend() -> None:
     session = GPTQModelSession(
-        config=GPTQModelEngine(),
+        config=GPTQModel(),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(dtype="float16"),
         tokenizer=SimpleNamespace(),
@@ -162,7 +162,7 @@ def test_load_gptqmodel_runtime_uses_quantized_loader(monkeypatch) -> None:
     )
 
     runtime = load_gptqmodel_runtime(
-        GPTQModelEngine(device="cpu", dtype="bfloat16", backend="auto"),
+        GPTQModel(device="cpu", dtype="bfloat16", backend="auto"),
         Model(path="/tmp/model"),
     )
 
@@ -198,7 +198,7 @@ def test_load_gptqmodel_runtime_uses_quantized_loader(monkeypatch) -> None:
     reason="CUDA is required for the GPTQModel engine integration test",
 )
 def test_gptqmodel_engine_can_generate_and_score_on_cuda() -> None:
-    session = GPTQModelEngine(
+    session = GPTQModel(
         device="cuda:0",
         batch_size=1,
         attn_implementation="flash_attention_2",

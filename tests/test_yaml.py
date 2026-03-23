@@ -96,7 +96,7 @@ def test_python_from_yaml_emits_fluent_python_api() -> None:
     script = evalution.python_from_yaml(
         """
 engine:
-  type: transformers
+  type: Transformer
   dtype: bfloat16
 model:
   path: /tmp/model
@@ -149,7 +149,7 @@ tests:
     )
 
     assert "import evalution as eval" in script
-    assert "eval.engine(eval.Transformers(" in script
+    assert "eval.engine(eval.Transformer(" in script
     assert ".model(eval.Model(" in script
     assert ".run(eval.gsm8k_platinum(" in script
     assert ".run(eval.boolq(" in script
@@ -179,7 +179,7 @@ def test_run_yaml_requires_tests_section() -> None:
         evalution.run_yaml(
             """
 engine:
-  type: transformers
+  type: Transformer
 model:
   path: /tmp/model
 """
@@ -190,11 +190,11 @@ model:
         raise AssertionError("expected missing tests section to raise KeyError")
 
 
-def test_python_from_yaml_emits_transformer_compat_alias() -> None:
+def test_python_from_yaml_emits_transformer_compat_name() -> None:
     script = evalution.python_from_yaml(
         """
 engine:
-  type: transformer_compat
+  type: TransformerCompat
 model:
   path: /tmp/model
 tests:
@@ -203,14 +203,14 @@ tests:
 """
     )
 
-    assert "eval.engine(eval.TransformersCompat(" in script
+    assert "eval.engine(eval.TransformerCompat(" in script
 
 
-def test_python_from_yaml_emits_gptqmodel_engine_alias() -> None:
+def test_python_from_yaml_emits_gptqmodel_name() -> None:
     script = evalution.python_from_yaml(
         """
 engine:
-  type: gptqmodel
+  type: GPTQModel
   backend: auto
 model:
   path: /tmp/model
@@ -220,4 +220,4 @@ tests:
 """
     )
 
-    assert "eval.engine(eval.GPTQModelEngine(" in script
+    assert "eval.engine(eval.GPTQModel(" in script
