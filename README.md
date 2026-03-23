@@ -267,6 +267,7 @@ logic, those implementation details can shift results.
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
+| `pubmedqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PubMedQA `jin2019pubmedqa` |
 | `qnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `race` | Multiple-choice log-likelihood, raw + length-normalized accuracy | RACE `lai-etal-2017-race` |
@@ -355,6 +356,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
 - `piqa`: PIQA `bisk2020piqa`
 - `prost`: PROST `aroca-ouellette-etal-2021-prost`
+- `pubmedqa`: PubMedQA `jin2019pubmedqa`
 - `race`: RACE `lai-etal-2017-race`
 - `sciq`: SciQ `welbl2017crowdsourcing`
 - `siqa`: Social IQA `sap2019social`
@@ -461,6 +463,15 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2021},
   pages = {4597--4608},
   url = {https://aclanthology.org/2021.findings-acl.404},
+}
+
+# PubMedQA
+@inproceedings{jin2019pubmedqa,
+  title = {PubMedQA: A Dataset for Biomedical Research Question Answering},
+  author = {Qiao Jin and Bhuwan Dhingra and Zhengping Liu and William Cohen and Xinghua Lu},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
+  year = {2019},
+  pages = {2567--2577},
 }
 
 # CommonsenseQA

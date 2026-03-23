@@ -57,6 +57,7 @@ from .multiple_choice_utils import choice_index_from_labels, question_answer_pro
 from .openbookqa import OpenBookQA, openbookqa
 from .piqa import PIQA, piqa
 from .prost import Prost, prost
+from .pubmedqa import PubMedQA, pubmedqa
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .race import RACE, race
@@ -108,6 +109,7 @@ __all__ = [
     "OpenBookQA",
     "PIQA",
     "Prost",
+    "PubMedQA",
     "QNLI",
     "QQP",
     "RACE",
@@ -178,6 +180,7 @@ __all__ = [
     "openbookqa",
     "piqa",
     "prost",
+    "pubmedqa",
     "qnli",
     "qqp",
     "race",

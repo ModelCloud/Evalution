@@ -1834,6 +1834,33 @@ SUITE_SPECS = {
             metadata_validator=_metadata_fields_truthy("group", "name"),
         ),
     ),
+    "pubmedqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.pubmedqa(batch_size=24, max_rows=128),
+        expected_name="pubmedqa",
+        baseline={
+            "acc,ll": 0.9765625,
+            "acc,ll_avg": 0.9765625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "bigbio/pubmed_qa",
+            "dataset_name": "pubmed_qa_labeled_fold0_source",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"yes", "no", "maybe"},
+            prediction_values={"yes", "no", "maybe"},
+            prompt_prefix="Abstract: ",
+            prompt_substrings=("\nQuestion: ",),
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy("pubid", "long_answer"),
+        ),
+    ),
     "qnli": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.qnli(batch_size=24, streaming=True, max_rows=128),
         expected_name="qnli",

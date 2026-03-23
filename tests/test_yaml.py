@@ -192,6 +192,8 @@ tests:
     max_rows: 16
   - type: prost
     max_rows: 18
+  - type: pubmedqa
+    max_rows: 18
   - type: qnli
     max_rows: 26
   - type: qqp
@@ -263,6 +265,7 @@ tests:
     assert ".run(benchmarks.openbookqa(" in script
     assert ".run(benchmarks.piqa(" in script
     assert ".run(benchmarks.prost(" in script
+    assert ".run(benchmarks.pubmedqa(" in script
     assert ".run(benchmarks.qnli(" in script
     assert ".run(benchmarks.qqp(" in script
     assert ".run(benchmarks.race(" in script

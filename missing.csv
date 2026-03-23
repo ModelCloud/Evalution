@@ -132,7 +132,6 @@ pile_10k,1,pile_10k/pile_10k.yaml,
 pisa,14,pisa/pisa_ch.yaml,pisa/pisa_ch_llm_judged.yaml
 polemo2,2,polemo2/polemo2_in.yaml,polemo2/polemo2_out.yaml
 portuguese_bench,20,portuguese_bench/assin_entailment.yaml,portuguese_bench/assin_paraphrase.yaml
-pubmedqa,1,pubmedqa/pubmedqa.yaml,
 qa4mre,3,qa4mre/qa4mre_2011.yaml,qa4mre/qa4mre_2012.yaml
 qasper,2,qasper/bool.yaml,qasper/freeform.yaml
 realtoxicityprompts,1,realtoxicityprompts/realtoxicityprompts.yaml,
