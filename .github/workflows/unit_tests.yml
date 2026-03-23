@@ -41,12 +41,12 @@ jobs:
 
       - name: Activate uv env
         run: |
-          env_name="cu${{ CUDA_VERSION }}_torch${{ TORCH_VERSION }}_py${PYTHON_VERSION}_release"
+          env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
           /opt/uv/setup_uv_venv.sh $env_name
 
       - name: Setup uv env
         run: |
-          /opt/env/init_compiler_torch_only.sh ${{ CUDA_VERSION }} ${{ TORCH_VERSION }} ${UV_PYTHON}
+          /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
 
       - name: Print uv env
         run: |
