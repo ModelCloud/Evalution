@@ -71,6 +71,7 @@ from .single_continuation import BaseSingleContinuationSuite, SingleContinuation
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .squadv2 import SQuADV2, squadv2
+from .triviaqa import TriviaQA, triviaqa
 from .wic import WiC, wic
 from .webqs import WebQS, webqs
 from .wikitext import WikiText, wikitext
@@ -131,6 +132,7 @@ __all__ = [
     "SQuADV2",
     "SST2",
     "TestSuite",
+    "TriviaQA",
     "WiC",
     "WebQS",
     "WikiText",
@@ -206,6 +208,7 @@ __all__ = [
     "squadv2",
     "question_answer_prompt",
     "sst2",
+    "triviaqa",
     "wic",
     "webqs",
     "wikitext",

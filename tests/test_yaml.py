@@ -216,6 +216,8 @@ tests:
     max_rows: 22
   - type: squadv2
     max_rows: 16
+  - type: triviaqa
+    max_rows: 16
   - type: wic
     max_rows: 14
   - type: webqs
@@ -287,6 +289,7 @@ tests:
     assert ".run(benchmarks.swag(" in script
     assert ".run(benchmarks.sst2(" in script
     assert ".run(benchmarks.squadv2(" in script
+    assert ".run(benchmarks.triviaqa(" in script
     assert ".run(benchmarks.wic(" in script
     assert ".run(benchmarks.webqs(" in script
     assert ".run(benchmarks.wikitext(" in script

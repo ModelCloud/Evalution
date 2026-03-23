@@ -279,6 +279,7 @@ logic, those implementation details can shift results.
 | `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
 | `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `squadv2` | Generated QA exact match and token-overlap F1 with explicit no-answer handling | SQuAD 2.0 `rajpurkar2018know` |
+| `triviaqa` | Generated QA exact match and token-overlap F1 over answer aliases | TriviaQA `joshi2017triviaqa` |
 | `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
 | `wikitext` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | WikiText-2 `merity2016pointer` |
@@ -368,6 +369,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `prost`: PROST `aroca-ouellette-etal-2021-prost`
 - `pubmedqa`: PubMedQA `jin2019pubmedqa`
 - `squadv2`: SQuAD 2.0 `rajpurkar2018know`
+- `triviaqa`: TriviaQA `joshi2017triviaqa`
 - `race`: RACE `lai-etal-2017-race`
 - `sciq`: SciQ `welbl2017crowdsourcing`
 - `siqa`: Social IQA `sap2019social`
@@ -504,6 +506,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Pranav Rajpurkar and Robin Jia and Percy Liang},
   journal = {arXiv preprint arXiv:1806.03822},
   year = {2018},
+}
+
+# TriviaQA
+@article{joshi2017triviaqa,
+  title = {TriviaQA: A Large Scale Distantly Supervised Challenge Dataset for Reading Comprehension},
+  author = {Mandar Joshi and Eunsol Choi and Daniel Weld and Luke Zettlemoyer},
+  journal = {Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics},
+  year = {2017},
 }
 
 # PubMedQA

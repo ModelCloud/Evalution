@@ -561,6 +561,22 @@ def _assert_squadv2_sample(sample: Any, index: int) -> None:
     assert "has_answer" in sample.metadata
 
 
+def _assert_triviaqa_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["question_id"]
+    assert sample.metadata["question_source"]
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_aliases"]
+    assert sample.metadata["answer_type"]
+    assert sample.metadata["answer_value"]
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -2180,6 +2196,26 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=_assert_squadv2_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "triviaqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.triviaqa(batch_size=16, max_rows=32),
+        expected_name="triviaqa",
+        baseline={
+            "em": 0.1875,
+            "f1": 0.25358089581501343,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "trivia_qa",
+            "dataset_name": "rc.nocontext",
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_triviaqa_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "wic": SuiteSpec(

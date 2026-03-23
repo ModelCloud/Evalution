@@ -86,6 +86,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "swag": benchmarks.swag,
     "sst2": benchmarks.sst2,
     "squadv2": benchmarks.squadv2,
+    "triviaqa": benchmarks.triviaqa,
     "wic": benchmarks.wic,
     "webqs": benchmarks.webqs,
     "wikitext": benchmarks.wikitext,
