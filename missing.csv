@@ -109,7 +109,6 @@ med_prescriptions,2,med_prescriptions/med_prescriptions_easy.yaml,med_prescripti
 med_text_classification,2,med_text_classification/med_text_classification_easy.yaml,med_text_classification/med_text_classification_hard.yaml
 meddialog,4,meddialog/meddialog_qsumm.yaml,meddialog/meddialog_qsumm_perplexity.yaml
 mediqa_qa2019,2,mediqa_qa2019/mediqa_qa2019.yaml,mediqa_qa2019/mediqa_qa2019_perplexity.yaml
-medmcqa,1,medmcqa/medmcqa.yaml,
 medqa,1,medqa/medqa.yaml,
 medtext,2,medtext/medtext.yaml,medtext/medtext_perplexity.yaml
 mela,11,mela/mela_ar.yaml,mela/mela_de.yaml

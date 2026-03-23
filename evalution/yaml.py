@@ -43,6 +43,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "headqa_en": benchmarks.headqa_en,
     "headqa_es": benchmarks.headqa_es,
     "hellaswag": benchmarks.hellaswag,
+    "medmcqa": benchmarks.medmcqa,
     "mmlu": benchmarks.mmlu,
     "mmlu_pro": benchmarks.mmlu_pro,
     "mnli": benchmarks.mnli,

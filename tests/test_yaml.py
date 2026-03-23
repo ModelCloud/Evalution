@@ -115,6 +115,8 @@ tests:
     max_rows: 18
   - type: headqa_es
     max_rows: 18
+  - type: medmcqa
+    max_rows: 18
   - type: boolq
     max_rows: 48
   - type: cb
@@ -189,6 +191,7 @@ tests:
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.headqa_en(" in script
     assert ".run(benchmarks.headqa_es(" in script
+    assert ".run(benchmarks.medmcqa(" in script
     assert ".run(benchmarks.boolq(" in script
     assert ".run(benchmarks.cb(" in script
     assert ".run(benchmarks.cola(" in script

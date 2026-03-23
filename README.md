@@ -236,6 +236,7 @@ logic, those implementation details can shift results.
 | `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_en` | `EleutherAI/headqa` / `en` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | `EleutherAI/headqa` / `es` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `medmcqa` | `openlifescienceai/medmcqa` | `validation` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
 | `mmlu` | `cais/mmlu` / `<subsets>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
 | `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<subsets>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | `nyu-mll/glue` / `mnli` | `validation_matched` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
@@ -311,6 +312,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
+- `medmcqa`: MedMCQA `pmlr-v174-pal22a`
 - `mmlu`: MMLU `hendryckstest2021`
 - `mmlu_pro`: MMLU-Pro `wang2024mmlupro`
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
@@ -432,6 +434,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {David Vilares and Carlos G{\'o}mez-Rodr{\'i}guez},
   booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
   year = {2019},
+}
+
+# MedMCQA
+@inproceedings{pmlr-v174-pal22a,
+  title = {MedMCQA: A Large-scale Multi-Subject Multi-Choice Dataset for Medical domain Question Answering},
+  author = {Ankit Pal and Logesh Kumar Umapathi and Malaikannan Sankarasubbu},
+  booktitle = {Proceedings of the Conference on Health, Inference, and Learning},
+  year = {2022},
 }
 
 # OpenBookQA

@@ -1116,6 +1116,33 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
+    "medmcqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, streaming=True, max_rows=128),
+        expected_name="medmcqa",
+        baseline={
+            "acc,ll": 0.4296875,
+            "acc,ll_avg": 0.4296875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "openlifescienceai/medmcqa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            prompt_substrings=("\nChoices:\nA. ", "\nD. "),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
     "mmlu_all": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.mmlu(
             subsets="all",

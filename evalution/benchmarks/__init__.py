@@ -26,6 +26,7 @@ from .hendrycks_ethics import (
 )
 from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
+from .medmcqa import MedMCQA, medmcqa
 from .mmlu import MMLU, mmlu
 from .mmlu_pro import MMLUPro, mmlu_pro
 from .mnli import MNLI, mnli
@@ -61,6 +62,7 @@ __all__ = [
     "HendrycksEthics",
     "HEADQA",
     "HellaSwag",
+    "MedMCQA",
     "MMLU",
     "MMLUPro",
     "MNLI",
@@ -101,6 +103,7 @@ __all__ = [
     "headqa_en",
     "headqa_es",
     "hellaswag",
+    "medmcqa",
     "macro_f1",
     "matthews_corrcoef",
     "mmlu",
