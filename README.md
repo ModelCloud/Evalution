@@ -240,6 +240,7 @@ logic, those implementation details can shift results.
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
+| `cnn_dailymail` | Generated summarization with ROUGE-1, ROUGE-2, and ROUGE-Lsum F1 | CNN/DailyMail `nallapati2016abstractive` |
 | `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
 | `coqa` | Generated conversational QA exact match and token-overlap F1 with gold history turns | CoQA `reddy2019coqa` |
 | `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
@@ -369,6 +370,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `babi`: bAbI `weston2015towards`
 - `c4`: C4 `raffel2020exploring`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
+- `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
 - `coqa`: CoQA `reddy2019coqa`
 - `drop`: DROP `dua2019drop`
@@ -710,6 +712,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Yinfei Yang and Yuan Zhang and Chris Tar and Jason Baldridge},
   booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
   year = {2019},
+}
+
+# CNN/DailyMail
+@article{nallapati2016abstractive,
+  title = {Abstractive Text Summarization using Sequence-to-Sequence RNNs and Beyond},
+  author = {Ramesh Nallapati and Bowen Zhou and Cicero dos Santos and {\c{C}}aglar Gul{\c{c}}ehre and Bing Xiang},
+  journal = {arXiv preprint arXiv:1602.06023},
+  year = {2016},
 }
 
 # XCOPA

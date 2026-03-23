@@ -468,6 +468,40 @@ def _assert_generated_exact_match_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_generated_summary_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "reference-stripped",
+    }
+    assert set(sample.scores) == {"rouge1", "rouge2", "rougeLsum"}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
+def _assert_cnn_dailymail_metadata(metadata: dict[str, Any]) -> None:
+    assert metadata["id"]
+    assert metadata["article_chars"] > 0
+    assert metadata["reference_lines"] >= 1
+
+
 def _assert_single_continuation_loglikelihood_sample(
     sample: Any,
     index: int,
@@ -1252,6 +1286,38 @@ SUITE_SPECS = {
             prediction_values={"yes", "no"},
             prompt_substrings=("\nQuestion: Does this sentence make sense?\nAnswer:",),
         ),
+    ),
+    "cnn_dailymail": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.cnn_dailymail(
+            batch_size=8,
+            max_new_tokens=96,
+            max_rows=32,
+        ),
+        expected_name="cnn_dailymail",
+        baseline={
+            "rouge1": 0.3200104088411268,
+            "rouge2": 0.11965895439917622,
+            "rougeLsum": 0.2568289407320166,
+        },
+        expected_metrics=frozenset({"rouge1", "rouge2", "rougeLsum"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "cnn_dailymail",
+            "dataset_name": "3.0.0",
+            "split": "validation",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_summary_rouge",
+            "primary_metric": "rougeLsum",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_generated_summary_sample(
+            sample,
+            index,
+            prompt_prefix="Summarize the following news article.\n\nArticle:\n",
+            prompt_suffix="\n\nSummary:",
+            metadata_validator=_assert_cnn_dailymail_metadata,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "commonsense_qa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.commonsense_qa(

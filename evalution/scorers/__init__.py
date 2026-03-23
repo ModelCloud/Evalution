@@ -37,6 +37,7 @@ from .multiple_choice import (
     normalized_logprob,
 )
 from .math_exact_match import extract_math_answer, math_exact_match, math_strings_equivalent, normalize_math_string
+from .summary_rouge import summary_rouge_scores
 
 __all__ = [
     "ChoiceScore",
@@ -75,4 +76,5 @@ __all__ = [
     "normalized_logprob",
     "numbers_equal",
     "extract_math_answer",
+    "summary_rouge_scores",
 ]

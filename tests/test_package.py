@@ -63,6 +63,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.cb)
     assert evalution.benchmarks.CoLA is not None
     assert callable(evalution.benchmarks.cola)
+    assert evalution.benchmarks.CNNDailyMail is not None
+    assert callable(evalution.benchmarks.cnn_dailymail)
     assert evalution.benchmarks.CommonsenseQA is not None
     assert callable(evalution.benchmarks.commonsense_qa)
     assert evalution.benchmarks.CoQA is not None

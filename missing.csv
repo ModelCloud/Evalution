@@ -35,7 +35,6 @@ ceval,53,ceval/ceval-valid_accountant.yaml,ceval/ceval-valid_advanced_mathematic
 chartqa,3,chartqa/chartqa.yaml,chartqa/chartqa_llama.yaml
 click,14,click/click.yaml,click/click_cul/click_cul_economy.yaml
 cmmlu,68,cmmlu/cmmlu_agronomy.yaml,cmmlu/cmmlu_anatomy.yaml
-cnn_dailymail,1,cnn_dailymail/cnn_dailymail.yaml,
 code_x_glue,7,code_x_glue/code-text/go.yaml,code_x_glue/code-text/java.yaml
 common_voice,1,common_voice/common_voice_en.yaml,
 copal_id,2,copal_id/colloquial.yaml,copal_id/standard.yaml

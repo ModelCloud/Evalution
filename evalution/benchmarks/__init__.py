@@ -28,6 +28,7 @@ from .c4 import C4, c4
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
 from .cola import CoLA, cola
+from .cnn_dailymail import CNNDailyMail, cnn_dailymail
 from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
@@ -101,6 +102,7 @@ __all__ = [
     "BoolQ",
     "CB",
     "CoLA",
+    "CNNDailyMail",
     "CommonsenseQA",
     "CoQA",
     "COPA",
@@ -174,6 +176,7 @@ __all__ = [
     "boolq",
     "cb",
     "cola",
+    "cnn_dailymail",
     "commonsense_qa",
     "coqa",
     "copa",
