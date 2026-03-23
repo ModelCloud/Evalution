@@ -107,6 +107,9 @@ def _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManag
     fit for the current Evalution compare case where each lane owns one model/device. It is not a
     general fix for a single process driving one model across several CUDA devices directly.
     """
+    # Older or alternate transformers builds may not expose the internal manager thread entrypoint
+    # that this stop-gap relies on. In that case we leave the class untouched instead of trying to
+    # patch a different API surface heuristically.
     run_generation_loop = getattr(ContinuousBatchingManager, "_run_generation_loop", None)
     if not callable(run_generation_loop):
         return

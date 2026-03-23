@@ -598,6 +598,21 @@ def test_transformer_monkey_patch_skips_cuda_context_for_cpu_manager(monkeypatch
     assert manager._run_generation_loop() == "ok"
 
 
+def test_transformer_monkey_patch_skips_manager_without_generation_loop(monkeypatch) -> None:
+    import evalution.engines.transformer as transformer_module
+
+    class FakeContinuousBatchingManager:
+        pass
+
+    def fail_if_called(device: object) -> object:
+        raise AssertionError(f"torch.cuda.device should not be used without _run_generation_loop: {device!r}")
+
+    monkeypatch.setattr(torch.cuda, "device", fail_if_called)
+    transformer_module._patch_continuous_batching_manager_cuda_context_once(FakeContinuousBatchingManager)
+
+    assert "_run_generation_loop" not in FakeContinuousBatchingManager.__dict__
+
+
 def test_transformer_session_prepare_requests_batches_tokenization() -> None:
     class FakePrepareTokenizer:
         def __init__(self) -> None:
