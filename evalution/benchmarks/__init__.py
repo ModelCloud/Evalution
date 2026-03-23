@@ -88,6 +88,7 @@ from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
 from .xcopa import XCOPA, xcopa, xcopa_et, xcopa_ht, xcopa_id, xcopa_it, xcopa_qu, xcopa_sw, xcopa_ta, xcopa_th, xcopa_tr, xcopa_vi, xcopa_zh
+from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinograd_jp, xwinograd_pt, xwinograd_ru, xwinograd_zh
 
 __all__ = [
     "ANLI",
@@ -161,6 +162,7 @@ __all__ = [
     "WNLI",
     "WinoGrande",
     "XCOPA",
+    "XWinograd",
     "aime",
     "aime24",
     "aime25",
@@ -268,4 +270,11 @@ __all__ = [
     "xcopa_tr",
     "xcopa_vi",
     "xcopa_zh",
+    "xwinograd",
+    "xwinograd_en",
+    "xwinograd_fr",
+    "xwinograd_jp",
+    "xwinograd_pt",
+    "xwinograd_ru",
+    "xwinograd_zh",
 ]

@@ -121,6 +121,12 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xcopa_tr": benchmarks.xcopa_tr,
     "xcopa_vi": benchmarks.xcopa_vi,
     "xcopa_zh": benchmarks.xcopa_zh,
+    "xwinograd_en": benchmarks.xwinograd_en,
+    "xwinograd_fr": benchmarks.xwinograd_fr,
+    "xwinograd_jp": benchmarks.xwinograd_jp,
+    "xwinograd_pt": benchmarks.xwinograd_pt,
+    "xwinograd_ru": benchmarks.xwinograd_ru,
+    "xwinograd_zh": benchmarks.xwinograd_zh,
 }
 
 

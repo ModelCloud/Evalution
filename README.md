@@ -294,6 +294,12 @@ logic, those implementation details can shift results.
 | `xcopa_tr` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
 | `xcopa_vi` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
 | `xcopa_zh` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xwinograd_en` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_fr` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_jp` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_pt` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_ru` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_zh` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
 | `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
@@ -416,6 +422,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 - `xcopa_et`, `xcopa_ht`, `xcopa_id`, `xcopa_it`, `xcopa_qu`, `xcopa_sw`, `xcopa_ta`, `xcopa_th`, `xcopa_tr`, `xcopa_vi`, `xcopa_zh`: XCOPA `ponti2020xcopa`
+- `xwinograd_en`, `xwinograd_fr`, `xwinograd_jp`, `xwinograd_pt`, `xwinograd_ru`, `xwinograd_zh`: XWinograd `tikhonov2021heads`
 
 ```bibtex
 
@@ -830,6 +837,16 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Hector Levesque and Ernest Davis and Leora Morgenstern},
   booktitle = {Thirteenth International Conference on the Principles of Knowledge Representation and Reasoning},
   year = {2012},
+}
+
+# XWinograd
+@misc{tikhonov2021heads,
+  title = {It's All in the Heads: Using Attention Heads as a Baseline for Cross-Lingual Transfer in Commonsense Reasoning},
+  author = {Alexey Tikhonov and Max Ryabinin},
+  year = {2021},
+  eprint = {2106.12066},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
 }
 
 # WinoGrande

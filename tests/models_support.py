@@ -96,6 +96,14 @@ XCOPA_TASKS = (
     "xcopa_vi",
     "xcopa_zh",
 )
+XWINOGRAD_TASKS = (
+    "xwinograd_en",
+    "xwinograd_fr",
+    "xwinograd_jp",
+    "xwinograd_pt",
+    "xwinograd_ru",
+    "xwinograd_zh",
+)
 BLIMP_INTEGRATION_SUBSETS = (
     "adjunct_island",
     "anaphor_gender_agreement",
@@ -449,6 +457,30 @@ def _assert_bear_sample(
     assert sample.metadata["template_index"] >= 0
     assert sample.metadata["choice_count"] >= min_choice_count
     assert len(sample.metadata["answer_options"]) == sample.metadata["choice_count"]
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_xwinograd_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert "_" in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["language"] == language
+    assert sample.metadata["sentence"] == sample.prompt
+    assert sample.metadata["answer_label"] in {"1", "2"}
+    assert sample.metadata["blank_index"] >= 0
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert sample.metadata["choice_labels"] == ["A", "B"]
     assert "choice_logprobs" in sample.metadata
     assert "choice_logprobs_norm" in sample.metadata
 
@@ -2879,6 +2911,108 @@ SUITE_SPECS = {
         },
         expected_sample_count=128,
         sample_validator=_assert_webqs_sample,
+    ),
+    "xwinograd_en": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_en(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_en",
+        baseline={"acc,ll": 0.75, "acc,ll_avg": 0.75},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "en",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="en"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_fr": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_fr(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_fr",
+        baseline={"acc,ll": 0.71875, "acc,ll_avg": 0.71875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "fr",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="fr"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_jp": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_jp(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_jp",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "jp",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="jp"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_pt": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_pt(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_pt",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "pt",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="pt"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_ru": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_ru(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_ru",
+        baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.65625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "ru",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="ru"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_zh": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_zh(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_zh",
+        baseline={"acc,ll": 0.6875, "acc,ll_avg": 0.6875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "zh",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="zh"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "c4": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.c4(batch_size=1, max_rows=32),

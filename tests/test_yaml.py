@@ -248,6 +248,18 @@ tests:
     max_rows: 16
   - type: xcopa_zh
     max_rows: 16
+  - type: xwinograd_en
+    max_rows: 16
+  - type: xwinograd_fr
+    max_rows: 16
+  - type: xwinograd_jp
+    max_rows: 16
+  - type: xwinograd_pt
+    max_rows: 16
+  - type: xwinograd_ru
+    max_rows: 16
+  - type: xwinograd_zh
+    max_rows: 16
   - type: piqa
     max_rows: 16
   - type: pile_10k
@@ -362,6 +374,12 @@ tests:
     assert ".run(benchmarks.xcopa_tr(" in script
     assert ".run(benchmarks.xcopa_vi(" in script
     assert ".run(benchmarks.xcopa_zh(" in script
+    assert ".run(benchmarks.xwinograd_en(" in script
+    assert ".run(benchmarks.xwinograd_fr(" in script
+    assert ".run(benchmarks.xwinograd_jp(" in script
+    assert ".run(benchmarks.xwinograd_pt(" in script
+    assert ".run(benchmarks.xwinograd_ru(" in script
+    assert ".run(benchmarks.xwinograd_zh(" in script
     assert ".run(benchmarks.piqa(" in script
     assert ".run(benchmarks.pile_10k(" in script
     assert ".run(benchmarks.prost(" in script
