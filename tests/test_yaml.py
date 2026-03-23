@@ -192,6 +192,8 @@ tests:
     max_rows: 20
   - type: piqa
     max_rows: 16
+  - type: pile_10k
+    max_rows: 8
   - type: prost
     max_rows: 18
   - type: pubmedqa
@@ -271,6 +273,7 @@ tests:
     assert ".run(benchmarks.mrpc(" in script
     assert ".run(benchmarks.openbookqa(" in script
     assert ".run(benchmarks.piqa(" in script
+    assert ".run(benchmarks.pile_10k(" in script
     assert ".run(benchmarks.prost(" in script
     assert ".run(benchmarks.pubmedqa(" in script
     assert ".run(benchmarks.qnli(" in script

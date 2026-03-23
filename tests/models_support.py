@@ -530,6 +530,20 @@ def _assert_c4_sample(sample: Any, index: int) -> None:
     assert sample.metadata["token_count"] >= 1
 
 
+def _assert_pile_10k_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target == "[document]"
+    assert sample.prediction == "[rolling-loglikelihood]"
+    assert set(sample.extracted) == {"token_count", "word_count", "byte_count"}
+    assert set(sample.scores) == {"word_perplexity", "byte_perplexity", "bits_per_byte"}
+    assert sample.metadata["text_preview"]
+    assert sample.metadata["text_char_count"] > 0
+    assert sample.metadata["pile_set_name"]
+    assert "logprob" in sample.metadata
+    assert sample.metadata["token_count"] >= 1
+
+
 def _assert_mmlu_pro_sample(
     sample: Any,
     index: int,
@@ -1857,6 +1871,27 @@ SUITE_SPECS = {
             prompt_prefix="Question: ",
             prompt_substrings=("\nAnswer:",),
         ),
+    ),
+    "pile_10k": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.pile_10k(batch_size=1, max_rows=32),
+        expected_name="pile_10k",
+        baseline={
+            "word_perplexity": 49.77654296230349,
+            "byte_perplexity": 1.8463441469459794,
+            "bits_per_byte": 0.884671487337572,
+        },
+        expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "monology/pile-uncopyrighted",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "rolling_loglikelihood_perplexity",
+            "primary_metric": "word_perplexity",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_pile_10k_sample,
+        abs_tolerance=0.05,
     ),
     "prost": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.prost(batch_size=24, max_rows=128),

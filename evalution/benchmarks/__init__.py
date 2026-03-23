@@ -57,6 +57,7 @@ from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
 from .piqa import PIQA, piqa
+from .pile_10k import Pile10K, pile_10k
 from .prost import Prost, prost
 from .pubmedqa import PubMedQA, pubmedqa
 from .qnli import QNLI, qnli
@@ -114,6 +115,7 @@ __all__ = [
     "MultipleChoiceSample",
     "OpenBookQA",
     "PIQA",
+    "Pile10K",
     "Prost",
     "PubMedQA",
     "QNLI",
@@ -189,6 +191,7 @@ __all__ = [
     "mrpc",
     "openbookqa",
     "piqa",
+    "pile_10k",
     "prost",
     "pubmedqa",
     "qnli",
