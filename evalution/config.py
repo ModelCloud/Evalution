@@ -5,13 +5,14 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
 
 @dataclass(slots=True, frozen=True)
 class Model:
     path: str
+    label: str | None = None
     tokenizer_path: str | None = None
     revision: str | None = None
     trust_remote_code: bool = False
@@ -28,3 +29,9 @@ def coerce_model(model: Model | dict[str, Any]) -> Model:
     if isinstance(model, dict):
         return Model(**model)
     raise TypeError("model must be an evalution.Model or a plain dict of model options")
+
+
+def model_with_label(model: Model, *, label: str | None) -> Model:
+    if label is None:
+        return model
+    return replace(model, label=label)

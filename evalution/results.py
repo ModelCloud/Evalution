@@ -42,3 +42,37 @@ class RunResult:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(slots=True)
+class CompareMetricResult:
+    left_value: Any
+    right_value: Any
+    delta: float | None = None
+    winner: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class CompareTestResult:
+    name: str
+    left: TestResult
+    right: TestResult
+    metrics: dict[str, CompareMetricResult]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class CompareRunResult:
+    left_name: str
+    right_name: str
+    left: RunResult
+    right: RunResult
+    tests: list[CompareTestResult]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

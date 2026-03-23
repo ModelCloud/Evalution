@@ -926,7 +926,29 @@ def load_transformer_runtime(
 
     if config.device_map is None:
         device = config.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
-        model.to(device)
+        try:
+            model.to(device)
+        except NotImplementedError as exc:
+            if "Cannot copy out of meta tensor; no data!" not in str(exc):
+                raise
+
+            get_logger().warning(
+                "transformers returned a meta-initialized model for %s; reloading with device_map=%s",
+                model_config.path,
+                device,
+            )
+            model = _load_model_with_compat_fallback(
+                AutoModelForCausalLM,
+                model_config.path,
+                {
+                    **load_kwargs,
+                    "device_map": device,
+                },
+            )
+            freeze = getattr(model, "requires_grad_", None)
+            if callable(freeze):
+                freeze(False)
+            model.eval()
         input_device = torch.device(device)
     else:
         input_device = _resolve_input_device(model, prefer=config.device)

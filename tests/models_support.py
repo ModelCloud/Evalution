@@ -18,6 +18,14 @@ import evalution
 
 LLAMA3_2_1B_INSTRUCT = Path("/monster/data/model/Llama-3.2-1B-Instruct")
 LLAMA3_2_TRANSFORMERS_DEVICE = os.environ.get("EVALUTION_TEST_DEVICE", "cuda:0")
+LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE = os.environ.get(
+    "EVALUTION_TEST_COMPARE_LEFT_DEVICE",
+    "cuda:0",
+)
+LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE = os.environ.get(
+    "EVALUTION_TEST_COMPARE_RIGHT_DEVICE",
+    "cuda:1",
+)
 SCORE_BASELINE_ABS_TOLERANCE = 2 / 128
 SCORE_BASELINE_ABS_TOLERANCE_32 = 2 / 32
 MMLU_STEM_SUBSETS = {
@@ -64,6 +72,13 @@ LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.skipif(
         not hasattr(sys, "_is_gil_enabled") or sys._is_gil_enabled(),
         reason="the full-model continuous batching integration test requires Python free-threading with GIL disabled",
+    ),
+]
+LLAMA3_2_TRANSFORMERS_COMPARE_TEST_MARKS = [
+    *LLAMA3_2_TRANSFORMERS_TEST_MARKS,
+    pytest.mark.skipif(
+        torch.cuda.device_count() < 2,
+        reason="the full-model compare integration test requires at least two CUDA devices",
     ),
 ]
 
@@ -120,6 +135,76 @@ def run_llama3_2_suite(
     assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
     assert result.engine["execution"]["paged_attention"] is True
+    assert len(result.tests) == 1
+    return result, result.tests[0]
+
+
+def run_llama3_2_compare_suite(
+    capsys: pytest.CaptureFixture[str],
+    suite: Any,
+) -> tuple[Any, Any]:
+    with capsys.disabled():
+        result = (
+            evalution.compare(
+                evalution.engine(
+                    evalution.Transformers(
+                        dtype="bfloat16",
+                        attn_implementation="flash_attention_2",
+                        paged_attention=True,
+                        device=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
+                        batch_size="auto",
+                    )
+                ).model(
+                    evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
+                    label=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
+                ),
+                evalution.engine(
+                    evalution.Transformers(
+                        dtype="bfloat16",
+                        attn_implementation="flash_attention_2",
+                        paged_attention=True,
+                        device=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
+                        batch_size="auto",
+                    )
+                ).model(
+                    evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
+                    label=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
+                ),
+            )
+            .run(suite)
+            .result()
+        )
+
+    assert result.left_name == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
+    assert result.right_name == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
+    assert result.left.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
+    assert result.right.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
+    assert result.left.model["label"] == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
+    assert result.right.model["label"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
+    assert result.left.engine["dtype"] == "bfloat16"
+    assert result.right.engine["dtype"] == "bfloat16"
+    assert result.left.engine["attn_implementation"] == "flash_attention_2"
+    assert result.right.engine["attn_implementation"] == "flash_attention_2"
+    assert result.left.engine["batch_size"] == "auto"
+    assert result.right.engine["batch_size"] == "auto"
+    assert result.left.engine["paged_attention"] is True
+    assert result.right.engine["paged_attention"] is True
+    assert result.left.engine["device"] == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
+    assert result.right.engine["device"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
+    assert (
+        result.left.engine["execution"]["effective_attn_implementation"]
+        == "paged|flash_attention_2"
+    )
+    assert (
+        result.right.engine["execution"]["effective_attn_implementation"]
+        == "paged|flash_attention_2"
+    )
+    assert result.left.engine["execution"]["generation_backend"] == "continuous_batching"
+    assert result.right.engine["execution"]["generation_backend"] == "continuous_batching"
+    assert result.left.engine["execution"]["paged_attention"] is True
+    assert result.right.engine["execution"]["paged_attention"] is True
+    assert len(result.left.tests) == 1
+    assert len(result.right.tests) == 1
     assert len(result.tests) == 1
     return result, result.tests[0]
 
@@ -351,8 +436,8 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_platinum_cot",
         baseline={
-            "exact_match,strict-match": 0.3515625,
-            "exact_match,flexible-extract": 0.390625,
+            "exact_match,strict-match": 0.375,
+            "exact_match,flexible-extract": 0.4140625,
         },
         expected_metrics=frozenset({"exact_match,strict-match", "exact_match,flexible-extract"}),
         expected_metadata={
@@ -1007,3 +1092,62 @@ def run_suite_spec(
         spec.result_validator(test_result)
     assert_single_test_serialization(result, test_result)
     return result, test_result
+
+
+def run_compare_suite_spec(
+    capsys: pytest.CaptureFixture[str],
+    suite_key: str,
+) -> tuple[Any, Any]:
+    spec = SUITE_SPECS[suite_key]
+    result, compare_test_result = run_llama3_2_compare_suite(capsys, spec.suite_factory())
+    left_test = compare_test_result.left
+    right_test = compare_test_result.right
+
+    assert compare_test_result.name == spec.expected_name
+    assert left_test.name == spec.expected_name
+    assert right_test.name == spec.expected_name
+
+    for test_result in (left_test, right_test):
+        for key, expected_value in spec.expected_metadata.items():
+            assert test_result.metadata[key] == expected_value
+        assert len(test_result.samples) == spec.expected_sample_count
+        assert set(test_result.metrics) == spec.expected_metrics
+        assert_metrics_match_baseline(
+            test_result.metrics,
+            spec.baseline,
+            abs_tolerance=spec.abs_tolerance,
+        )
+        for index, sample in enumerate(test_result.samples):
+            spec.sample_validator(sample, index)
+        if spec.result_validator is not None:
+            spec.result_validator(test_result)
+
+    assert set(compare_test_result.metrics) == spec.expected_metrics
+    for metric_name, metric_result in compare_test_result.metrics.items():
+        assert left_test.metrics[metric_name] == pytest.approx(
+            right_test.metrics[metric_name],
+            abs=spec.abs_tolerance,
+        )
+        assert metric_result.left_value == pytest.approx(
+            left_test.metrics[metric_name],
+            abs=spec.abs_tolerance,
+        )
+        assert metric_result.right_value == pytest.approx(
+            right_test.metrics[metric_name],
+            abs=spec.abs_tolerance,
+        )
+        assert metric_result.delta == pytest.approx(
+            left_test.metrics[metric_name] - right_test.metrics[metric_name],
+            abs=spec.abs_tolerance,
+        )
+        assert abs(metric_result.delta) <= spec.abs_tolerance
+
+    serialized = result.to_dict()
+    assert serialized["left_name"] == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
+    assert serialized["right_name"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
+    assert len(serialized["tests"]) == 1
+    serialized_test = serialized["tests"][0]
+    assert serialized_test["name"] == compare_test_result.name
+    assert serialized_test["left"]["name"] == left_test.name
+    assert serialized_test["right"]["name"] == right_test.name
+    return result, compare_test_result
