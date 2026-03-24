@@ -357,6 +357,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.webqs)
     assert evalution.benchmarks.WikiText is not None
     assert callable(evalution.benchmarks.wikitext)
+    assert evalution.benchmarks.WMDP is not None
+    assert evalution.benchmarks.WMDP_SUBSETS
+    assert evalution.benchmarks.WMDP_TASKS
+    assert callable(evalution.benchmarks.wmdp)
+    for factory_name in evalution.benchmarks.WMDP_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.WinoGender is not None
     assert callable(evalution.benchmarks.winogender)
     assert callable(evalution.benchmarks.winogender_all)

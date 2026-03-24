@@ -196,6 +196,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "wic": benchmarks.wic,
     "webqs": benchmarks.webqs,
     "wikitext": benchmarks.wikitext,
+    "wmdp": benchmarks.wmdp,
     "winogender_all": benchmarks.winogender_all,
     "winogender_female": benchmarks.winogender_female,
     "winogender_gotcha": benchmarks.winogender_gotcha,
@@ -267,6 +268,11 @@ for _task_name in benchmarks.TRUTHFULQA_TASKS:
 del _task_name
 
 for _task_name in benchmarks.INVERSE_SCALING_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.WMDP_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

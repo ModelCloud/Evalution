@@ -500,6 +500,11 @@ tests:
     max_rows: 18
   - type: wikitext
     max_rows: 8
+  - type: wmdp
+    subset: bio
+    max_rows: 16
+  - type: wmdp_chem
+    max_rows: 16
   - type: winogender_all
     max_rows: 16
   - type: winogender_female
@@ -710,6 +715,8 @@ tests:
     assert ".run(benchmarks.wic(" in script
     assert ".run(benchmarks.webqs(" in script
     assert ".run(benchmarks.wikitext(" in script
+    assert ".run(benchmarks.wmdp(" in script
+    assert ".run(benchmarks.wmdp_chem(" in script
     assert ".run(benchmarks.winogender_all(" in script
     assert ".run(benchmarks.winogender_female(" in script
     assert ".run(benchmarks.winogender_gotcha(" in script

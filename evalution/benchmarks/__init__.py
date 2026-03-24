@@ -139,6 +139,8 @@ from .triviaqa import TriviaQA, triviaqa
 from .wic import WiC, wic
 from .webqs import WebQS, webqs
 from .wikitext import WikiText, wikitext
+from . import wmdp as _wmdp_module
+from .wmdp import WMDP, WMDP_SUBSETS, WMDP_TASKS, wmdp
 from .winogender import WinoGender, winogender, winogender_all, winogender_female, winogender_gotcha, winogender_gotcha_female, winogender_gotcha_male, winogender_male, winogender_neutral
 from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
@@ -230,6 +232,11 @@ for _inverse_scaling_task in INVERSE_SCALING_TASKS:
     globals()[_inverse_scaling_task] = getattr(_inverse_scaling_module, _inverse_scaling_task)
 
 del _inverse_scaling_task
+
+for _wmdp_task in WMDP_TASKS:
+    globals()[_wmdp_task] = getattr(_wmdp_module, _wmdp_task)
+
+del _wmdp_task
 
 __all__ = [
     "ANLI",
@@ -377,6 +384,9 @@ __all__ = [
     "WiC",
     "WebQS",
     "WikiText",
+    "WMDP",
+    "WMDP_SUBSETS",
+    "WMDP_TASKS",
     "WinoGender",
     "WSC273",
     "WNLI",
@@ -576,6 +586,7 @@ __all__ = [
     "wic",
     "webqs",
     "wikitext",
+    "wmdp",
     "winogender",
     "winogender_all",
     "winogender_female",
@@ -634,6 +645,7 @@ __all__.extend(CABBQ_TASKS)
 __all__.extend(BBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
+__all__.extend(WMDP_TASKS)
 __all__.extend(XNLI_TASKS)
 __all__.extend(XQUAD_TASKS)
 __all__.extend(TRUTHFULQA_TASKS)
