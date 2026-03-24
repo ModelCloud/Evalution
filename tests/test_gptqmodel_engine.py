@@ -30,6 +30,7 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     engine = GPTQModel()
 
     assert engine.batch_size == "auto"
+    assert engine.seed is None
     assert engine.backend == "auto"
     assert engine.gptqmodel_path == "/root/gptqmodel"
     assert engine.manual_eviction is False
@@ -39,6 +40,7 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.kv_padding_interval_size == 0
     assert engine.max_cached_graphs == 0
     assert engine.to_dict()["batch_size"] == "auto"
+    assert engine.to_dict()["seed"] is None
     assert engine.to_dict()["backend"] == "auto"
     assert engine.to_dict()["gptqmodel_path"] == "/root/gptqmodel"
     assert engine.to_dict()["manual_eviction"] is False
@@ -47,6 +49,59 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
+
+
+def test_load_gptqmodel_runtime_seeds_runtime(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        pad_token = "<pad>"
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeInnerModel:
+        config = SimpleNamespace()
+
+    class FakeWrapper:
+        def __init__(self) -> None:
+            self.model = FakeInnerModel()
+
+        def requires_grad_(self, value: bool):
+            return self
+
+        def eval(self):
+            return self
+
+    seed_calls: list[int | None] = []
+
+    monkeypatch.setattr(
+        "evalution.engines.gptqmodel_engine._seed_transformer_runtime",
+        lambda seed: seed_calls.append(seed),
+    )
+    monkeypatch.setattr(
+        transformers.AutoTokenizer,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeTokenizer(),
+    )
+    monkeypatch.setattr(
+        "evalution.engines.gptqmodel_engine._clone_prepare_tokenizer",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(
+        "evalution.engines.gptqmodel_engine._import_gptqmodel",
+        lambda path: SimpleNamespace(
+            GPTQModel=SimpleNamespace(load=lambda **kwargs: FakeWrapper())
+        ),
+    )
+
+    load_gptqmodel_runtime(
+        GPTQModel(device="cpu", seed=4321),
+        Model(path="/tmp/model"),
+    )
+
+    assert seed_calls == [4321]
 
 
 def test_gptqmodel_session_describes_quantized_backend() -> None:

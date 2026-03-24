@@ -21,6 +21,7 @@ from evalution.engines.base import (
     LoglikelihoodRequest,
     RollingLoglikelihoodRequest,
 )
+from evalution.engines.transformers_common import _seed_transformer_runtime
 from evalution.engines.transformers import Transformers, TransformersSession
 from evalution.engines.transformers_compat import TransformersCompat
 
@@ -29,6 +30,7 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     engine = Transformers()
 
     assert engine.batch_size == "auto"
+    assert engine.seed is None
     assert engine.manual_eviction is False
     assert engine.allow_block_sharing is True
     assert engine.use_async_batching is None
@@ -36,12 +38,93 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.kv_padding_interval_size == 0
     assert engine.max_cached_graphs == 0
     assert engine.to_dict()["batch_size"] == "auto"
+    assert engine.to_dict()["seed"] is None
     assert engine.to_dict()["manual_eviction"] is False
     assert engine.to_dict()["allow_block_sharing"] is True
     assert engine.to_dict()["use_async_batching"] is None
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
+
+
+def test_transformer_session_from_config_seeds_runtime(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        pad_token = "<pad>"
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+
+        def requires_grad_(self, value: bool):
+            return self
+
+        def eval(self):
+            return self
+
+        def to(self, device):
+            return self
+
+    seed_calls: list[int | None] = []
+
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._seed_transformer_runtime",
+        lambda seed: seed_calls.append(seed),
+    )
+    monkeypatch.setattr(
+        transformers.AutoTokenizer,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeTokenizer(),
+    )
+    monkeypatch.setattr(
+        transformers.AutoModelForCausalLM,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeModel(),
+    )
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._clone_prepare_tokenizer",
+        lambda **kwargs: None,
+    )
+
+    TransformersSession.from_config(
+        Transformers(device="cpu", seed=1234),
+        Model(path="/tmp/model"),
+    )
+
+    assert seed_calls == [1234]
+
+
+def test_seed_transformer_runtime_syncs_transformers_python_numpy_torch_and_cuda(
+    monkeypatch,
+) -> None:
+    import numpy as np
+    import transformers
+
+    calls: list[tuple[str, int]] = []
+
+    monkeypatch.setattr(transformers, "set_seed", lambda seed: calls.append(("transformers", seed)))
+    monkeypatch.setattr("evalution.engines.transformers_common.random.seed", lambda seed: calls.append(("python", seed)))
+    monkeypatch.setattr(np.random, "seed", lambda seed: calls.append(("numpy", seed)))
+    monkeypatch.setattr(torch, "manual_seed", lambda seed: calls.append(("torch", seed)))
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(torch.cuda, "manual_seed", lambda seed: calls.append(("cuda", seed)))
+    monkeypatch.setattr(torch.cuda, "manual_seed_all", lambda seed: calls.append(("cuda_all", seed)))
+
+    _seed_transformer_runtime(99)
+
+    assert calls == [
+        ("transformers", 99),
+        ("python", 99),
+        ("numpy", 99),
+        ("torch", 99),
+        ("cuda", 99),
+        ("cuda_all", 99),
+    ]
 
 
 def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch) -> None:
@@ -59,10 +142,13 @@ def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch
         "avg_prompt_tokens": 12.0,
         "max_prompt_tokens": 12,
         "max_new_tokens": 32,
+        "max_num_beams": 1,
         "dtype_name": "bfloat16",
         "dtype_bytes": 2,
         "total_vram_gib": 0.0,
+        "free_vram_gib": 0.0,
         "parameter_count_billions": 1.0,
+        "kv_cache_bytes_per_token": None,
     }
     calls = {"estimate": 0}
 

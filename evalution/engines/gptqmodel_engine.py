@@ -26,6 +26,7 @@ from evalution.engines.transformers_common import (
     _clone_prepare_tokenizer,
     _requests_paged_attention,
     _resolve_input_device,
+    _seed_transformer_runtime,
     transformers_continuous_batching_support,
 )
 from evalution.logbar import get_logger
@@ -164,6 +165,8 @@ def load_gptqmodel_runtime(
 ) -> _LoadedGPTQModelRuntime:
     import torch
     from transformers import AutoTokenizer
+
+    _seed_transformer_runtime(config.seed)
 
     trust_remote_code = (
         config.trust_remote_code

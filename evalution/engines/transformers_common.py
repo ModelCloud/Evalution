@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import gc
 import inspect
+import random
 import threading
 from contextlib import contextmanager, suppress
 from dataclasses import asdict, dataclass, field, replace
@@ -92,6 +93,7 @@ class _TransformersCommonConfig(BaseEngine):
     attn_implementation: str | None = None
     device: str | None = None
     device_map: str | dict[str, Any] | None = None
+    seed: int | None = None
     batch_size: int | str = _AUTO_BATCH_SIZE
     max_new_tokens: int = 256
     trust_remote_code: bool | None = None
@@ -984,6 +986,8 @@ def load_transformer_runtime(
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
+    _seed_transformer_runtime(config.seed)
+
     trust_remote_code = (
         config.trust_remote_code
         if config.trust_remote_code is not None
@@ -1079,6 +1083,31 @@ def load_transformer_runtime(
         input_device=input_device,
         requested_attn_implementation=requested_attn_implementation,
     )
+
+
+def _seed_transformer_runtime(seed: int | None) -> None:
+    if seed is None:
+        return
+
+    with suppress(Exception):
+        from transformers import set_seed as transformers_set_seed
+
+        transformers_set_seed(seed)
+
+    random.seed(seed)
+
+    with suppress(Exception):
+        import numpy as np
+
+        np.random.seed(seed)
+
+    with suppress(Exception):
+        import torch
+
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
 
 
 # Guard modern paged-attention engines with the package version that first shipped continuous batching.
