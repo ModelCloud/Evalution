@@ -177,6 +177,11 @@ tests:
     max_rows: 18
   - type: babi
     max_rows: 18
+  - type: babilong
+    qa_split: qa1
+    max_rows: 18
+  - type: babilong_qa2
+    max_rows: 18
   - type: bbh
     subset: boolean_expressions
     max_rows: 18
@@ -478,6 +483,8 @@ tests:
     assert ".run(benchmarks.asdiv(" in script
     assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script
+    assert ".run(benchmarks.babilong(" in script
+    assert ".run(benchmarks.babilong_qa2(" in script
     assert ".run(benchmarks.bbh(" in script
     assert ".run(benchmarks.bbh_date_understanding(" in script
     assert ".run(benchmarks.bangla(" in script

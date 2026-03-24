@@ -239,6 +239,7 @@ logic, those implementation details can shift results.
 | `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
 | `babi` | Generated exact match | bAbI `weston2015towards` |
+| `babilong` | Generated normalized exact match across `qa1` to `qa20` with configurable context lengths | BABILong `kuratov2024babilong` |
 | `bbh` | Generated exact match across 27 BIG-Bench Hard subsets selected through the `subset` parameter | BIG-Bench Hard `suzgun2022challenging` |
 | `bangla` | Multiple-choice log-likelihood across `boolqa/commonsenseqa/mmlu/openbookqa/piqa` Bangla subsets, raw + length-normalized accuracy | TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms` |
 | `bear` | Full-statement multiple-choice log-likelihood over balanced relational distractors, raw + length-normalized accuracy | BEAR `wiland2024bear` |
@@ -382,6 +383,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
+- `babilong_<qa_split>` for `qa1` through `qa20`: BABILong `kuratov2024babilong`
 - `bbh_<subset>` for all BIG-Bench Hard subsets: BIG-Bench Hard `suzgun2022challenging`
 - `bangla_boolqa`, `bangla_commonsenseqa`, `bangla_mmlu`, `bangla_openbookqa`, `bangla_piqa`: TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms`
 - `bear`, `bear_big`: BEAR `wiland2024bear`
@@ -546,6 +548,15 @@ The current built-in suite coverage maps to these benchmark citations:
   journal = {arXiv preprint arXiv:2210.09261},
   year = {2022},
   url = {https://arxiv.org/abs/2210.09261},
+}
+
+# BABILong
+@article{kuratov2024babilong,
+  title = {BABILong: Testing the Limits of LLMs with Long Context Reasoning-in-a-Haystack},
+  author = {Kuratov, Yuri and Bulatov, Aydar and Anokhin, Petr and Rodkin, Ivan and Sorokin, Dmitry and Burtsev, Mikhail},
+  journal = {arXiv preprint arXiv:2406.10149},
+  year = {2024},
+  url = {https://arxiv.org/abs/2406.10149},
 }
 
 # C4

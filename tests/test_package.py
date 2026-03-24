@@ -90,6 +90,13 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.asdiv_cot_llama)
     assert evalution.benchmarks.BABI is not None
     assert callable(evalution.benchmarks.babi)
+    assert evalution.benchmarks.BABILong is not None
+    assert evalution.benchmarks.BABILONG_CONTEXT_LENGTHS
+    assert evalution.benchmarks.BABILONG_TASK_SPLITS
+    assert evalution.benchmarks.BABILONG_TASKS
+    assert callable(evalution.benchmarks.babilong)
+    for factory_name in evalution.benchmarks.BABILONG_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.BBH is not None
     assert evalution.benchmarks.BBH_SUBSETS
     assert evalution.benchmarks.BBH_TASKS

@@ -88,6 +88,7 @@ BEAR_TASKS = (
     "bear",
     "bear_big",
 )
+BABILONG_TASKS = tuple(evalution.benchmarks.BABILONG_TASKS)
 BBH_TASKS = tuple(evalution.benchmarks.BBH_TASKS)
 BANGLA_TASKS = (
     "bangla_boolqa",
@@ -816,6 +817,22 @@ def _assert_generated_exact_match_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_babilong_sample(
+    sample: Any,
+    index: int,
+    *,
+    qa_split: str,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Context:\n")
+    assert sample.prompt.endswith("\n\nAnswer:")
+    assert "\n\nQuestion:\n" in sample.prompt
+    assert sample.target
+    assert set(sample.extracted) == {"prediction-stripped", "target-stripped"}
+    assert set(sample.scores) == {"em"}
+    _metadata_babilong_split(qa_split)(sample.metadata)
+
+
 def _assert_generated_summary_sample(
     sample: Any,
     index: int,
@@ -1223,6 +1240,15 @@ def _metadata_bbh_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_babilong_split(qa_split: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["context_length"] == "0k"
+        assert metadata["qa_split"] == qa_split
+        assert metadata["question"]
+
+    return validate
+
+
 def _metadata_bangla_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -1350,6 +1376,36 @@ def _bbh_suite_spec(task_name: str, subset: str, baseline: float) -> SuiteSpec:
             prompt_prefix="Q: ",
             prompt_suffix="\nA:",
             metadata_validator=_metadata_bbh_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _babilong_suite_spec(task_name: str, qa_split: str, baseline: float) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            batch_size=4,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline={"em": baseline},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "RMT-team/babilong",
+            "dataset_name": "0k",
+            "split": qa_split,
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+            "context_length": "0k",
+            "qa_split": qa_split,
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, qa_split=qa_split: _assert_babilong_sample(
+            sample,
+            index,
+            qa_split=qa_split,
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
@@ -4751,6 +4807,30 @@ for _task_name, _subset, _baseline in (
     ("bbh_word_sorting", "word_sorting", 0.0),
 ):
     SUITE_SPECS[_task_name] = _bbh_suite_spec(_task_name, _subset, _baseline)
+
+for _task_name, _qa_split, _baseline in (
+    ("babilong_qa1", "qa1", 0.0625),
+    ("babilong_qa2", "qa2", 0.0),
+    ("babilong_qa3", "qa3", 0.0),
+    ("babilong_qa4", "qa4", 0.0),
+    ("babilong_qa5", "qa5", 0.40625),
+    ("babilong_qa6", "qa6", 0.03125),
+    ("babilong_qa7", "qa7", 0.0),
+    ("babilong_qa8", "qa8", 0.15625),
+    ("babilong_qa9", "qa9", 0.40625),
+    ("babilong_qa10", "qa10", 0.15625),
+    ("babilong_qa11", "qa11", 0.0),
+    ("babilong_qa12", "qa12", 0.0),
+    ("babilong_qa13", "qa13", 0.0),
+    ("babilong_qa14", "qa14", 0.03125),
+    ("babilong_qa15", "qa15", 0.0),
+    ("babilong_qa16", "qa16", 0.53125),
+    ("babilong_qa17", "qa17", 0.25),
+    ("babilong_qa18", "qa18", 0.0),
+    ("babilong_qa19", "qa19", 0.0),
+    ("babilong_qa20", "qa20", 0.0),
+):
+    SUITE_SPECS[_task_name] = _babilong_suite_spec(_task_name, _qa_split, _baseline)
 
 for _task_name, _language in (
     ("paws_x_de", "de"),

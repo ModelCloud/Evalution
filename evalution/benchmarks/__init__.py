@@ -27,6 +27,8 @@ from .arithmetic import (
 )
 from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
+from . import babilong as _babilong_module
+from .babilong import BABILong, BABILONG_CONTEXT_LENGTHS, BABILONG_TASK_SPLITS, BABILONG_TASKS, babilong
 from . import bbh as _bbh_module
 from .bbh import BBH, BBH_SUBSETS, BBH_TASKS, bbh
 from .bangla import BANGLA_SUBSETS, BANGLA_TASKS, Bangla, bangla, bangla_boolqa, bangla_commonsenseqa, bangla_mmlu, bangla_openbookqa, bangla_piqa
@@ -130,6 +132,11 @@ for _bbh_task in BBH_TASKS:
 
 del _bbh_task
 
+for _babilong_task in BABILONG_TASKS:
+    globals()[_babilong_task] = getattr(_babilong_module, _babilong_task)
+
+del _babilong_task
+
 __all__ = [
     "ANLI",
     "AIME",
@@ -148,6 +155,10 @@ __all__ = [
     "ASDiv",
     "ASDivCoTLlama",
     "BABI",
+    "BABILong",
+    "BABILONG_CONTEXT_LENGTHS",
+    "BABILONG_TASK_SPLITS",
+    "BABILONG_TASKS",
     "BBH",
     "BBH_SUBSETS",
     "BBH_TASKS",
@@ -300,6 +311,7 @@ __all__ = [
     "asdiv",
     "asdiv_cot_llama",
     "babi",
+    "babilong",
     "bbh",
     "bangla",
     "bangla_boolqa",
@@ -452,3 +464,4 @@ __all__ = [
 ]
 
 __all__.extend(BBH_TASKS)
+__all__.extend(BABILONG_TASKS)

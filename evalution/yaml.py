@@ -80,6 +80,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "asdiv": benchmarks.asdiv,
     "asdiv_cot_llama": benchmarks.asdiv_cot_llama,
     "babi": benchmarks.babi,
+    "babilong": benchmarks.babilong,
     "bbh": benchmarks.bbh,
     "bangla": benchmarks.bangla,
     "bangla_boolqa": benchmarks.bangla_boolqa,
@@ -226,6 +227,11 @@ for _bbh_task in benchmarks.BBH_TASKS:
     _TEST_FACTORIES[_bbh_task] = getattr(benchmarks, _bbh_task)
 
 del _bbh_task
+
+for _babilong_task in benchmarks.BABILONG_TASKS:
+    _TEST_FACTORIES[_babilong_task] = getattr(benchmarks, _babilong_task)
+
+del _babilong_task
 
 
 def run_yaml(source: str | Path) -> EvaluationRun:
