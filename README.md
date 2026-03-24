@@ -325,6 +325,7 @@ logic, those implementation details can shift results.
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
 | `paws_x` | Multiple-choice log-likelihood across `de/en/es/fr/ja/ko/zh` language subsets, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
 | `xcopa` | Multiple-choice log-likelihood over option labels across `et/ht/id/it/qu/sw/ta/th/tr/vi/zh` language subsets, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xquad` | Generated extractive QA exact match and token-overlap F1 across `ar/de/el/en/es/hi/ro/ru/th/tr/vi/zh` language subsets | XQuAD `artetxe2020crosslingual` |
 | `xstorycloze` | Multiple-choice log-likelihood over translated StoryCloze endings across `ar/en/es/eu/hi/id/my/ru/sw/te/zh` subsets, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
 | `xnli` | Three-way NLI multiple-choice log-likelihood across `ar/bg/de/el/en/es/fr/hi/ru/sw/th/tr/ur/vi/zh` language subsets, raw + length-normalized accuracy | XNLI `conneau2018xnli` |
 | `xwinograd` | Partial-evaluation multiple-choice log-likelihood over blank replacements across `en/fr/jp/pt/ru/zh` language subsets, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
@@ -484,6 +485,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 - `xcopa_et`, `xcopa_ht`, `xcopa_id`, `xcopa_it`, `xcopa_qu`, `xcopa_sw`, `xcopa_ta`, `xcopa_th`, `xcopa_tr`, `xcopa_vi`, `xcopa_zh`: XCOPA `ponti2020xcopa`
+- `xquad_<language>` for the built-in XQuAD language subsets: XQuAD `artetxe2020crosslingual`
 - `xstorycloze_ar`, `xstorycloze_en`, `xstorycloze_es`, `xstorycloze_eu`, `xstorycloze_hi`, `xstorycloze_id`, `xstorycloze_my`, `xstorycloze_ru`, `xstorycloze_sw`, `xstorycloze_te`, `xstorycloze_zh`: XStoryCloze `lin2021fewshotmultilingual`
 - `xnli_<language>` for the built-in XNLI language subsets: XNLI `conneau2018xnli`
 - `xwinograd_en`, `xwinograd_fr`, `xwinograd_jp`, `xwinograd_pt`, `xwinograd_ru`, `xwinograd_zh`: XWinograd `tikhonov2021heads`
@@ -742,6 +744,17 @@ The current built-in suite coverage maps to these benchmark citations:
   pages = {2475--2485},
   url = {https://aclanthology.org/D18-1269/},
   doi = {10.18653/v1/D18-1269},
+}
+
+# XQuAD
+@inproceedings{artetxe2020crosslingual,
+  title = {Cross-lingual Question Answering},
+  author = {Artetxe, Mikel and Ruder, Sebastian and Yogatama, Dani},
+  booktitle = {Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics},
+  year = {2020},
+  pages = {1198--1207},
+  url = {https://aclanthology.org/2020.acl-main.119/},
+  doi = {10.18653/v1/2020.acl-main.119},
 }
 
 # ASDiv

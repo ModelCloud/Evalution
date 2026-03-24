@@ -195,6 +195,12 @@ XNLI_TASKS = (
     "xnli_fr",
     "xnli_sw",
 )
+XQUAD_TASKS = (
+    "xquad_ar",
+    "xquad_en",
+    "xquad_es",
+    "xquad_zh",
+)
 XWINOGRAD_TASKS = (
     "xwinograd_en",
     "xwinograd_fr",
@@ -1095,6 +1101,22 @@ def _assert_triviaqa_sample(sample: Any, index: int) -> None:
     assert sample.metadata["answer_value"]
 
 
+def _assert_xquad_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Context: ")
+    assert "\n\nQuestion: " in sample.prompt
+    assert sample.prompt.endswith("\n\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["id"]
+    assert sample.metadata["language"] == language
+    assert sample.metadata["question"]
+    assert sample.metadata["context"]
+    assert sample.metadata["answer_texts"]
+
+
 def _assert_nq_open_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Question: ")
@@ -1719,6 +1741,39 @@ def _xnli_suite_spec(
                 "\nQuestion: What is the relationship between the premise and hypothesis: entailment, neutral, or contradiction?\nAnswer:",
             ),
             metadata_validator=_metadata_xnli_language(language),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _xquad_suite_spec(
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.xquad(
+            language=language,
+            batch_size=16,
+            max_rows=32,
+        ),
+        expected_name=f"xquad_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "google/xquad",
+            "dataset_name": f"xquad.{language}",
+            "split": "validation",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_xquad_sample(
+            sample,
+            index,
+            language=language,
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
@@ -5868,6 +5923,17 @@ for _language, _baseline in {
     "sw": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
 }.items():
     SUITE_SPECS[f"xnli_{_language}"] = _xnli_suite_spec(
+        language=_language,
+        baseline=_baseline,
+    )
+
+for _language, _baseline in {
+    "ar": {"em": 0.1875, "f1": 0.339294733044733},
+    "en": {"em": 0.15625, "f1": 0.3847293331668331},
+    "es": {"em": 0.125, "f1": 0.5209415584415584},
+    "zh": {"em": 0.375, "f1": 0.45312499999999994},
+}.items():
+    SUITE_SPECS[f"xquad_{_language}"] = _xquad_suite_spec(
         language=_language,
         baseline=_baseline,
     )

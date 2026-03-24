@@ -138,6 +138,8 @@ from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
 from .xcopa import XCOPA, xcopa, xcopa_et, xcopa_ht, xcopa_id, xcopa_it, xcopa_qu, xcopa_sw, xcopa_ta, xcopa_th, xcopa_tr, xcopa_vi, xcopa_zh
+from . import xquad as _xquad_module
+from .xquad import XQUAD_LANGUAGES, XQUAD_TASKS, XQuAD, xquad
 from .xstorycloze import XSTORYCLOZE_LANGUAGES, XStoryCloze, xstorycloze, xstorycloze_ar, xstorycloze_en, xstorycloze_es, xstorycloze_eu, xstorycloze_hi, xstorycloze_id, xstorycloze_my, xstorycloze_ru, xstorycloze_sw, xstorycloze_te, xstorycloze_zh
 from . import xnli as _xnli_module
 from .xnli import XNLI, XNLI_LANGUAGES, XNLI_TASKS, xnli
@@ -207,6 +209,11 @@ for _xnli_task in XNLI_TASKS:
     globals()[_xnli_task] = getattr(_xnli_module, _xnli_task)
 
 del _xnli_task
+
+for _xquad_task in XQUAD_TASKS:
+    globals()[_xquad_task] = getattr(_xquad_module, _xquad_task)
+
+del _xquad_task
 
 __all__ = [
     "ANLI",
@@ -350,6 +357,9 @@ __all__ = [
     "WNLI",
     "WinoGrande",
     "XCOPA",
+    "XQUAD_LANGUAGES",
+    "XQUAD_TASKS",
+    "XQuAD",
     "XNLI",
     "XNLI_LANGUAGES",
     "XNLI_TASKS",
@@ -558,6 +568,7 @@ __all__ = [
     "xcopa_tr",
     "xcopa_vi",
     "xcopa_zh",
+    "xquad",
     "xstorycloze",
     "xstorycloze_ar",
     "xstorycloze_en",
@@ -592,3 +603,4 @@ __all__.extend(CABBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(XNLI_TASKS)
+__all__.extend(XQUAD_TASKS)

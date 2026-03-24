@@ -364,6 +364,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.xcopa_tr)
     assert callable(evalution.benchmarks.xcopa_vi)
     assert callable(evalution.benchmarks.xcopa_zh)
+    assert evalution.benchmarks.XQuAD is not None
+    assert evalution.benchmarks.XQUAD_LANGUAGES
+    assert evalution.benchmarks.XQUAD_TASKS
+    assert callable(evalution.benchmarks.xquad)
+    for factory_name in evalution.benchmarks.XQUAD_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.XStoryCloze is not None
     assert evalution.benchmarks.XSTORYCLOZE_LANGUAGES
     assert callable(evalution.benchmarks.xstorycloze)

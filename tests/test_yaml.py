@@ -397,6 +397,11 @@ tests:
     max_rows: 16
   - type: xcopa_zh
     max_rows: 16
+  - type: xquad
+    language: en
+    max_rows: 16
+  - type: xquad_es
+    max_rows: 16
   - type: xstorycloze_ar
     max_rows: 16
   - type: xstorycloze_en
@@ -641,6 +646,8 @@ tests:
     assert ".run(benchmarks.xcopa_tr(" in script
     assert ".run(benchmarks.xcopa_vi(" in script
     assert ".run(benchmarks.xcopa_zh(" in script
+    assert ".run(benchmarks.xquad(" in script
+    assert ".run(benchmarks.xquad_es(" in script
     assert ".run(benchmarks.xstorycloze_ar(" in script
     assert ".run(benchmarks.xstorycloze_en(" in script
     assert ".run(benchmarks.xstorycloze_es(" in script

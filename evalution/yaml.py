@@ -211,6 +211,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xcopa_tr": benchmarks.xcopa_tr,
     "xcopa_vi": benchmarks.xcopa_vi,
     "xcopa_zh": benchmarks.xcopa_zh,
+    "xquad": benchmarks.xquad,
     "xstorycloze_ar": benchmarks.xstorycloze_ar,
     "xstorycloze_en": benchmarks.xstorycloze_en,
     "xstorycloze_es": benchmarks.xstorycloze_es,
@@ -240,6 +241,11 @@ for _task_name in benchmarks.ESBBQ_TASKS:
 del _task_name
 
 for _task_name in benchmarks.XNLI_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.XQUAD_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name
