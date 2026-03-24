@@ -2948,6 +2948,38 @@ SUITE_SPECS = {
             prompt_substrings=(":",),
         ),
     ),
+    "histoires_morales": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.histoires_morales(batch_size=24, max_rows=32),
+        expected_name="histoires_morales",
+        baseline={
+            "acc,ll": 0.53125,
+            "acc,ll_avg": 0.5,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "LabHC/histoires_morales",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy(
+                "guid",
+                "norm",
+                "situation",
+                "intention",
+                "moral_action",
+                "immoral_action",
+                "moral_consequence",
+                "immoral_consequence",
+            ),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "icelandic_winogrande": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.icelandic_winogrande(batch_size=24, max_rows=32),
         expected_name="icelandic_winogrande",

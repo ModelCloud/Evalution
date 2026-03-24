@@ -271,6 +271,7 @@ logic, those implementation details can shift results.
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
@@ -403,6 +404,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
+- `histoires_morales`: Histoires Morales `leteno2025histoiresmorales`
 - `icelandic_winogrande`: Icelandic WinoGrande `snaebjarnarson-etal-2022-warm`
 - `kobest_boolq`, `kobest_copa`, `kobest_hellaswag`, `kobest_sentineg`, `kobest_wic`: KoBEST `kim2022kobest`
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
@@ -586,6 +588,15 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
   journal = {arXiv preprint arXiv:2110.14168},
   year = {2021},
+}
+
+# Histoires Morales
+@article{leteno2025histoiresmorales,
+  title = {Histoires Morales: A French Dataset for Assessing Moral Alignment},
+  author = {Leteno, Thibaud and Proskurina, Irina and Gourru, Antoine and Velcin, Julien and Laclau, Charlotte and Metzler, Guillaume and Gravier, Christophe},
+  journal = {arXiv preprint arXiv:2501.17117},
+  year = {2025},
+  url = {https://arxiv.org/abs/2501.17117},
 }
 
 # Icelandic WinoGrande

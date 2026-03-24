@@ -173,6 +173,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.headqa_es)
     assert evalution.benchmarks.HellaSwag is not None
     assert callable(evalution.benchmarks.hellaswag)
+    assert evalution.benchmarks.HistoiresMorales is not None
+    assert callable(evalution.benchmarks.histoires_morales)
     assert evalution.benchmarks.IcelandicWinoGrande is not None
     assert callable(evalution.benchmarks.icelandic_winogrande)
     assert evalution.benchmarks.KoBEST is not None

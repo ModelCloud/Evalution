@@ -125,6 +125,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "headqa_en": benchmarks.headqa_en,
     "headqa_es": benchmarks.headqa_es,
     "hellaswag": benchmarks.hellaswag,
+    "histoires_morales": benchmarks.histoires_morales,
     "icelandic_winogrande": benchmarks.icelandic_winogrande,
     "kobest": benchmarks.kobest,
     "kobest_boolq": benchmarks.kobest_boolq,
