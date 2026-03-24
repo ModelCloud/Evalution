@@ -13,13 +13,14 @@ from typing import Any, Callable, TypeVar
 from evalution.logbar import get_logger, spinner
 
 T = TypeVar("T")
+_DEFAULT_SHUFFLE_SEED = 7
 
 def normalize_order(order: str) -> str:
     normalized = order.strip().lower()
     if normalized in {"native", "length|asc", "length|desc"}:
         return normalized
     if normalized in {"shuffle", "random"}:
-        return "shuffle"
+        return f"shuffle|{_DEFAULT_SHUFFLE_SEED}"
     if normalized.startswith("shuffle|") or normalized.startswith("random|"):
         mode, seed_text = normalized.split("|", maxsplit=1)
         try:
@@ -44,10 +45,8 @@ def apply_order(
     ordered = list(items)
     if normalized_order == "native":
         return ordered
-    if normalized_order == "shuffle" or normalized_order.startswith("shuffle|"):
-        seed = 0
-        if "|" in normalized_order:
-            seed = int(normalized_order.split("|", maxsplit=1)[1])
+    if normalized_order.startswith("shuffle|"):
+        seed = int(normalized_order.split("|", maxsplit=1)[1])
         random.Random(seed).shuffle(ordered)
         return ordered
     reverse = normalized_order == "length|desc"

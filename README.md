@@ -150,8 +150,50 @@ evalution emit-python evalution.yaml
 `attn_implementation`, and `max_new_tokens`.
 
 Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`,
-and scorer-specific options like `label_permutations` can be set directly on each benchmark call
-or in each YAML `tests` entry.
+`order`, and scorer-specific options like `label_permutations` can be set directly on each benchmark
+call or in each YAML `tests` entry.
+
+## Benchmark Row Order
+
+Dataset-backed benchmarks support an `order` override that controls benchmark row traversal order.
+This is a benchmark-level dataset ordering control, separate from any engine-internal request
+reordering used for batching efficiency.
+
+Supported values:
+
+- `native`: preserve the dataset loader's row order. This is the default.
+- `shuffle` or `random`: shuffle rows deterministically with an implicit seed of `7`.
+- `shuffle|245` or `random|245`: shuffle rows deterministically with the provided integer seed.
+- `length|asc`: execute shorter prepared requests first.
+- `length|desc`: execute longer prepared requests first.
+
+Python:
+
+```python
+import evalution.benchmarks as benchmarks
+
+suite = benchmarks.gsm8k(order="length|desc")
+suite = benchmarks.arc_challenge(order="shuffle|245")
+```
+
+YAML:
+
+```yaml
+tests:
+  - type: gsm8k
+    order: length|desc
+  - type: arc_challenge
+    order: shuffle|245
+```
+
+Notes:
+
+- `random` is an alias of `shuffle`.
+- `shuffle` without an explicit seed is normalized to `shuffle|7`.
+- `random|245` is normalized to `shuffle|245` in result metadata.
+- Ordering is applied after the benchmark's selected rows are loaded and capped by `max_rows`.
+- For streaming datasets, non-`native` ordering requires materializing rows. Set `max_rows` or
+  disable streaming when using `shuffle` or `length|...`.
 
 ## Subset Selection
 
