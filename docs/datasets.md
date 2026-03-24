@@ -71,6 +71,8 @@ This document records the dataset identifier and split semantics for each Evalut
 | `esbbq.EsBBQ` | `BSC-LT/EsBBQ` | `Age` | `test` | none |
 | `eus_exams.EusExams` | `HiTZ/EusExams` | `None` | `test` | none |
 | `gpqa.GPQA` | `Idavidrein/gpqa` | `None` | `train` | none |
+| `graphwalks.graphwalks_128k` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_128k_and_shorter.parquet` |
+| `graphwalks.graphwalks_1M` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_256k_to_1mil.parquet` |
 | `gsm8k.GSM8K` | `openai/gsm8k` | `main` | `test` | none |
 | `gsm8k_platinum.GSM8KPlatinum` | `madrylab/gsm8k-platinum` | `main` | `test` | none |
 | `headqa.HEADQA` | `EleutherAI/headqa` | `en` | `test` | none |
