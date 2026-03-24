@@ -9,6 +9,8 @@ from .afrixnli import AFRIXNLI_LANGUAGES, AFRIXNLI_TASKS, AfriXNLI, afrixnli, af
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
 from .aime import AIME, aime, aime24, aime25
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
+from . import arabicmmlu as _arabicmmlu_module
+from .arabicmmlu import ARABICMMLU_SUBSETS, ARABICMMLU_TASKS, ArabicMMLU, arabicmmlu
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .arc_mt import ARCMT, ARC_MT_LANGUAGES, ARC_MT_TASKS, arc_mt, arc_mt_da, arc_mt_de, arc_mt_el, arc_mt_es, arc_mt_fi, arc_mt_hu, arc_mt_is, arc_mt_it, arc_mt_nb, arc_mt_pl, arc_mt_pt, arc_mt_sv
@@ -137,6 +139,11 @@ for _babilong_task in BABILONG_TASKS:
 
 del _babilong_task
 
+for _arabicmmlu_task in ARABICMMLU_TASKS:
+    globals()[_arabicmmlu_task] = getattr(_arabicmmlu_module, _arabicmmlu_task)
+
+del _arabicmmlu_task
+
 __all__ = [
     "ANLI",
     "AIME",
@@ -145,11 +152,14 @@ __all__ = [
     "AFRIXNLI_LANGUAGES",
     "AFRIXNLI_TASKS",
     "AfriXNLI",
+    "ARABICMMLU_SUBSETS",
+    "ARABICMMLU_TASKS",
     "ARCEasy",
     "ARCChallenge",
     "ARCMT",
     "ARC_MT_LANGUAGES",
     "ARC_MT_TASKS",
+    "ArabicMMLU",
     "COPAArabic",
     "Arithmetic",
     "ASDiv",
@@ -282,6 +292,7 @@ __all__ = [
     "anli_r1",
     "anli_r2",
     "anli_r3",
+    "arabicmmlu",
     "copa_ar",
     "arc_easy",
     "arc_challenge",
@@ -465,3 +476,4 @@ __all__ = [
 
 __all__.extend(BBH_TASKS)
 __all__.extend(BABILONG_TASKS)
+__all__.extend(ARABICMMLU_TASKS)

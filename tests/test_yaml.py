@@ -166,6 +166,11 @@ tests:
     max_rows: 18
   - type: anli_r3
     max_rows: 18
+  - type: arabicmmlu
+    subset: All
+    max_rows: 16
+  - type: arabicmmlu_islamic_studies
+    max_rows: 16
   - type: arc_mt
     language: da
     max_rows: 16
@@ -478,6 +483,8 @@ tests:
     assert ".run(benchmarks.anli_r1(" in script
     assert ".run(benchmarks.anli_r2(" in script
     assert ".run(benchmarks.anli_r3(" in script
+    assert ".run(benchmarks.arabicmmlu(" in script
+    assert ".run(benchmarks.arabicmmlu_islamic_studies(" in script
     assert ".run(benchmarks.arc_mt(" in script
     assert ".run(benchmarks.arc_mt_is(" in script
     assert ".run(benchmarks.asdiv(" in script

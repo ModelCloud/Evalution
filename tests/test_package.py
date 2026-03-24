@@ -60,6 +60,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.anli_r1)
     assert callable(evalution.benchmarks.anli_r2)
     assert callable(evalution.benchmarks.anli_r3)
+    assert evalution.benchmarks.ArabicMMLU is not None
+    assert evalution.benchmarks.ARABICMMLU_SUBSETS
+    assert evalution.benchmarks.ARABICMMLU_TASKS
+    assert callable(evalution.benchmarks.arabicmmlu)
+    for factory_name in evalution.benchmarks.ARABICMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.ARCChallenge is not None
     assert evalution.benchmarks.ARCMT is not None
     assert evalution.benchmarks.ARC_MT_LANGUAGES

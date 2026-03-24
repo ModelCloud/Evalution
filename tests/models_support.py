@@ -70,6 +70,12 @@ AEXAMS_TASKS = (
     "aexams_science",
     "aexams_social",
 )
+ARABICMMLU_TASKS = (
+    "arabicmmlu_all",
+    "arabicmmlu_islamic_studies",
+    "arabicmmlu_computer_science_high_school",
+    "arabicmmlu_driving_test",
+)
 AIME_TASKS = ("aime", "aime24", "aime25")
 ALGHAFA_TASKS = ("copa_ar", "piqa_ar")
 ARITHMETIC_TASKS = (
@@ -1200,6 +1206,20 @@ def _metadata_ceval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_arabicmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["group"]
+        assert metadata["subject"]
+        assert metadata["question"]
+        assert metadata["answer_label"] in {"A", "B", "C", "D", "E"}
+        assert metadata["choice_labels"]
+        assert metadata["raw_choices"]
+        assert len(metadata["choice_labels"]) == len(metadata["raw_choices"])
+
+    return validate
+
+
 def _metadata_afrixnli_language(language: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["language"] == language
@@ -1815,6 +1835,42 @@ def _gpqa_suite_spec(
             subset=subset,
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _arabicmmlu_suite_spec(
+    *,
+    task_name: str,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.arabicmmlu(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "MBZUAI/ArabicMMLU",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D", "E"},
+            prediction_values={"A", "B", "C", "D", "E"},
+            prompt_prefix="This is a ",
+            prompt_suffix="\n\nAnswer:",
+            prompt_substrings=("\n\nQuestion: ",),
+            metadata_validator=_metadata_arabicmmlu_subset(subset),
+        ),
     )
 
 
@@ -4807,6 +4863,26 @@ for _task_name, _subset, _baseline in (
     ("bbh_word_sorting", "word_sorting", 0.0),
 ):
     SUITE_SPECS[_task_name] = _bbh_suite_spec(_task_name, _subset, _baseline)
+
+for _task_name, _subset, _baseline in (
+    ("arabicmmlu_all", "All", {"acc,ll": 0.2890625, "acc,ll_avg": 0.2890625}),
+    (
+        "arabicmmlu_islamic_studies",
+        "Islamic Studies",
+        {"acc,ll": 0.2890625, "acc,ll_avg": 0.2890625},
+    ),
+    (
+        "arabicmmlu_computer_science_high_school",
+        "Computer Science (High School)",
+        {"acc,ll": 0.3515625, "acc,ll_avg": 0.3515625},
+    ),
+    ("arabicmmlu_driving_test", "Driving Test", {"acc,ll": 0.453125, "acc,ll_avg": 0.453125}),
+):
+    SUITE_SPECS[_task_name] = _arabicmmlu_suite_spec(
+        task_name=_task_name,
+        subset=_subset,
+        baseline=_baseline,
+    )
 
 for _task_name, _qa_split, _baseline in (
     ("babilong_qa1", "qa1", 0.0625),

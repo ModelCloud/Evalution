@@ -52,6 +52,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "anli_r1": benchmarks.anli_r1,
     "anli_r2": benchmarks.anli_r2,
     "anli_r3": benchmarks.anli_r3,
+    "arabicmmlu": benchmarks.arabicmmlu,
     "arc_challenge": benchmarks.arc_challenge,
     "arc_easy": benchmarks.arc_easy,
     "arc_mt": benchmarks.arc_mt,
@@ -232,6 +233,11 @@ for _babilong_task in benchmarks.BABILONG_TASKS:
     _TEST_FACTORIES[_babilong_task] = getattr(benchmarks, _babilong_task)
 
 del _babilong_task
+
+for _arabicmmlu_task in benchmarks.ARABICMMLU_TASKS:
+    _TEST_FACTORIES[_arabicmmlu_task] = getattr(benchmarks, _arabicmmlu_task)
+
+del _arabicmmlu_task
 
 
 def run_yaml(source: str | Path) -> EvaluationRun:

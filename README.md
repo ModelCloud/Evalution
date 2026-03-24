@@ -223,6 +223,7 @@ logic, those implementation details can shift results.
 | `anli_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `arabicmmlu` | Multiple-choice log-likelihood across configurable ArabicMMLU subject subsets, raw + length-normalized accuracy | ArabicMMLU `koto2024arabicmmlu` |
 | `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_mt` | Multiple-choice exam score with tie-aware partial credit across translated ARC Challenge subsets `da/de/el/es/fi/hu/is/it/nb/pl/pt/sv` | ARC `clark2018arc` |
@@ -377,6 +378,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `aexams_biology`, `aexams_islamic_studies`, `aexams_physics`, `aexams_science`, `aexams_social`: EXAMS `hardalov-etal-2020-exams`
 - `afrixnli_amh`, `afrixnli_eng`, `afrixnli_ewe`, `afrixnli_fra`, `afrixnli_hau`, `afrixnli_ibo`, `afrixnli_kin`, `afrixnli_lin`, `afrixnli_lug`, `afrixnli_orm`, `afrixnli_sna`, `afrixnli_sot`, `afrixnli_swa`, `afrixnli_twi`, `afrixnli_wol`, `afrixnli_xho`, `afrixnli_yor`, `afrixnli_zul`: IrokoBench AfriXNLI `adelani2025irokobench`
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
+- `arabicmmlu_<subset>` for the built-in ArabicMMLU subsets: ArabicMMLU `koto2024arabicmmlu`
 - `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
 - `arc_mt_da`, `arc_mt_de`, `arc_mt_el`, `arc_mt_es`, `arc_mt_fi`, `arc_mt_hu`, `arc_mt_is`, `arc_mt_it`, `arc_mt_nb`, `arc_mt_pl`, `arc_mt_pt`, `arc_mt_sv`: ARC `clark2018arc`
@@ -830,6 +832,16 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Yubo Wang and Xueguang Ma and Ge Zhang and Yuansheng Ni and Abhranil Chandra and Shiguang Guo and Weiming Ren and Aaran Arulraj and Xuan He and Ziyan Jiang and Tianle Li and Max Ku and Kai Wang and Alex Zhuang and Rongqi Fan and Xiang Yue and Wenhu Chen},
   journal = {arXiv preprint arXiv:2406.01574},
   year = {2024},
+}
+
+# ArabicMMLU
+@misc{koto2024arabicmmlu,
+  title = {ArabicMMLU: Assessing Massive Multitask Language Understanding in Arabic},
+  author = {Koto, Fajri and Li, Haonan and Shatnawi, Sara and Doughman, Jad and Sadallah, Abdelrahman Boda and Alraeesi, Aisha and Almubarak, Khalid and Alyafeai, Zaid and Sengupta, Neha and Shehata, Shady and Habash, Nizar and Nakov, Preslav and Baldwin, Timothy},
+  year = {2024},
+  eprint = {2402.12840},
+  archivePrefix = {arXiv},
+  url = {https://arxiv.org/abs/2402.12840},
 }
 
 # GLUE
