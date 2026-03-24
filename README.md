@@ -264,6 +264,7 @@ logic, those implementation details can shift results.
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
 | `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
@@ -387,6 +388,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
+- `kobest_boolq`, `kobest_copa`, `kobest_hellaswag`, `kobest_sentineg`, `kobest_wic`: KoBEST `kim2022kobest`
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
 - `logiqa`: LogiQA `liu2020logiqa`
 - `mathqa`: MathQA `amini2019mathqa`
@@ -740,6 +742,17 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {David Vilares and Carlos G{\'o}mez-Rodr{\'i}guez},
   booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
   year = {2019},
+}
+
+# KoBEST
+@misc{kim2022kobest,
+  title = {KoBEST: Korean Balanced Evaluation of Significant Tasks},
+  author = {Dohyeong Kim and Myeongjun Jang and Deuk Sin Kwon and Eric Davis},
+  year = {2022},
+  eprint = {2204.04541},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2204.04541},
 }
 
 # LAMBADA

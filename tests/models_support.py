@@ -172,6 +172,13 @@ CODE_X_GLUE_TASKS = (
     "code2text_python",
     "code2text_ruby",
 )
+KOBEST_TASKS = (
+    "kobest_boolq",
+    "kobest_copa",
+    "kobest_hellaswag",
+    "kobest_sentineg",
+    "kobest_wic",
+)
 CROWS_PAIRS_TASKS = tuple(evalution.benchmarks.CROWS_PAIRS_TASKS)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
@@ -1094,6 +1101,34 @@ def _metadata_ceval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_kobest_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        if subset == "boolq":
+            assert metadata["paragraph"]
+            assert metadata["question"]
+            return
+        if subset == "copa":
+            assert metadata["question"] in {"원인", "결과"}
+            assert len(metadata["raw_choices"]) == 2
+            return
+        if subset == "hellaswag":
+            assert metadata["context"]
+            assert len(metadata["raw_choices"]) == 4
+            return
+        if subset == "sentineg":
+            assert metadata["sentence"]
+            return
+        if subset == "wic":
+            assert metadata["word"]
+            assert metadata["context_1"]
+            assert metadata["context_2"]
+            return
+        raise AssertionError(f"unsupported kobest subset metadata: {subset!r}")
+
+    return validate
+
+
 def _metadata_sentence_has_blank(metadata: dict[str, Any]) -> None:
     assert " _ " in metadata["sentence"]
 
@@ -1239,6 +1274,73 @@ def _xcopa_suite_spec(
                 "\nAnswer:",
             ),
             metadata_validator=_metadata_language_and_idx(language),
+        ),
+    )
+
+
+def _kobest_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    target_values: set[str] | None = None
+    prediction_values: set[str] | None = None
+    prompt_prefix: str | None = None
+    prompt_suffix: str | None = None
+    prompt_substrings: tuple[str, ...] = ()
+
+    if subset == "boolq":
+        target_values = {"아니오", "예"}
+        prediction_values = {"아니오", "예"}
+        prompt_prefix = "지문: "
+        prompt_suffix = "\n답변:"
+        prompt_substrings = ("\n질문: ",)
+    elif subset == "copa":
+        prompt_prefix = None
+    elif subset == "hellaswag":
+        prompt_prefix = None
+    elif subset == "sentineg":
+        target_values = {"부정", "긍정"}
+        prediction_values = {"부정", "긍정"}
+        prompt_prefix = "문장: "
+        prompt_suffix = "\n답변:"
+        prompt_substrings = ("\n질문: 이 문장의 감성은 무엇입니까?\n",)
+    elif subset == "wic":
+        target_values = {"아니오", "예"}
+        prediction_values = {"아니오", "예"}
+        prompt_prefix = "문장 1: "
+        prompt_suffix = "\n답변:"
+        prompt_substrings = ("\n문장 2: ", "\n질문: 두 문장에서 '")
+    else:
+        raise AssertionError(f"unsupported kobest subset spec: {subset!r}")
+
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.kobest(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=f"kobest_{subset}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "skt/kobest_v1",
+            "dataset_name": subset,
+            "split": "test",
+            "subset": subset,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset, target_values=target_values, prediction_values=prediction_values, prompt_prefix=prompt_prefix, prompt_suffix=prompt_suffix, prompt_substrings=prompt_substrings: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values=target_values,
+            prediction_values=prediction_values,
+            prompt_prefix=prompt_prefix,
+            prompt_suffix=prompt_suffix,
+            prompt_substrings=prompt_substrings,
+            metadata_validator=_metadata_kobest_subset(subset),
         ),
     )
 
@@ -2438,6 +2540,41 @@ SUITE_SPECS = {
             label_permutations=0.25,
             prompt_substrings=(":",),
         ),
+    ),
+    "kobest_boolq": _kobest_suite_spec(
+        subset="boolq",
+        baseline={
+            "acc,ll": 0.546875,
+            "acc,ll_avg": 0.5546875,
+        },
+    ),
+    "kobest_copa": _kobest_suite_spec(
+        subset="copa",
+        baseline={
+            "acc,ll": 0.546875,
+            "acc,ll_avg": 0.53125,
+        },
+    ),
+    "kobest_hellaswag": _kobest_suite_spec(
+        subset="hellaswag",
+        baseline={
+            "acc,ll": 0.359375,
+            "acc,ll_avg": 0.4609375,
+        },
+    ),
+    "kobest_sentineg": _kobest_suite_spec(
+        subset="sentineg",
+        baseline={
+            "acc,ll": 0.5078125,
+            "acc,ll_avg": 0.515625,
+        },
+    ),
+    "kobest_wic": _kobest_suite_spec(
+        subset="wic",
+        baseline={
+            "acc,ll": 0.4375,
+            "acc,ll_avg": 0.4765625,
+        },
     ),
     "headqa_en": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.headqa_en(batch_size=24, streaming=True, max_rows=128),

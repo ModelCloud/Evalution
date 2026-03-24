@@ -123,6 +123,15 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.headqa_es)
     assert evalution.benchmarks.HellaSwag is not None
     assert callable(evalution.benchmarks.hellaswag)
+    assert evalution.benchmarks.KoBEST is not None
+    assert evalution.benchmarks.KOBEST_SUBSETS
+    assert evalution.benchmarks.KOBEST_TASKS
+    assert callable(evalution.benchmarks.kobest)
+    assert callable(evalution.benchmarks.kobest_boolq)
+    assert callable(evalution.benchmarks.kobest_copa)
+    assert callable(evalution.benchmarks.kobest_hellaswag)
+    assert callable(evalution.benchmarks.kobest_sentineg)
+    assert callable(evalution.benchmarks.kobest_wic)
     assert evalution.benchmarks.LAMBADA is not None
     assert evalution.benchmarks.LAMBADACloze is not None
     assert callable(evalution.benchmarks.lambada_openai)
