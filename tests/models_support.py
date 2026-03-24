@@ -160,6 +160,12 @@ BLIMP_TASKS = tuple(
     f"blimp_{subset.lower()}"
     for subset in BLIMP_INTEGRATION_SUBSETS
 )
+BELEBELE_TASKS = (
+    "belebele_amh_Ethi",
+    "belebele_eng_Latn",
+    "belebele_fra_Latn",
+    "belebele_swh_Latn",
+)
 COPAL_ID_TASKS = (
     "copal_id_standard",
     "copal_id_colloquial",
@@ -1143,6 +1149,20 @@ def _metadata_afrixnli_language(language: str) -> Callable[[dict[str, Any]], Non
     return validate
 
 
+def _metadata_belebele_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["dialect"] == language
+        assert metadata["question_number"] > 0
+        assert metadata["link"]
+        assert metadata["passage"]
+        assert metadata["question"]
+        assert len(metadata["raw_choices"]) == 4
+        assert metadata["correct_answer_num"] in {"1", "2", "3", "4"}
+
+    return validate
+
+
 def _metadata_kobest_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -1353,6 +1373,48 @@ def _afrixnli_suite_spec(
                 "\nQuestion: What is the relationship between the premise and hypothesis: entailment, neutral, or contradiction?\nAnswer:",
             ),
             metadata_validator=_metadata_afrixnli_language(language),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _belebele_suite_spec(
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.belebele(
+            language=language,
+            batch_size=4,
+            max_rows=32,
+        ),
+        expected_name=f"belebele_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "facebook/belebele",
+            "dataset_name": language,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_substrings=(
+                "P: ",
+                "\nQ: ",
+                "\nA: ",
+                "\nB: ",
+                "\nC: ",
+                "\nD: ",
+                "\nAnswer:",
+            ),
+            metadata_validator=_metadata_belebele_language(language),
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
@@ -4453,6 +4515,17 @@ for _language, _baseline in {
     "swa": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
 }.items():
     SUITE_SPECS[f"afrixnli_{_language}"] = _afrixnli_suite_spec(
+        language=_language,
+        baseline=_baseline,
+    )
+
+for _language, _baseline in {
+    "amh_Ethi": {"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
+    "eng_Latn": {"acc,ll": 0.53125, "acc,ll_avg": 0.53125},
+    "fra_Latn": {"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+    "swh_Latn": {"acc,ll": 0.25, "acc,ll_avg": 0.25},
+}.items():
+    SUITE_SPECS[f"belebele_{_language}"] = _belebele_suite_spec(
         language=_language,
         baseline=_baseline,
     )

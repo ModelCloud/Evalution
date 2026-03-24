@@ -240,6 +240,7 @@ logic, those implementation details can shift results.
 | `babi` | Generated exact match | bAbI `weston2015towards` |
 | `bear` | Full-statement multiple-choice log-likelihood over balanced relational distractors, raw + length-normalized accuracy | BEAR `wiland2024bear` |
 | `bear_big` | Full-statement multiple-choice log-likelihood over the larger BEAR probe, raw + length-normalized accuracy | BEAR `wiland2024bear` |
+| `belebele` | Multiple-choice reading-comprehension log-likelihood across 122 language variants selected through the `language` parameter, raw + length-normalized accuracy | Belebele `bandarkar2023belebele` |
 | `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
 | `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
@@ -373,6 +374,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
 - `bear`, `bear_big`: BEAR `wiland2024bear`
+- `belebele`: Belebele `bandarkar2023belebele`
 - `blimp`: BLiMP `warstadt2020blimp`
 - `c4`: C4 `raffel2020exploring`
 - `ceval`: C-Eval `huang2023ceval`
@@ -485,6 +487,17 @@ The current built-in suite coverage maps to these benchmark citations:
   journal = {arXiv preprint arXiv:2404.04113},
   year = {2024},
   url = {https://arxiv.org/abs/2404.04113},
+}
+
+# Belebele
+@misc{bandarkar2023belebele,
+  title = {The Belebele Benchmark: a Parallel Reading Comprehension Dataset in 122 Language Variants},
+  author = {Lucas Bandarkar and Davis Liang and Benjamin Muller and Mikel Artetxe and Satya Narayan Shukla and Donald Husa and Naman Goyal and Abhinandan Krishnan and Luke Zettlemoyer and Madian Khabsa},
+  year = {2023},
+  eprint = {2308.16884},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2308.16884},
 }
 
 # BLiMP

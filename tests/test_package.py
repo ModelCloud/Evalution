@@ -87,6 +87,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.BEAR is not None
     assert callable(evalution.benchmarks.bear)
     assert callable(evalution.benchmarks.bear_big)
+    assert evalution.benchmarks.Belebele is not None
+    assert callable(evalution.benchmarks.belebele)
     assert evalution.benchmarks.BLiMP is not None
     assert evalution.benchmarks.BLIMP_SUBSETS
     assert callable(evalution.benchmarks.blimp)

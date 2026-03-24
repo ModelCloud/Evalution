@@ -176,6 +176,9 @@ tests:
     max_rows: 18
   - type: bear_big
     max_rows: 18
+  - type: belebele
+    language: eng_Latn
+    max_rows: 16
   - type: blimp
     subset: adjunct_island
     max_rows: 18
@@ -438,6 +441,7 @@ tests:
     assert ".run(benchmarks.babi(" in script
     assert ".run(benchmarks.bear(" in script
     assert ".run(benchmarks.bear_big(" in script
+    assert ".run(benchmarks.belebele(" in script
     assert ".run(benchmarks.blimp(" in script
     assert ".run(benchmarks.c4(" in script
     assert ".run(benchmarks.ceval(" in script
