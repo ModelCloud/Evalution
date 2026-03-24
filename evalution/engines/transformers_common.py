@@ -10,6 +10,7 @@ import inspect
 import random
 import threading
 from contextlib import contextmanager, suppress
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field, replace
 from statistics import mean
 from typing import Any
@@ -64,6 +65,11 @@ _AUTO_BATCH_LADDER = (
     1280,
     1536,
     2048,
+)
+_TRANSFORMERS_NO_TIE_WEIGHTS_PATCH_LOCK = threading.Lock()
+_TRANSFORMERS_NO_TIE_WEIGHTS_ACTIVE: ContextVar[bool] = ContextVar(
+    "evalution_transformers_no_tie_weights_active",
+    default=False,
 )
 
 
@@ -986,6 +992,7 @@ def load_transformer_runtime(
 ) -> _LoadedTransformerRuntime:
     import torch
     from transformers import AutoModelForCausalLM
+    _patch_transformers_no_tie_weights_context_once()
 
     _seed_transformer_runtime(config.seed)
 
@@ -1082,6 +1089,58 @@ def load_transformer_runtime(
         input_device=input_device,
         requested_attn_implementation=requested_attn_implementation,
     )
+
+
+def _patch_transformers_no_tie_weights_context_once() -> None:
+    """Make transformers.no_tie_weights execution-scoped instead of process-global.
+
+    Upstream transformers currently swaps `PreTrainedModel.tie_weights` at the class level inside
+    `initialization.no_tie_weights()`. Concurrent model loads can therefore suppress `tie_weights()`
+    on the wrong model/thread. Evalution loads models concurrently in compare tests, so mirror the
+    upstream context-scoped stop-gap locally until the equivalent transformers fix is available.
+    """
+    try:
+        import transformers.initialization as initialization
+        import transformers.modeling_utils as modeling_utils
+    except Exception:
+        return
+
+    PreTrainedModel = getattr(modeling_utils, "PreTrainedModel", None)
+    current_no_tie_weights = getattr(initialization, "no_tie_weights", None)
+    current_tie_weights = getattr(PreTrainedModel, "tie_weights", None)
+    if PreTrainedModel is None or not callable(current_no_tie_weights) or not callable(current_tie_weights):
+        return
+
+    with _TRANSFORMERS_NO_TIE_WEIGHTS_PATCH_LOCK:
+        current_no_tie_weights = getattr(initialization, "no_tie_weights", None)
+        current_tie_weights = getattr(PreTrainedModel, "tie_weights", None)
+        if not callable(current_no_tie_weights) or not callable(current_tie_weights):
+            return
+        if getattr(current_no_tie_weights, "__evalution_context_patch__", False):
+            return
+
+        original_tie_weights = current_tie_weights
+
+        def _context_scoped_tie_weights(self: Any, *args: Any, **kwargs: Any) -> Any:
+            if _TRANSFORMERS_NO_TIE_WEIGHTS_ACTIVE.get():
+                return None
+            return original_tie_weights(self, *args, **kwargs)
+
+        _context_scoped_tie_weights.__evalution_context_patch__ = True
+        _context_scoped_tie_weights.__wrapped__ = original_tie_weights
+        PreTrainedModel.tie_weights = _context_scoped_tie_weights
+
+        @contextmanager
+        def _context_scoped_no_tie_weights():
+            token = _TRANSFORMERS_NO_TIE_WEIGHTS_ACTIVE.set(True)
+            try:
+                yield
+            finally:
+                _TRANSFORMERS_NO_TIE_WEIGHTS_ACTIVE.reset(token)
+
+        _context_scoped_no_tie_weights.__evalution_context_patch__ = True
+        _context_scoped_no_tie_weights.__wrapped__ = current_no_tie_weights
+        initialization.no_tie_weights = _context_scoped_no_tie_weights
 
 
 def _resolve_tokenizer_source(model_config: Model) -> Any:
