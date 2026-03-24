@@ -254,6 +254,7 @@ logic, those implementation details can shift results.
 | `copal_id` | Multiple-choice log-likelihood across `standard/colloquial` variants, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
 | `crows_pairs` | Pairwise full-sentence log-likelihood across `english/french` language splits and supported bias-category subsets, with stereotype-preference rate and average absolute log-likelihood gap | CrowS-Pairs `nangia-etal-2020-crows`, French CrowS-Pairs `neveol-etal-2022-french` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
+| `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
 | `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `ethics_deontology` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `ethics_justice` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
@@ -383,6 +384,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `crows_pairs_english`, `crows_pairs_english_age`, `crows_pairs_english_autre`, `crows_pairs_english_disability`, `crows_pairs_english_gender`, `crows_pairs_english_nationality`, `crows_pairs_english_physical_appearance`, `crows_pairs_english_race_color`, `crows_pairs_english_religion`, `crows_pairs_english_sexual_orientation`, `crows_pairs_english_socioeconomic`: CrowS-Pairs `nangia-etal-2020-crows`
 - `crows_pairs_french`, `crows_pairs_french_age`, `crows_pairs_french_autre`, `crows_pairs_french_disability`, `crows_pairs_french_gender`, `crows_pairs_french_nationality`, `crows_pairs_french_physical_appearance`, `crows_pairs_french_race_color`, `crows_pairs_french_religion`, `crows_pairs_french_sexual_orientation`, `crows_pairs_french_socioeconomic`: French CrowS-Pairs `neveol-etal-2022-french`
 - `drop`: DROP `dua2019drop`
+- `gpqa_main`, `gpqa_diamond`, `gpqa_extended`: GPQA `rein2024gpqa`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
@@ -530,6 +532,15 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
   journal = {arXiv preprint arXiv:2110.14168},
   year = {2021},
+}
+
+# GPQA
+@inproceedings{rein2024gpqa,
+  title = {{GPQA}: A Graduate-Level Google-Proof {Q\&A} Benchmark},
+  author = {David Rein and Betty Li Hou and Asa Cooper Stickland and Jackson Petty and Richard Yuanzhe Pang and Julien Dirani and Julian Michael and Samuel R. Bowman},
+  booktitle = {First Conference on Language Modeling},
+  year = {2024},
+  url = {https://openreview.net/forum?id=Ti67584b98},
 }
 
 # ARC

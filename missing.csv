@@ -53,7 +53,6 @@ galician_bench,30,galician_bench/belebele_glg_Latn.yaml,galician_bench/flores_gl
 glianorex,3,glianorex/glianorex.yaml,glianorex/glianorex_en.yaml
 global_mmlu,2709,global_mmlu/default/ar/global_mmlu_ar_business.yaml,global_mmlu/default/ar/global_mmlu_ar_humanities.yaml
 global_piqa,234,global_piqa/completions/acm_arab.yaml,global_piqa/completions/acq_arab.yaml
-gpqa,15,gpqa/cot_n_shot/gpqa_diamond_cot_n_shot.yaml,gpqa/cot_n_shot/gpqa_extended_cot_n_shot.yaml
 graphwalks,3,graphwalks/graphwalks.yaml,graphwalks/graphwalks_128k.yaml
 groundcocoa,1,groundcocoa/groundcocoa.yaml,
 gsm_plus,2,gsm_plus/gsm_plus.yaml,gsm_plus/gsm_plus_mini.yaml

@@ -112,6 +112,13 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.copa_ar)
     assert evalution.benchmarks.DROP is not None
     assert callable(evalution.benchmarks.drop)
+    assert evalution.benchmarks.GPQA is not None
+    assert evalution.benchmarks.GPQA_SUBSETS
+    assert evalution.benchmarks.GPQA_TASKS
+    assert callable(evalution.benchmarks.gpqa)
+    assert callable(evalution.benchmarks.gpqa_main)
+    assert callable(evalution.benchmarks.gpqa_diamond)
+    assert callable(evalution.benchmarks.gpqa_extended)
     assert evalution.benchmarks.HendrycksEthics is not None
     assert callable(evalution.benchmarks.ethics_cm)
     assert callable(evalution.benchmarks.ethics_deontology)

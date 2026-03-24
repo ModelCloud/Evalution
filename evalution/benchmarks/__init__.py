@@ -52,6 +52,7 @@ from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
 from .drop import DROP, drop
+from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hendrycks_ethics import (
@@ -150,6 +151,9 @@ __all__ = [
     "CoQA",
     "COPA",
     "DROP",
+    "GPQA",
+    "GPQA_SUBSETS",
+    "GPQA_TASKS",
     "GSM8K",
     "GSM8KPlatinum",
     "HendrycksEthics",
@@ -255,6 +259,10 @@ __all__ = [
     "coqa",
     "copa",
     "drop",
+    "gpqa",
+    "gpqa_diamond",
+    "gpqa_extended",
+    "gpqa_main",
     "ethics_cm",
     "ethics_deontology",
     "ethics_justice",

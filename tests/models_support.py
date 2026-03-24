@@ -164,6 +164,11 @@ CEVAL_TASKS = (
     "ceval_high_school_physics",
     "ceval_law",
 )
+GPQA_TASKS = (
+    "gpqa_main",
+    "gpqa_diamond",
+    "gpqa_extended",
+)
 CODE_X_GLUE_TASKS = (
     "code2text_go",
     "code2text_java",
@@ -1017,6 +1022,27 @@ def _assert_mmlu_pro_sample(
     assert 3 <= len(sample.metadata["choice_texts"]) <= 10
 
 
+def _assert_gpqa_sample(sample: Any, index: int, *, subset: str) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target in {"A", "B", "C", "D"}
+    assert sample.prediction
+    assert sample.prompt.startswith("What is the correct answer to this question: ")
+    assert "\nChoices:\n(A) " in sample.prompt
+    assert sample.prompt.endswith('Format your response as follows: "The correct answer is (insert answer here)"')
+    assert set(sample.extracted) == {"choice-label", "choice-text"}
+    assert set(sample.scores) == {"em,choice_label"}
+    assert sample.metadata["subset"] == subset
+    assert sample.metadata["record_id"]
+    assert sample.metadata["question"]
+    assert sample.metadata["high_level_domain"]
+    assert sample.metadata["subdomain"]
+    assert sample.metadata["choice_labels"] == ["A", "B", "C", "D"]
+    assert len(sample.metadata["choice_texts"]) == 4
+    assert sample.metadata["gold_choice"] in sample.metadata["choice_texts"]
+    assert sample.metadata["shuffle_seed"] == 0
+
+
 def _validate_gsm8k_like_result(test_result: Any) -> None:
     invalid_predictions = 0
     numeric_matches = 0
@@ -1342,6 +1368,44 @@ def _kobest_suite_spec(
             prompt_substrings=prompt_substrings,
             metadata_validator=_metadata_kobest_subset(subset),
         ),
+    )
+
+
+def _gpqa_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.gpqa(
+            subset=subset,
+            batch_size=4,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name=f"gpqa_{subset}",
+        baseline=baseline,
+        expected_metrics=frozenset({"em,choice_label"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Idavidrein/gpqa",
+            "dataset_name": f"gpqa_{subset}",
+            "split": "train",
+            "subset": subset,
+            "shuffle_seed": 0,
+            "prompt_variant": "author_zero_shot_label_response",
+            "choice_order_mode": "seeded_shuffle",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_choice_label_exact_match",
+            "primary_metric": "em,choice_label",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_gpqa_sample(
+            sample,
+            index,
+            subset=subset,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
 
 
@@ -2139,6 +2203,18 @@ SUITE_SPECS = {
         expected_sample_count=16,
         sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="ruby"),
         abs_tolerance=0.05,
+    ),
+    "gpqa_main": _gpqa_suite_spec(
+        subset="main",
+        baseline={"em,choice_label": 0.0},
+    ),
+    "gpqa_diamond": _gpqa_suite_spec(
+        subset="diamond",
+        baseline={"em,choice_label": 0.0},
+    ),
+    "gpqa_extended": _gpqa_suite_spec(
+        subset="extended",
+        baseline={"em,choice_label": 0.0},
     ),
     "commonsense_qa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.commonsense_qa(
