@@ -61,9 +61,15 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.anli_r2)
     assert callable(evalution.benchmarks.anli_r3)
     assert evalution.benchmarks.ARCChallenge is not None
+    assert evalution.benchmarks.ARCMT is not None
+    assert evalution.benchmarks.ARC_MT_LANGUAGES
+    assert evalution.benchmarks.ARC_MT_TASKS
     assert callable(evalution.benchmarks.arc_challenge)
     assert evalution.benchmarks.ARCEasy is not None
     assert callable(evalution.benchmarks.arc_easy)
+    assert callable(evalution.benchmarks.arc_mt)
+    for factory_name in evalution.benchmarks.ARC_MT_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.Arithmetic is not None
     for factory_name in (
         "arithmetic_1dc",

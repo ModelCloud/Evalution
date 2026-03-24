@@ -166,6 +166,11 @@ tests:
     max_rows: 18
   - type: anli_r3
     max_rows: 18
+  - type: arc_mt
+    language: da
+    max_rows: 16
+  - type: arc_mt_is
+    max_rows: 16
   - type: asdiv
     max_rows: 18
   - type: asdiv_cot_llama
@@ -449,6 +454,8 @@ tests:
     assert ".run(benchmarks.anli_r1(" in script
     assert ".run(benchmarks.anli_r2(" in script
     assert ".run(benchmarks.anli_r3(" in script
+    assert ".run(benchmarks.arc_mt(" in script
+    assert ".run(benchmarks.arc_mt_is(" in script
     assert ".run(benchmarks.asdiv(" in script
     assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script

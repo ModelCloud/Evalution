@@ -117,6 +117,12 @@ XCOPA_TASKS = (
     "xcopa_vi",
     "xcopa_zh",
 )
+ARC_MT_TASKS = (
+    "arc_mt_da",
+    "arc_mt_fi",
+    "arc_mt_is",
+    "arc_mt_pt",
+)
 AFRIXNLI_TASKS = (
     "afrixnli_amh",
     "afrixnli_eng",
@@ -721,6 +727,12 @@ def _assert_arc_exam_sample(sample: Any, index: int) -> None:
     assert "selected_count" in sample.metadata
 
 
+def _assert_arc_mt_sample(sample: Any, index: int, *, language: str) -> None:
+    _assert_arc_exam_sample(sample, index)
+    assert sample.metadata["language"] == language
+    assert len(sample.metadata["choice_labels"]) == 4
+
+
 def _assert_arc_exam_label_perm_sample(
     sample: Any,
     index: int,
@@ -1170,6 +1182,13 @@ def _metadata_belebele_language(language: str) -> Callable[[dict[str, Any]], Non
     return validate
 
 
+def _metadata_arc_mt_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+
+    return validate
+
+
 def _metadata_bangla_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -1534,6 +1553,42 @@ def _bangla_suite_spec(
             prompt_substrings=prompt_substrings,
             metadata_validator=_metadata_bangla_subset(subset),
         ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _arc_mt_suite_spec(
+    *,
+    language: str,
+    dataset_path: str,
+    dataset_name: str | None,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.arc_mt(
+            language=language,
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name=f"arc_mt_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,exam"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": dataset_path,
+            "dataset_name": dataset_name,
+            "split": "test",
+            "scoring_mode": "multiple_choice_exam_score",
+            "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
+            "language": language,
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_arc_mt_sample(
+            sample,
+            index,
+            language=language,
+        ),
+        result_validator=_validate_arc_exam_result,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
 
@@ -4657,6 +4712,19 @@ for _subset, _baseline in {
 }.items():
     SUITE_SPECS[f"bangla_{_subset}"] = _bangla_suite_spec(
         subset=_subset,
+        baseline=_baseline,
+    )
+
+for _language, _dataset_path, _dataset_name, _baseline in (
+    ("da", "LumiOpen/arc_challenge_mt", "da", {"acc,exam": 0.1875}),
+    ("fi", "LumiOpen/arc_challenge_mt", "fi", {"acc,exam": 0.28125}),
+    ("is", "mideind/icelandic-arc-challenge", None, {"acc,exam": 0.25}),
+    ("pt", "LumiOpen/arc_challenge_mt", "pt", {"acc,exam": 0.21875}),
+):
+    SUITE_SPECS[f"arc_mt_{_language}"] = _arc_mt_suite_spec(
+        language=_language,
+        dataset_path=_dataset_path,
+        dataset_name=_dataset_name,
         baseline=_baseline,
     )
 

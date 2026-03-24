@@ -225,6 +225,7 @@ logic, those implementation details can shift results.
 | `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
+| `arc_mt` | Multiple-choice exam score with tie-aware partial credit across translated ARC Challenge subsets `da/de/el/es/fi/hu/is/it/nb/pl/pt/sv` | ARC `clark2018arc` |
 | `arithmetic_1dc` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
 | `arithmetic_2da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
 | `arithmetic_2dm` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
@@ -371,6 +372,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
+- `arc_mt_da`, `arc_mt_de`, `arc_mt_el`, `arc_mt_es`, `arc_mt_fi`, `arc_mt_hu`, `arc_mt_is`, `arc_mt_it`, `arc_mt_nb`, `arc_mt_pl`, `arc_mt_pt`, `arc_mt_sv`: ARC `clark2018arc`
 - `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
