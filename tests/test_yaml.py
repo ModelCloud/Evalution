@@ -219,6 +219,8 @@ tests:
     max_rows: 18
   - type: lambada_standard_cloze
     max_rows: 18
+  - type: icelandic_winogrande
+    max_rows: 16
   - type: logiqa
     max_rows: 18
   - type: mathqa
@@ -482,6 +484,7 @@ tests:
     assert ".run(benchmarks.lambada_openai_cloze(" in script
     assert ".run(benchmarks.lambada_standard(" in script
     assert ".run(benchmarks.lambada_standard_cloze(" in script
+    assert ".run(benchmarks.icelandic_winogrande(" in script
     assert ".run(benchmarks.logiqa(" in script
     assert ".run(benchmarks.mathqa(" in script
     assert ".run(benchmarks.mc_taco(" in script

@@ -272,6 +272,7 @@ logic, those implementation details can shift results.
 | `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
+| `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
@@ -402,6 +403,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
+- `icelandic_winogrande`: Icelandic WinoGrande `snaebjarnarson-etal-2022-warm`
 - `kobest_boolq`, `kobest_copa`, `kobest_hellaswag`, `kobest_sentineg`, `kobest_wic`: KoBEST `kim2022kobest`
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
 - `logiqa`: LogiQA `liu2020logiqa`
@@ -584,6 +586,18 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
   journal = {arXiv preprint arXiv:2110.14168},
   year = {2021},
+}
+
+# Icelandic WinoGrande
+@inproceedings{snaebjarnarson-etal-2022-warm,
+  title = {A Warm Start and a Clean Crawled Corpus - A Recipe for Good Language Models},
+  author = {Sn{\ae}bjarnarson, V{\'e}steinn and S{\'i}monarson, Haukur Barri and Ragnarsson, P{\'e}tur Orri and Ing{\'o}lfsd{\'o}ttir, Svanhv{\'i}t Lilja and J{\'o}nsson, Haukur and Thorsteinsson, Vilhjalmur and Einarsson, Hafsteinn},
+  booktitle = {Proceedings of the Thirteenth Language Resources and Evaluation Conference},
+  year = {2022},
+  address = {Marseille, France},
+  publisher = {European Language Resources Association},
+  url = {https://aclanthology.org/2022.lrec-1.464/},
+  pages = {4356--4366},
 }
 
 # GPQA

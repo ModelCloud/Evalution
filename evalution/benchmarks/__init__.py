@@ -71,6 +71,7 @@ from .hendrycks_ethics import (
 )
 from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
+from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic
 from .lambada import LAMBADA, lambada_openai, lambada_standard
 from .lambada_cloze import LAMBADACloze, lambada_openai_cloze, lambada_standard_cloze
@@ -177,6 +178,7 @@ __all__ = [
     "HendrycksEthics",
     "HEADQA",
     "HellaSwag",
+    "IcelandicWinoGrande",
     "KOBEST_SUBSETS",
     "KOBEST_TASKS",
     "KoBEST",
@@ -334,6 +336,7 @@ __all__ = [
     "headqa_en",
     "headqa_es",
     "hellaswag",
+    "icelandic_winogrande",
     "kobest",
     "kobest_boolq",
     "kobest_copa",

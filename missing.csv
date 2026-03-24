@@ -56,7 +56,6 @@ histoires_morales,1,histoires_morales/histoires_morales.yaml,
 hrm8k,12,hrm8k/default/hrm8k.yaml,hrm8k/default/hrm8k_gsm8k.yaml
 humaneval,5,humaneval/humaneval.yaml,humaneval/humaneval_64.yaml
 humaneval_infilling,5,humaneval_infilling/humaneval_infilling.yaml,humaneval_infilling/multi_line_infilling.yaml
-icelandic_winogrande,1,icelandic_winogrande/default.yaml,
 ifeval,3,ifeval/ifeval.yaml,ifeval/multilingual/ifeval_ca.yaml
 include,666,include/default/Albanian/include_base_44_albanian_arts_humanities.yaml,include/default/Albanian/include_base_44_albanian_business_commerce.yaml
 inverse_scaling,11,inverse_scaling/inverse_scaling_hindsight_neglect.yaml,inverse_scaling/inverse_scaling_into_the_unknown.yaml

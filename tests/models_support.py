@@ -567,6 +567,30 @@ def _assert_xwinograd_sample(sample: Any, index: int, *, language: str) -> None:
     assert "choice_logprobs_norm" in sample.metadata
 
 
+def _assert_icelandic_winogrande_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert "_" in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["qID"]
+    assert sample.metadata["sentence"] == sample.prompt
+    assert sample.metadata["answer_label"] in {"1", "2"}
+    assert sample.metadata["blank_index"] >= 0
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert sample.metadata["choice_labels"] == ["A", "B"]
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
 def _assert_xstorycloze_sample(sample: Any, index: int, *, language: str) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -2923,6 +2947,26 @@ SUITE_SPECS = {
             index,
             prompt_substrings=(":",),
         ),
+    ),
+    "icelandic_winogrande": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.icelandic_winogrande(batch_size=24, max_rows=32),
+        expected_name="icelandic_winogrande",
+        baseline={
+            "acc,ll": 0.5625,
+            "acc,ll_avg": 0.5625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "mideind/icelandic-winogrande",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_icelandic_winogrande_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "hellaswag_label_perm_0_25": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.hellaswag(
