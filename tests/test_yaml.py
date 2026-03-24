@@ -114,6 +114,16 @@ engine:
 model:
   path: /tmp/model
 tests:
+  - type: aexams_biology
+    max_rows: 18
+  - type: aexams_islamic_studies
+    max_rows: 18
+  - type: aexams_physics
+    max_rows: 18
+  - type: aexams_science
+    max_rows: 18
+  - type: aexams_social
+    max_rows: 18
   - type: anli_r1
     max_rows: 18
   - type: anli_r2
@@ -349,6 +359,11 @@ tests:
     assert "engines.Transformers(" in script
     assert "eval(engines." not in script
     assert ".model(eval.Model(" in script
+    assert ".run(benchmarks.aexams_biology(" in script
+    assert ".run(benchmarks.aexams_islamic_studies(" in script
+    assert ".run(benchmarks.aexams_physics(" in script
+    assert ".run(benchmarks.aexams_science(" in script
+    assert ".run(benchmarks.aexams_social(" in script
     assert ".run(benchmarks.anli_r1(" in script
     assert ".run(benchmarks.anli_r2(" in script
     assert ".run(benchmarks.anli_r3(" in script

@@ -22,7 +22,15 @@ def test_package_import() -> None:
 
 
 def test_package_exports_benchmarks_namespace() -> None:
+    assert evalution.benchmarks.AEXAMS is not None
+    assert evalution.benchmarks.AEXAMS_SUBJECTS
     assert evalution.benchmarks.AIME is not None
+    assert callable(evalution.benchmarks.aexams)
+    assert callable(evalution.benchmarks.aexams_biology)
+    assert callable(evalution.benchmarks.aexams_islamic_studies)
+    assert callable(evalution.benchmarks.aexams_physics)
+    assert callable(evalution.benchmarks.aexams_science)
+    assert callable(evalution.benchmarks.aexams_social)
     assert callable(evalution.benchmarks.aime)
     assert callable(evalution.benchmarks.aime24)
     assert callable(evalution.benchmarks.aime25)

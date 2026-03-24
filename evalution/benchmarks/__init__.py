@@ -4,6 +4,7 @@
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
 from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
+from .aexams import AEXAMS, AEXAMS_SUBJECTS, aexams, aexams_biology, aexams_islamic_studies, aexams_physics, aexams_science, aexams_social
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
 from .aime import AIME, aime, aime24, aime25
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
@@ -96,6 +97,8 @@ from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinogr
 __all__ = [
     "ANLI",
     "AIME",
+    "AEXAMS",
+    "AEXAMS_SUBJECTS",
     "ARCEasy",
     "ARCChallenge",
     "COPAArabic",
@@ -174,6 +177,12 @@ __all__ = [
     "aime",
     "aime24",
     "aime25",
+    "aexams",
+    "aexams_biology",
+    "aexams_islamic_studies",
+    "aexams_physics",
+    "aexams_science",
+    "aexams_social",
     "anli_r1",
     "anli_r2",
     "anli_r3",

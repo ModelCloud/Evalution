@@ -28,7 +28,12 @@ LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE = os.environ.get(
 )
 SCORE_BASELINE_ABS_TOLERANCE = 2 / 128
 SCORE_BASELINE_ABS_TOLERANCE_32 = 2 / 32
+SCORE_BASELINE_ABS_TOLERANCE_35 = 2 / 35
+SCORE_BASELINE_ABS_TOLERANCE_42 = 2 / 42
+SCORE_BASELINE_ABS_TOLERANCE_73 = 2 / 73
 SCORE_BASELINE_ABS_TOLERANCE_89 = 2 / 89
+SCORE_BASELINE_ABS_TOLERANCE_115 = 2 / 115
+SCORE_BASELINE_ABS_TOLERANCE_272 = 2 / 272
 MMLU_STEM_SUBSETS = {
     "stem.abstract_algebra",
     "stem.anatomy",
@@ -58,6 +63,13 @@ MMLU_PRO_STEM_SUBSETS = {
     "stem.math",
     "stem.physics",
 }
+AEXAMS_TASKS = (
+    "aexams_biology",
+    "aexams_islamic_studies",
+    "aexams_physics",
+    "aexams_science",
+    "aexams_social",
+)
 AIME_TASKS = ("aime", "aime24", "aime25")
 ALGHAFA_TASKS = ("copa_ar", "piqa_ar")
 ARITHMETIC_TASKS = (
@@ -1352,6 +1364,121 @@ SUITE_SPECS = {
         expected_sample_count=128,
         sample_validator=_assert_asdiv_cot_llama_sample,
         result_validator=_validate_gsm8k_like_result,
+    ),
+    "aexams_biology": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_biology(batch_size=24),
+        expected_name="aexams_biology",
+        baseline={"acc,ll": 0.34285714285714286, "acc,ll_avg": 0.34285714285714286},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "Biology",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=35,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"biology"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_35,
+    ),
+    "aexams_islamic_studies": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_islamic_studies(batch_size=24),
+        expected_name="aexams_islamic_studies",
+        baseline={"acc,ll": 0.4246575342465753, "acc,ll_avg": 0.4246575342465753},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "IslamicStudies",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=73,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"islamic_studies"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_73,
+    ),
+    "aexams_physics": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_physics(batch_size=24),
+        expected_name="aexams_physics",
+        baseline={"acc,ll": 0.2857142857142857, "acc,ll_avg": 0.2857142857142857},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "Physics",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=42,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"physics"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_42,
+    ),
+    "aexams_science": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_science(batch_size=24),
+        expected_name="aexams_science",
+        baseline={"acc,ll": 0.34782608695652173, "acc,ll_avg": 0.34782608695652173},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "Science",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=115,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"science"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_115,
+    ),
+    "aexams_social": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_social(batch_size=24),
+        expected_name="aexams_social",
+        baseline={"acc,ll": 0.29044117647058826, "acc,ll_avg": 0.29044117647058826},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "Social",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=272,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"social"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_272,
     ),
     "babi": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.babi(

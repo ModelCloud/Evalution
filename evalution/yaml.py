@@ -22,6 +22,11 @@ _ENGINE_FACTORIES: dict[str, Any] = {
     "transformerscompat": TransformersCompat,
 }
 _TEST_FACTORIES: dict[str, Any] = {
+    "aexams_biology": benchmarks.aexams_biology,
+    "aexams_islamic_studies": benchmarks.aexams_islamic_studies,
+    "aexams_physics": benchmarks.aexams_physics,
+    "aexams_science": benchmarks.aexams_science,
+    "aexams_social": benchmarks.aexams_social,
     "aime": benchmarks.aime,
     "aime24": benchmarks.aime24,
     "aime25": benchmarks.aime25,

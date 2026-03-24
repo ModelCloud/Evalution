@@ -1,7 +1,6 @@
 family,yaml_file_count,example_1,example_2
 aclue,16,aclue/aclue_ancient_chinese_culture.yaml,aclue/aclue_ancient_literature.yaml
 acpbench,30,acpbench/boolq_cot_2shot/act_reach.yaml,acpbench/boolq_cot_2shot/app.yaml
-aexams,6,aexams/aexams_Biology.yaml,aexams/aexams_IslamicStudies.yaml
 afrimgsm,369,afrimgsm/direct/afrimgsm.yaml,afrimgsm/direct/prompt_1/afrimgsm_amh.yaml
 afrimmlu,177,afrimmlu/direct/afrimmlu.yaml,afrimmlu/direct/prompt_1/afrimmlu_direct_amh.yaml
 afrixnli,265,afrixnli/anli prompt/en-direct/afrixnli_en_direct_amh.yaml,afrixnli/anli prompt/en-direct/afrixnli_en_direct_eng.yaml

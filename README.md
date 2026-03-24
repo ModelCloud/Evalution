@@ -215,6 +215,11 @@ logic, those implementation details can shift results.
 
 | Suite | Scoring | Original benchmark |
 | --- | --- | --- |
+| `aexams_biology` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
+| `aexams_islamic_studies` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
+| `aexams_physics` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
+| `aexams_science` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
+| `aexams_social` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
 | `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
 | `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
 | `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
@@ -394,6 +399,7 @@ original benchmark papers below.
 
 The current built-in suite coverage maps to these benchmark citations:
 
+- `aexams_biology`, `aexams_islamic_studies`, `aexams_physics`, `aexams_science`, `aexams_social`: EXAMS `hardalov-etal-2020-exams`
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
@@ -448,6 +454,17 @@ The current built-in suite coverage maps to these benchmark citations:
 - `xwinograd_en`, `xwinograd_fr`, `xwinograd_jp`, `xwinograd_pt`, `xwinograd_ru`, `xwinograd_zh`: XWinograd `tikhonov2021heads`
 
 ```bibtex
+
+# EXAMS
+@inproceedings{hardalov-etal-2020-exams,
+  title = {EXAMS: A Multi-Subject High School Examinations Dataset for Cross-Lingual and Multilingual Question Answering},
+  author = {Momchil Hardalov and Todor Mihaylov and Vassil Momchev and Pepa Atanasova and Preslav Nakov and Iryna Gurevych},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year = {2020},
+  pages = {3407--3414},
+  url = {https://aclanthology.org/2020.emnlp-main.438/},
+  doi = {10.18653/v1/2020.emnlp-main.438},
+}
 
 # AIME
 @dataset{aime_1983_2024,
