@@ -32,6 +32,7 @@ SCORE_BASELINE_ABS_TOLERANCE_35 = 2 / 35
 SCORE_BASELINE_ABS_TOLERANCE_42 = 2 / 42
 SCORE_BASELINE_ABS_TOLERANCE_73 = 2 / 73
 SCORE_BASELINE_ABS_TOLERANCE_89 = 2 / 89
+SCORE_BASELINE_ABS_TOLERANCE_104 = 2 / 104
 SCORE_BASELINE_ABS_TOLERANCE_115 = 2 / 115
 SCORE_BASELINE_ABS_TOLERANCE_272 = 2 / 272
 MMLU_STEM_SUBSETS = {
@@ -1505,6 +1506,12 @@ def _metadata_kobest_subset(subset: str) -> Callable[[dict[str, Any]], None]:
 
 def _metadata_sentence_has_blank(metadata: dict[str, Any]) -> None:
     assert " _ " in metadata["sentence"]
+
+
+def _metadata_has_wsc_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["noun"]
+    assert metadata["pronoun"]
+    assert isinstance(metadata["span2_index"], int)
 
 
 def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
@@ -5782,6 +5789,34 @@ SUITE_SPECS = {
             index,
             metadata_validator=_metadata_has_choice_labels(exact_count=2),
         ),
+    ),
+    "wsc": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.wsc(batch_size=24, stream=True, max_rows=128),
+        expected_name="wsc",
+        baseline={
+            "acc,ll": 0.36538461538461536,
+            "acc,ll_avg": 0.36538461538461536,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "super_glue",
+            "dataset_name": "wsc.fixed",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "order": "native",
+        },
+        expected_sample_count=104,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"yes", "no"},
+            prediction_values={"yes", "no"},
+            prompt_prefix="Passage: ",
+            prompt_substrings=("does the pronoun", "\nAnswer:"),
+            metadata_validator=_metadata_has_wsc_fields,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_104,
     ),
     "wnli": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wnli(batch_size=24, stream=True, max_rows=71),

@@ -146,6 +146,7 @@ from .wikitext import WikiText, wikitext
 from . import wmdp as _wmdp_module
 from .wmdp import WMDP, WMDP_SUBSETS, WMDP_TASKS, wmdp
 from .winogender import WinoGender, winogender, winogender_all, winogender_female, winogender_gotcha, winogender_gotcha_female, winogender_gotcha_male, winogender_male, winogender_neutral
+from .wsc import WSC, wsc
 from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
@@ -401,6 +402,7 @@ __all__ = [
     "WMDP_SUBSETS",
     "WMDP_TASKS",
     "WinoGender",
+    "WSC",
     "WSC273",
     "WNLI",
     "WinoGrande",
@@ -610,6 +612,7 @@ __all__ = [
     "winogender_gotcha_male",
     "winogender_male",
     "winogender_neutral",
+    "wsc",
     "wsc273",
     "wnli",
     "winogrande",

@@ -117,6 +117,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `wikitext.WikiText` | `EleutherAI/wikitext_document_level` | `wikitext-2-raw-v1` | `test` | none |
 | `winogender.WinoGender` | `oskarvanderwal/winogender` | `all` | `test` | none |
 | `winogrande.WinoGrande` | `winogrande` | `winogrande_xl` | `validation` | none |
+| `wsc.WSC` | `super_glue` | `wsc.fixed` | `validation` | none |
 | `wnli.WNLI` | `nyu-mll/glue` | `wnli` | `validation` | none |
 | `wsc273.WSC273` | `winograd_wsc` | `wsc273` | `test` | none |
 | `xcopa.XCOPA` | `xcopa` | `it` | `test` | none |
