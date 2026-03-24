@@ -60,9 +60,9 @@ def _load_mathqa_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Dataset:
-    del streaming
+    del stream
     if dataset_path != "math_qa":
         raise ValueError(f"unsupported MathQA dataset path: {dataset_path!r}")
 
@@ -82,7 +82,7 @@ class MathQA(BaseMultipleChoiceSuite):
     dataset_path: str = "math_qa"
     # Align the default split with current benchmark-style harness usage.
     split: str = "test"
-    streaming: bool = False
+    stream: bool = False
 
     def dataset_loader(self) -> Any:
         return _load_mathqa_dataset

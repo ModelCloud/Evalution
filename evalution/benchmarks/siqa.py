@@ -57,9 +57,9 @@ def _load_social_iqa_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Dataset:
-    del streaming
+    del stream
     if dataset_path != "allenai/social_i_qa":
         raise ValueError(f"unsupported Social IQA dataset path: {dataset_path!r}")
 
@@ -85,7 +85,7 @@ def _load_social_iqa_dataset(
 class SIQA(BaseMultipleChoiceSuite):
     dataset_path: str = "allenai/social_i_qa"
     split: str = "validation"
-    streaming: bool = False
+    stream: bool = False
 
     def dataset_loader(self) -> Any:
         return _load_social_iqa_dataset

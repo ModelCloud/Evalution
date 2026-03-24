@@ -33,7 +33,7 @@ class Pile10K(BaseRollingPerplexitySuite):
     max_rows: int | None = 10_000
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = True
+    stream: bool = True
 
     def dataset_loader(self) -> Any:
         return load_dataset

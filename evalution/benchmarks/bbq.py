@@ -37,7 +37,7 @@ def _load_bbq_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Any:
     if dataset_path != "heegyu/bbq":
         raise ValueError(f"unsupported BBQ dataset path: {dataset_path!r}")
@@ -57,7 +57,7 @@ def _load_bbq_dataset(
         data_files={split: data_file},
         split=split,
         cache_dir=cache_dir,
-        streaming=streaming,
+        streaming=stream,
     )
 
 

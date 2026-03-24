@@ -25,7 +25,7 @@ def _load_prost_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Any:
     if dataset_path != "corypaik/prost":
         raise ValueError(f"unsupported PROST dataset path: {dataset_path!r}")
@@ -36,7 +36,7 @@ def _load_prost_dataset(
         data_files={split: _PROST_DATA_URL},
         split=split,
         cache_dir=cache_dir,
-        streaming=streaming,
+        streaming=stream,
     )
 
 
@@ -45,7 +45,7 @@ class Prost(BaseMultipleChoiceSuite):
     # Score PROST by ranking the answer text choices after the zero-shot prompt stem.
     dataset_path: str = "corypaik/prost"
     split: str = "test"
-    streaming: bool = False
+    stream: bool = False
 
     def dataset_loader(self) -> Any:
         return _load_prost_dataset

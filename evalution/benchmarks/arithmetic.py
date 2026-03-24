@@ -40,7 +40,7 @@ def _load_arithmetic_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Any:
     if dataset_path != "EleutherAI/arithmetic":
         raise ValueError(f"unsupported arithmetic dataset path: {dataset_path!r}")
@@ -62,7 +62,7 @@ def _load_arithmetic_dataset(
         data_files={split: file_path},
         split=split,
         cache_dir=cache_dir,
-        streaming=streaming,
+        streaming=stream,
     )
 
 

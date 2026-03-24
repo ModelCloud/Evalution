@@ -33,7 +33,7 @@ class C4(BaseRollingPerplexitySuite):
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = True
+    stream: bool = True
 
     def dataset_loader(self) -> Any:
         return load_dataset

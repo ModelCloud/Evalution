@@ -34,7 +34,7 @@ def _load_mc_taco_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Any:
     if dataset_path != "CogComp/mc_taco":
         raise ValueError(f"unsupported MC-TACO dataset path: {dataset_path!r}")
@@ -48,7 +48,7 @@ def _load_mc_taco_dataset(
         column_names=_MC_TACO_COLUMNS,
         split=split,
         cache_dir=cache_dir,
-        streaming=streaming,
+        streaming=stream,
     )
 
 

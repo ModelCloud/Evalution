@@ -76,7 +76,7 @@ def _load_aexams_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Dataset:
     del cache_dir
     if dataset_path != "Hennara/aexams":
@@ -85,8 +85,8 @@ def _load_aexams_dataset(
         raise ValueError("AEXAMS dataset_name is required")
     if split not in {"test", "dev"}:
         raise ValueError(f"unsupported AEXAMS split: {split!r}")
-    if streaming:
-        raise ValueError("AEXAMS raw zip loader requires non-streaming dataset materialization")
+    if stream:
+        raise ValueError("AEXAMS raw zip loader requires non-stream dataset materialization")
     return Dataset.from_list(list(_aexams_rows(dataset_name, split)))
 
 
@@ -103,7 +103,7 @@ class AEXAMS(BaseMultipleChoiceSuite):
     dataset_path: str = "Hennara/aexams"
     dataset_name: str | None = None
     split: str = "test"
-    streaming: bool = False
+    stream: bool = False
     subject: str = ""
 
     def __post_init__(self) -> None:

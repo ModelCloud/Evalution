@@ -32,7 +32,7 @@ class WMDP(BaseMultipleChoiceSuite):
     dataset_name: str | None = None
     split: str = "bio"
     subset: str = "bio"
-    streaming: bool = False
+    stream: bool = False
 
     def __post_init__(self) -> None:
         if self.subset not in WMDP_SUBSETS:
