@@ -26,7 +26,7 @@ _GSM8K_PLATINUM_SUITE_KWARGS = {
     "apply_chat_template": True,
     "batch_size": 24,
     "max_new_tokens": 96,
-    "streaming": True,
+    "stream": True,
     "max_rows": 128,
 }
 _REPO_ROOT = Path(__file__).resolve().parents[2]

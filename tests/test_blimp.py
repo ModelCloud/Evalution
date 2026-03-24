@@ -82,7 +82,7 @@ def test_blimp_scores_sentence_pairs(monkeypatch) -> None:
         "dataset_path": "blimp",
         "dataset_name": "adjunct_island",
         "split": "train",
-        "streaming": False,
+        "stream": False,
         "scoring_mode": "multiple_choice_loglikelihood",
         "prompt_variant": "full_sentence_pair",
     }

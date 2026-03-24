@@ -96,7 +96,7 @@ def test_lambada_scores_single_continuation_loglikelihood(
         "dataset_path": expected_dataset_path,
         "dataset_name": expected_dataset_name,
         "split": "test",
-        "streaming": False,
+        "stream": False,
         "scoring_mode": "single_continuation_loglikelihood",
     }
 

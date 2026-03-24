@@ -88,7 +88,7 @@ def test_asdiv_scores_single_continuation_loglikelihood_without_prefix_space(mon
         "dataset_path": "EleutherAI/asdiv",
         "dataset_name": None,
         "split": "validation",
-        "streaming": False,
+        "stream": False,
         "scoring_mode": "single_continuation_loglikelihood",
     }
 
@@ -144,7 +144,7 @@ def test_asdiv_cot_llama_scores_numeric_generation_with_chat_fewshots(monkeypatc
         "dataset_path": "EleutherAI/asdiv",
         "dataset_name": None,
         "split": "validation",
-        "streaming": False,
+        "stream": False,
         "generation_submission_mode": "fixed_batches",
         "variant": "cot_llama",
         "num_fewshot": 8,

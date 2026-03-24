@@ -56,7 +56,7 @@ def test_aime_scores_boxed_math_exact_match(monkeypatch) -> None:
         "dataset_path": "gneubig/aime-1983-2024",
         "dataset_name": None,
         "split": "train",
-        "streaming": False,
+        "stream": False,
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_math_exact_match",
         "primary_metric": "em",

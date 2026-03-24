@@ -76,7 +76,7 @@ def test_mc_taco_loader_reads_raw_tsv_via_csv_builder() -> None:
     dataset = mc_taco_module._load_mc_taco_dataset(
         "CogComp/mc_taco",
         split="validation",
-        streaming=False,
+        stream=False,
     )
 
     first = dataset[0]

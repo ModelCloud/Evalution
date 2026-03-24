@@ -75,7 +75,7 @@ def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
         "dataset_path": "allenai/ai2_arc",
         "dataset_name": "ARC-Challenge",
         "split": "test",
-        "streaming": False,
+        "stream": False,
         "scoring_mode": "multiple_choice_exam_score",
         "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
     }
@@ -141,7 +141,7 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
     suite = evalution.benchmarks.arc_challenge(
         max_rows=1,
         batch_size=7,
-        streaming=True,
+        stream=True,
     )
     session = FakeSession(
         [
@@ -153,7 +153,7 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
     )
     result = suite.evaluate(session)
 
-    assert result.metadata["streaming"] is True
+    assert result.metadata["stream"] is True
     assert calls
     assert calls[0]["streaming"] is True
 

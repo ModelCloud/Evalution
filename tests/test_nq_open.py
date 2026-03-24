@@ -50,7 +50,7 @@ def test_nq_open_scores_best_alias(monkeypatch) -> None:
         "dataset_path": "nq_open",
         "dataset_name": "nq_open",
         "split": "validation",
-        "streaming": False,
+        "stream": False,
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_qa_exact_match_f1",
         "primary_metric": "f1",

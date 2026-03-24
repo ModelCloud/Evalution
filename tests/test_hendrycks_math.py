@@ -55,7 +55,7 @@ def test_hendrycks_math_scores_boxed_answer_exact_match(monkeypatch) -> None:
         "dataset_path": "EleutherAI/hendrycks_math",
         "dataset_name": "algebra",
         "split": "test",
-        "streaming": False,
+        "stream": False,
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_math_exact_match",
         "primary_metric": "em",

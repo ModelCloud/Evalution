@@ -47,7 +47,7 @@ def test_pile_10k_scores_weighted_perplexity_metrics(monkeypatch) -> None:
         "dataset_path": "monology/pile-uncopyrighted",
         "dataset_name": None,
         "split": "train",
-        "streaming": True,
+        "stream": True,
         "scoring_mode": "rolling_loglikelihood_perplexity",
         "primary_metric": "word_perplexity",
     }

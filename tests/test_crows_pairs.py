@@ -98,7 +98,7 @@ def test_crows_pairs_scores_full_and_filtered_variants(monkeypatch) -> None:
         "dataset_path": "jannalu/crows_pairs_multilingual",
         "dataset_name": "english",
         "split": "test",
-        "streaming": False,
+        "stream": False,
         "language": "english",
         "bias_type": None,
         "scoring_mode": "pairwise_sentence_loglikelihood_bias_preference",

@@ -382,7 +382,7 @@ def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> No
     suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
-        streaming=True,
+        stream=True,
     )
     session = FakeSession(["The answer is 42."])
     result = suite.evaluate(session)
@@ -464,7 +464,7 @@ def test_gsm8k_platinum_prefetches_remaining_streaming_batches_on_background_thr
     suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
-        streaming=True,
+        stream=True,
     )
     session = PreparingFakeSession(
         ["The answer is 42."] * 260,
@@ -501,7 +501,7 @@ def test_gsm8k_platinum_streaming_prefetch_and_generation_respect_resolved_batch
     suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
-        streaming=True,
+        stream=True,
     )
     max_batch_size = 32
     session = PreparingFakeSession(
@@ -538,7 +538,7 @@ def test_gsm8k_platinum_streaming_uses_continuous_generation_to_refill_slots(
     suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
-        streaming=True,
+        stream=True,
     )
     max_batch_size = 32
     session = ContinuousPreparingFakeSession(
@@ -578,7 +578,7 @@ def test_gsm8k_platinum_skips_auto_batch_preview_when_suite_batch_size_is_fixed(
     suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=False,
-        streaming=True,
+        stream=True,
         batch_size=24,
     )
     session = ContinuousPreparingFakeSession(["The answer is 42."] * 300)
