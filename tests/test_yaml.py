@@ -124,6 +124,42 @@ tests:
     max_rows: 18
   - type: aexams_social
     max_rows: 18
+  - type: afrixnli_amh
+    max_rows: 16
+  - type: afrixnli_eng
+    max_rows: 16
+  - type: afrixnli_ewe
+    max_rows: 16
+  - type: afrixnli_fra
+    max_rows: 16
+  - type: afrixnli_hau
+    max_rows: 16
+  - type: afrixnli_ibo
+    max_rows: 16
+  - type: afrixnli_kin
+    max_rows: 16
+  - type: afrixnli_lin
+    max_rows: 16
+  - type: afrixnli_lug
+    max_rows: 16
+  - type: afrixnli_orm
+    max_rows: 16
+  - type: afrixnli_sna
+    max_rows: 16
+  - type: afrixnli_sot
+    max_rows: 16
+  - type: afrixnli_swa
+    max_rows: 16
+  - type: afrixnli_twi
+    max_rows: 16
+  - type: afrixnli_wol
+    max_rows: 16
+  - type: afrixnli_xho
+    max_rows: 16
+  - type: afrixnli_yor
+    max_rows: 16
+  - type: afrixnli_zul
+    max_rows: 16
   - type: anli_r1
     max_rows: 18
   - type: anli_r2
@@ -376,6 +412,24 @@ tests:
     assert ".run(benchmarks.aexams_physics(" in script
     assert ".run(benchmarks.aexams_science(" in script
     assert ".run(benchmarks.aexams_social(" in script
+    assert ".run(benchmarks.afrixnli_amh(" in script
+    assert ".run(benchmarks.afrixnli_eng(" in script
+    assert ".run(benchmarks.afrixnli_ewe(" in script
+    assert ".run(benchmarks.afrixnli_fra(" in script
+    assert ".run(benchmarks.afrixnli_hau(" in script
+    assert ".run(benchmarks.afrixnli_ibo(" in script
+    assert ".run(benchmarks.afrixnli_kin(" in script
+    assert ".run(benchmarks.afrixnli_lin(" in script
+    assert ".run(benchmarks.afrixnli_lug(" in script
+    assert ".run(benchmarks.afrixnli_orm(" in script
+    assert ".run(benchmarks.afrixnli_sna(" in script
+    assert ".run(benchmarks.afrixnli_sot(" in script
+    assert ".run(benchmarks.afrixnli_swa(" in script
+    assert ".run(benchmarks.afrixnli_twi(" in script
+    assert ".run(benchmarks.afrixnli_wol(" in script
+    assert ".run(benchmarks.afrixnli_xho(" in script
+    assert ".run(benchmarks.afrixnli_yor(" in script
+    assert ".run(benchmarks.afrixnli_zul(" in script
     assert ".run(benchmarks.anli_r1(" in script
     assert ".run(benchmarks.anli_r2(" in script
     assert ".run(benchmarks.anli_r3(" in script

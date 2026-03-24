@@ -24,6 +24,9 @@ def test_package_import() -> None:
 def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.AEXAMS is not None
     assert evalution.benchmarks.AEXAMS_SUBJECTS
+    assert evalution.benchmarks.AfriXNLI is not None
+    assert evalution.benchmarks.AFRIXNLI_LANGUAGES
+    assert evalution.benchmarks.AFRIXNLI_TASKS
     assert evalution.benchmarks.AIME is not None
     assert callable(evalution.benchmarks.aexams)
     assert callable(evalution.benchmarks.aexams_biology)
@@ -31,6 +34,25 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.aexams_physics)
     assert callable(evalution.benchmarks.aexams_science)
     assert callable(evalution.benchmarks.aexams_social)
+    assert callable(evalution.benchmarks.afrixnli)
+    assert callable(evalution.benchmarks.afrixnli_amh)
+    assert callable(evalution.benchmarks.afrixnli_eng)
+    assert callable(evalution.benchmarks.afrixnli_ewe)
+    assert callable(evalution.benchmarks.afrixnli_fra)
+    assert callable(evalution.benchmarks.afrixnli_hau)
+    assert callable(evalution.benchmarks.afrixnli_ibo)
+    assert callable(evalution.benchmarks.afrixnli_kin)
+    assert callable(evalution.benchmarks.afrixnli_lin)
+    assert callable(evalution.benchmarks.afrixnli_lug)
+    assert callable(evalution.benchmarks.afrixnli_orm)
+    assert callable(evalution.benchmarks.afrixnli_sna)
+    assert callable(evalution.benchmarks.afrixnli_sot)
+    assert callable(evalution.benchmarks.afrixnli_swa)
+    assert callable(evalution.benchmarks.afrixnli_twi)
+    assert callable(evalution.benchmarks.afrixnli_wol)
+    assert callable(evalution.benchmarks.afrixnli_xho)
+    assert callable(evalution.benchmarks.afrixnli_yor)
+    assert callable(evalution.benchmarks.afrixnli_zul)
     assert callable(evalution.benchmarks.aime)
     assert callable(evalution.benchmarks.aime24)
     assert callable(evalution.benchmarks.aime25)

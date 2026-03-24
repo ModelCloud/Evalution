@@ -5,6 +5,7 @@
 
 from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
 from .aexams import AEXAMS, AEXAMS_SUBJECTS, aexams, aexams_biology, aexams_islamic_studies, aexams_physics, aexams_science, aexams_social
+from .afrixnli import AFRIXNLI_LANGUAGES, AFRIXNLI_TASKS, AfriXNLI, afrixnli, afrixnli_amh, afrixnli_eng, afrixnli_ewe, afrixnli_fra, afrixnli_hau, afrixnli_ibo, afrixnli_kin, afrixnli_lin, afrixnli_lug, afrixnli_orm, afrixnli_sna, afrixnli_sot, afrixnli_swa, afrixnli_twi, afrixnli_wol, afrixnli_xho, afrixnli_yor, afrixnli_zul
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
 from .aime import AIME, aime, aime24, aime25
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
@@ -119,6 +120,9 @@ __all__ = [
     "AIME",
     "AEXAMS",
     "AEXAMS_SUBJECTS",
+    "AFRIXNLI_LANGUAGES",
+    "AFRIXNLI_TASKS",
+    "AfriXNLI",
     "ARCEasy",
     "ARCChallenge",
     "COPAArabic",
@@ -215,6 +219,25 @@ __all__ = [
     "aexams_physics",
     "aexams_science",
     "aexams_social",
+    "afrixnli",
+    "afrixnli_amh",
+    "afrixnli_eng",
+    "afrixnli_ewe",
+    "afrixnli_fra",
+    "afrixnli_hau",
+    "afrixnli_ibo",
+    "afrixnli_kin",
+    "afrixnli_lin",
+    "afrixnli_lug",
+    "afrixnli_orm",
+    "afrixnli_sna",
+    "afrixnli_sot",
+    "afrixnli_swa",
+    "afrixnli_twi",
+    "afrixnli_wol",
+    "afrixnli_xho",
+    "afrixnli_yor",
+    "afrixnli_zul",
     "anli_r1",
     "anli_r2",
     "anli_r3",

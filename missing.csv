@@ -3,7 +3,6 @@ aclue,16,aclue/aclue_ancient_chinese_culture.yaml,aclue/aclue_ancient_literature
 acpbench,30,acpbench/boolq_cot_2shot/act_reach.yaml,acpbench/boolq_cot_2shot/app.yaml
 afrimgsm,369,afrimgsm/direct/afrimgsm.yaml,afrimgsm/direct/prompt_1/afrimgsm_amh.yaml
 afrimmlu,177,afrimmlu/direct/afrimmlu.yaml,afrimmlu/direct/prompt_1/afrimmlu_direct_amh.yaml
-afrixnli,265,afrixnli/anli prompt/en-direct/afrixnli_en_direct_amh.yaml,afrixnli/anli prompt/en-direct/afrixnli_en_direct_eng.yaml
 afrobench,1818,afrobench/adr/afridiacritics.yaml,afrobench/adr/prompt_1/afridiacritics_bbj.yaml
 agieval,25,agieval/agieval.yaml,agieval/agieval_cn.yaml
 arab_culture,18,arab_culture/arab_culture_algeria.yaml,arab_culture/arab_culture_egypt.yaml

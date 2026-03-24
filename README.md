@@ -219,6 +219,7 @@ logic, those implementation details can shift results.
 | `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
 | `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
 | `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
+| `afrixnli` | Three-way NLI multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` language subsets, raw + length-normalized accuracy | IrokoBench AfriXNLI `adelani2025irokobench` |
 | `anli_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
@@ -364,6 +365,7 @@ original benchmark papers below.
 The current built-in suite coverage maps to these benchmark citations:
 
 - `aexams_biology`, `aexams_islamic_studies`, `aexams_physics`, `aexams_science`, `aexams_social`: EXAMS `hardalov-etal-2020-exams`
+- `afrixnli_amh`, `afrixnli_eng`, `afrixnli_ewe`, `afrixnli_fra`, `afrixnli_hau`, `afrixnli_ibo`, `afrixnli_kin`, `afrixnli_lin`, `afrixnli_lug`, `afrixnli_orm`, `afrixnli_sna`, `afrixnli_sot`, `afrixnli_swa`, `afrixnli_twi`, `afrixnli_wol`, `afrixnli_xho`, `afrixnli_yor`, `afrixnli_zul`: IrokoBench AfriXNLI `adelani2025irokobench`
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
@@ -764,6 +766,16 @@ The current built-in suite coverage maps to these benchmark citations:
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
   url = {https://arxiv.org/abs/2204.04541},
+}
+
+# IrokoBench
+@inproceedings{adelani2025irokobench,
+  title = {IrokoBench: A New Benchmark for African Languages in the Age of Large Language Models},
+  author = {David Ifeoluwa Adelani and Jessica Ojo and Israel Abebe Azime and Jian Yun Zhuang and Jesujoba O. Alabi and others},
+  booktitle = {Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies},
+  pages = {2732--2757},
+  year = {2025},
+  url = {https://aclanthology.org/2025.naacl-long.139/},
 }
 
 # LAMBADA

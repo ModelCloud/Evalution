@@ -110,6 +110,12 @@ XCOPA_TASKS = (
     "xcopa_vi",
     "xcopa_zh",
 )
+AFRIXNLI_TASKS = (
+    "afrixnli_amh",
+    "afrixnli_eng",
+    "afrixnli_fra",
+    "afrixnli_swa",
+)
 XWINOGRAD_TASKS = (
     "xwinograd_en",
     "xwinograd_fr",
@@ -1127,6 +1133,16 @@ def _metadata_ceval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_afrixnli_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["premise"]
+        assert metadata["hypothesis"]
+        assert metadata["choice_texts"] == ["entailment", "neutral", "contradiction"]
+
+    return validate
+
+
 def _metadata_kobest_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -1301,6 +1317,44 @@ def _xcopa_suite_spec(
             ),
             metadata_validator=_metadata_language_and_idx(language),
         ),
+    )
+
+
+def _afrixnli_suite_spec(
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.afrixnli(
+            language=language,
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name=f"afrixnli_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "masakhane/afrixnli",
+            "dataset_name": language,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"entailment", "neutral", "contradiction"},
+            prediction_values={"entailment", "neutral", "contradiction"},
+            prompt_substrings=(
+                "Premise: ",
+                "\nHypothesis: ",
+                "\nQuestion: What is the relationship between the premise and hypothesis: entailment, neutral, or contradiction?\nAnswer:",
+            ),
+            metadata_validator=_metadata_afrixnli_language(language),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
 
 
@@ -4390,6 +4444,17 @@ for _subset, _baseline, _sample_count in (
         subset=_subset,
         baseline=_baseline,
         expected_sample_count=_sample_count,
+    )
+
+for _language, _baseline in {
+    "amh": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "eng": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "fra": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "swa": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+}.items():
+    SUITE_SPECS[f"afrixnli_{_language}"] = _afrixnli_suite_spec(
+        language=_language,
+        baseline=_baseline,
     )
 
 for _task_name, _baseline in {
