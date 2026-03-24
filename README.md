@@ -277,6 +277,7 @@ logic, those implementation details can shift results.
 | `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
 | `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
 | `careqa` | Multiple-choice log-likelihood across supported closed-ended healthcare QA subsets `en/es`, raw + length-normalized accuracy | CareQA `arias-duart-etal-2025-automatic` |
+| `cabbq` | Multiple-choice log-likelihood across Catalan BBQ bias categories, raw + length-normalized accuracy | CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
@@ -428,6 +429,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `blimp`: BLiMP `warstadt2020blimp`
 - `c4`: C4 `raffel2020exploring`
 - `careqa_en`, `careqa_es`: CareQA `arias-duart-etal-2025-automatic`
+- `cabbq_<category>` for the built-in Catalan BBQ categories: CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan`
 - `ceval`: C-Eval `huang2023ceval`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
@@ -714,6 +716,17 @@ The current built-in suite coverage maps to these benchmark citations:
   booktitle = {Proceedings of the 2025 Conference of the North American Chapter of the Association for Computational Linguistics},
   year = {2025},
   url = {https://arxiv.org/abs/2502.06666},
+}
+
+# CaBBQ / EsBBQ
+@misc{ruizfernández2025esbbqcabbqspanishcatalan,
+  title = {EsBBQ and CaBBQ: The Spanish and Catalan Bias Benchmarks for Question Answering},
+  author = {Valle Ruiz-Fernández and Mario Mina and Júlia Falcão and Luis Vasquez-Reina and Anna Sallés and Aitor Gonzalez-Agirre and Olatz Perez-de-Viñaspre},
+  year = {2025},
+  eprint = {2507.11216},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2507.11216},
 }
 
 # ASDiv

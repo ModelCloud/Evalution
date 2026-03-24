@@ -108,6 +108,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.careqa)
     assert callable(evalution.benchmarks.careqa_en)
     assert callable(evalution.benchmarks.careqa_es)
+    assert evalution.benchmarks.CaBBQ is not None
+    assert evalution.benchmarks.CABBQ_CATEGORIES
+    assert evalution.benchmarks.CABBQ_TASKS
+    assert callable(evalution.benchmarks.cabbq)
+    for factory_name in evalution.benchmarks.CABBQ_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.ARCChallenge is not None
     assert evalution.benchmarks.ARCMT is not None
     assert evalution.benchmarks.ARC_MT_LANGUAGES

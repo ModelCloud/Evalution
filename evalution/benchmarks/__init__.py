@@ -45,6 +45,8 @@ from .belebele import Belebele, belebele
 from .base import BaseTestSuite, TestSuite
 from .blimp import BLiMP, BLIMP_SUBSETS, blimp
 from .c4 import C4, c4
+from . import cabbq as _cabbq_module
+from .cabbq import CABBQ_CATEGORIES, CABBQ_TASKS, CaBBQ, cabbq
 from .ceval import CEVAL_SUBSETS, CEval, ceval
 from .careqa import CAREQA_CONFIGS, CAREQA_TASKS, CareQA, careqa, careqa_en, careqa_es
 from .boolq import BoolQ, boolq
@@ -167,6 +169,11 @@ for _eus_exams_task in EUS_EXAMS_TASKS:
 
 del _eus_exams_task
 
+for _cabbq_task in CABBQ_TASKS:
+    globals()[_cabbq_task] = getattr(_cabbq_module, _cabbq_task)
+
+del _cabbq_task
+
 for _afrimmlu_task in AFRIMMLU_TASKS:
     globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
 
@@ -235,7 +242,10 @@ __all__ = [
     "BaseMultipleChoiceSuite",
     "BaseSingleContinuationSuite",
     "BaseTestSuite",
+    "CABBQ_CATEGORIES",
+    "CABBQ_TASKS",
     "C4",
+    "CaBBQ",
     "CAREQA_CONFIGS",
     "CAREQA_TASKS",
     "CareQA",
@@ -401,6 +411,7 @@ __all__ = [
     "bear_big",
     "belebele",
     "blimp",
+    "cabbq",
     "c4",
     "careqa",
     "careqa_en",
@@ -555,5 +566,6 @@ __all__.extend(DARIJAMMLU_TASKS)
 __all__.extend(EGYMMLU_TASKS)
 __all__.extend(EUS_EXAMS_TASKS)
 __all__.extend(CAREQA_TASKS)
+__all__.extend(CABBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)

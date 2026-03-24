@@ -100,6 +100,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "careqa": benchmarks.careqa,
     "careqa_en": benchmarks.careqa_en,
     "careqa_es": benchmarks.careqa_es,
+    "cabbq": benchmarks.cabbq,
     "ceval": benchmarks.ceval,
     "boolq": benchmarks.boolq,
     "cb": benchmarks.cb,

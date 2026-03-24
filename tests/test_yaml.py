@@ -206,6 +206,11 @@ tests:
     max_rows: 16
   - type: careqa_es
     max_rows: 16
+  - type: cabbq
+    category: Age
+    max_rows: 16
+  - type: cabbq_gender
+    max_rows: 16
   - type: arc_mt
     language: da
     max_rows: 16
@@ -534,6 +539,8 @@ tests:
     assert ".run(benchmarks.eus_exams_eu_opeosakiadmineu(" in script
     assert ".run(benchmarks.careqa(" in script
     assert ".run(benchmarks.careqa_es(" in script
+    assert ".run(benchmarks.cabbq(" in script
+    assert ".run(benchmarks.cabbq_gender(" in script
     assert ".run(benchmarks.arc_mt(" in script
     assert ".run(benchmarks.arc_mt_is(" in script
     assert ".run(benchmarks.asdiv(" in script

@@ -14,7 +14,6 @@ bertaqa,16,bertaqa/bertaqa_en.yaml,bertaqa/bertaqa_en_mt_gemma-7b.yaml
 bhs,25,bhs/basque-DO-S_DO_V_AUX.yaml,bhs/basque-DO-S_IO_DO_V_AUX.yaml
 bigbench,286,bigbench/generate_until/abstract_narrative_understanding.yaml,bigbench/generate_until/anachronisms.yaml
 blimp_nl,85,blimp_nl/adpositional_phrases__argument_r_extraction.yaml,blimp_nl/adpositional_phrases__argument_scrambling.yaml
-cabbq,11,cabbq/cabbq.yaml,cabbq/cabbq_age.yaml
 catalan_bench,43,catalan_bench/arc_ca_challenge.yaml,catalan_bench/arc_ca_easy.yaml
 chartqa,3,chartqa/chartqa.yaml,chartqa/chartqa_llama.yaml
 click,14,click/click.yaml,click/click_cul/click_cul_economy.yaml
