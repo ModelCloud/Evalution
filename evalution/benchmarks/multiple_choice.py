@@ -26,7 +26,7 @@ from evalution.scorers.multiple_choice import (
     normalize_label_permutation_fraction,
 )
 from evalution.benchmarks.base import TestSuite
-from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
+from evalution.benchmarks.data import apply_order, doc_count, limit_docs, load_suite_dataset, normalize_order
 
 
 @dataclass(slots=True)
@@ -48,6 +48,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     # validation-only public evaluation rows or use nonstandard split names, so a blanket test
     # default here would silently change benchmark semantics.
     split: str = "validation"
+    order: str = "native"
+    order_seed: int = 0
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
@@ -79,6 +81,10 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     def continuation_for_choice_label(self, label: str) -> str:
         return f" {label}"
 
+    # Let suites override how prompt/choice payload length is measured for benchmark-level ordering.
+    def order_length(self, sample: MultipleChoiceSample) -> int:
+        return len(sample.prompt) + sum(len(self.continuation_for_choice(choice)) for choice in sample.choices)
+
     # Build the prompt used by the optional label-permutation scorer. The default keeps the original prompt
     # stem, lists labeled options, and asks for just the label. Suites with special semantics can override it.
     def label_prompt(
@@ -103,6 +109,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
+            "order": normalize_order(self.order),
+            "order_seed": self.order_seed,
             "streaming": self.streaming,
             "scoring_mode": "multiple_choice_loglikelihood",
         }
@@ -193,6 +201,7 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     # Execute the shared dataset loading, flattened choice scoring, and accuracy aggregation flow.
     def evaluate(self, session: InferenceSession) -> TestResult:
         task_name = self.task_name()
+        resolved_order = normalize_order(self.order)
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
             self.dataset_loader(),
@@ -205,7 +214,11 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)
-        if not isinstance(docs, list):
+        if resolved_order != "native" and self.streaming and self.max_rows is None:
+            raise ValueError(
+                "benchmark order requires materialized rows; set `max_rows` or disable streaming"
+            )
+        if not isinstance(docs, list) or resolved_order != "native":
             docs = list(docs)
 
         total = doc_count(
@@ -217,6 +230,12 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         logger.info("%s: evaluating %d sample(s)", task_name, total)
 
         samples = [self.build_sample(doc, index=index) for index, doc in enumerate(docs)]
+        samples = apply_order(
+            samples,
+            order=resolved_order,
+            length_key=self.order_length,
+            seed=self.order_seed,
+        )
         requests: list[LoglikelihoodRequest] = []
         request_to_choice: list[tuple[int, int]] = []
         for sample in samples:

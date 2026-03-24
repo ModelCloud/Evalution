@@ -5,11 +5,49 @@
 
 from __future__ import annotations
 
+import random
 from itertools import islice
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from evalution.logbar import get_logger, spinner
+
+T = TypeVar("T")
+
+_ORDER_ALIASES = {
+    "native": "native",
+    "shuffle": "shuffle",
+    "random": "shuffle",
+    "length|asc": "length|asc",
+    "length|desc": "length|desc",
+}
+
+
+def normalize_order(order: str) -> str:
+    normalized = order.strip().lower()
+    try:
+        return _ORDER_ALIASES[normalized]
+    except KeyError as exc:
+        allowed = ", ".join(sorted(_ORDER_ALIASES))
+        raise ValueError(f"unsupported benchmark order: {order!r}; expected one of {allowed}") from exc
+
+
+def apply_order(
+    items: list[T],
+    *,
+    order: str,
+    length_key: Callable[[T], int],
+    seed: int,
+) -> list[T]:
+    normalized_order = normalize_order(order)
+    ordered = list(items)
+    if normalized_order == "native":
+        return ordered
+    if normalized_order == "shuffle":
+        random.Random(seed).shuffle(ordered)
+        return ordered
+    reverse = normalized_order == "length|desc"
+    return sorted(ordered, key=length_key, reverse=reverse)
 
 
  # Load the suite dataset and return both the rows object and wall-clock load time.
