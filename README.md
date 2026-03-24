@@ -326,6 +326,7 @@ logic, those implementation details can shift results.
 | `paws_x` | Multiple-choice log-likelihood across `de/en/es/fr/ja/ko/zh` language subsets, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
 | `xcopa` | Multiple-choice log-likelihood over option labels across `et/ht/id/it/qu/sw/ta/th/tr/vi/zh` language subsets, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
 | `xstorycloze` | Multiple-choice log-likelihood over translated StoryCloze endings across `ar/en/es/eu/hi/id/my/ru/sw/te/zh` subsets, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xnli` | Three-way NLI multiple-choice log-likelihood across `ar/bg/de/el/en/es/fr/hi/ru/sw/th/tr/ur/vi/zh` language subsets, raw + length-normalized accuracy | XNLI `conneau2018xnli` |
 | `xwinograd` | Partial-evaluation multiple-choice log-likelihood over blank replacements across `en/fr/jp/pt/ru/zh` language subsets, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `piqa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic PIQA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
@@ -484,6 +485,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 - `xcopa_et`, `xcopa_ht`, `xcopa_id`, `xcopa_it`, `xcopa_qu`, `xcopa_sw`, `xcopa_ta`, `xcopa_th`, `xcopa_tr`, `xcopa_vi`, `xcopa_zh`: XCOPA `ponti2020xcopa`
 - `xstorycloze_ar`, `xstorycloze_en`, `xstorycloze_es`, `xstorycloze_eu`, `xstorycloze_hi`, `xstorycloze_id`, `xstorycloze_my`, `xstorycloze_ru`, `xstorycloze_sw`, `xstorycloze_te`, `xstorycloze_zh`: XStoryCloze `lin2021fewshotmultilingual`
+- `xnli_<language>` for the built-in XNLI language subsets: XNLI `conneau2018xnli`
 - `xwinograd_en`, `xwinograd_fr`, `xwinograd_jp`, `xwinograd_pt`, `xwinograd_ru`, `xwinograd_zh`: XWinograd `tikhonov2021heads`
 
 ```bibtex
@@ -729,6 +731,17 @@ The current built-in suite coverage maps to these benchmark citations:
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
   url = {https://arxiv.org/abs/2507.11216},
+}
+
+# XNLI
+@inproceedings{conneau2018xnli,
+  title = {XNLI: Evaluating Cross-lingual Sentence Representations},
+  author = {Conneau, Alexis and Rinott, Ruty and Lample, Guillaume and Williams, Adina and Bowman, Samuel R. and Schwenk, Holger and Stoyanov, Veselin},
+  booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
+  year = {2018},
+  pages = {2475--2485},
+  url = {https://aclanthology.org/D18-1269/},
+  doi = {10.18653/v1/D18-1269},
 }
 
 # ASDiv

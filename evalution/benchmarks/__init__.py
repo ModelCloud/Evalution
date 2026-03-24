@@ -139,6 +139,8 @@ from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
 from .xcopa import XCOPA, xcopa, xcopa_et, xcopa_ht, xcopa_id, xcopa_it, xcopa_qu, xcopa_sw, xcopa_ta, xcopa_th, xcopa_tr, xcopa_vi, xcopa_zh
 from .xstorycloze import XSTORYCLOZE_LANGUAGES, XStoryCloze, xstorycloze, xstorycloze_ar, xstorycloze_en, xstorycloze_es, xstorycloze_eu, xstorycloze_hi, xstorycloze_id, xstorycloze_my, xstorycloze_ru, xstorycloze_sw, xstorycloze_te, xstorycloze_zh
+from . import xnli as _xnli_module
+from .xnli import XNLI, XNLI_LANGUAGES, XNLI_TASKS, xnli
 from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinograd_jp, xwinograd_pt, xwinograd_ru, xwinograd_zh
 
 for _crows_pairs_task in CROWS_PAIRS_TASKS:
@@ -200,6 +202,11 @@ for _arabicmmlu_task in ARABICMMLU_TASKS:
     globals()[_arabicmmlu_task] = getattr(_arabicmmlu_module, _arabicmmlu_task)
 
 del _arabicmmlu_task
+
+for _xnli_task in XNLI_TASKS:
+    globals()[_xnli_task] = getattr(_xnli_module, _xnli_task)
+
+del _xnli_task
 
 __all__ = [
     "ANLI",
@@ -343,6 +350,9 @@ __all__ = [
     "WNLI",
     "WinoGrande",
     "XCOPA",
+    "XNLI",
+    "XNLI_LANGUAGES",
+    "XNLI_TASKS",
     "XSTORYCLOZE_LANGUAGES",
     "XStoryCloze",
     "XWinograd",
@@ -560,6 +570,7 @@ __all__ = [
     "xstorycloze_sw",
     "xstorycloze_te",
     "xstorycloze_zh",
+    "xnli",
     "xwinograd",
     "xwinograd_en",
     "xwinograd_fr",
@@ -580,3 +591,4 @@ __all__.extend(CAREQA_TASKS)
 __all__.extend(CABBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
+__all__.extend(XNLI_TASKS)

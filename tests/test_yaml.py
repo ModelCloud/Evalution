@@ -419,6 +419,11 @@ tests:
     max_rows: 16
   - type: xstorycloze_zh
     max_rows: 16
+  - type: xnli
+    language: en
+    max_rows: 16
+  - type: xnli_fr
+    max_rows: 16
   - type: xwinograd_en
     max_rows: 16
   - type: xwinograd_fr
@@ -647,6 +652,8 @@ tests:
     assert ".run(benchmarks.xstorycloze_sw(" in script
     assert ".run(benchmarks.xstorycloze_te(" in script
     assert ".run(benchmarks.xstorycloze_zh(" in script
+    assert ".run(benchmarks.xnli(" in script
+    assert ".run(benchmarks.xnli_fr(" in script
     assert ".run(benchmarks.xwinograd_en(" in script
     assert ".run(benchmarks.xwinograd_fr(" in script
     assert ".run(benchmarks.xwinograd_jp(" in script

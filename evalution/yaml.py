@@ -222,6 +222,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xstorycloze_sw": benchmarks.xstorycloze_sw,
     "xstorycloze_te": benchmarks.xstorycloze_te,
     "xstorycloze_zh": benchmarks.xstorycloze_zh,
+    "xnli": benchmarks.xnli,
     "xwinograd_en": benchmarks.xwinograd_en,
     "xwinograd_fr": benchmarks.xwinograd_fr,
     "xwinograd_jp": benchmarks.xwinograd_jp,
@@ -234,6 +235,11 @@ for _task_name in benchmarks.CABBQ_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 for _task_name in benchmarks.ESBBQ_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.XNLI_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

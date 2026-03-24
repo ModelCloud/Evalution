@@ -378,6 +378,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.xstorycloze_sw)
     assert callable(evalution.benchmarks.xstorycloze_te)
     assert callable(evalution.benchmarks.xstorycloze_zh)
+    assert evalution.benchmarks.XNLI is not None
+    assert evalution.benchmarks.XNLI_LANGUAGES
+    assert evalution.benchmarks.XNLI_TASKS
+    assert callable(evalution.benchmarks.xnli)
+    for factory_name in evalution.benchmarks.XNLI_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.XWinograd is not None
     assert callable(evalution.benchmarks.xwinograd)
     assert callable(evalution.benchmarks.xwinograd_en)

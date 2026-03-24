@@ -189,6 +189,12 @@ AFRIXNLI_TASKS = (
     "afrixnli_fra",
     "afrixnli_swa",
 )
+XNLI_TASKS = (
+    "xnli_ar",
+    "xnli_en",
+    "xnli_fr",
+    "xnli_sw",
+)
 XWINOGRAD_TASKS = (
     "xwinograd_en",
     "xwinograd_fr",
@@ -1328,6 +1334,16 @@ def _metadata_afrixnli_language(language: str) -> Callable[[dict[str, Any]], Non
     return validate
 
 
+def _metadata_xnli_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["premise"]
+        assert metadata["hypothesis"]
+        assert metadata["choice_texts"] == ["entailment", "neutral", "contradiction"]
+
+    return validate
+
+
 def _metadata_belebele_language(language: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["language"] == language
@@ -1665,6 +1681,44 @@ def _afrixnli_suite_spec(
                 "\nQuestion: What is the relationship between the premise and hypothesis: entailment, neutral, or contradiction?\nAnswer:",
             ),
             metadata_validator=_metadata_afrixnli_language(language),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _xnli_suite_spec(
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.xnli(
+            language=language,
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name=f"xnli_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "facebook/xnli",
+            "dataset_name": language,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"entailment", "neutral", "contradiction"},
+            prediction_values={"entailment", "neutral", "contradiction"},
+            prompt_substrings=(
+                "Premise: ",
+                "\nHypothesis: ",
+                "\nQuestion: What is the relationship between the premise and hypothesis: entailment, neutral, or contradiction?\nAnswer:",
+            ),
+            metadata_validator=_metadata_xnli_language(language),
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
@@ -5803,6 +5857,17 @@ for _language, _baseline in {
     "swa": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
 }.items():
     SUITE_SPECS[f"afrixnli_{_language}"] = _afrixnli_suite_spec(
+        language=_language,
+        baseline=_baseline,
+    )
+
+for _language, _baseline in {
+    "ar": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+    "en": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+    "fr": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+    "sw": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+}.items():
+    SUITE_SPECS[f"xnli_{_language}"] = _xnli_suite_spec(
         language=_language,
         baseline=_baseline,
     )
