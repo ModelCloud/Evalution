@@ -5,11 +5,12 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List
 
 from datasets import load_dataset
+
+import pcre
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -17,7 +18,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 
 
-_FINAL_ANSWER_RE = re.compile(r"final answer:\s*\[(.*)\]", re.IGNORECASE)
+_FINAL_ANSWER_RE = pcre.compile(r"final answer:\s*\[(.*)\]", pcre.IGNORECASE)
 
 
 def _split_nodes(text: str) -> List[str]:

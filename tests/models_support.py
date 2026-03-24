@@ -2802,6 +2802,42 @@ def _esbbq_suite_spec(
     )
 
 
+def _graphwalks_sample_validator(sample: Any, index: int) -> None:
+    metadata = sample.metadata
+    assert sample.index == index
+    assert metadata.get("problem_type")
+    assert metadata.get("prompt_chars", 0) > 0
+    assert isinstance(sample.extracted.get("prediction_nodes_strict"), list)
+    assert isinstance(sample.extracted.get("prediction_nodes_flexible"), list)
+
+
+def _graphwalks_suite_spec(
+    task_name: str,
+    *,
+    data_file: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.graphwalks_128k(
+            max_rows=1,
+            batch_size=1,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"f1", "flexible_f1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "openai/graphwalks",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "graphwalks_set_f1",
+            "data_file": data_file,
+        },
+        expected_sample_count=1,
+        sample_validator=_graphwalks_sample_validator,
+    )
+
+
 SUITE_SPECS = {
     "cabbq_age": _cabbq_suite_spec(
         "cabbq_age",
@@ -2852,6 +2888,11 @@ SUITE_SPECS = {
         "esbbq_nationality",
         category="Nationality",
         baseline={"acc,ll": 0.4765625, "acc,ll_avg": 0.4765625},
+    ),
+    "graphwalks_128k": _graphwalks_suite_spec(
+        "graphwalks_128k",
+        data_file="graphwalks_128k_and_shorter.parquet",
+        baseline={"f1": 0.0, "flexible_f1": 0.0},
     ),
     "eus_exams_eu_opeosakiadmineu": _eus_exams_suite_spec(
         "eus_exams_eu_opeosakiadmineu",
