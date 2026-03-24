@@ -104,6 +104,19 @@ XWINOGRAD_TASKS = (
     "xwinograd_ru",
     "xwinograd_zh",
 )
+XSTORYCLOZE_TASKS = (
+    "xstorycloze_ar",
+    "xstorycloze_en",
+    "xstorycloze_es",
+    "xstorycloze_eu",
+    "xstorycloze_hi",
+    "xstorycloze_id",
+    "xstorycloze_my",
+    "xstorycloze_ru",
+    "xstorycloze_sw",
+    "xstorycloze_te",
+    "xstorycloze_zh",
+)
 WINOGENDER_TASKS = (
     "winogender_all",
     "winogender_female",
@@ -490,6 +503,28 @@ def _assert_xwinograd_sample(sample: Any, index: int, *, language: str) -> None:
     assert sample.metadata["blank_index"] >= 0
     assert len(sample.metadata["choice_texts"]) == 2
     assert sample.metadata["choice_labels"] == ["A", "B"]
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_xstorycloze_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["language"] == language
+    assert sample.metadata["story_id"]
+    assert len(sample.metadata["input_sentences"]) == 4
+    assert len(sample.metadata["choice_texts"]) == 2
     assert "choice_logprobs" in sample.metadata
     assert "choice_logprobs_norm" in sample.metadata
 
@@ -3054,6 +3089,182 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="zh"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_ar": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_ar(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_ar",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "ar",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="ar"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_en": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_en(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_en",
+        baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.6875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "en",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="en"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_es(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_es",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "es",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="es"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_eu": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_eu(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_eu",
+        baseline={"acc,ll": 0.4375, "acc,ll_avg": 0.4375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "eu",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="eu"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_hi": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_hi(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_hi",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "hi",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="hi"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_id": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_id(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_id",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "id",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="id"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_my": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_my(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_my",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "my",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="my"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_ru": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_ru(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_ru",
+        baseline={"acc,ll": 0.625, "acc,ll_avg": 0.6875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "ru",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="ru"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_sw": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_sw(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_sw",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.75},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "sw",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="sw"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_te": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_te(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_te",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "te",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="te"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_zh": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_zh(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_zh",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.53125},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "zh",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="zh"),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "winogender_all": SuiteSpec(

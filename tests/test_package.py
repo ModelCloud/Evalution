@@ -195,6 +195,20 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.xcopa_tr)
     assert callable(evalution.benchmarks.xcopa_vi)
     assert callable(evalution.benchmarks.xcopa_zh)
+    assert evalution.benchmarks.XStoryCloze is not None
+    assert evalution.benchmarks.XSTORYCLOZE_LANGUAGES
+    assert callable(evalution.benchmarks.xstorycloze)
+    assert callable(evalution.benchmarks.xstorycloze_ar)
+    assert callable(evalution.benchmarks.xstorycloze_en)
+    assert callable(evalution.benchmarks.xstorycloze_es)
+    assert callable(evalution.benchmarks.xstorycloze_eu)
+    assert callable(evalution.benchmarks.xstorycloze_hi)
+    assert callable(evalution.benchmarks.xstorycloze_id)
+    assert callable(evalution.benchmarks.xstorycloze_my)
+    assert callable(evalution.benchmarks.xstorycloze_ru)
+    assert callable(evalution.benchmarks.xstorycloze_sw)
+    assert callable(evalution.benchmarks.xstorycloze_te)
+    assert callable(evalution.benchmarks.xstorycloze_zh)
     assert evalution.benchmarks.XWinograd is not None
     assert callable(evalution.benchmarks.xwinograd)
     assert callable(evalution.benchmarks.xwinograd_en)

@@ -248,6 +248,28 @@ tests:
     max_rows: 16
   - type: xcopa_zh
     max_rows: 16
+  - type: xstorycloze_ar
+    max_rows: 16
+  - type: xstorycloze_en
+    max_rows: 16
+  - type: xstorycloze_es
+    max_rows: 16
+  - type: xstorycloze_eu
+    max_rows: 16
+  - type: xstorycloze_hi
+    max_rows: 16
+  - type: xstorycloze_id
+    max_rows: 16
+  - type: xstorycloze_my
+    max_rows: 16
+  - type: xstorycloze_ru
+    max_rows: 16
+  - type: xstorycloze_sw
+    max_rows: 16
+  - type: xstorycloze_te
+    max_rows: 16
+  - type: xstorycloze_zh
+    max_rows: 16
   - type: xwinograd_en
     max_rows: 16
   - type: xwinograd_fr
@@ -388,6 +410,17 @@ tests:
     assert ".run(benchmarks.xcopa_tr(" in script
     assert ".run(benchmarks.xcopa_vi(" in script
     assert ".run(benchmarks.xcopa_zh(" in script
+    assert ".run(benchmarks.xstorycloze_ar(" in script
+    assert ".run(benchmarks.xstorycloze_en(" in script
+    assert ".run(benchmarks.xstorycloze_es(" in script
+    assert ".run(benchmarks.xstorycloze_eu(" in script
+    assert ".run(benchmarks.xstorycloze_hi(" in script
+    assert ".run(benchmarks.xstorycloze_id(" in script
+    assert ".run(benchmarks.xstorycloze_my(" in script
+    assert ".run(benchmarks.xstorycloze_ru(" in script
+    assert ".run(benchmarks.xstorycloze_sw(" in script
+    assert ".run(benchmarks.xstorycloze_te(" in script
+    assert ".run(benchmarks.xstorycloze_zh(" in script
     assert ".run(benchmarks.xwinograd_en(" in script
     assert ".run(benchmarks.xwinograd_fr(" in script
     assert ".run(benchmarks.xwinograd_jp(" in script

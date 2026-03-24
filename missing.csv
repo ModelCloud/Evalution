@@ -148,5 +148,4 @@ wmt2016,1,wmt2016/ro_en-t5_prompt.yaml,
 xnli,16,xnli/xnli_ar.yaml,xnli/xnli_bg.yaml
 xnli_eu,3,xnli_eu/xnli_eu.yaml,xnli_eu/xnli_eu_mt.yaml
 xquad,12,xquad/xquad_ar.yaml,xquad/xquad_de.yaml
-xstorycloze,12,xstorycloze/default_ar.yaml,xstorycloze/default_en.yaml
 zhoblimp,119,zhoblimp/BA_BEI_subj_drop.yaml,zhoblimp/BA_deletion.yaml

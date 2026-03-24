@@ -294,6 +294,17 @@ logic, those implementation details can shift results.
 | `xcopa_tr` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
 | `xcopa_vi` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
 | `xcopa_zh` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xstorycloze_ar` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_en` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_es` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_eu` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_hi` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_id` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_my` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_ru` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_sw` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_te` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xstorycloze_zh` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
 | `xwinograd_en` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `xwinograd_fr` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `xwinograd_jp` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
@@ -430,6 +441,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
 - `xcopa_et`, `xcopa_ht`, `xcopa_id`, `xcopa_it`, `xcopa_qu`, `xcopa_sw`, `xcopa_ta`, `xcopa_th`, `xcopa_tr`, `xcopa_vi`, `xcopa_zh`: XCOPA `ponti2020xcopa`
+- `xstorycloze_ar`, `xstorycloze_en`, `xstorycloze_es`, `xstorycloze_eu`, `xstorycloze_hi`, `xstorycloze_id`, `xstorycloze_my`, `xstorycloze_ru`, `xstorycloze_sw`, `xstorycloze_te`, `xstorycloze_zh`: XStoryCloze `lin2021fewshotmultilingual`
 - `xwinograd_en`, `xwinograd_fr`, `xwinograd_jp`, `xwinograd_pt`, `xwinograd_ru`, `xwinograd_zh`: XWinograd `tikhonov2021heads`
 
 ```bibtex
@@ -863,6 +875,14 @@ The current built-in suite coverage maps to these benchmark citations:
   eprint = {2106.12066},
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
+}
+
+# XStoryCloze
+@article{lin2021fewshotmultilingual,
+  title = {Few-shot Learning with Multilingual Language Models},
+  author = {Xi Victoria Lin and Todor Mihaylov and Mikel Artetxe and Tianlu Wang and Shuohui Chen and Daniel Simig and Myle Ott and Naman Goyal and Shruti Bhosale and Jingfei Du and Ramakanth Pasunuru and Sam Shleifer and Punit Singh Koura and Vishrav Chaudhary and Brian O'Horo and Jeff Wang and Luke Zettlemoyer and Zornitsa Kozareva and Mona T. Diab and Veselin Stoyanov and Xian Li},
+  journal = {arXiv preprint arXiv:2112.10668},
+  year = {2021},
 }
 
 # WinoGrande
