@@ -46,6 +46,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.afrimgsm)
     for factory_name in evalution.benchmarks.AFRIMGSM_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.AfriMMLU is not None
+    assert evalution.benchmarks.AFRIMMLU_LANGUAGES
+    assert evalution.benchmarks.AFRIMMLU_TASKS
+    assert callable(evalution.benchmarks.afrimmlu)
+    for factory_name in evalution.benchmarks.AFRIMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert callable(evalution.benchmarks.afrixnli)
     assert callable(evalution.benchmarks.afrixnli_amh)
     assert callable(evalution.benchmarks.afrixnli_eng)

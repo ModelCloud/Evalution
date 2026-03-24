@@ -240,6 +240,7 @@ logic, those implementation details can shift results.
 | `aexams` | Multiple-choice log-likelihood over answer labels across `biology/islamic_studies/physics/science/social` subjects, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
 | `agieval` | Multiple-choice log-likelihood across supported AGIEval subject subsets, raw + length-normalized accuracy | AGIEval `zhong2023agieval` |
 | `afrimgsm` | Generated numeric exact match across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/vai/wol/xho/yor/zul` translated grade-school math subsets | IrokoBench AfriMGSM `adelani2025irokobench` |
+| `afrimmlu` | Multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` translated MMLU subsets, raw + length-normalized accuracy | IrokoBench AfriMMLU `adelani2025irokobench` |
 | `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
 | `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
 | `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
@@ -402,6 +403,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `aexams_biology`, `aexams_islamic_studies`, `aexams_physics`, `aexams_science`, `aexams_social`: EXAMS `hardalov-etal-2020-exams`
 - `agieval_<subset>` for the built-in single-answer AGIEval subsets: AGIEval `zhong2023agieval`
 - `afrimgsm_<language>` for the built-in AfriMGSM language subsets: IrokoBench AfriMGSM `adelani2025irokobench`
+- `afrimmlu_<language>` for the built-in AfriMMLU language subsets: IrokoBench AfriMMLU `adelani2025irokobench`
 - `afrixnli_amh`, `afrixnli_eng`, `afrixnli_ewe`, `afrixnli_fra`, `afrixnli_hau`, `afrixnli_ibo`, `afrixnli_kin`, `afrixnli_lin`, `afrixnli_lug`, `afrixnli_orm`, `afrixnli_sna`, `afrixnli_sot`, `afrixnli_swa`, `afrixnli_twi`, `afrixnli_wol`, `afrixnli_xho`, `afrixnli_yor`, `afrixnli_zul`: IrokoBench AfriXNLI `adelani2025irokobench`
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `arabicmmlu_<subset>` for the built-in ArabicMMLU subsets: ArabicMMLU `koto2024arabicmmlu`

@@ -1,7 +1,6 @@
 family,yaml_file_count,example_1,example_2
 aclue,16,aclue/aclue_ancient_chinese_culture.yaml,aclue/aclue_ancient_literature.yaml
 acpbench,30,acpbench/boolq_cot_2shot/act_reach.yaml,acpbench/boolq_cot_2shot/app.yaml
-afrimmlu,177,afrimmlu/direct/afrimmlu.yaml,afrimmlu/direct/prompt_1/afrimmlu_direct_amh.yaml
 afrobench,1818,afrobench/adr/afridiacritics.yaml,afrobench/adr/prompt_1/afridiacritics_bbj.yaml
 arab_culture,18,arab_culture/arab_culture_algeria.yaml,arab_culture/arab_culture_egypt.yaml
 arab_culture_completion,18,arab_culture_completion/arab_culture_completion_algeria.yaml,arab_culture_completion/arab_culture_completion_egypt.yaml

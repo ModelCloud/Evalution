@@ -9,6 +9,8 @@ from . import agieval as _agieval_module
 from .agieval import AGIEVAL_SUBSETS, AGIEVAL_TASKS, AGIEval, agieval
 from . import afrimgsm as _afrimgsm_module
 from .afrimgsm import AFRIMGSM_LANGUAGES, AFRIMGSM_TASKS, AfriMGSM, afrimgsm
+from . import afrimmlu as _afrimmlu_module
+from .afrimmlu import AFRIMMLU_LANGUAGES, AFRIMMLU_TASKS, AfriMMLU, afrimmlu
 from .afrixnli import AFRIXNLI_LANGUAGES, AFRIXNLI_TASKS, AfriXNLI, afrixnli, afrixnli_amh, afrixnli_eng, afrixnli_ewe, afrixnli_fra, afrixnli_hau, afrixnli_ibo, afrixnli_kin, afrixnli_lin, afrixnli_lug, afrixnli_orm, afrixnli_sna, afrixnli_sot, afrixnli_swa, afrixnli_twi, afrixnli_wol, afrixnli_xho, afrixnli_yor, afrixnli_zul
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
 from .aime import AIME, aime, aime24, aime25
@@ -143,6 +145,11 @@ for _afrimgsm_task in AFRIMGSM_TASKS:
 
 del _afrimgsm_task
 
+for _afrimmlu_task in AFRIMMLU_TASKS:
+    globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
+
+del _afrimmlu_task
+
 for _bbh_task in BBH_TASKS:
     globals()[_bbh_task] = getattr(_bbh_module, _bbh_task)
 
@@ -169,6 +176,9 @@ __all__ = [
     "AFRIMGSM_LANGUAGES",
     "AFRIMGSM_TASKS",
     "AfriMGSM",
+    "AFRIMMLU_LANGUAGES",
+    "AFRIMMLU_TASKS",
+    "AfriMMLU",
     "AFRIXNLI_LANGUAGES",
     "AFRIXNLI_TASKS",
     "AfriXNLI",
@@ -292,6 +302,7 @@ __all__ = [
     "aexams_social",
     "agieval",
     "afrimgsm",
+    "afrimmlu",
     "afrixnli",
     "afrixnli_amh",
     "afrixnli_eng",
@@ -500,4 +511,5 @@ __all__.extend(BBH_TASKS)
 __all__.extend(BABILONG_TASKS)
 __all__.extend(AGIEVAL_TASKS)
 __all__.extend(AFRIMGSM_TASKS)
+__all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)

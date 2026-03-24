@@ -82,6 +82,12 @@ AFRIMGSM_TASKS = (
     "afrimgsm_swa",
     "afrimgsm_yor",
 )
+AFRIMMLU_TASKS = (
+    "afrimmlu_eng",
+    "afrimmlu_fra",
+    "afrimmlu_hau",
+    "afrimmlu_swa",
+)
 ARABICMMLU_TASKS = (
     "arabicmmlu_all",
     "arabicmmlu_islamic_studies",
@@ -1252,6 +1258,18 @@ def _metadata_afrimgsm_language(language: str) -> Callable[[dict[str, Any]], Non
     return validate
 
 
+def _metadata_afrimmlu_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["subject"]
+        assert metadata["question"]
+        assert metadata["answer_label"] in {"A", "B", "C", "D"}
+        assert metadata["raw_choices"]
+        assert len(metadata["raw_choices"]) == 4
+
+    return validate
+
+
 def _metadata_arabicmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -2135,7 +2153,75 @@ def _afrimgsm_suite_spec(
     )
 
 
+def _afrimmlu_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.afrimmlu(
+            language=language,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "masakhane/afrimmlu",
+            "dataset_name": language,
+            "split": "test",
+            "language": language,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_substrings=("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_afrimmlu_language(language),
+        ),
+    )
+
+
 SUITE_SPECS = {
+    "afrimmlu_eng": _afrimmlu_suite_spec(
+        "afrimmlu_eng",
+        language="eng",
+        baseline={
+            "acc,ll": 0.3828125,
+            "acc,ll_avg": 0.3828125,
+        },
+    ),
+    "afrimmlu_fra": _afrimmlu_suite_spec(
+        "afrimmlu_fra",
+        language="fra",
+        baseline={
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.28125,
+        },
+    ),
+    "afrimmlu_hau": _afrimmlu_suite_spec(
+        "afrimmlu_hau",
+        language="hau",
+        baseline={
+            "acc,ll": 0.2578125,
+            "acc,ll_avg": 0.2578125,
+        },
+    ),
+    "afrimmlu_swa": _afrimmlu_suite_spec(
+        "afrimmlu_swa",
+        language="swa",
+        baseline={
+            "acc,ll": 0.2890625,
+            "acc,ll_avg": 0.2890625,
+        },
+    ),
     "afrimgsm_eng": _afrimgsm_suite_spec(
         "afrimgsm_eng",
         language="eng",
