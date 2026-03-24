@@ -42,6 +42,8 @@ from .bbh import BBH, BBH_SUBSETS, BBH_TASKS, bbh
 from .bangla import BANGLA_SUBSETS, BANGLA_TASKS, Bangla, bangla, bangla_boolqa, bangla_commonsenseqa, bangla_mmlu, bangla_openbookqa, bangla_piqa
 from .bear import BEAR, bear, bear_big
 from .belebele import Belebele, belebele
+from . import bbq as _bbq_module
+from .bbq import BBQ, BBQ_CATEGORIES, BBQ_TASKS, bbq
 from .base import BaseTestSuite, TestSuite
 from .blimp import BLiMP, BLIMP_SUBSETS, blimp
 from .c4 import C4, c4
@@ -199,6 +201,11 @@ for _bbh_task in BBH_TASKS:
 
 del _bbh_task
 
+for _bbq_task in BBQ_TASKS:
+    globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
+
+del _bbq_task
+
 for _babilong_task in BABILONG_TASKS:
     globals()[_babilong_task] = getattr(_babilong_module, _babilong_task)
 
@@ -266,6 +273,9 @@ __all__ = [
     "BEAR",
     "Bangla",
     "Belebele",
+    "BBQ",
+    "BBQ_CATEGORIES",
+    "BBQ_TASKS",
     "BLiMP",
     "BLIMP_SUBSETS",
     "BaseRollingPerplexitySuite",
@@ -456,6 +466,7 @@ __all__ = [
     "bear",
     "bear_big",
     "belebele",
+    "bbq",
     "blimp",
     "cabbq",
     "c4",
@@ -620,6 +631,7 @@ __all__.extend(EGYMMLU_TASKS)
 __all__.extend(EUS_EXAMS_TASKS)
 __all__.extend(CAREQA_TASKS)
 __all__.extend(CABBQ_TASKS)
+__all__.extend(BBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(XNLI_TASKS)

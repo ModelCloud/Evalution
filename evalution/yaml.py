@@ -95,6 +95,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "bear": benchmarks.bear,
     "bear_big": benchmarks.bear_big,
     "belebele": benchmarks.belebele,
+    "bbq": benchmarks.bbq,
     "blimp": benchmarks.blimp,
     "c4": benchmarks.c4,
     "careqa": benchmarks.careqa,
@@ -241,6 +242,11 @@ for _task_name in benchmarks.CABBQ_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 for _task_name in benchmarks.ESBBQ_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.BBQ_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

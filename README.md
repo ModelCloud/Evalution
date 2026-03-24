@@ -274,6 +274,7 @@ logic, those implementation details can shift results.
 | `bear` | Full-statement multiple-choice log-likelihood over balanced relational distractors, raw + length-normalized accuracy | BEAR `wiland2024bear` |
 | `bear_big` | Full-statement multiple-choice log-likelihood over the larger BEAR probe, raw + length-normalized accuracy | BEAR `wiland2024bear` |
 | `belebele` | Multiple-choice reading-comprehension log-likelihood across 122 language variants selected through the `language` parameter, raw + length-normalized accuracy | Belebele `bandarkar2023belebele` |
+| `bbq` | Multiple-choice log-likelihood across English BBQ bias categories, raw + length-normalized accuracy | BBQ `parrish2022bbq` |
 | `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
 | `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
 | `careqa` | Multiple-choice log-likelihood across supported closed-ended healthcare QA subsets `en/es`, raw + length-normalized accuracy | CareQA `arias-duart-etal-2025-automatic` |
@@ -437,6 +438,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `careqa_en`, `careqa_es`: CareQA `arias-duart-etal-2025-automatic`
 - `cabbq_<category>` for the built-in Catalan BBQ categories: CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan`
 - `esbbq_<category>` for the built-in Spanish BBQ categories: EsBBQ `ruizfernández2025esbbqcabbqspanishcatalan`
+- `bbq_<category>` for the built-in English BBQ categories: BBQ `parrish2022bbq`
 - `ceval`: C-Eval `huang2023ceval`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
@@ -739,6 +741,15 @@ The current built-in suite coverage maps to these benchmark citations:
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
   url = {https://arxiv.org/abs/2507.11216},
+}
+
+# BBQ
+@inproceedings{parrish2022bbq,
+  title = {BBQ: A Hand-Built Bias Benchmark for Question Answering},
+  author = {Parrish, Alicia and Chen, Angelica and Nangia, Nikita and Padmakumar, Vishakh and Phang, Jason and Thompson, John and Htut, Phu Mon and Bowman, Samuel R.},
+  booktitle = {Findings of the Association for Computational Linguistics: ACL 2022},
+  year = {2022},
+  url = {https://aclanthology.org/2022.findings-acl.165/},
 }
 
 # XNLI

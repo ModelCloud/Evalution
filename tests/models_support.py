@@ -1516,7 +1516,7 @@ def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
             "streaming": True,
             "dataset_path": "EleutherAI/arithmetic",
             "dataset_name": task_name,
-            "split": "test",
+            "split": "validation",
             "scoring_mode": "single_continuation_loglikelihood",
         },
         expected_sample_count=128,
@@ -1632,7 +1632,7 @@ def _paws_x_suite_spec(
             "streaming": False,
             "dataset_path": "paws-x",
             "dataset_name": language,
-            "split": "test",
+            "split": "validation",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
@@ -2649,6 +2649,53 @@ def _cabbq_suite_spec(
             prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nAnswer:"),
             metadata_validator=_metadata_cabbq_category(category),
         ),
+    )
+
+
+def _metadata_bbq_category(category: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["category"] == category
+        assert metadata["question_polarity"]
+        assert metadata["context_condition"]
+        assert metadata["question_index"]
+        assert len(metadata["raw_choices"]) == 3
+
+    return validate
+
+
+def _bbq_suite_spec(
+    task_name: str,
+    *,
+    category: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda category=category: evalution.benchmarks.bbq(
+            category=category,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "heegyu/bbq",
+            "dataset_name": category,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, category=category: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C"},
+            prediction_values={"A", "B", "C"},
+            prompt_prefix="Context: ",
+            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nAnswer:"),
+            metadata_validator=_metadata_bbq_category(category),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
 
 
@@ -6054,6 +6101,30 @@ for _variant, _baseline in {
 }.items():
     SUITE_SPECS[f"truthfulqa_{_variant}"] = _truthfulqa_suite_spec(
         variant=_variant,
+        baseline=_baseline,
+    )
+
+for _task_name, _category, _baseline in (
+    ("bbq_age", "Age", {"acc,ll": 0.34375, "acc,ll_avg": 0.34375}),
+    (
+        "bbq_disability_status",
+        "Disability_status",
+        {"acc,ll": 0.4765625, "acc,ll_avg": 0.4765625},
+    ),
+    (
+        "bbq_gender_identity",
+        "Gender_identity",
+        {"acc,ll": 0.4921875, "acc,ll_avg": 0.4921875},
+    ),
+    (
+        "bbq_nationality",
+        "Nationality",
+        {"acc,ll": 0.4140625, "acc,ll_avg": 0.4140625},
+    ),
+):
+    SUITE_SPECS[_task_name] = _bbq_suite_spec(
+        _task_name,
+        category=_category,
         baseline=_baseline,
     )
 

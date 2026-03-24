@@ -177,6 +177,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.bear_big)
     assert evalution.benchmarks.Belebele is not None
     assert callable(evalution.benchmarks.belebele)
+    assert evalution.benchmarks.BBQ is not None
+    assert evalution.benchmarks.BBQ_CATEGORIES
+    assert evalution.benchmarks.BBQ_TASKS
+    assert callable(evalution.benchmarks.bbq)
+    for factory_name in evalution.benchmarks.BBQ_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.BLiMP is not None
     assert evalution.benchmarks.BLIMP_SUBSETS
     assert callable(evalution.benchmarks.blimp)

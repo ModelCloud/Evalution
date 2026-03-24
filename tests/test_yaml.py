@@ -257,6 +257,11 @@ tests:
   - type: belebele
     language: eng_Latn
     max_rows: 16
+  - type: bbq
+    category: Age
+    max_rows: 16
+  - type: bbq_gender_identity
+    max_rows: 16
   - type: blimp
     subset: adjunct_island
     max_rows: 18
@@ -588,6 +593,8 @@ tests:
     assert ".run(benchmarks.bear(" in script
     assert ".run(benchmarks.bear_big(" in script
     assert ".run(benchmarks.belebele(" in script
+    assert ".run(benchmarks.bbq(" in script
+    assert ".run(benchmarks.bbq_gender_identity(" in script
     assert ".run(benchmarks.blimp(" in script
     assert ".run(benchmarks.c4(" in script
     assert ".run(benchmarks.ceval(" in script
