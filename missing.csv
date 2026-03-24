@@ -14,7 +14,6 @@ aradice,109,aradice/ArabicMMLU/EGY/AraDiCE_ArabicMMLU.yaml,aradice/ArabicMMLU/EG
 babilong,22,babilong/babilong.yaml,babilong/babilong_longctx.yaml
 basque_bench,26,basque_bench/arc_eu_challenge.yaml,basque_bench/arc_eu_easy.yaml
 basqueglue,6,basqueglue/bec.yaml,basqueglue/bhtc.yaml
-bbh,113,bbh/cot_fewshot/boolean_expressions.yaml,bbh/cot_fewshot/causal_judgement.yaml
 bbq,6,bbq/bbq_generate.yaml,bbq/bbq_generate_ambig.yaml
 bertaqa,16,bertaqa/bertaqa_en.yaml,bertaqa/bertaqa_en_mt_gemma-7b.yaml
 bhs,25,bhs/basque-DO-S_DO_V_AUX.yaml,bhs/basque-DO-S_IO_DO_V_AUX.yaml

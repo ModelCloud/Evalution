@@ -239,6 +239,7 @@ logic, those implementation details can shift results.
 | `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
 | `babi` | Generated exact match | bAbI `weston2015towards` |
+| `bbh` | Generated exact match across 27 BIG-Bench Hard subsets selected through the `subset` parameter | BIG-Bench Hard `suzgun2022challenging` |
 | `bangla` | Multiple-choice log-likelihood across `boolqa/commonsenseqa/mmlu/openbookqa/piqa` Bangla subsets, raw + length-normalized accuracy | TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms` |
 | `bear` | Full-statement multiple-choice log-likelihood over balanced relational distractors, raw + length-normalized accuracy | BEAR `wiland2024bear` |
 | `bear_big` | Full-statement multiple-choice log-likelihood over the larger BEAR probe, raw + length-normalized accuracy | BEAR `wiland2024bear` |
@@ -381,6 +382,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
+- `bbh_<subset>` for all BIG-Bench Hard subsets: BIG-Bench Hard `suzgun2022challenging`
 - `bangla_boolqa`, `bangla_commonsenseqa`, `bangla_mmlu`, `bangla_openbookqa`, `bangla_piqa`: TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms`
 - `bear`, `bear_big`: BEAR `wiland2024bear`
 - `belebele`: Belebele `bandarkar2023belebele`
@@ -535,6 +537,15 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2020},
   doi = {10.1162/tacl_a_00321},
   url = {https://doi.org/10.1162/tacl_a_00321},
+}
+
+# BIG-Bench Hard
+@article{suzgun2022challenging,
+  title = {Challenging {BIG-Bench} Tasks and Whether Chain-of-Thought Can Solve Them},
+  author = {Suzgun, Mirac and Scales, Nathan and Sch{\"a}rli, Nathanael and Gehrmann, Sebastian and Tay, Yi and Chung, Hyung Won and Chowdhery, Aakanksha and Le, Quoc V. and Chi, Ed H. and Zhou, Denny and Wei, Jason},
+  journal = {arXiv preprint arXiv:2210.09261},
+  year = {2022},
+  url = {https://arxiv.org/abs/2210.09261},
 }
 
 # C4

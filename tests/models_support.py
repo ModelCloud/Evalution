@@ -88,6 +88,7 @@ BEAR_TASKS = (
     "bear",
     "bear_big",
 )
+BBH_TASKS = tuple(evalution.benchmarks.BBH_TASKS)
 BANGLA_TASKS = (
     "bangla_boolqa",
     "bangla_commonsenseqa",
@@ -1213,6 +1214,15 @@ def _metadata_arc_mt_language(language: str) -> Callable[[dict[str, Any]], None]
     return validate
 
 
+def _metadata_bbh_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["input"]
+        assert metadata["target_text"]
+
+    return validate
+
+
 def _metadata_bangla_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -1312,6 +1322,36 @@ def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
             index,
             task_name=task_name,
         ),
+    )
+
+
+def _bbh_suite_spec(task_name: str, subset: str, baseline: float) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            batch_size=4,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline={"em": baseline},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "lukaemon/bbh",
+            "dataset_name": subset,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_prefix="Q: ",
+            prompt_suffix="\nA:",
+            metadata_validator=_metadata_bbh_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
 
 
@@ -4680,6 +4720,37 @@ for _task_name, _baseline in {
     "arithmetic_5ds": 0.3203125,
 }.items():
     SUITE_SPECS[_task_name] = _arithmetic_suite_spec(_task_name, _baseline)
+
+for _task_name, _subset, _baseline in (
+    ("bbh_boolean_expressions", "boolean_expressions", 0.5),
+    ("bbh_causal_judgement", "causal_judgement", 0.15625),
+    ("bbh_date_understanding", "date_understanding", 0.375),
+    ("bbh_disambiguation_qa", "disambiguation_qa", 0.09375),
+    ("bbh_dyck_languages", "dyck_languages", 0.0),
+    ("bbh_formal_fallacies", "formal_fallacies", 0.03125),
+    ("bbh_geometric_shapes", "geometric_shapes", 0.0),
+    ("bbh_hyperbaton", "hyperbaton", 0.40625),
+    ("bbh_logical_deduction_five_objects", "logical_deduction_five_objects", 0.0),
+    ("bbh_logical_deduction_seven_objects", "logical_deduction_seven_objects", 0.15625),
+    ("bbh_logical_deduction_three_objects", "logical_deduction_three_objects", 0.03125),
+    ("bbh_movie_recommendation", "movie_recommendation", 0.0),
+    ("bbh_multistep_arithmetic_two", "multistep_arithmetic_two", 0.0),
+    ("bbh_navigate", "navigate", 0.375),
+    ("bbh_object_counting", "object_counting", 0.375),
+    ("bbh_penguins_in_a_table", "penguins_in_a_table", 0.09375),
+    ("bbh_reasoning_about_colored_objects", "reasoning_about_colored_objects", 0.1875),
+    ("bbh_ruin_names", "ruin_names", 0.28125),
+    ("bbh_salient_translation_error_detection", "salient_translation_error_detection", 0.0),
+    ("bbh_snarks", "snarks", 0.5625),
+    ("bbh_sports_understanding", "sports_understanding", 0.0),
+    ("bbh_temporal_sequences", "temporal_sequences", 0.125),
+    ("bbh_tracking_shuffled_objects_five_objects", "tracking_shuffled_objects_five_objects", 0.0),
+    ("bbh_tracking_shuffled_objects_seven_objects", "tracking_shuffled_objects_seven_objects", 0.0),
+    ("bbh_tracking_shuffled_objects_three_objects", "tracking_shuffled_objects_three_objects", 0.03125),
+    ("bbh_web_of_lies", "web_of_lies", 0.46875),
+    ("bbh_word_sorting", "word_sorting", 0.0),
+):
+    SUITE_SPECS[_task_name] = _bbh_suite_spec(_task_name, _subset, _baseline)
 
 for _task_name, _language in (
     ("paws_x_de", "de"),

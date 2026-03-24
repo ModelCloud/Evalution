@@ -90,6 +90,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.asdiv_cot_llama)
     assert evalution.benchmarks.BABI is not None
     assert callable(evalution.benchmarks.babi)
+    assert evalution.benchmarks.BBH is not None
+    assert evalution.benchmarks.BBH_SUBSETS
+    assert evalution.benchmarks.BBH_TASKS
+    assert callable(evalution.benchmarks.bbh)
+    for factory_name in evalution.benchmarks.BBH_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.Bangla is not None
     assert evalution.benchmarks.BANGLA_SUBSETS
     assert evalution.benchmarks.BANGLA_TASKS

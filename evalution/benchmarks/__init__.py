@@ -27,6 +27,8 @@ from .arithmetic import (
 )
 from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
+from . import bbh as _bbh_module
+from .bbh import BBH, BBH_SUBSETS, BBH_TASKS, bbh
 from .bangla import BANGLA_SUBSETS, BANGLA_TASKS, Bangla, bangla, bangla_boolqa, bangla_commonsenseqa, bangla_mmlu, bangla_openbookqa, bangla_piqa
 from .bear import BEAR, bear, bear_big
 from .belebele import Belebele, belebele
@@ -123,6 +125,11 @@ for _crows_pairs_task in CROWS_PAIRS_TASKS:
 
 del _crows_pairs_task
 
+for _bbh_task in BBH_TASKS:
+    globals()[_bbh_task] = getattr(_bbh_module, _bbh_task)
+
+del _bbh_task
+
 __all__ = [
     "ANLI",
     "AIME",
@@ -141,6 +148,9 @@ __all__ = [
     "ASDiv",
     "ASDivCoTLlama",
     "BABI",
+    "BBH",
+    "BBH_SUBSETS",
+    "BBH_TASKS",
     "BANGLA_SUBSETS",
     "BANGLA_TASKS",
     "BEAR",
@@ -290,6 +300,7 @@ __all__ = [
     "asdiv",
     "asdiv_cot_llama",
     "babi",
+    "bbh",
     "bangla",
     "bangla_boolqa",
     "bangla_commonsenseqa",
@@ -439,3 +450,5 @@ __all__ = [
     "xwinograd_ru",
     "xwinograd_zh",
 ]
+
+__all__.extend(BBH_TASKS)
