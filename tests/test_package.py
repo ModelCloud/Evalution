@@ -84,6 +84,15 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.asdiv_cot_llama)
     assert evalution.benchmarks.BABI is not None
     assert callable(evalution.benchmarks.babi)
+    assert evalution.benchmarks.Bangla is not None
+    assert evalution.benchmarks.BANGLA_SUBSETS
+    assert evalution.benchmarks.BANGLA_TASKS
+    assert callable(evalution.benchmarks.bangla)
+    assert callable(evalution.benchmarks.bangla_boolqa)
+    assert callable(evalution.benchmarks.bangla_commonsenseqa)
+    assert callable(evalution.benchmarks.bangla_mmlu)
+    assert callable(evalution.benchmarks.bangla_openbookqa)
+    assert callable(evalution.benchmarks.bangla_piqa)
     assert evalution.benchmarks.BEAR is not None
     assert callable(evalution.benchmarks.bear)
     assert callable(evalution.benchmarks.bear_big)

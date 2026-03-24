@@ -172,6 +172,19 @@ tests:
     max_rows: 18
   - type: babi
     max_rows: 18
+  - type: bangla
+    subset: boolqa
+    max_rows: 16
+  - type: bangla_boolqa
+    max_rows: 16
+  - type: bangla_commonsenseqa
+    max_rows: 16
+  - type: bangla_mmlu
+    max_rows: 16
+  - type: bangla_openbookqa
+    max_rows: 16
+  - type: bangla_piqa
+    max_rows: 16
   - type: bear
     max_rows: 18
   - type: bear_big
@@ -439,6 +452,12 @@ tests:
     assert ".run(benchmarks.asdiv(" in script
     assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script
+    assert ".run(benchmarks.bangla(" in script
+    assert ".run(benchmarks.bangla_boolqa(" in script
+    assert ".run(benchmarks.bangla_commonsenseqa(" in script
+    assert ".run(benchmarks.bangla_mmlu(" in script
+    assert ".run(benchmarks.bangla_openbookqa(" in script
+    assert ".run(benchmarks.bangla_piqa(" in script
     assert ".run(benchmarks.bear(" in script
     assert ".run(benchmarks.bear_big(" in script
     assert ".run(benchmarks.belebele(" in script

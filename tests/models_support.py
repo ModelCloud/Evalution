@@ -88,6 +88,13 @@ BEAR_TASKS = (
     "bear",
     "bear_big",
 )
+BANGLA_TASKS = (
+    "bangla_boolqa",
+    "bangla_commonsenseqa",
+    "bangla_mmlu",
+    "bangla_openbookqa",
+    "bangla_piqa",
+)
 PAWS_X_TASKS = (
     "paws_x_de",
     "paws_x_en",
@@ -1163,6 +1170,34 @@ def _metadata_belebele_language(language: str) -> Callable[[dict[str, Any]], Non
     return validate
 
 
+def _metadata_bangla_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        if subset == "boolqa":
+            assert metadata["passage"]
+            assert metadata["question"]
+            return
+        assert metadata["question"]
+        assert metadata["choice_labels"]
+        assert metadata["raw_choices"]
+        if subset == "commonsenseqa":
+            assert len(metadata["raw_choices"]) == 5
+            return
+        if subset == "mmlu":
+            assert len(metadata["raw_choices"]) == 4
+            assert "subject" in metadata
+            return
+        if subset == "openbookqa":
+            assert len(metadata["raw_choices"]) == 4
+            return
+        if subset == "piqa":
+            assert len(metadata["raw_choices"]) == 2
+            return
+        raise AssertionError(f"unsupported bangla subset metadata: {subset!r}")
+
+    return validate
+
+
 def _metadata_kobest_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -1415,6 +1450,89 @@ def _belebele_suite_spec(
                 "\nAnswer:",
             ),
             metadata_validator=_metadata_belebele_language(language),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _bangla_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    expected_metadata = {
+        "streaming": False,
+        "split": "validation",
+        "subset": subset,
+        "scoring_mode": "multiple_choice_loglikelihood",
+    }
+    target_values: set[str] | None = None
+    prediction_values: set[str] | None = None
+    prompt_prefix: str | None = None
+    prompt_suffix: str | None = None
+    prompt_substrings: tuple[str, ...] = ()
+
+    if subset == "boolqa":
+        expected_metadata["dataset_path"] = "hishab/boolq_bn"
+        expected_metadata["dataset_name"] = None
+        target_values = {"yes", "no"}
+        prediction_values = {"yes", "no"}
+        prompt_prefix = "Passage:\n"
+        prompt_suffix = "\n\nAnswer:"
+        prompt_substrings = ("\n\nQuestion:\n",)
+    elif subset == "commonsenseqa":
+        expected_metadata["dataset_path"] = "hishab/commonsenseqa-bn"
+        expected_metadata["dataset_name"] = None
+        target_values = {"A", "B", "C", "D", "E"}
+        prediction_values = {"A", "B", "C", "D", "E"}
+        prompt_suffix = "\nAnswer:"
+        prompt_substrings = ("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nE. ")
+    elif subset == "mmlu":
+        expected_metadata["dataset_path"] = "hishab/titulm-bangla-mmlu"
+        expected_metadata["dataset_name"] = "all"
+        expected_metadata["split"] = "test"
+        target_values = {"A", "B", "C", "D"}
+        prediction_values = {"A", "B", "C", "D"}
+        prompt_suffix = " Answer:"
+        prompt_substrings = (" A. ", " B. ", " C. ", " D. ")
+    elif subset == "openbookqa":
+        expected_metadata["dataset_path"] = "hishab/openbookqa-bn"
+        expected_metadata["dataset_name"] = None
+        expected_metadata["split"] = "test"
+        target_values = {"A", "B", "C", "D"}
+        prediction_values = {"A", "B", "C", "D"}
+        prompt_suffix = "\nAnswer:"
+        prompt_substrings = ("\nA. ", "\nB. ", "\nC. ", "\nD. ")
+    elif subset == "piqa":
+        expected_metadata["dataset_path"] = "hishab/piqa-bn"
+        expected_metadata["dataset_name"] = None
+        target_values = {"A", "B"}
+        prediction_values = {"A", "B"}
+        prompt_suffix = "\nAnswer:"
+        prompt_substrings = ("\nA. ", "\nB. ")
+    else:
+        raise AssertionError(f"unsupported bangla subset spec: {subset!r}")
+
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.bangla(
+            subset=subset,
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name=f"bangla_{subset}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata=expected_metadata,
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset, target_values=target_values, prediction_values=prediction_values, prompt_prefix=prompt_prefix, prompt_suffix=prompt_suffix, prompt_substrings=prompt_substrings: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values=target_values,
+            prediction_values=prediction_values,
+            prompt_prefix=prompt_prefix,
+            prompt_suffix=prompt_suffix,
+            prompt_substrings=prompt_substrings,
+            metadata_validator=_metadata_bangla_subset(subset),
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
@@ -4527,6 +4645,18 @@ for _language, _baseline in {
 }.items():
     SUITE_SPECS[f"belebele_{_language}"] = _belebele_suite_spec(
         language=_language,
+        baseline=_baseline,
+    )
+
+for _subset, _baseline in {
+    "boolqa": {"acc,ll": 0.71875, "acc,ll_avg": 0.71875},
+    "commonsenseqa": {"acc,ll": 0.375, "acc,ll_avg": 0.375},
+    "mmlu": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "openbookqa": {"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
+    "piqa": {"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+}.items():
+    SUITE_SPECS[f"bangla_{_subset}"] = _bangla_suite_spec(
+        subset=_subset,
         baseline=_baseline,
     )
 

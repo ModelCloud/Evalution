@@ -26,6 +26,7 @@ from .arithmetic import (
 )
 from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
+from .bangla import BANGLA_SUBSETS, BANGLA_TASKS, Bangla, bangla, bangla_boolqa, bangla_commonsenseqa, bangla_mmlu, bangla_openbookqa, bangla_piqa
 from .bear import BEAR, bear, bear_big
 from .belebele import Belebele, belebele
 from .base import BaseTestSuite, TestSuite
@@ -131,7 +132,10 @@ __all__ = [
     "ASDiv",
     "ASDivCoTLlama",
     "BABI",
+    "BANGLA_SUBSETS",
+    "BANGLA_TASKS",
     "BEAR",
+    "Bangla",
     "Belebele",
     "BLiMP",
     "BLIMP_SUBSETS",
@@ -259,6 +263,12 @@ __all__ = [
     "asdiv",
     "asdiv_cot_llama",
     "babi",
+    "bangla",
+    "bangla_boolqa",
+    "bangla_commonsenseqa",
+    "bangla_mmlu",
+    "bangla_openbookqa",
+    "bangla_piqa",
     "bear",
     "bear_big",
     "belebele",

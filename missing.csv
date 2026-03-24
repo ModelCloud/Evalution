@@ -13,7 +13,6 @@ arabicmmlu,46,arabicmmlu/arabicmmlu_accounting_university.yaml,arabicmmlu/arabic
 aradice,109,aradice/ArabicMMLU/EGY/AraDiCE_ArabicMMLU.yaml,aradice/ArabicMMLU/EGY/AraDiCE_ArabicMMLU_high_humanities_history.yaml
 arc_mt,12,arc_mt/arc_challenge_mt_da.yaml,arc_mt/arc_challenge_mt_de.yaml
 babilong,22,babilong/babilong.yaml,babilong/babilong_longctx.yaml
-bangla,5,bangla/bangla_boolqa.yaml,bangla/bangla_commonsenseqa.yaml
 basque_bench,26,basque_bench/arc_eu_challenge.yaml,basque_bench/arc_eu_easy.yaml
 basqueglue,6,basqueglue/bec.yaml,basqueglue/bhtc.yaml
 bbh,113,bbh/cot_fewshot/boolean_expressions.yaml,bbh/cot_fewshot/causal_judgement.yaml
