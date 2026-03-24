@@ -14,15 +14,15 @@ from evalution.benchmarks.translated_hellaswag import BaseTranslatedHellaSwagSui
 
 
 @dataclass(slots=True)
-class DarijaHellaSwag(BaseTranslatedHellaSwagSuite):
-    dataset_path: str = "MBZUAI-Paris/DarijaHellaSwag"
+class EgyHellaSwag(BaseTranslatedHellaSwagSuite):
+    dataset_path: str = "UBC-NLP/EgyHellaSwag"
 
     def dataset_loader(self) -> Any:
         return load_dataset
 
     def task_name(self) -> str:
-        return "darijahellaswag"
+        return "egyhellaswag"
 
 
-def darijahellaswag(**kwargs: Any) -> DarijaHellaSwag:
-    return DarijaHellaSwag(**kwargs)
+def egyhellaswag(**kwargs: Any) -> EgyHellaSwag:
+    return EgyHellaSwag(**kwargs)

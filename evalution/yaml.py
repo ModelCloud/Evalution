@@ -109,6 +109,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "coqa": benchmarks.coqa,
     "copa": benchmarks.copa,
     "darijahellaswag": benchmarks.darijahellaswag,
+    "egyhellaswag": benchmarks.egyhellaswag,
     "drop": benchmarks.drop,
     "gpqa": benchmarks.gpqa,
     "gpqa_main": benchmarks.gpqa_main,

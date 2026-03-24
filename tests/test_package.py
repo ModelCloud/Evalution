@@ -141,6 +141,8 @@ def test_package_exports_benchmarks_namespace() -> None:
         assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.DarijaHellaSwag is not None
     assert callable(evalution.benchmarks.darijahellaswag)
+    assert evalution.benchmarks.EgyHellaSwag is not None
+    assert callable(evalution.benchmarks.egyhellaswag)
     assert evalution.benchmarks.COPAArabic is not None
     assert evalution.benchmarks.COPALID is not None
     assert callable(evalution.benchmarks.copal_id)

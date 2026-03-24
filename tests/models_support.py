@@ -2564,6 +2564,34 @@ SUITE_SPECS = {
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
+    "egyhellaswag": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.egyhellaswag(
+            batch_size=24,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name="egyhellaswag",
+        baseline={
+            "acc,ll": 0.25,
+            "acc,ll_avg": 0.1875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "UBC-NLP/EgyHellaSwag",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=(":",),
+            metadata_validator=_metadata_fields_truthy("activity_label", "source_id", "split_type"),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "copa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, streaming=True, max_rows=100),
         expected_name="copa",

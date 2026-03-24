@@ -72,7 +72,7 @@ def test_darijahellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None
 
 def test_darijahellaswag_label_prompt_lists_explicit_choices() -> None:
     suite = evalution.benchmarks.darijahellaswag()
-    sample = darijahellaswag_module.MultipleChoiceSample(
+    sample = evalution.benchmarks.MultipleChoiceSample(
         index=0,
         prompt="قلع قرميد السطح: راجل گالس فوق السطح. هو",
         choices=[

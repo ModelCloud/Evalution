@@ -258,6 +258,7 @@ logic, those implementation details can shift results.
 | `copal_id` | Multiple-choice log-likelihood across `standard/colloquial` variants, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
 | `crows_pairs` | Pairwise full-sentence log-likelihood across `english/french` language splits and supported bias-category subsets, with stereotype-preference rate and average absolute log-likelihood gap | CrowS-Pairs `nangia-etal-2020-crows`, French CrowS-Pairs `neveol-etal-2022-french` |
 | `darijahellaswag` | Multiple-choice log-likelihood over Moroccan Darija translated HellaSwag endings, raw + length-normalized accuracy | DarijaHellaSwag `shang2024atlaschatadaptinglargelanguage` |
+| `egyhellaswag` | Multiple-choice log-likelihood over Egyptian Arabic translated HellaSwag endings, raw + length-normalized accuracy | EgyHellaSwag `mekki2025nilechatlinguisticallydiverseculturally` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
 | `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
 | `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
@@ -393,6 +394,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `crows_pairs_english`, `crows_pairs_english_age`, `crows_pairs_english_autre`, `crows_pairs_english_disability`, `crows_pairs_english_gender`, `crows_pairs_english_nationality`, `crows_pairs_english_physical_appearance`, `crows_pairs_english_race_color`, `crows_pairs_english_religion`, `crows_pairs_english_sexual_orientation`, `crows_pairs_english_socioeconomic`: CrowS-Pairs `nangia-etal-2020-crows`
 - `crows_pairs_french`, `crows_pairs_french_age`, `crows_pairs_french_autre`, `crows_pairs_french_disability`, `crows_pairs_french_gender`, `crows_pairs_french_nationality`, `crows_pairs_french_physical_appearance`, `crows_pairs_french_race_color`, `crows_pairs_french_religion`, `crows_pairs_french_sexual_orientation`, `crows_pairs_french_socioeconomic`: French CrowS-Pairs `neveol-etal-2022-french`
 - `darijahellaswag`: DarijaHellaSwag `shang2024atlaschatadaptinglargelanguage`
+- `egyhellaswag`: EgyHellaSwag `mekki2025nilechatlinguisticallydiverseculturally`
 - `drop`: DROP `dua2019drop`
 - `gpqa_main`, `gpqa_diamond`, `gpqa_extended`: GPQA `rein2024gpqa`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
@@ -557,6 +559,15 @@ The current built-in suite coverage maps to these benchmark citations:
   journal = {arXiv preprint arXiv:2409.17912},
   year = {2024},
   url = {https://arxiv.org/abs/2409.17912},
+}
+
+# EgyHellaSwag
+@article{mekki2025nilechatlinguisticallydiverseculturally,
+  title = {NileChat: Towards Linguistically Diverse and Culturally Aware LLMs for Local Communities},
+  author = {El Mekki, Abdellah and Atou, Houdaifa and Nacar, Omer and Shehata, Shady and Abdul-Mageed, Muhammad},
+  journal = {arXiv preprint arXiv:2505.18383},
+  year = {2025},
+  url = {https://arxiv.org/abs/2505.18383},
 }
 
 # GSM8K-Platinum

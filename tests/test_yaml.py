@@ -261,6 +261,8 @@ tests:
     max_rows: 12
   - type: darijahellaswag
     max_rows: 16
+  - type: egyhellaswag
+    max_rows: 16
   - type: copa_ar
     max_rows: 12
   - type: drop
@@ -501,6 +503,7 @@ tests:
     assert ".run(benchmarks.coqa(" in script
     assert ".run(benchmarks.copa(" in script
     assert ".run(benchmarks.darijahellaswag(" in script
+    assert ".run(benchmarks.egyhellaswag(" in script
     assert ".run(benchmarks.copa_ar(" in script
     assert ".run(benchmarks.drop(" in script
     assert ".run(benchmarks.ethics_cm(" in script

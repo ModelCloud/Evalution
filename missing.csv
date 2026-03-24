@@ -32,7 +32,6 @@ darija_bench,37,darija_bench/darija_sentiment/darija_sentiment.yaml,darija_bench
 darijammlu,47,darijammlu/darijammlu_accounting.yaml,darijammlu/darijammlu_arabic_language.yaml
 discrim_eval,2,discrim_eval/discrim_eval_explicit.yaml,discrim_eval/discrim_eval_implicit.yaml
 e2lmc,20,e2lmc/mmlu_early_training/mmlu_early_training.yaml,e2lmc/noor/noor_abstract_algebra.yaml
-egyhellaswag,1,egyhellaswag/egyhellaswag.yaml,
 egymmlu,47,egymmlu/egymmlu_accounting.yaml,egymmlu/egymmlu_arabic_language.yaml
 eq_bench,3,eq_bench/default.yaml,eq_bench/multilingual/eqbench_ca.yaml
 esbbq,11,esbbq/esbbq.yaml,esbbq/esbbq_age.yaml

@@ -53,6 +53,7 @@ from . import crows_pairs as _crows_pairs_module
 from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .crows_pairs import CROWS_PAIRS_BIAS_TYPES, CROWS_PAIRS_LANGUAGES, CROWS_PAIRS_TASKS, CrowSPairs, crows_pairs
 from .darijahellaswag import DarijaHellaSwag, darijahellaswag
+from .egyhellaswag import EgyHellaSwag, egyhellaswag
 from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
@@ -163,6 +164,7 @@ __all__ = [
     "CROWS_PAIRS_TASKS",
     "CrowSPairs",
     "DarijaHellaSwag",
+    "EgyHellaSwag",
     "COPALID",
     "CoQA",
     "COPA",
@@ -309,6 +311,7 @@ __all__ = [
     "crows_pairs",
     *CROWS_PAIRS_TASKS,
     "darijahellaswag",
+    "egyhellaswag",
     "copal_id",
     "copal_id_colloquial",
     "copal_id_standard",
