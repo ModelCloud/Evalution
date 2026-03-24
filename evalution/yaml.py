@@ -186,6 +186,9 @@ _TEST_FACTORIES: dict[str, Any] = {
     "swag": benchmarks.swag,
     "sst2": benchmarks.sst2,
     "squadv2": benchmarks.squadv2,
+    "truthfulqa": benchmarks.truthfulqa,
+    "truthfulqa_mc1": benchmarks.truthfulqa_mc1,
+    "truthfulqa_mc2": benchmarks.truthfulqa_mc2,
     "triviaqa": benchmarks.triviaqa,
     "wic": benchmarks.wic,
     "webqs": benchmarks.webqs,
@@ -246,6 +249,11 @@ for _task_name in benchmarks.XNLI_TASKS:
 del _task_name
 
 for _task_name in benchmarks.XQUAD_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.TRUTHFULQA_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

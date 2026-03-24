@@ -109,7 +109,6 @@ tmlu,32,tmlu/default/tmlu_AST_biology.yaml,tmlu/default/tmlu_AST_chemistry.yaml
 tmmluplus,72,tmmluplus/default/tmmluplus_accounting.yaml,tmmluplus/default/tmmluplus_administrative_law.yaml
 toxigen,1,toxigen/toxigen.yaml,
 translation,8,translation/iwslt2017_ar-en.yaml,translation/iwslt2017_en-ar.yaml
-truthfulqa,3,truthfulqa/truthfulqa_gen.yaml,truthfulqa/truthfulqa_mc1.yaml
 truthfulqa-multi,15,truthfulqa-multi/truthfulqa-multi_gen_ca.yaml,truthfulqa-multi/truthfulqa-multi_gen_en.yaml
 turblimp,17,turblimp/anaphor_agreement.yaml,turblimp/argument_structure_ditransitive.yaml
 turkishmmlu,18,turkishmmlu/config/Biology.yaml,turkishmmlu/config/Chemistry.yaml

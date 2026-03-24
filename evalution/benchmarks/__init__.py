@@ -129,6 +129,7 @@ from .single_continuation import BaseSingleContinuationSuite, SingleContinuation
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .squadv2 import SQuADV2, squadv2
+from .truthfulqa import TRUTHFULQA_TASKS, TruthfulQAMC, truthfulqa, truthfulqa_mc1, truthfulqa_mc2
 from .triviaqa import TriviaQA, triviaqa
 from .wic import WiC, wic
 from .webqs import WebQS, webqs
@@ -348,6 +349,8 @@ __all__ = [
     "SQuADV2",
     "SST2",
     "TestSuite",
+    "TRUTHFULQA_TASKS",
+    "TruthfulQAMC",
     "TriviaQA",
     "WiC",
     "WebQS",
@@ -541,6 +544,9 @@ __all__ = [
     "squadv2",
     "question_answer_prompt",
     "sst2",
+    "truthfulqa",
+    "truthfulqa_mc1",
+    "truthfulqa_mc2",
     "triviaqa",
     "wic",
     "webqs",
@@ -604,3 +610,4 @@ __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(XNLI_TASKS)
 __all__.extend(XQUAD_TASKS)
+__all__.extend(TRUTHFULQA_TASKS)

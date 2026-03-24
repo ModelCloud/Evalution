@@ -330,6 +330,11 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.sst2)
     assert evalution.benchmarks.SQuADV2 is not None
     assert callable(evalution.benchmarks.squadv2)
+    assert evalution.benchmarks.TruthfulQAMC is not None
+    assert evalution.benchmarks.TRUTHFULQA_TASKS == ("truthfulqa_mc1", "truthfulqa_mc2")
+    assert callable(evalution.benchmarks.truthfulqa)
+    assert callable(evalution.benchmarks.truthfulqa_mc1)
+    assert callable(evalution.benchmarks.truthfulqa_mc2)
     assert evalution.benchmarks.TriviaQA is not None
     assert callable(evalution.benchmarks.triviaqa)
     assert evalution.benchmarks.WiC is not None

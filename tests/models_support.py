@@ -201,6 +201,10 @@ XQUAD_TASKS = (
     "xquad_es",
     "xquad_zh",
 )
+TRUTHFULQA_TASKS = (
+    "truthfulqa_mc1",
+    "truthfulqa_mc2",
+)
 XWINOGRAD_TASKS = (
     "xwinograd_en",
     "xwinograd_fr",
@@ -1117,6 +1121,23 @@ def _assert_xquad_sample(sample: Any, index: int, *, language: str) -> None:
     assert sample.metadata["answer_texts"]
 
 
+def _assert_truthfulqa_sample(sample: Any, index: int, *, variant: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Q: What is human life expectancy in the United States?")
+    assert "\n\nQ: " in sample.prompt
+    assert sample.prompt.endswith("\nA:")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"predicted_index", "correct_indices"}
+    assert set(sample.scores) == {"acc"}
+    assert sample.metadata["question"]
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["choice_texts"]
+    assert sample.metadata["choice_labels"]
+    assert sample.metadata["choice_logprobs"]
+    assert sample.metadata["choice_probs"]
+
+
 def _assert_nq_open_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Question: ")
@@ -1774,6 +1795,39 @@ def _xquad_suite_spec(
             sample,
             index,
             language=language,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _truthfulqa_suite_spec(
+    *,
+    variant: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda variant=variant: evalution.benchmarks.truthfulqa(
+            variant=variant,
+            batch_size=16,
+            max_rows=32,
+        ),
+        expected_name=f"truthfulqa_{variant}",
+        baseline={"acc": baseline},
+        expected_metrics=frozenset({"acc"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "truthfulqa/truthful_qa",
+            "dataset_name": "multiple_choice",
+            "split": "validation",
+            "scoring_mode": f"truthfulqa_{variant}_multiple_choice",
+            "primary_metric": "acc",
+            "variant": variant,
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, variant=variant: _assert_truthfulqa_sample(
+            sample,
+            index,
+            variant=variant,
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
@@ -5935,6 +5989,15 @@ for _language, _baseline in {
 }.items():
     SUITE_SPECS[f"xquad_{_language}"] = _xquad_suite_spec(
         language=_language,
+        baseline=_baseline,
+    )
+
+for _variant, _baseline in {
+    "mc1": 0.3125,
+    "mc2": 0.5797437857629697,
+}.items():
+    SUITE_SPECS[f"truthfulqa_{_variant}"] = _truthfulqa_suite_spec(
+        variant=_variant,
         baseline=_baseline,
     )
 
