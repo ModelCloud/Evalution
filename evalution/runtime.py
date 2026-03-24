@@ -10,7 +10,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Any
 
-from evalution.config import Model, coerce_model, model_with_label
+from evalution.config import Model
 from evalution.engines.base import BaseEngine, BaseInferenceSession
 from evalution.logbar import (
     LoggingContext,
@@ -124,7 +124,8 @@ def run(
     if not isinstance(engine, BaseEngine):
         raise TypeError("engine must inherit BaseEngine")
 
-    evaluation = engine.model(model)
+    model_config = model if isinstance(model, Model) else Model(**model)
+    evaluation = engine.model(**model_config.to_dict())
     try:
         for test in tests:
             evaluation.run(test)

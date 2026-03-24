@@ -132,13 +132,33 @@ class BaseEngine(ABC):
         # suite execution, and result materialization depend on the common inference APIs.
         raise NotImplementedError
 
-    def model(self, model: Model | dict, *, label: str | None = None) -> EvaluationRun:
-        from evalution.config import coerce_model, model_with_label
+    def model(
+        self,
+        *,
+        path: str,
+        tokenizer: Any | None = None,
+        tokenizer_path: str | None = None,
+        revision: str | None = None,
+        trust_remote_code: bool = False,
+        model_kwargs: dict[str, Any] | None = None,
+        tokenizer_kwargs: dict[str, Any] | None = None,
+        label: str | None = None,
+    ) -> EvaluationRun:
+        from evalution.config import Model, model_with_label
         from evalution.runtime import EvaluationRun
 
+        model = Model(
+            path=path,
+            tokenizer=tokenizer,
+            tokenizer_path=tokenizer_path,
+            revision=revision,
+            trust_remote_code=trust_remote_code,
+            model_kwargs=model_kwargs or {},
+            tokenizer_kwargs=tokenizer_kwargs or {},
+        )
         return EvaluationRun(
             _engine_impl=self,
-            _model_config=model_with_label(coerce_model(model), label=label),
+            _model_config=model_with_label(model, label=label),
         )
 
     # Serialize engine controls into the public run result payload.
