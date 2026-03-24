@@ -5709,7 +5709,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
         expected_metadata={
-            "stream": False,
+            "stream": True,
             "dataset_path": "EleutherAI/wikitext_document_level",
             "dataset_name": "wikitext-2-raw-v1",
             "split": "test",
