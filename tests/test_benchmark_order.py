@@ -140,17 +140,15 @@ def test_random_order_aliases_shuffle_with_seed(monkeypatch) -> None:
         variant="base",
         max_rows=3,
         batch_size=3,
-        order="random",
-        order_seed=7,
+        order="random|7",
     ).evaluate(random_session)
     shuffle_result = evalution.benchmarks.gsm8k(
         variant="base",
         max_rows=3,
         batch_size=3,
-        order="shuffle",
-        order_seed=7,
+        order="shuffle|7",
     ).evaluate(shuffle_session)
 
     assert random_session.prompts == shuffle_session.prompts
-    assert random_result.metadata["order"] == "shuffle"
-    assert shuffle_result.metadata["order"] == "shuffle"
+    assert random_result.metadata["order"] == "shuffle|7"
+    assert shuffle_result.metadata["order"] == "shuffle|7"

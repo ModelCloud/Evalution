@@ -41,7 +41,6 @@ class BaseTestSuite(TestSuite):
     dataset_name: str | None = None
     split: str = "test"
     order: str = "native"
-    order_seed: int = 0
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
@@ -128,7 +127,6 @@ class BaseTestSuite(TestSuite):
             "dataset_name": self.dataset_name,
             "split": self.split,
             "order": normalize_order(self.order),
-            "order_seed": self.order_seed,
             "streaming": self.streaming,
             "generation_submission_mode": generation_submission_mode,
         }
@@ -192,7 +190,6 @@ class BaseTestSuite(TestSuite):
                 ordered_prepared_samples,
                 order=resolved_order,
                 length_key=self.order_length,
-                seed=self.order_seed,
             )
             ordered_sample_indices = [sample.index for sample in ordered_prepared_samples]
             ordered_prepared_samples = prepare_batch_for_session(session, ordered_prepared_samples)

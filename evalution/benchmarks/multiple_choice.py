@@ -49,7 +49,6 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     # default here would silently change benchmark semantics.
     split: str = "validation"
     order: str = "native"
-    order_seed: int = 0
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
@@ -110,7 +109,6 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             "dataset_name": self.dataset_name,
             "split": self.split,
             "order": normalize_order(self.order),
-            "order_seed": self.order_seed,
             "streaming": self.streaming,
             "scoring_mode": "multiple_choice_loglikelihood",
         }
@@ -234,7 +232,6 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             samples,
             order=resolved_order,
             length_key=self.order_length,
-            seed=self.order_seed,
         )
         requests: list[LoglikelihoodRequest] = []
         request_to_choice: list[tuple[int, int]] = []

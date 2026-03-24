@@ -14,22 +14,24 @@ from evalution.logbar import get_logger, spinner
 
 T = TypeVar("T")
 
-_ORDER_ALIASES = {
-    "native": "native",
-    "shuffle": "shuffle",
-    "random": "shuffle",
-    "length|asc": "length|asc",
-    "length|desc": "length|desc",
-}
-
-
 def normalize_order(order: str) -> str:
     normalized = order.strip().lower()
-    try:
-        return _ORDER_ALIASES[normalized]
-    except KeyError as exc:
-        allowed = ", ".join(sorted(_ORDER_ALIASES))
-        raise ValueError(f"unsupported benchmark order: {order!r}; expected one of {allowed}") from exc
+    if normalized in {"native", "length|asc", "length|desc"}:
+        return normalized
+    if normalized in {"shuffle", "random"}:
+        return "shuffle"
+    if normalized.startswith("shuffle|") or normalized.startswith("random|"):
+        mode, seed_text = normalized.split("|", maxsplit=1)
+        try:
+            seed = int(seed_text)
+        except ValueError as exc:
+            raise ValueError(f"unsupported benchmark order seed: {order!r}") from exc
+        del mode
+        return f"shuffle|{seed}"
+    raise ValueError(
+        f"unsupported benchmark order: {order!r}; expected one of native, shuffle, random, "
+        "shuffle|<seed>, random|<seed>, length|asc, length|desc"
+    )
 
 
 def apply_order(
@@ -37,13 +39,15 @@ def apply_order(
     *,
     order: str,
     length_key: Callable[[T], int],
-    seed: int,
 ) -> list[T]:
     normalized_order = normalize_order(order)
     ordered = list(items)
     if normalized_order == "native":
         return ordered
-    if normalized_order == "shuffle":
+    if normalized_order == "shuffle" or normalized_order.startswith("shuffle|"):
+        seed = 0
+        if "|" in normalized_order:
+            seed = int(normalized_order.split("|", maxsplit=1)[1])
         random.Random(seed).shuffle(ordered)
         return ordered
     reverse = normalized_order == "length|desc"
