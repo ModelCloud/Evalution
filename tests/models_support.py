@@ -28,6 +28,12 @@ LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE = os.environ.get(
 )
 SCORE_BASELINE_ABS_TOLERANCE = 2 / 128
 SCORE_BASELINE_ABS_TOLERANCE_32 = 2 / 32
+SCORE_BASELINE_ABS_TOLERANCE_35 = 2 / 35
+SCORE_BASELINE_ABS_TOLERANCE_42 = 2 / 42
+SCORE_BASELINE_ABS_TOLERANCE_73 = 2 / 73
+SCORE_BASELINE_ABS_TOLERANCE_89 = 2 / 89
+SCORE_BASELINE_ABS_TOLERANCE_115 = 2 / 115
+SCORE_BASELINE_ABS_TOLERANCE_272 = 2 / 272
 MMLU_STEM_SUBSETS = {
     "stem.abstract_algebra",
     "stem.anatomy",
@@ -57,7 +63,15 @@ MMLU_PRO_STEM_SUBSETS = {
     "stem.math",
     "stem.physics",
 }
+AEXAMS_TASKS = (
+    "aexams_biology",
+    "aexams_islamic_studies",
+    "aexams_physics",
+    "aexams_science",
+    "aexams_social",
+)
 AIME_TASKS = ("aime", "aime24", "aime25")
+ALGHAFA_TASKS = ("copa_ar", "piqa_ar")
 ARITHMETIC_TASKS = (
     "arithmetic_1dc",
     "arithmetic_2da",
@@ -73,6 +87,14 @@ ARITHMETIC_TASKS = (
 BEAR_TASKS = (
     "bear",
     "bear_big",
+)
+BBH_TASKS = tuple(evalution.benchmarks.BBH_TASKS)
+BANGLA_TASKS = (
+    "bangla_boolqa",
+    "bangla_commonsenseqa",
+    "bangla_mmlu",
+    "bangla_openbookqa",
+    "bangla_piqa",
 )
 PAWS_X_TASKS = (
     "paws_x_de",
@@ -96,6 +118,18 @@ XCOPA_TASKS = (
     "xcopa_vi",
     "xcopa_zh",
 )
+ARC_MT_TASKS = (
+    "arc_mt_da",
+    "arc_mt_fi",
+    "arc_mt_is",
+    "arc_mt_pt",
+)
+AFRIXNLI_TASKS = (
+    "afrixnli_amh",
+    "afrixnli_eng",
+    "afrixnli_fra",
+    "afrixnli_swa",
+)
 XWINOGRAD_TASKS = (
     "xwinograd_en",
     "xwinograd_fr",
@@ -103,6 +137,19 @@ XWINOGRAD_TASKS = (
     "xwinograd_pt",
     "xwinograd_ru",
     "xwinograd_zh",
+)
+XSTORYCLOZE_TASKS = (
+    "xstorycloze_ar",
+    "xstorycloze_en",
+    "xstorycloze_es",
+    "xstorycloze_eu",
+    "xstorycloze_hi",
+    "xstorycloze_id",
+    "xstorycloze_my",
+    "xstorycloze_ru",
+    "xstorycloze_sw",
+    "xstorycloze_te",
+    "xstorycloze_zh",
 )
 WINOGENDER_TASKS = (
     "winogender_all",
@@ -127,6 +174,12 @@ BLIMP_TASKS = tuple(
     f"blimp_{subset.lower()}"
     for subset in BLIMP_INTEGRATION_SUBSETS
 )
+BELEBELE_TASKS = (
+    "belebele_amh_Ethi",
+    "belebele_eng_Latn",
+    "belebele_fra_Latn",
+    "belebele_swh_Latn",
+)
 COPAL_ID_TASKS = (
     "copal_id_standard",
     "copal_id_colloquial",
@@ -137,6 +190,27 @@ CEVAL_TASKS = (
     "ceval_high_school_physics",
     "ceval_law",
 )
+GPQA_TASKS = (
+    "gpqa_main",
+    "gpqa_diamond",
+    "gpqa_extended",
+)
+CODE_X_GLUE_TASKS = (
+    "code2text_go",
+    "code2text_java",
+    "code2text_javascript",
+    "code2text_php",
+    "code2text_python",
+    "code2text_ruby",
+)
+KOBEST_TASKS = (
+    "kobest_boolq",
+    "kobest_copa",
+    "kobest_hellaswag",
+    "kobest_sentineg",
+    "kobest_wic",
+)
+CROWS_PAIRS_TASKS = tuple(evalution.benchmarks.CROWS_PAIRS_TASKS)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -494,6 +568,80 @@ def _assert_xwinograd_sample(sample: Any, index: int, *, language: str) -> None:
     assert "choice_logprobs_norm" in sample.metadata
 
 
+def _assert_icelandic_winogrande_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert "_" in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["qID"]
+    assert sample.metadata["sentence"] == sample.prompt
+    assert sample.metadata["answer_label"] in {"1", "2"}
+    assert sample.metadata["blank_index"] >= 0
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert sample.metadata["choice_labels"] == ["A", "B"]
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_xstorycloze_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["language"] == language
+    assert sample.metadata["story_id"]
+    assert len(sample.metadata["input_sentences"]) == 4
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_crows_pairs_sample(
+    sample: Any,
+    index: int,
+    *,
+    language: str,
+    bias_type: str | None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "predicted_index",
+        "predicted_label",
+    }
+    assert set(sample.scores) == {
+        "pct_stereotype",
+        "likelihood_diff",
+    }
+    assert sample.metadata["language"] == language
+    assert sample.metadata["bias_category"] == (bias_type or "all")
+    assert sample.metadata["bias_type"]
+    assert sample.metadata["stereo_antistereo"] in {"stereo", "antistereo"}
+    assert sample.metadata["choice_labels"] == ["sent_more", "sent_less"]
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert len(sample.metadata["choice_logprobs"]) == 2
+
+
 def _assert_winogender_sample(
     sample: Any,
     index: int,
@@ -604,6 +752,12 @@ def _assert_arc_exam_sample(sample: Any, index: int) -> None:
     assert "selected_count" in sample.metadata
 
 
+def _assert_arc_mt_sample(sample: Any, index: int, *, language: str) -> None:
+    _assert_arc_exam_sample(sample, index)
+    assert sample.metadata["language"] == language
+    assert len(sample.metadata["choice_labels"]) == 4
+
+
 def _assert_arc_exam_label_perm_sample(
     sample: Any,
     index: int,
@@ -694,6 +848,26 @@ def _assert_cnn_dailymail_metadata(metadata: dict[str, Any]) -> None:
     assert metadata["id"]
     assert metadata["article_chars"] > 0
     assert metadata["reference_lines"] >= 1
+
+
+def _assert_code2text_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt == sample.prompt.strip()
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "reference-stripped",
+    }
+    assert sample.scores == {}
+    assert sample.metadata["language"] == language
+    assert sample.metadata["repo"]
+    assert sample.metadata["path"]
+    assert sample.metadata["func_name"]
+    assert sample.metadata["sha"]
+    assert sample.metadata["url"]
+    assert sample.metadata["code_token_count"] > 0
+    assert sample.metadata["docstring_token_count"] > 0
 
 
 def _assert_single_continuation_loglikelihood_sample(
@@ -904,6 +1078,27 @@ def _assert_mmlu_pro_sample(
     assert 3 <= len(sample.metadata["choice_texts"]) <= 10
 
 
+def _assert_gpqa_sample(sample: Any, index: int, *, subset: str) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target in {"A", "B", "C", "D"}
+    assert sample.prediction
+    assert sample.prompt.startswith("What is the correct answer to this question: ")
+    assert "\nChoices:\n(A) " in sample.prompt
+    assert sample.prompt.endswith('Format your response as follows: "The correct answer is (insert answer here)"')
+    assert set(sample.extracted) == {"choice-label", "choice-text"}
+    assert set(sample.scores) == {"em,choice_label"}
+    assert sample.metadata["subset"] == subset
+    assert sample.metadata["record_id"]
+    assert sample.metadata["question"]
+    assert sample.metadata["high_level_domain"]
+    assert sample.metadata["subdomain"]
+    assert sample.metadata["choice_labels"] == ["A", "B", "C", "D"]
+    assert len(sample.metadata["choice_texts"]) == 4
+    assert sample.metadata["gold_choice"] in sample.metadata["choice_texts"]
+    assert sample.metadata["shuffle_seed"] == 0
+
+
 def _validate_gsm8k_like_result(test_result: Any) -> None:
     invalid_predictions = 0
     numeric_matches = 0
@@ -988,6 +1183,102 @@ def _metadata_ceval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_afrixnli_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["premise"]
+        assert metadata["hypothesis"]
+        assert metadata["choice_texts"] == ["entailment", "neutral", "contradiction"]
+
+    return validate
+
+
+def _metadata_belebele_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["dialect"] == language
+        assert metadata["question_number"] > 0
+        assert metadata["link"]
+        assert metadata["passage"]
+        assert metadata["question"]
+        assert len(metadata["raw_choices"]) == 4
+        assert metadata["correct_answer_num"] in {"1", "2", "3", "4"}
+
+    return validate
+
+
+def _metadata_arc_mt_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+
+    return validate
+
+
+def _metadata_bbh_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["input"]
+        assert metadata["target_text"]
+
+    return validate
+
+
+def _metadata_bangla_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        if subset == "boolqa":
+            assert metadata["passage"]
+            assert metadata["question"]
+            return
+        assert metadata["question"]
+        assert metadata["choice_labels"]
+        assert metadata["raw_choices"]
+        if subset == "commonsenseqa":
+            assert len(metadata["raw_choices"]) == 5
+            return
+        if subset == "mmlu":
+            assert len(metadata["raw_choices"]) == 4
+            assert "subject" in metadata
+            return
+        if subset == "openbookqa":
+            assert len(metadata["raw_choices"]) == 4
+            return
+        if subset == "piqa":
+            assert len(metadata["raw_choices"]) == 2
+            return
+        raise AssertionError(f"unsupported bangla subset metadata: {subset!r}")
+
+    return validate
+
+
+def _metadata_kobest_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        if subset == "boolq":
+            assert metadata["paragraph"]
+            assert metadata["question"]
+            return
+        if subset == "copa":
+            assert metadata["question"] in {"원인", "결과"}
+            assert len(metadata["raw_choices"]) == 2
+            return
+        if subset == "hellaswag":
+            assert metadata["context"]
+            assert len(metadata["raw_choices"]) == 4
+            return
+        if subset == "sentineg":
+            assert metadata["sentence"]
+            return
+        if subset == "wic":
+            assert metadata["word"]
+            assert metadata["context_1"]
+            assert metadata["context_2"]
+            return
+        raise AssertionError(f"unsupported kobest subset metadata: {subset!r}")
+
+    return validate
+
+
 def _metadata_sentence_has_blank(metadata: dict[str, Any]) -> None:
     assert " _ " in metadata["sentence"]
 
@@ -1031,6 +1322,36 @@ def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
             index,
             task_name=task_name,
         ),
+    )
+
+
+def _bbh_suite_spec(task_name: str, subset: str, baseline: float) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            batch_size=4,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline={"em": baseline},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "lukaemon/bbh",
+            "dataset_name": subset,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_prefix="Q: ",
+            prompt_suffix="\nA:",
+            metadata_validator=_metadata_bbh_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
 
 
@@ -1137,6 +1458,310 @@ def _xcopa_suite_spec(
     )
 
 
+def _afrixnli_suite_spec(
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.afrixnli(
+            language=language,
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name=f"afrixnli_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "masakhane/afrixnli",
+            "dataset_name": language,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"entailment", "neutral", "contradiction"},
+            prediction_values={"entailment", "neutral", "contradiction"},
+            prompt_substrings=(
+                "Premise: ",
+                "\nHypothesis: ",
+                "\nQuestion: What is the relationship between the premise and hypothesis: entailment, neutral, or contradiction?\nAnswer:",
+            ),
+            metadata_validator=_metadata_afrixnli_language(language),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _belebele_suite_spec(
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.belebele(
+            language=language,
+            batch_size=4,
+            max_rows=32,
+        ),
+        expected_name=f"belebele_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "facebook/belebele",
+            "dataset_name": language,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_substrings=(
+                "P: ",
+                "\nQ: ",
+                "\nA: ",
+                "\nB: ",
+                "\nC: ",
+                "\nD: ",
+                "\nAnswer:",
+            ),
+            metadata_validator=_metadata_belebele_language(language),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _bangla_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    expected_metadata = {
+        "streaming": False,
+        "split": "validation",
+        "subset": subset,
+        "scoring_mode": "multiple_choice_loglikelihood",
+    }
+    target_values: set[str] | None = None
+    prediction_values: set[str] | None = None
+    prompt_prefix: str | None = None
+    prompt_suffix: str | None = None
+    prompt_substrings: tuple[str, ...] = ()
+
+    if subset == "boolqa":
+        expected_metadata["dataset_path"] = "hishab/boolq_bn"
+        expected_metadata["dataset_name"] = None
+        target_values = {"yes", "no"}
+        prediction_values = {"yes", "no"}
+        prompt_prefix = "Passage:\n"
+        prompt_suffix = "\n\nAnswer:"
+        prompt_substrings = ("\n\nQuestion:\n",)
+    elif subset == "commonsenseqa":
+        expected_metadata["dataset_path"] = "hishab/commonsenseqa-bn"
+        expected_metadata["dataset_name"] = None
+        target_values = {"A", "B", "C", "D", "E"}
+        prediction_values = {"A", "B", "C", "D", "E"}
+        prompt_suffix = "\nAnswer:"
+        prompt_substrings = ("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nE. ")
+    elif subset == "mmlu":
+        expected_metadata["dataset_path"] = "hishab/titulm-bangla-mmlu"
+        expected_metadata["dataset_name"] = "all"
+        expected_metadata["split"] = "test"
+        target_values = {"A", "B", "C", "D"}
+        prediction_values = {"A", "B", "C", "D"}
+        prompt_suffix = " Answer:"
+        prompt_substrings = (" A. ", " B. ", " C. ", " D. ")
+    elif subset == "openbookqa":
+        expected_metadata["dataset_path"] = "hishab/openbookqa-bn"
+        expected_metadata["dataset_name"] = None
+        expected_metadata["split"] = "test"
+        target_values = {"A", "B", "C", "D"}
+        prediction_values = {"A", "B", "C", "D"}
+        prompt_suffix = "\nAnswer:"
+        prompt_substrings = ("\nA. ", "\nB. ", "\nC. ", "\nD. ")
+    elif subset == "piqa":
+        expected_metadata["dataset_path"] = "hishab/piqa-bn"
+        expected_metadata["dataset_name"] = None
+        target_values = {"A", "B"}
+        prediction_values = {"A", "B"}
+        prompt_suffix = "\nAnswer:"
+        prompt_substrings = ("\nA. ", "\nB. ")
+    else:
+        raise AssertionError(f"unsupported bangla subset spec: {subset!r}")
+
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.bangla(
+            subset=subset,
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name=f"bangla_{subset}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata=expected_metadata,
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset, target_values=target_values, prediction_values=prediction_values, prompt_prefix=prompt_prefix, prompt_suffix=prompt_suffix, prompt_substrings=prompt_substrings: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values=target_values,
+            prediction_values=prediction_values,
+            prompt_prefix=prompt_prefix,
+            prompt_suffix=prompt_suffix,
+            prompt_substrings=prompt_substrings,
+            metadata_validator=_metadata_bangla_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _arc_mt_suite_spec(
+    *,
+    language: str,
+    dataset_path: str,
+    dataset_name: str | None,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.arc_mt(
+            language=language,
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name=f"arc_mt_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,exam"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": dataset_path,
+            "dataset_name": dataset_name,
+            "split": "test",
+            "scoring_mode": "multiple_choice_exam_score",
+            "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
+            "language": language,
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_arc_mt_sample(
+            sample,
+            index,
+            language=language,
+        ),
+        result_validator=_validate_arc_exam_result,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _kobest_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    target_values: set[str] | None = None
+    prediction_values: set[str] | None = None
+    prompt_prefix: str | None = None
+    prompt_suffix: str | None = None
+    prompt_substrings: tuple[str, ...] = ()
+
+    if subset == "boolq":
+        target_values = {"아니오", "예"}
+        prediction_values = {"아니오", "예"}
+        prompt_prefix = "지문: "
+        prompt_suffix = "\n답변:"
+        prompt_substrings = ("\n질문: ",)
+    elif subset == "copa":
+        prompt_prefix = None
+    elif subset == "hellaswag":
+        prompt_prefix = None
+    elif subset == "sentineg":
+        target_values = {"부정", "긍정"}
+        prediction_values = {"부정", "긍정"}
+        prompt_prefix = "문장: "
+        prompt_suffix = "\n답변:"
+        prompt_substrings = ("\n질문: 이 문장의 감성은 무엇입니까?\n",)
+    elif subset == "wic":
+        target_values = {"아니오", "예"}
+        prediction_values = {"아니오", "예"}
+        prompt_prefix = "문장 1: "
+        prompt_suffix = "\n답변:"
+        prompt_substrings = ("\n문장 2: ", "\n질문: 두 문장에서 '")
+    else:
+        raise AssertionError(f"unsupported kobest subset spec: {subset!r}")
+
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.kobest(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=f"kobest_{subset}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "skt/kobest_v1",
+            "dataset_name": subset,
+            "split": "test",
+            "subset": subset,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset, target_values=target_values, prediction_values=prediction_values, prompt_prefix=prompt_prefix, prompt_suffix=prompt_suffix, prompt_substrings=prompt_substrings: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values=target_values,
+            prediction_values=prediction_values,
+            prompt_prefix=prompt_prefix,
+            prompt_suffix=prompt_suffix,
+            prompt_substrings=prompt_substrings,
+            metadata_validator=_metadata_kobest_subset(subset),
+        ),
+    )
+
+
+def _gpqa_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.gpqa(
+            subset=subset,
+            batch_size=4,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name=f"gpqa_{subset}",
+        baseline=baseline,
+        expected_metrics=frozenset({"em,choice_label"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Idavidrein/gpqa",
+            "dataset_name": f"gpqa_{subset}",
+            "split": "train",
+            "subset": subset,
+            "shuffle_seed": 0,
+            "prompt_variant": "author_zero_shot_label_response",
+            "choice_order_mode": "seeded_shuffle",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_choice_label_exact_match",
+            "primary_metric": "em,choice_label",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_gpqa_sample(
+            sample,
+            index,
+            subset=subset,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 def _blimp_suite_spec(
     *,
     subset: str,
@@ -1204,6 +1829,44 @@ def _ceval_suite_spec(
             metadata_validator=_metadata_ceval_subset(subset),
         ),
         abs_tolerance=2 / expected_sample_count,
+    )
+
+
+def _crows_pairs_suite_spec(
+    task_name: str,
+    *,
+    baseline: dict[str, float],
+    expected_sample_count: int,
+) -> SuiteSpec:
+    suffix = task_name.removeprefix("crows_pairs_")
+    language, _, bias_type = suffix.partition("_")
+    resolved_bias_type = bias_type or None
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"pct_stereotype", "likelihood_diff"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "jannalu/crows_pairs_multilingual",
+            "dataset_name": language,
+            "split": "test",
+            "language": language,
+            "bias_type": resolved_bias_type,
+            "scoring_mode": "pairwise_sentence_loglikelihood_bias_preference",
+            "primary_metric": "pct_stereotype",
+            "prompt_variant": "empty_context_full_sentence",
+        },
+        expected_sample_count=expected_sample_count,
+        sample_validator=lambda sample, index, language=language, bias_type=resolved_bias_type: _assert_crows_pairs_sample(
+            sample,
+            index,
+            language=language,
+            bias_type=bias_type,
+        ),
+        abs_tolerance=max(2 / expected_sample_count, 0.15),
     )
 
 
@@ -1315,6 +1978,121 @@ SUITE_SPECS = {
         expected_sample_count=128,
         sample_validator=_assert_asdiv_cot_llama_sample,
         result_validator=_validate_gsm8k_like_result,
+    ),
+    "aexams_biology": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_biology(batch_size=24),
+        expected_name="aexams_biology",
+        baseline={"acc,ll": 0.34285714285714286, "acc,ll_avg": 0.34285714285714286},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "Biology",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=35,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"biology"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_35,
+    ),
+    "aexams_islamic_studies": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_islamic_studies(batch_size=24),
+        expected_name="aexams_islamic_studies",
+        baseline={"acc,ll": 0.4246575342465753, "acc,ll_avg": 0.4246575342465753},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "IslamicStudies",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=73,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"islamic_studies"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_73,
+    ),
+    "aexams_physics": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_physics(batch_size=24),
+        expected_name="aexams_physics",
+        baseline={"acc,ll": 0.2857142857142857, "acc,ll_avg": 0.2857142857142857},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "Physics",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=42,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"physics"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_42,
+    ),
+    "aexams_science": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_science(batch_size=24),
+        expected_name="aexams_science",
+        baseline={"acc,ll": 0.34782608695652173, "acc,ll_avg": 0.34782608695652173},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "Science",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=115,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"science"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_115,
+    ),
+    "aexams_social": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.aexams_social(batch_size=24),
+        expected_name="aexams_social",
+        baseline={"acc,ll": 0.29044117647058826, "acc,ll_avg": 0.29044117647058826},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "Hennara/aexams",
+            "dataset_name": "Social",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=272,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("subject", {"social"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_272,
     ),
     "babi": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.babi(
@@ -1659,6 +2437,138 @@ SUITE_SPECS = {
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
+    "code2text_go": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_go(batch_size=1, max_rows=16),
+        expected_name="code2text_go",
+        baseline={"bleu4": 0.12701024051547405},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_go",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "go",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="go"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_java": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_java(batch_size=1, max_rows=16),
+        expected_name="code2text_java",
+        baseline={"bleu4": 0.7372980967711409},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_java",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "java",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="java"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_javascript": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_javascript(batch_size=1, max_rows=16),
+        expected_name="code2text_javascript",
+        baseline={"bleu4": 0.24753010988524},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_javascript",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "javascript",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="javascript"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_php": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_php(batch_size=1, max_rows=16),
+        expected_name="code2text_php",
+        baseline={"bleu4": 0.2931185120841358},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_php",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "php",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="php"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_python": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_python(batch_size=1, max_rows=16),
+        expected_name="code2text_python",
+        baseline={"bleu4": 0.14476427430734137},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_python",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "python",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="python"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_ruby": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_ruby(batch_size=1, max_rows=16),
+        expected_name="code2text_ruby",
+        baseline={"bleu4": 0.3812030669921292},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_ruby",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "ruby",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="ruby"),
+        abs_tolerance=0.05,
+    ),
+    "gpqa_main": _gpqa_suite_spec(
+        subset="main",
+        baseline={"em,choice_label": 0.0},
+    ),
+    "gpqa_diamond": _gpqa_suite_spec(
+        subset="diamond",
+        baseline={"em,choice_label": 0.0},
+    ),
+    "gpqa_extended": _gpqa_suite_spec(
+        subset="extended",
+        baseline={"em,choice_label": 0.0},
+    ),
     "commonsense_qa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.commonsense_qa(
             batch_size=24,
@@ -1690,6 +2600,62 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=5),
         ),
     ),
+    "darijahellaswag": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.darijahellaswag(
+            batch_size=24,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name="darijahellaswag",
+        baseline={
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.28125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "MBZUAI-Paris/DarijaHellaSwag",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=(":",),
+            metadata_validator=_metadata_fields_truthy("activity_label", "source_id", "split_type"),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "egyhellaswag": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.egyhellaswag(
+            batch_size=24,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name="egyhellaswag",
+        baseline={
+            "acc,ll": 0.25,
+            "acc,ll_avg": 0.1875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "UBC-NLP/EgyHellaSwag",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=(":",),
+            metadata_validator=_metadata_fields_truthy("activity_label", "source_id", "split_type"),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "copa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, streaming=True, max_rows=100),
         expected_name="copa",
@@ -1711,6 +2677,31 @@ SUITE_SPECS = {
             index,
             metadata_validator=_metadata_field_in("question", {"cause", "effect"}),
         ),
+    ),
+    "copa_ar": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.copa_ar(batch_size=24, streaming=True, max_rows=89),
+        expected_name="copa_ar",
+        baseline={
+            "acc,ll": 0.5730337078651685,
+            "acc,ll_avg": 0.4943820224719101,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Hennara/copa_ar",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=89,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="السؤال: ",
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("source_benchmark", {"copa"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_89,
     ),
     "copal_id_standard": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copal_id_standard(
@@ -1997,6 +2988,58 @@ SUITE_SPECS = {
             prompt_substrings=(":",),
         ),
     ),
+    "histoires_morales": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.histoires_morales(batch_size=24, max_rows=32),
+        expected_name="histoires_morales",
+        baseline={
+            "acc,ll": 0.53125,
+            "acc,ll_avg": 0.5,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "LabHC/histoires_morales",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy(
+                "guid",
+                "norm",
+                "situation",
+                "intention",
+                "moral_action",
+                "immoral_action",
+                "moral_consequence",
+                "immoral_consequence",
+            ),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "icelandic_winogrande": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.icelandic_winogrande(batch_size=24, max_rows=32),
+        expected_name="icelandic_winogrande",
+        baseline={
+            "acc,ll": 0.5625,
+            "acc,ll_avg": 0.5625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "mideind/icelandic-winogrande",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_icelandic_winogrande_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "hellaswag_label_perm_0_25": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.hellaswag(
             batch_size=24,
@@ -2034,6 +3077,41 @@ SUITE_SPECS = {
             label_permutations=0.25,
             prompt_substrings=(":",),
         ),
+    ),
+    "kobest_boolq": _kobest_suite_spec(
+        subset="boolq",
+        baseline={
+            "acc,ll": 0.546875,
+            "acc,ll_avg": 0.5546875,
+        },
+    ),
+    "kobest_copa": _kobest_suite_spec(
+        subset="copa",
+        baseline={
+            "acc,ll": 0.546875,
+            "acc,ll_avg": 0.53125,
+        },
+    ),
+    "kobest_hellaswag": _kobest_suite_spec(
+        subset="hellaswag",
+        baseline={
+            "acc,ll": 0.359375,
+            "acc,ll_avg": 0.4609375,
+        },
+    ),
+    "kobest_sentineg": _kobest_suite_spec(
+        subset="sentineg",
+        baseline={
+            "acc,ll": 0.5078125,
+            "acc,ll_avg": 0.515625,
+        },
+    ),
+    "kobest_wic": _kobest_suite_spec(
+        subset="wic",
+        baseline={
+            "acc,ll": 0.4375,
+            "acc,ll_avg": 0.4765625,
+        },
     ),
     "headqa_en": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.headqa_en(batch_size=24, streaming=True, max_rows=128),
@@ -2536,6 +3614,30 @@ SUITE_SPECS = {
             prompt_substrings=("\nAnswer:",),
         ),
     ),
+    "piqa_ar": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.piqa_ar(batch_size=24, streaming=True, max_rows=128),
+        expected_name="piqa_ar",
+        baseline={
+            "acc,ll": 0.5625,
+            "acc,ll_avg": 0.5390625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Hennara/pica_ar",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="السؤال: ",
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("source_benchmark", {"piqa"}),
+        ),
+    ),
     "pile_10k": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.pile_10k(batch_size=1, max_rows=32),
         expected_name="pile_10k",
@@ -2607,6 +3709,75 @@ SUITE_SPECS = {
             prompt_suffix="\nAnswer:",
             metadata_validator=_metadata_fields_truthy("pubid", "long_answer"),
         ),
+    ),
+    "qa4mre_2011": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.qa4mre_2011(batch_size=1, max_rows=32),
+        expected_name="qa4mre_2011",
+        baseline={"acc,ll": 0.40625, "acc,ll_avg": 0.5},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "qa4mre",
+            "dataset_name": "2011.main.EN",
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy(
+                "year", "topic_id", "topic_name", "test_id", "document_id", "question_id", "question", "correct_answer_id"
+            ),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "qa4mre_2012": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.qa4mre_2012(batch_size=1, max_rows=32),
+        expected_name="qa4mre_2012",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "qa4mre",
+            "dataset_name": "2012.main.EN",
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy(
+                "year", "topic_id", "topic_name", "test_id", "document_id", "question_id", "question", "correct_answer_id"
+            ),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "qa4mre_2013": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.qa4mre_2013(batch_size=1, max_rows=32),
+        expected_name="qa4mre_2013",
+        baseline={"acc,ll": 0.46875, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "qa4mre",
+            "dataset_name": "2013.main.EN",
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy(
+                "year", "topic_id", "topic_name", "test_id", "document_id", "question_id", "question", "correct_answer_id"
+            ),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "qnli": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.qnli(batch_size=24, streaming=True, max_rows=128),
@@ -3056,6 +4227,182 @@ SUITE_SPECS = {
         sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="zh"),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
+    "xstorycloze_ar": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_ar(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_ar",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "ar",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="ar"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_en": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_en(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_en",
+        baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.6875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "en",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="en"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_es(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_es",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "es",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="es"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_eu": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_eu(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_eu",
+        baseline={"acc,ll": 0.4375, "acc,ll_avg": 0.4375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "eu",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="eu"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_hi": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_hi(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_hi",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "hi",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="hi"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_id": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_id(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_id",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "id",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="id"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_my": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_my(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_my",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "my",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="my"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_ru": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_ru(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_ru",
+        baseline={"acc,ll": 0.625, "acc,ll_avg": 0.6875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "ru",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="ru"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_sw": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_sw(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_sw",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.75},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "sw",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="sw"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_te": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_te(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_te",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "te",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="te"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xstorycloze_zh": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_zh(batch_size=24, streaming=True, max_rows=32),
+        expected_name="xstorycloze_zh",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.53125},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "juletxara/xstory_cloze",
+            "dataset_name": "zh",
+            "split": "eval",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="zh"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "winogender_all": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.winogender_all(batch_size=24, streaming=True, max_rows=32),
         expected_name="winogender_all",
@@ -3374,6 +4721,37 @@ for _task_name, _baseline in {
 }.items():
     SUITE_SPECS[_task_name] = _arithmetic_suite_spec(_task_name, _baseline)
 
+for _task_name, _subset, _baseline in (
+    ("bbh_boolean_expressions", "boolean_expressions", 0.5),
+    ("bbh_causal_judgement", "causal_judgement", 0.15625),
+    ("bbh_date_understanding", "date_understanding", 0.375),
+    ("bbh_disambiguation_qa", "disambiguation_qa", 0.09375),
+    ("bbh_dyck_languages", "dyck_languages", 0.0),
+    ("bbh_formal_fallacies", "formal_fallacies", 0.03125),
+    ("bbh_geometric_shapes", "geometric_shapes", 0.0),
+    ("bbh_hyperbaton", "hyperbaton", 0.40625),
+    ("bbh_logical_deduction_five_objects", "logical_deduction_five_objects", 0.0),
+    ("bbh_logical_deduction_seven_objects", "logical_deduction_seven_objects", 0.15625),
+    ("bbh_logical_deduction_three_objects", "logical_deduction_three_objects", 0.03125),
+    ("bbh_movie_recommendation", "movie_recommendation", 0.0),
+    ("bbh_multistep_arithmetic_two", "multistep_arithmetic_two", 0.0),
+    ("bbh_navigate", "navigate", 0.375),
+    ("bbh_object_counting", "object_counting", 0.375),
+    ("bbh_penguins_in_a_table", "penguins_in_a_table", 0.09375),
+    ("bbh_reasoning_about_colored_objects", "reasoning_about_colored_objects", 0.1875),
+    ("bbh_ruin_names", "ruin_names", 0.28125),
+    ("bbh_salient_translation_error_detection", "salient_translation_error_detection", 0.0),
+    ("bbh_snarks", "snarks", 0.5625),
+    ("bbh_sports_understanding", "sports_understanding", 0.0),
+    ("bbh_temporal_sequences", "temporal_sequences", 0.125),
+    ("bbh_tracking_shuffled_objects_five_objects", "tracking_shuffled_objects_five_objects", 0.0),
+    ("bbh_tracking_shuffled_objects_seven_objects", "tracking_shuffled_objects_seven_objects", 0.0),
+    ("bbh_tracking_shuffled_objects_three_objects", "tracking_shuffled_objects_three_objects", 0.03125),
+    ("bbh_web_of_lies", "web_of_lies", 0.46875),
+    ("bbh_word_sorting", "word_sorting", 0.0),
+):
+    SUITE_SPECS[_task_name] = _bbh_suite_spec(_task_name, _subset, _baseline)
+
 for _task_name, _language in (
     ("paws_x_de", "de"),
     ("paws_x_en", "en"),
@@ -3573,6 +4951,152 @@ for _subset, _baseline, _sample_count in (
         subset=_subset,
         baseline=_baseline,
         expected_sample_count=_sample_count,
+    )
+
+for _language, _baseline in {
+    "amh": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "eng": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "fra": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "swa": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+}.items():
+    SUITE_SPECS[f"afrixnli_{_language}"] = _afrixnli_suite_spec(
+        language=_language,
+        baseline=_baseline,
+    )
+
+for _language, _baseline in {
+    "amh_Ethi": {"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
+    "eng_Latn": {"acc,ll": 0.53125, "acc,ll_avg": 0.53125},
+    "fra_Latn": {"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+    "swh_Latn": {"acc,ll": 0.25, "acc,ll_avg": 0.25},
+}.items():
+    SUITE_SPECS[f"belebele_{_language}"] = _belebele_suite_spec(
+        language=_language,
+        baseline=_baseline,
+    )
+
+for _subset, _baseline in {
+    "boolqa": {"acc,ll": 0.71875, "acc,ll_avg": 0.71875},
+    "commonsenseqa": {"acc,ll": 0.375, "acc,ll_avg": 0.375},
+    "mmlu": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "openbookqa": {"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
+    "piqa": {"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+}.items():
+    SUITE_SPECS[f"bangla_{_subset}"] = _bangla_suite_spec(
+        subset=_subset,
+        baseline=_baseline,
+    )
+
+for _language, _dataset_path, _dataset_name, _baseline in (
+    ("da", "LumiOpen/arc_challenge_mt", "da", {"acc,exam": 0.1875}),
+    ("fi", "LumiOpen/arc_challenge_mt", "fi", {"acc,exam": 0.28125}),
+    ("is", "mideind/icelandic-arc-challenge", None, {"acc,exam": 0.25}),
+    ("pt", "LumiOpen/arc_challenge_mt", "pt", {"acc,exam": 0.21875}),
+):
+    SUITE_SPECS[f"arc_mt_{_language}"] = _arc_mt_suite_spec(
+        language=_language,
+        dataset_path=_dataset_path,
+        dataset_name=_dataset_name,
+        baseline=_baseline,
+    )
+
+for _task_name, _baseline in {
+    "crows_pairs_english": {
+        "pct_stereotype": 0.5625,
+        "likelihood_diff": 3.1171875,
+    },
+    "crows_pairs_english_age": {
+        "pct_stereotype": 0.75,
+        "likelihood_diff": 3.5078125,
+    },
+    "crows_pairs_english_autre": {
+        "pct_stereotype": 0.7272727272727273,
+        "likelihood_diff": 6.613636363636363,
+    },
+    "crows_pairs_english_disability": {
+        "pct_stereotype": 0.625,
+        "likelihood_diff": 8.796875,
+    },
+    "crows_pairs_english_gender": {
+        "pct_stereotype": 0.5,
+        "likelihood_diff": 3.34375,
+    },
+    "crows_pairs_english_nationality": {
+        "pct_stereotype": 0.625,
+        "likelihood_diff": 3.9140625,
+    },
+    "crows_pairs_english_physical_appearance": {
+        "pct_stereotype": 0.5625,
+        "likelihood_diff": 4.3125,
+    },
+    "crows_pairs_english_race_color": {
+        "pct_stereotype": 0.40625,
+        "likelihood_diff": 3.1484375,
+    },
+    "crows_pairs_english_religion": {
+        "pct_stereotype": 0.6875,
+        "likelihood_diff": 3.3828125,
+    },
+    "crows_pairs_english_sexual_orientation": {
+        "pct_stereotype": 0.6875,
+        "likelihood_diff": 5.125,
+    },
+    "crows_pairs_english_socioeconomic": {
+        "pct_stereotype": 0.78125,
+        "likelihood_diff": 4.1875,
+    },
+    "crows_pairs_french": {
+        "pct_stereotype": 0.46875,
+        "likelihood_diff": 6.6640625,
+    },
+    "crows_pairs_french_age": {
+        "pct_stereotype": 0.4375,
+        "likelihood_diff": 3.7421875,
+    },
+    "crows_pairs_french_autre": {
+        "pct_stereotype": 0.46153846153846156,
+        "likelihood_diff": 5.288461538461538,
+    },
+    "crows_pairs_french_disability": {
+        "pct_stereotype": 0.53125,
+        "likelihood_diff": 7.4609375,
+    },
+    "crows_pairs_french_gender": {
+        "pct_stereotype": 0.46875,
+        "likelihood_diff": 4.4375,
+    },
+    "crows_pairs_french_nationality": {
+        "pct_stereotype": 0.40625,
+        "likelihood_diff": 5.046875,
+    },
+    "crows_pairs_french_physical_appearance": {
+        "pct_stereotype": 0.4375,
+        "likelihood_diff": 3.828125,
+    },
+    "crows_pairs_french_race_color": {
+        "pct_stereotype": 0.3125,
+        "likelihood_diff": 3.9296875,
+    },
+    "crows_pairs_french_religion": {
+        "pct_stereotype": 0.46875,
+        "likelihood_diff": 3.84375,
+    },
+    "crows_pairs_french_sexual_orientation": {
+        "pct_stereotype": 0.6875,
+        "likelihood_diff": 6.2734375,
+    },
+    "crows_pairs_french_socioeconomic": {
+        "pct_stereotype": 0.5625,
+        "likelihood_diff": 5.72265625,
+    },
+}.items():
+    SUITE_SPECS[_task_name] = _crows_pairs_suite_spec(
+        _task_name,
+        baseline=_baseline,
+        expected_sample_count={
+            "crows_pairs_english_autre": 11,
+            "crows_pairs_french_autre": 13,
+        }.get(_task_name, 32),
     )
 
 

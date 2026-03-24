@@ -114,22 +114,94 @@ engine:
 model:
   path: /tmp/model
 tests:
+  - type: aexams_biology
+    max_rows: 18
+  - type: aexams_islamic_studies
+    max_rows: 18
+  - type: aexams_physics
+    max_rows: 18
+  - type: aexams_science
+    max_rows: 18
+  - type: aexams_social
+    max_rows: 18
+  - type: afrixnli_amh
+    max_rows: 16
+  - type: afrixnli_eng
+    max_rows: 16
+  - type: afrixnli_ewe
+    max_rows: 16
+  - type: afrixnli_fra
+    max_rows: 16
+  - type: afrixnli_hau
+    max_rows: 16
+  - type: afrixnli_ibo
+    max_rows: 16
+  - type: afrixnli_kin
+    max_rows: 16
+  - type: afrixnli_lin
+    max_rows: 16
+  - type: afrixnli_lug
+    max_rows: 16
+  - type: afrixnli_orm
+    max_rows: 16
+  - type: afrixnli_sna
+    max_rows: 16
+  - type: afrixnli_sot
+    max_rows: 16
+  - type: afrixnli_swa
+    max_rows: 16
+  - type: afrixnli_twi
+    max_rows: 16
+  - type: afrixnli_wol
+    max_rows: 16
+  - type: afrixnli_xho
+    max_rows: 16
+  - type: afrixnli_yor
+    max_rows: 16
+  - type: afrixnli_zul
+    max_rows: 16
   - type: anli_r1
     max_rows: 18
   - type: anli_r2
     max_rows: 18
   - type: anli_r3
     max_rows: 18
+  - type: arc_mt
+    language: da
+    max_rows: 16
+  - type: arc_mt_is
+    max_rows: 16
   - type: asdiv
     max_rows: 18
   - type: asdiv_cot_llama
     max_rows: 18
   - type: babi
     max_rows: 18
+  - type: bbh
+    subset: boolean_expressions
+    max_rows: 18
+  - type: bbh_date_understanding
+    max_rows: 18
+  - type: bangla
+    subset: boolqa
+    max_rows: 16
+  - type: bangla_boolqa
+    max_rows: 16
+  - type: bangla_commonsenseqa
+    max_rows: 16
+  - type: bangla_mmlu
+    max_rows: 16
+  - type: bangla_openbookqa
+    max_rows: 16
+  - type: bangla_piqa
+    max_rows: 16
   - type: bear
     max_rows: 18
   - type: bear_big
     max_rows: 18
+  - type: belebele
+    language: eng_Latn
+    max_rows: 16
   - type: blimp
     subset: adjunct_island
     max_rows: 18
@@ -144,6 +216,8 @@ tests:
     max_rows: 18
   - type: headqa_es
     max_rows: 18
+  - type: histoires_morales
+    max_rows: 16
   - type: lambada_openai
     max_rows: 18
   - type: lambada_openai_cloze
@@ -152,6 +226,8 @@ tests:
     max_rows: 18
   - type: lambada_standard_cloze
     max_rows: 18
+  - type: icelandic_winogrande
+    max_rows: 16
   - type: logiqa
     max_rows: 18
   - type: mathqa
@@ -170,6 +246,18 @@ tests:
     max_rows: 52
   - type: cnn_dailymail
     max_rows: 8
+  - type: code2text_go
+    max_rows: 8
+  - type: code2text_java
+    max_rows: 8
+  - type: code2text_javascript
+    max_rows: 8
+  - type: code2text_php
+    max_rows: 8
+  - type: code2text_python
+    max_rows: 8
+  - type: code2text_ruby
+    max_rows: 8
   - type: commonsense_qa
     max_rows: 18
   - type: copal_id_standard
@@ -179,6 +267,12 @@ tests:
   - type: coqa
     max_rows: 16
   - type: copa
+    max_rows: 12
+  - type: darijahellaswag
+    max_rows: 16
+  - type: egyhellaswag
+    max_rows: 16
+  - type: copa_ar
     max_rows: 12
   - type: drop
     max_rows: 16
@@ -248,6 +342,28 @@ tests:
     max_rows: 16
   - type: xcopa_zh
     max_rows: 16
+  - type: xstorycloze_ar
+    max_rows: 16
+  - type: xstorycloze_en
+    max_rows: 16
+  - type: xstorycloze_es
+    max_rows: 16
+  - type: xstorycloze_eu
+    max_rows: 16
+  - type: xstorycloze_hi
+    max_rows: 16
+  - type: xstorycloze_id
+    max_rows: 16
+  - type: xstorycloze_my
+    max_rows: 16
+  - type: xstorycloze_ru
+    max_rows: 16
+  - type: xstorycloze_sw
+    max_rows: 16
+  - type: xstorycloze_te
+    max_rows: 16
+  - type: xstorycloze_zh
+    max_rows: 16
   - type: xwinograd_en
     max_rows: 16
   - type: xwinograd_fr
@@ -262,12 +378,20 @@ tests:
     max_rows: 16
   - type: piqa
     max_rows: 16
+  - type: piqa_ar
+    max_rows: 16
   - type: pile_10k
     max_rows: 8
   - type: prost
     max_rows: 18
   - type: pubmedqa
     max_rows: 18
+  - type: qa4mre_2011
+    max_rows: 16
+  - type: qa4mre_2012
+    max_rows: 16
+  - type: qa4mre_2013
+    max_rows: 16
   - type: qnli
     max_rows: 26
   - type: qqp
@@ -323,24 +447,60 @@ tests:
     assert "engines.Transformers(" in script
     assert "eval(engines." not in script
     assert ".model(eval.Model(" in script
+    assert ".run(benchmarks.aexams_biology(" in script
+    assert ".run(benchmarks.aexams_islamic_studies(" in script
+    assert ".run(benchmarks.aexams_physics(" in script
+    assert ".run(benchmarks.aexams_science(" in script
+    assert ".run(benchmarks.aexams_social(" in script
+    assert ".run(benchmarks.afrixnli_amh(" in script
+    assert ".run(benchmarks.afrixnli_eng(" in script
+    assert ".run(benchmarks.afrixnli_ewe(" in script
+    assert ".run(benchmarks.afrixnli_fra(" in script
+    assert ".run(benchmarks.afrixnli_hau(" in script
+    assert ".run(benchmarks.afrixnli_ibo(" in script
+    assert ".run(benchmarks.afrixnli_kin(" in script
+    assert ".run(benchmarks.afrixnli_lin(" in script
+    assert ".run(benchmarks.afrixnli_lug(" in script
+    assert ".run(benchmarks.afrixnli_orm(" in script
+    assert ".run(benchmarks.afrixnli_sna(" in script
+    assert ".run(benchmarks.afrixnli_sot(" in script
+    assert ".run(benchmarks.afrixnli_swa(" in script
+    assert ".run(benchmarks.afrixnli_twi(" in script
+    assert ".run(benchmarks.afrixnli_wol(" in script
+    assert ".run(benchmarks.afrixnli_xho(" in script
+    assert ".run(benchmarks.afrixnli_yor(" in script
+    assert ".run(benchmarks.afrixnli_zul(" in script
     assert ".run(benchmarks.anli_r1(" in script
     assert ".run(benchmarks.anli_r2(" in script
     assert ".run(benchmarks.anli_r3(" in script
+    assert ".run(benchmarks.arc_mt(" in script
+    assert ".run(benchmarks.arc_mt_is(" in script
     assert ".run(benchmarks.asdiv(" in script
     assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script
+    assert ".run(benchmarks.bbh(" in script
+    assert ".run(benchmarks.bbh_date_understanding(" in script
+    assert ".run(benchmarks.bangla(" in script
+    assert ".run(benchmarks.bangla_boolqa(" in script
+    assert ".run(benchmarks.bangla_commonsenseqa(" in script
+    assert ".run(benchmarks.bangla_mmlu(" in script
+    assert ".run(benchmarks.bangla_openbookqa(" in script
+    assert ".run(benchmarks.bangla_piqa(" in script
     assert ".run(benchmarks.bear(" in script
     assert ".run(benchmarks.bear_big(" in script
+    assert ".run(benchmarks.belebele(" in script
     assert ".run(benchmarks.blimp(" in script
     assert ".run(benchmarks.c4(" in script
     assert ".run(benchmarks.ceval(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.headqa_en(" in script
     assert ".run(benchmarks.headqa_es(" in script
+    assert ".run(benchmarks.histoires_morales(" in script
     assert ".run(benchmarks.lambada_openai(" in script
     assert ".run(benchmarks.lambada_openai_cloze(" in script
     assert ".run(benchmarks.lambada_standard(" in script
     assert ".run(benchmarks.lambada_standard_cloze(" in script
+    assert ".run(benchmarks.icelandic_winogrande(" in script
     assert ".run(benchmarks.logiqa(" in script
     assert ".run(benchmarks.mathqa(" in script
     assert ".run(benchmarks.mc_taco(" in script
@@ -350,11 +510,20 @@ tests:
     assert ".run(benchmarks.cb(" in script
     assert ".run(benchmarks.cola(" in script
     assert ".run(benchmarks.cnn_dailymail(" in script
+    assert ".run(benchmarks.code2text_go(" in script
+    assert ".run(benchmarks.code2text_java(" in script
+    assert ".run(benchmarks.code2text_javascript(" in script
+    assert ".run(benchmarks.code2text_php(" in script
+    assert ".run(benchmarks.code2text_python(" in script
+    assert ".run(benchmarks.code2text_ruby(" in script
     assert ".run(benchmarks.commonsense_qa(" in script
     assert ".run(benchmarks.copal_id_standard(" in script
     assert ".run(benchmarks.copal_id_colloquial(" in script
     assert ".run(benchmarks.coqa(" in script
     assert ".run(benchmarks.copa(" in script
+    assert ".run(benchmarks.darijahellaswag(" in script
+    assert ".run(benchmarks.egyhellaswag(" in script
+    assert ".run(benchmarks.copa_ar(" in script
     assert ".run(benchmarks.drop(" in script
     assert ".run(benchmarks.ethics_cm(" in script
     assert ".run(benchmarks.ethics_deontology(" in script
@@ -377,6 +546,8 @@ tests:
     assert ".run(benchmarks.paws_x_ja(" in script
     assert ".run(benchmarks.paws_x_ko(" in script
     assert ".run(benchmarks.paws_x_zh(" in script
+    assert ".run(benchmarks.piqa(" in script
+    assert ".run(benchmarks.piqa_ar(" in script
     assert ".run(benchmarks.xcopa_et(" in script
     assert ".run(benchmarks.xcopa_ht(" in script
     assert ".run(benchmarks.xcopa_id(" in script
@@ -388,16 +559,29 @@ tests:
     assert ".run(benchmarks.xcopa_tr(" in script
     assert ".run(benchmarks.xcopa_vi(" in script
     assert ".run(benchmarks.xcopa_zh(" in script
+    assert ".run(benchmarks.xstorycloze_ar(" in script
+    assert ".run(benchmarks.xstorycloze_en(" in script
+    assert ".run(benchmarks.xstorycloze_es(" in script
+    assert ".run(benchmarks.xstorycloze_eu(" in script
+    assert ".run(benchmarks.xstorycloze_hi(" in script
+    assert ".run(benchmarks.xstorycloze_id(" in script
+    assert ".run(benchmarks.xstorycloze_my(" in script
+    assert ".run(benchmarks.xstorycloze_ru(" in script
+    assert ".run(benchmarks.xstorycloze_sw(" in script
+    assert ".run(benchmarks.xstorycloze_te(" in script
+    assert ".run(benchmarks.xstorycloze_zh(" in script
     assert ".run(benchmarks.xwinograd_en(" in script
     assert ".run(benchmarks.xwinograd_fr(" in script
     assert ".run(benchmarks.xwinograd_jp(" in script
     assert ".run(benchmarks.xwinograd_pt(" in script
     assert ".run(benchmarks.xwinograd_ru(" in script
     assert ".run(benchmarks.xwinograd_zh(" in script
-    assert ".run(benchmarks.piqa(" in script
     assert ".run(benchmarks.pile_10k(" in script
     assert ".run(benchmarks.prost(" in script
     assert ".run(benchmarks.pubmedqa(" in script
+    assert ".run(benchmarks.qa4mre_2011(" in script
+    assert ".run(benchmarks.qa4mre_2012(" in script
+    assert ".run(benchmarks.qa4mre_2013(" in script
     assert ".run(benchmarks.qnli(" in script
     assert ".run(benchmarks.qqp(" in script
     assert ".run(benchmarks.race(" in script

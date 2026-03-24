@@ -547,6 +547,7 @@ class TransformersSession(BaseTransformerSession):
 def _continuous_request_signature(request: GenerationRequest) -> tuple[Any, ...]:
     return (
         tuple(request.stop),
+        request.num_beams,
         request.do_sample,
         request.temperature if request.do_sample else None,
     )

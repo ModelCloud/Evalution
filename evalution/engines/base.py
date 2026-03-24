@@ -24,6 +24,7 @@ class GenerationRequest:
     add_generation_prompt: bool = True
     stop: list[str] = field(default_factory=list)
     max_new_tokens: int = 256
+    num_beams: int = 1
     do_sample: bool = False
     temperature: float = 0.0
     metadata: dict[str, Any] = field(default_factory=dict)
