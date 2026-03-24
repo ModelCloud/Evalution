@@ -96,6 +96,8 @@ from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
 from .histoires_morales import HistoiresMorales, histoires_morales
 from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
+from . import inverse_scaling as _inverse_scaling_module
+from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic
 from .lambada import LAMBADA, lambada_openai, lambada_standard
 from .lambada_cloze import LAMBADACloze, lambada_openai_cloze, lambada_standard_cloze
@@ -217,6 +219,11 @@ for _xquad_task in XQUAD_TASKS:
 
 del _xquad_task
 
+for _inverse_scaling_task in INVERSE_SCALING_TASKS:
+    globals()[_inverse_scaling_task] = getattr(_inverse_scaling_module, _inverse_scaling_task)
+
+del _inverse_scaling_task
+
 __all__ = [
     "ANLI",
     "AIME",
@@ -314,6 +321,9 @@ __all__ = [
     "HellaSwag",
     "HistoiresMorales",
     "IcelandicWinoGrande",
+    "INVERSE_SCALING_SUBSETS",
+    "INVERSE_SCALING_TASKS",
+    "InverseScaling",
     "KOBEST_SUBSETS",
     "KOBEST_TASKS",
     "KoBEST",
@@ -496,6 +506,7 @@ __all__ = [
     "hellaswag",
     "histoires_morales",
     "icelandic_winogrande",
+    "inverse_scaling",
     "kobest",
     "kobest_boolq",
     "kobest_copa",
@@ -614,3 +625,4 @@ __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(XNLI_TASKS)
 __all__.extend(XQUAD_TASKS)
 __all__.extend(TRUTHFULQA_TASKS)
+__all__.extend(INVERSE_SCALING_TASKS)

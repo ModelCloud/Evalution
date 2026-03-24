@@ -45,7 +45,6 @@ humaneval,5,humaneval/humaneval.yaml,humaneval/humaneval_64.yaml
 humaneval_infilling,5,humaneval_infilling/humaneval_infilling.yaml,humaneval_infilling/multi_line_infilling.yaml
 ifeval,3,ifeval/ifeval.yaml,ifeval/multilingual/ifeval_ca.yaml
 include,666,include/default/Albanian/include_base_44_albanian_arts_humanities.yaml,include/default/Albanian/include_base_44_albanian_business_commerce.yaml
-inverse_scaling,11,inverse_scaling/inverse_scaling_hindsight_neglect.yaml,inverse_scaling/inverse_scaling_into_the_unknown.yaml
 japanese_leaderboard,9,japanese_leaderboard/ja_leaderboard_jaqket_v2.yaml,japanese_leaderboard/ja_leaderboard_jcommonsenseqa.yaml
 jfinqa,4,jfinqa/jfinqa_consistency.yaml,jfinqa/jfinqa_numerical.yaml
 jsonschema_bench,3,jsonschema_bench/jsonschema_bench_easy.yaml,jsonschema_bench/jsonschema_bench_hard.yaml

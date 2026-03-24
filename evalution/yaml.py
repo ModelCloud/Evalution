@@ -141,6 +141,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "hellaswag": benchmarks.hellaswag,
     "histoires_morales": benchmarks.histoires_morales,
     "icelandic_winogrande": benchmarks.icelandic_winogrande,
+    "inverse_scaling": benchmarks.inverse_scaling,
     "kobest": benchmarks.kobest,
     "kobest_boolq": benchmarks.kobest_boolq,
     "kobest_copa": benchmarks.kobest_copa,
@@ -255,6 +256,11 @@ for _task_name in benchmarks.XQUAD_TASKS:
 del _task_name
 
 for _task_name in benchmarks.TRUTHFULQA_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.INVERSE_SCALING_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

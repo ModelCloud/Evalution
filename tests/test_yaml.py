@@ -283,6 +283,11 @@ tests:
     max_rows: 18
   - type: icelandic_winogrande
     max_rows: 16
+  - type: inverse_scaling
+    subset: hindsight-neglect
+    max_rows: 16
+  - type: inverse_scaling_hindsight_neglect
+    max_rows: 16
   - type: logiqa
     max_rows: 18
   - type: logiqa2
@@ -595,6 +600,8 @@ tests:
     assert ".run(benchmarks.lambada_standard(" in script
     assert ".run(benchmarks.lambada_standard_cloze(" in script
     assert ".run(benchmarks.icelandic_winogrande(" in script
+    assert ".run(benchmarks.inverse_scaling(" in script
+    assert ".run(benchmarks.inverse_scaling_hindsight_neglect(" in script
     assert ".run(benchmarks.logiqa(" in script
     assert ".run(benchmarks.logiqa2(" in script
     assert ".run(benchmarks.mathqa(" in script

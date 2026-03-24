@@ -1516,7 +1516,7 @@ def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
             "streaming": True,
             "dataset_path": "EleutherAI/arithmetic",
             "dataset_name": task_name,
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "single_continuation_loglikelihood",
         },
         expected_sample_count=128,
@@ -1632,7 +1632,7 @@ def _paws_x_suite_spec(
             "streaming": False,
             "dataset_path": "paws-x",
             "dataset_name": language,
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
@@ -1830,6 +1830,38 @@ def _truthfulqa_suite_spec(
             variant=variant,
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _inverse_scaling_suite_spec(
+    *,
+    task_name: str,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.inverse_scaling(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "pminervini/inverse-scaling",
+            "dataset_name": subset,
+            "split": "data",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="Answer:",
+            metadata_validator=_metadata_fields_truthy("subset", "round", "part", "choice_labels", "choice_texts"),
+        ),
     )
 
 
@@ -6022,6 +6054,34 @@ for _variant, _baseline in {
 }.items():
     SUITE_SPECS[f"truthfulqa_{_variant}"] = _truthfulqa_suite_spec(
         variant=_variant,
+        baseline=_baseline,
+    )
+
+for _task_name, _subset, _baseline in (
+    (
+        "inverse_scaling_hindsight_neglect",
+        "hindsight-neglect",
+        {"acc,ll": 0.375, "acc,ll_avg": 0.375},
+    ),
+    (
+        "inverse_scaling_into_the_unknown",
+        "into-the-unknown",
+        {"acc,ll": 0.296875, "acc,ll_avg": 0.296875},
+    ),
+    (
+        "inverse_scaling_resisting_correction",
+        "resisting-correction",
+        {"acc,ll": 0.796875, "acc,ll_avg": 0.828125},
+    ),
+    (
+        "inverse_scaling_sig_figs",
+        "sig-figs",
+        {"acc,ll": 0.0625, "acc,ll_avg": 0.0625},
+    ),
+):
+    SUITE_SPECS[_task_name] = _inverse_scaling_suite_spec(
+        task_name=_task_name,
+        subset=_subset,
         baseline=_baseline,
     )
 

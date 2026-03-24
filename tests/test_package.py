@@ -250,6 +250,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.histoires_morales)
     assert evalution.benchmarks.IcelandicWinoGrande is not None
     assert callable(evalution.benchmarks.icelandic_winogrande)
+    assert evalution.benchmarks.InverseScaling is not None
+    assert evalution.benchmarks.INVERSE_SCALING_SUBSETS
+    assert evalution.benchmarks.INVERSE_SCALING_TASKS
+    assert callable(evalution.benchmarks.inverse_scaling)
+    for factory_name in evalution.benchmarks.INVERSE_SCALING_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.KoBEST is not None
     assert evalution.benchmarks.KOBEST_SUBSETS
     assert evalution.benchmarks.KOBEST_TASKS

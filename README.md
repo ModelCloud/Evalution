@@ -312,6 +312,7 @@ logic, those implementation details can shift results.
 | `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `inverse_scaling` | Multiple-choice log-likelihood across inverse-scaling subsets, raw + length-normalized accuracy | Inverse Scaling Prize `mckenzie2023inverse` |
 | `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
 | `logiqa2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA 2.0 `liu2022logiqa2` |
 | `mathqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MathQA `amini2019mathqa` |
@@ -457,6 +458,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
 - `histoires_morales`: Histoires Morales `leteno2025histoiresmorales`
 - `icelandic_winogrande`: Icelandic WinoGrande `snaebjarnarson-etal-2022-warm`
+- `inverse_scaling_<subset>` for the built-in inverse-scaling subsets: Inverse Scaling Prize `mckenzie2023inverse`
 - `kobest_boolq`, `kobest_copa`, `kobest_hellaswag`, `kobest_sentineg`, `kobest_wic`: KoBEST `kim2022kobest`
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
 - `logiqa`: LogiQA `liu2020logiqa`
@@ -1048,6 +1050,15 @@ The current built-in suite coverage maps to these benchmark citations:
   publisher = {Zenodo},
   doi = {10.5281/zenodo.2630551},
   year = {2016},
+}
+
+# LogiQA
+@article{mckenzie2023inverse,
+  title = {Inverse Scaling Prize: First Round Winners},
+  author = {Robert McKenzie and Ethan Perez and Jan Leike and others},
+  year = {2023},
+  journal = {arXiv preprint arXiv:2306.09479},
+  url = {https://arxiv.org/abs/2306.09479},
 }
 
 # LogiQA
