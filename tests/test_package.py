@@ -96,6 +96,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.egymmlu)
     for factory_name in evalution.benchmarks.EGYMMLU_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.EusExams is not None
+    assert evalution.benchmarks.EUS_EXAMS_SUBSETS
+    assert evalution.benchmarks.EUS_EXAMS_TASKS
+    assert callable(evalution.benchmarks.eus_exams)
+    for factory_name in evalution.benchmarks.EUS_EXAMS_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.ARCChallenge is not None
     assert evalution.benchmarks.ARCMT is not None
     assert evalution.benchmarks.ARC_MT_LANGUAGES

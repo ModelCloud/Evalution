@@ -119,6 +119,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "drop": benchmarks.drop,
     "darijammlu": benchmarks.darijammlu,
     "egymmlu": benchmarks.egymmlu,
+    "eus_exams": benchmarks.eus_exams,
     "gpqa": benchmarks.gpqa,
     "gpqa_main": benchmarks.gpqa_main,
     "gpqa_diamond": benchmarks.gpqa_diamond,
@@ -230,6 +231,11 @@ for _task_name in benchmarks.DARIJAMMLU_TASKS:
 del _task_name
 
 for _task_name in benchmarks.EGYMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.EUS_EXAMS_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

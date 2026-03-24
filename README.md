@@ -251,6 +251,7 @@ logic, those implementation details can shift results.
 | `arabicmmlu` | Multiple-choice log-likelihood across configurable ArabicMMLU subject subsets, raw + length-normalized accuracy | ArabicMMLU `koto2024arabicmmlu` |
 | `darijammlu` | Multiple-choice log-likelihood across configurable DarijaMMLU subject subsets, raw + length-normalized accuracy | DarijaMMLU `shang2024atlaschatadaptinglargelanguage` |
 | `egymmlu` | Multiple-choice log-likelihood across configurable EgyMMLU subject subsets, raw + length-normalized accuracy | EgyMMLU `el-mekki-etal-2025-nilechat` |
+| `eus_exams` | Multiple-choice log-likelihood across configurable Basque and Spanish civil-service exam subsets, raw + length-normalized accuracy | EusExams `etxaniz2024latxa` |
 | `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_mt` | Multiple-choice exam score with tie-aware partial credit across translated ARC Challenge subsets `da/de/el/es/fi/hu/is/it/nb/pl/pt/sv` | ARC `clark2018arc` |
@@ -411,6 +412,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `arabicmmlu_<subset>` for the built-in ArabicMMLU subsets: ArabicMMLU `koto2024arabicmmlu`
 - `darijammlu_<subset>` for the built-in DarijaMMLU subsets: DarijaMMLU `shang2024atlaschatadaptinglargelanguage`
 - `egymmlu_<subset>` for the built-in EgyMMLU subsets: EgyMMLU `el-mekki-etal-2025-nilechat`
+- `eus_exams_<subset>` for the built-in EusExams subsets: EusExams `etxaniz2024latxa`
 - `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
 - `arc_mt_da`, `arc_mt_de`, `arc_mt_el`, `arc_mt_es`, `arc_mt_fi`, `arc_mt_hu`, `arc_mt_is`, `arc_mt_it`, `arc_mt_nb`, `arc_mt_pl`, `arc_mt_pt`, `arc_mt_sv`: ARC `clark2018arc`
@@ -906,6 +908,17 @@ The current built-in suite coverage maps to these benchmark citations:
   publisher = {Association for Computational Linguistics},
   url = {https://aclanthology.org/2025.emnlp-main.556/},
   doi = {10.18653/v1/2025.emnlp-main.556},
+}
+
+# EusExams
+@misc{etxaniz2024latxa,
+  title = {Latxa: An Open Language Model and Evaluation Suite for Basque},
+  author = {Julen Etxaniz and Oscar Sainz and Naiara Perez and Itziar Aldabe and German Rigau and Eneko Agirre and Aitor Ormazabal and Mikel Artetxe and Aitor Soroa},
+  year = {2024},
+  eprint = {2403.20266},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2403.20266},
 }
 
 # GLUE

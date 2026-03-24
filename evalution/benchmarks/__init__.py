@@ -74,6 +74,8 @@ from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
 from .drop import DROP, drop
+from . import eus_exams as _eus_exams_module
+from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
 from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
@@ -158,6 +160,11 @@ for _egymmlu_task in EGYMMLU_TASKS:
     globals()[_egymmlu_task] = getattr(_egymmlu_module, _egymmlu_task)
 
 del _egymmlu_task
+
+for _eus_exams_task in EUS_EXAMS_TASKS:
+    globals()[_eus_exams_task] = getattr(_eus_exams_module, _eus_exams_task)
+
+del _eus_exams_task
 
 for _afrimmlu_task in AFRIMMLU_TASKS:
     globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
@@ -249,6 +256,9 @@ __all__ = [
     "EGYMMLU_TASKS",
     "EgyHellaSwag",
     "EgyMMLU",
+    "EUS_EXAMS_SUBSETS",
+    "EUS_EXAMS_TASKS",
+    "EusExams",
     "COPALID",
     "CoQA",
     "COPA",
@@ -413,6 +423,7 @@ __all__ = [
     "coqa",
     "copa",
     "drop",
+    "eus_exams",
     "gpqa",
     "gpqa_diamond",
     "gpqa_extended",
@@ -535,5 +546,6 @@ __all__.extend(AGIEVAL_TASKS)
 __all__.extend(AFRIMGSM_TASKS)
 __all__.extend(DARIJAMMLU_TASKS)
 __all__.extend(EGYMMLU_TASKS)
+__all__.extend(EUS_EXAMS_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)

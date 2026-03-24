@@ -100,6 +100,12 @@ EGYMMLU_TASKS = (
     "egymmlu_computer_science",
     "egymmlu_driving_test",
 )
+EUS_EXAMS_TASKS = (
+    "eus_exams_eu_opeosakiadmineu",
+    "eus_exams_eu_opeosakiauxenfeu",
+    "eus_exams_es_ejadministrativo",
+    "eus_exams_es_ejauxiliar",
+)
 ARABICMMLU_TASKS = (
     "arabicmmlu_all",
     "arabicmmlu_islamic_studies",
@@ -2293,7 +2299,80 @@ def _egymmlu_suite_spec(
     )
 
 
+def _metadata_eus_exams_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["language"] in {"eu", "es"}
+        assert metadata["question_id"]
+        assert metadata["link"].startswith("https://")
+        assert isinstance(metadata["raw_choices"], list)
+        assert len(metadata["raw_choices"]) == 4
+
+    return validate
+
+
+def _eus_exams_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+    expected_sample_count: int,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.eus_exams(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "HiTZ/EusExams",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=expected_sample_count,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_substrings=("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_eus_exams_subset(subset),
+        ),
+        abs_tolerance=2 / expected_sample_count,
+    )
+
+
 SUITE_SPECS = {
+    "eus_exams_eu_opeosakiadmineu": _eus_exams_suite_spec(
+        "eus_exams_eu_opeosakiadmineu",
+        subset="eu_opeosakiadmineu",
+        baseline={"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
+        expected_sample_count=128,
+    ),
+    "eus_exams_eu_opeosakiauxenfeu": _eus_exams_suite_spec(
+        "eus_exams_eu_opeosakiauxenfeu",
+        subset="eu_opeosakiauxenfeu",
+        baseline={"acc,ll": 0.2734375, "acc,ll_avg": 0.2734375},
+        expected_sample_count=128,
+    ),
+    "eus_exams_es_ejadministrativo": _eus_exams_suite_spec(
+        "eus_exams_es_ejadministrativo",
+        subset="es_ejadministrativo",
+        baseline={"acc,ll": 0.3937007874015748, "acc,ll_avg": 0.3937007874015748},
+        expected_sample_count=127,
+    ),
+    "eus_exams_es_ejauxiliar": _eus_exams_suite_spec(
+        "eus_exams_es_ejauxiliar",
+        subset="es_ejauxiliar",
+        baseline={"acc,ll": 0.36220472440944884, "acc,ll_avg": 0.36220472440944884},
+        expected_sample_count=127,
+    ),
     "egymmlu_arabic_language": _egymmlu_suite_spec(
         "egymmlu_arabic_language",
         subset="arabic_language",
