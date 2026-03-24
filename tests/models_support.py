@@ -106,6 +106,10 @@ EUS_EXAMS_TASKS = (
     "eus_exams_es_ejadministrativo",
     "eus_exams_es_ejauxiliar",
 )
+CAREQA_TASKS = (
+    "careqa_en",
+    "careqa_es",
+)
 ARABICMMLU_TASKS = (
     "arabicmmlu_all",
     "arabicmmlu_islamic_studies",
@@ -2348,7 +2352,64 @@ def _eus_exams_suite_spec(
     )
 
 
+def _metadata_careqa_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["category"]
+        assert metadata["exam_id"] > 0
+        assert metadata["year"] >= 2020
+        assert metadata["unique_id"]
+        assert len(metadata["raw_choices"]) == 4
+
+    return validate
+
+
+def _careqa_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.careqa(
+            language=language,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "HPAI-BSC/CareQA",
+            "dataset_name": f"CareQA_{language}",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_substrings=("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_careqa_language(language),
+        ),
+    )
+
+
 SUITE_SPECS = {
+    "careqa_en": _careqa_suite_spec(
+        "careqa_en",
+        language="en",
+        baseline={"acc,ll": 0.3359375, "acc,ll_avg": 0.3359375},
+    ),
+    "careqa_es": _careqa_suite_spec(
+        "careqa_es",
+        language="es",
+        baseline={"acc,ll": 0.2890625, "acc,ll_avg": 0.2890625},
+    ),
     "eus_exams_eu_opeosakiadmineu": _eus_exams_suite_spec(
         "eus_exams_eu_opeosakiadmineu",
         subset="eu_opeosakiadmineu",

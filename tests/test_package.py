@@ -102,6 +102,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.eus_exams)
     for factory_name in evalution.benchmarks.EUS_EXAMS_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.CareQA is not None
+    assert evalution.benchmarks.CAREQA_CONFIGS
+    assert evalution.benchmarks.CAREQA_TASKS
+    assert callable(evalution.benchmarks.careqa)
+    assert callable(evalution.benchmarks.careqa_en)
+    assert callable(evalution.benchmarks.careqa_es)
     assert evalution.benchmarks.ARCChallenge is not None
     assert evalution.benchmarks.ARCMT is not None
     assert evalution.benchmarks.ARC_MT_LANGUAGES

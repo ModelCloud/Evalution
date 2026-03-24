@@ -276,6 +276,7 @@ logic, those implementation details can shift results.
 | `belebele` | Multiple-choice reading-comprehension log-likelihood across 122 language variants selected through the `language` parameter, raw + length-normalized accuracy | Belebele `bandarkar2023belebele` |
 | `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
 | `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
+| `careqa` | Multiple-choice log-likelihood across supported closed-ended healthcare QA subsets `en/es`, raw + length-normalized accuracy | CareQA `arias-duart-etal-2025-automatic` |
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
@@ -426,6 +427,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `belebele`: Belebele `bandarkar2023belebele`
 - `blimp`: BLiMP `warstadt2020blimp`
 - `c4`: C4 `raffel2020exploring`
+- `careqa_en`, `careqa_es`: CareQA `arias-duart-etal-2025-automatic`
 - `ceval`: C-Eval `huang2023ceval`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
@@ -703,6 +705,15 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Tom Brown and Benjamin Mann and Nick Ryder and Melanie Subbiah and Jared Kaplan and Prafulla Dhariwal and Arvind Neelakantan and Pranav Shyam and Girish Sastry and Amanda Askell and Sandhini Agarwal and Ariel Herbert-Voss and Gretchen Krueger and Tom Henighan and Rewon Child and Aditya Ramesh and Daniel Ziegler and Jeffrey Wu and Clemens Winter and Chris Hesse and Mark Chen and Eric Sigler and Mateusz Litwin and Scott Gray and Benjamin Chess and Jack Clark and Christopher Berner and Sam McCandlish and Alec Radford and Ilya Sutskever and Dario Amodei},
   booktitle = {Advances in Neural Information Processing Systems},
   year = {2020},
+}
+
+# CareQA
+@inproceedings{arias-duart-etal-2025-automatic,
+  title = {Automatic Evaluation of Healthcare LLMs Beyond Question-Answering},
+  author = {Arias-Duart, Anna and Bernabeu, Pablo and Lopez, Adria and Hadj Taieb, Meriem and Villegas, Marta and Gonzalez-Agirre, Aitor},
+  booktitle = {Proceedings of the 2025 Conference of the North American Chapter of the Association for Computational Linguistics},
+  year = {2025},
+  url = {https://arxiv.org/abs/2502.06666},
 }
 
 # ASDiv

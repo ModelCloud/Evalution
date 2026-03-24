@@ -46,6 +46,7 @@ from .base import BaseTestSuite, TestSuite
 from .blimp import BLiMP, BLIMP_SUBSETS, blimp
 from .c4 import C4, c4
 from .ceval import CEVAL_SUBSETS, CEval, ceval
+from .careqa import CAREQA_CONFIGS, CAREQA_TASKS, CareQA, careqa, careqa_en, careqa_es
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
 from .cola import CoLA, cola
@@ -235,6 +236,9 @@ __all__ = [
     "BaseSingleContinuationSuite",
     "BaseTestSuite",
     "C4",
+    "CAREQA_CONFIGS",
+    "CAREQA_TASKS",
+    "CareQA",
     "CEVAL_SUBSETS",
     "CEval",
     "BoolQ",
@@ -398,6 +402,9 @@ __all__ = [
     "belebele",
     "blimp",
     "c4",
+    "careqa",
+    "careqa_en",
+    "careqa_es",
     "ceval",
     "boolq",
     "cb",
@@ -547,5 +554,6 @@ __all__.extend(AFRIMGSM_TASKS)
 __all__.extend(DARIJAMMLU_TASKS)
 __all__.extend(EGYMMLU_TASKS)
 __all__.extend(EUS_EXAMS_TASKS)
+__all__.extend(CAREQA_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
