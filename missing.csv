@@ -57,7 +57,6 @@ lambada_multilingual_stablelm,7,lambada_multilingual_stablelm/lambada_mt_stablel
 libra,22,libra/librusec_history.yaml,libra/librusec_mhqa.yaml
 lingoly,3,lingoly/lingoly_context.yaml,lingoly/lingoly_group.yaml
 lm_syneval,73,lm_syneval/lm_syneval__agreement__long_vp_coord__plur_MS_LMV_LMV.yaml,lm_syneval/lm_syneval__agreement__long_vp_coord__sing_MS_LMV_LMV.yaml
-logiqa2,2,logiqa2/logieval.yaml,logiqa2/logiqa2.yaml
 longbench,48,longbench/2wikimqa.yaml,longbench/2wikimqa_e.yaml
 longbench2,26,longbench2/academic_multi_doc.yaml,longbench2/academic_single.yaml
 mastermind,6,mastermind/mastermind_24_easy.yaml,mastermind/mastermind_24_hard.yaml

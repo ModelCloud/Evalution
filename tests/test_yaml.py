@@ -285,6 +285,8 @@ tests:
     max_rows: 16
   - type: logiqa
     max_rows: 18
+  - type: logiqa2
+    max_rows: 18
   - type: mathqa
     max_rows: 18
   - type: mc_taco
@@ -594,6 +596,7 @@ tests:
     assert ".run(benchmarks.lambada_standard_cloze(" in script
     assert ".run(benchmarks.icelandic_winogrande(" in script
     assert ".run(benchmarks.logiqa(" in script
+    assert ".run(benchmarks.logiqa2(" in script
     assert ".run(benchmarks.mathqa(" in script
     assert ".run(benchmarks.mc_taco(" in script
     assert ".run(benchmarks.medmcqa(" in script

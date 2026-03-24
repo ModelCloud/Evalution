@@ -313,6 +313,7 @@ logic, those implementation details can shift results.
 | `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
+| `logiqa2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA 2.0 `liu2022logiqa2` |
 | `mathqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MathQA `amini2019mathqa` |
 | `mc_taco` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | MC-TACO `zhou2019mctaco` |
 | `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
@@ -459,6 +460,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `kobest_boolq`, `kobest_copa`, `kobest_hellaswag`, `kobest_sentineg`, `kobest_wic`: KoBEST `kim2022kobest`
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
 - `logiqa`: LogiQA `liu2020logiqa`
+- `logiqa2`: LogiQA 2.0 `liu2022logiqa2`
 - `mathqa`: MathQA `amini2019mathqa`
 - `mc_taco`: MC-TACO `zhou2019mctaco`
 - `medmcqa`: MedMCQA `pmlr-v174-pal22a`
@@ -1054,6 +1056,16 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Jian Liu and Leyang Cui and Hanmeng Liu and Dandan Huang and Yile Wang and Yue Zhang},
   year = {2020},
   eprint = {2007.08124},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+}
+
+# LogiQA 2.0
+@misc{liu2022logiqa2,
+  title = {LogiQA 2.0: An Improved Dataset for Logical Reasoning in Natural Language Understanding},
+  author = {Jian Liu and Leyang Cui and Hanmeng Liu and Dandan Huang and Yile Wang and Yue Zhang},
+  year = {2022},
+  eprint = {2203.15796},
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
 }

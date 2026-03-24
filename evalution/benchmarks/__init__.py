@@ -100,6 +100,7 @@ from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, 
 from .lambada import LAMBADA, lambada_openai, lambada_standard
 from .lambada_cloze import LAMBADACloze, lambada_openai_cloze, lambada_standard_cloze
 from .logiqa import LogiQA, logiqa
+from .logiqa2 import LogiQA2, logiqa2
 from .mathqa import MathQA, mathqa
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
@@ -319,6 +320,7 @@ __all__ = [
     "LAMBADA",
     "LAMBADACloze",
     "LogiQA",
+    "LogiQA2",
     "MathQA",
     "MedMCQA",
     "MedQA",
@@ -505,6 +507,7 @@ __all__ = [
     "lambada_standard",
     "lambada_standard_cloze",
     "logiqa",
+    "logiqa2",
     "mathqa",
     "medmcqa",
     "medqa_4options",
