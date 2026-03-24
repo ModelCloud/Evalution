@@ -172,6 +172,7 @@ CODE_X_GLUE_TASKS = (
     "code2text_python",
     "code2text_ruby",
 )
+CROWS_PAIRS_TASKS = tuple(evalution.benchmarks.CROWS_PAIRS_TASKS)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -549,6 +550,34 @@ def _assert_xstorycloze_sample(sample: Any, index: int, *, language: str) -> Non
     assert len(sample.metadata["choice_texts"]) == 2
     assert "choice_logprobs" in sample.metadata
     assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_crows_pairs_sample(
+    sample: Any,
+    index: int,
+    *,
+    language: str,
+    bias_type: str | None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "predicted_index",
+        "predicted_label",
+    }
+    assert set(sample.scores) == {
+        "pct_stereotype",
+        "likelihood_diff",
+    }
+    assert sample.metadata["language"] == language
+    assert sample.metadata["bias_category"] == (bias_type or "all")
+    assert sample.metadata["bias_type"]
+    assert sample.metadata["stereo_antistereo"] in {"stereo", "antistereo"}
+    assert sample.metadata["choice_labels"] == ["sent_more", "sent_less"]
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert len(sample.metadata["choice_logprobs"]) == 2
 
 
 def _assert_winogender_sample(
@@ -1281,6 +1310,44 @@ def _ceval_suite_spec(
             metadata_validator=_metadata_ceval_subset(subset),
         ),
         abs_tolerance=2 / expected_sample_count,
+    )
+
+
+def _crows_pairs_suite_spec(
+    task_name: str,
+    *,
+    baseline: dict[str, float],
+    expected_sample_count: int,
+) -> SuiteSpec:
+    suffix = task_name.removeprefix("crows_pairs_")
+    language, _, bias_type = suffix.partition("_")
+    resolved_bias_type = bias_type or None
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"pct_stereotype", "likelihood_diff"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "jannalu/crows_pairs_multilingual",
+            "dataset_name": language,
+            "split": "test",
+            "language": language,
+            "bias_type": resolved_bias_type,
+            "scoring_mode": "pairwise_sentence_loglikelihood_bias_preference",
+            "primary_metric": "pct_stereotype",
+            "prompt_variant": "empty_context_full_sentence",
+        },
+        expected_sample_count=expected_sample_count,
+        sample_validator=lambda sample, index, language=language, bias_type=resolved_bias_type: _assert_crows_pairs_sample(
+            sample,
+            index,
+            language=language,
+            bias_type=bias_type,
+        ),
+        abs_tolerance=max(2 / expected_sample_count, 0.15),
     )
 
 
@@ -4110,6 +4177,105 @@ for _subset, _baseline, _sample_count in (
         subset=_subset,
         baseline=_baseline,
         expected_sample_count=_sample_count,
+    )
+
+for _task_name, _baseline in {
+    "crows_pairs_english": {
+        "pct_stereotype": 0.5625,
+        "likelihood_diff": 3.1171875,
+    },
+    "crows_pairs_english_age": {
+        "pct_stereotype": 0.75,
+        "likelihood_diff": 3.5078125,
+    },
+    "crows_pairs_english_autre": {
+        "pct_stereotype": 0.7272727272727273,
+        "likelihood_diff": 6.613636363636363,
+    },
+    "crows_pairs_english_disability": {
+        "pct_stereotype": 0.625,
+        "likelihood_diff": 8.796875,
+    },
+    "crows_pairs_english_gender": {
+        "pct_stereotype": 0.5,
+        "likelihood_diff": 3.34375,
+    },
+    "crows_pairs_english_nationality": {
+        "pct_stereotype": 0.625,
+        "likelihood_diff": 3.9140625,
+    },
+    "crows_pairs_english_physical_appearance": {
+        "pct_stereotype": 0.5625,
+        "likelihood_diff": 4.3125,
+    },
+    "crows_pairs_english_race_color": {
+        "pct_stereotype": 0.40625,
+        "likelihood_diff": 3.1484375,
+    },
+    "crows_pairs_english_religion": {
+        "pct_stereotype": 0.6875,
+        "likelihood_diff": 3.3828125,
+    },
+    "crows_pairs_english_sexual_orientation": {
+        "pct_stereotype": 0.6875,
+        "likelihood_diff": 5.125,
+    },
+    "crows_pairs_english_socioeconomic": {
+        "pct_stereotype": 0.78125,
+        "likelihood_diff": 4.1875,
+    },
+    "crows_pairs_french": {
+        "pct_stereotype": 0.46875,
+        "likelihood_diff": 6.6640625,
+    },
+    "crows_pairs_french_age": {
+        "pct_stereotype": 0.4375,
+        "likelihood_diff": 3.7421875,
+    },
+    "crows_pairs_french_autre": {
+        "pct_stereotype": 0.46153846153846156,
+        "likelihood_diff": 5.288461538461538,
+    },
+    "crows_pairs_french_disability": {
+        "pct_stereotype": 0.53125,
+        "likelihood_diff": 7.4609375,
+    },
+    "crows_pairs_french_gender": {
+        "pct_stereotype": 0.46875,
+        "likelihood_diff": 4.4375,
+    },
+    "crows_pairs_french_nationality": {
+        "pct_stereotype": 0.40625,
+        "likelihood_diff": 5.046875,
+    },
+    "crows_pairs_french_physical_appearance": {
+        "pct_stereotype": 0.4375,
+        "likelihood_diff": 3.828125,
+    },
+    "crows_pairs_french_race_color": {
+        "pct_stereotype": 0.3125,
+        "likelihood_diff": 3.9296875,
+    },
+    "crows_pairs_french_religion": {
+        "pct_stereotype": 0.46875,
+        "likelihood_diff": 3.84375,
+    },
+    "crows_pairs_french_sexual_orientation": {
+        "pct_stereotype": 0.6875,
+        "likelihood_diff": 6.2734375,
+    },
+    "crows_pairs_french_socioeconomic": {
+        "pct_stereotype": 0.5625,
+        "likelihood_diff": 5.72265625,
+    },
+}.items():
+    SUITE_SPECS[_task_name] = _crows_pairs_suite_spec(
+        _task_name,
+        baseline=_baseline,
+        expected_sample_count={
+            "crows_pairs_english_autre": 11,
+            "crows_pairs_french_autre": 13,
+        }.get(_task_name, 32),
     )
 
 

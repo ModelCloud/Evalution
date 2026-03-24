@@ -17,6 +17,8 @@ Examples:
 - `acc,label_perm:0.25`
 - `em,choice_label`
 - `f1,ll_avg_macro`
+- `pct_stereotype`
+- `likelihood_diff`
 - `mcc,ll_avg`
 
 ## Metric Key Glossary
@@ -27,6 +29,8 @@ Examples:
 - `exam`: ARC exam-style tie-aware partial credit.
 - `num`: numeric-answer match after numeric extraction and canonicalization.
 - `em`: exact match after the suite's task-specific extraction step.
+- `pct_stereotype`: fraction of minimal pairs where the more stereotypical sentence receives the higher score.
+- `likelihood_diff`: average absolute log-likelihood gap between paired candidate sentences.
 - `choice_label`: extracted option-label match such as `A/B/C/D`.
 - `label_perm:<fraction>`: permutation-averaged label-only accuracy using the configured fraction
   of all label permutations.

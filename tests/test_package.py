@@ -93,6 +93,13 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.code2text_ruby)
     assert evalution.benchmarks.CommonsenseQA is not None
     assert callable(evalution.benchmarks.commonsense_qa)
+    assert evalution.benchmarks.CrowSPairs is not None
+    assert evalution.benchmarks.CROWS_PAIRS_BIAS_TYPES
+    assert evalution.benchmarks.CROWS_PAIRS_LANGUAGES
+    assert evalution.benchmarks.CROWS_PAIRS_TASKS
+    assert callable(evalution.benchmarks.crows_pairs)
+    for factory_name in evalution.benchmarks.CROWS_PAIRS_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.COPAArabic is not None
     assert evalution.benchmarks.COPALID is not None
     assert callable(evalution.benchmarks.copal_id)

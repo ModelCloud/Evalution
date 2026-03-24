@@ -160,6 +160,11 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xwinograd_zh": benchmarks.xwinograd_zh,
 }
 
+for _crows_pairs_task in benchmarks.CROWS_PAIRS_TASKS:
+    _TEST_FACTORIES[_crows_pairs_task] = getattr(benchmarks, _crows_pairs_task)
+
+del _crows_pairs_task
+
 
 def run_yaml(source: str | Path) -> EvaluationRun:
     spec = _load_yaml_spec(source)

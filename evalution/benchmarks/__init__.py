@@ -45,7 +45,9 @@ from .code_x_glue import (
     code2text_python,
     code2text_ruby,
 )
+from . import crows_pairs as _crows_pairs_module
 from .commonsense_qa import CommonsenseQA, commonsense_qa
+from .crows_pairs import CROWS_PAIRS_BIAS_TYPES, CROWS_PAIRS_LANGUAGES, CROWS_PAIRS_TASKS, CrowSPairs, crows_pairs
 from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
@@ -105,6 +107,11 @@ from .xcopa import XCOPA, xcopa, xcopa_et, xcopa_ht, xcopa_id, xcopa_it, xcopa_q
 from .xstorycloze import XSTORYCLOZE_LANGUAGES, XStoryCloze, xstorycloze, xstorycloze_ar, xstorycloze_en, xstorycloze_es, xstorycloze_eu, xstorycloze_hi, xstorycloze_id, xstorycloze_my, xstorycloze_ru, xstorycloze_sw, xstorycloze_te, xstorycloze_zh
 from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinograd_jp, xwinograd_pt, xwinograd_ru, xwinograd_zh
 
+for _crows_pairs_task in CROWS_PAIRS_TASKS:
+    globals()[_crows_pairs_task] = getattr(_crows_pairs_module, _crows_pairs_task)
+
+del _crows_pairs_task
+
 __all__ = [
     "ANLI",
     "AIME",
@@ -134,6 +141,10 @@ __all__ = [
     "CODE_X_GLUE_LANGUAGES",
     "CodeXGLUECodeToText",
     "CommonsenseQA",
+    "CROWS_PAIRS_BIAS_TYPES",
+    "CROWS_PAIRS_LANGUAGES",
+    "CROWS_PAIRS_TASKS",
+    "CrowSPairs",
     "COPALID",
     "CoQA",
     "COPA",
@@ -232,6 +243,8 @@ __all__ = [
     "code2text_python",
     "code2text_ruby",
     "commonsense_qa",
+    "crows_pairs",
+    *CROWS_PAIRS_TASKS,
     "copal_id",
     "copal_id_colloquial",
     "copal_id_standard",

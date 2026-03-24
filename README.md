@@ -215,11 +215,7 @@ logic, those implementation details can shift results.
 
 | Suite | Scoring | Original benchmark |
 | --- | --- | --- |
-| `aexams_biology` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
-| `aexams_islamic_studies` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
-| `aexams_physics` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
-| `aexams_science` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
-| `aexams_social` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
+| `aexams` | Multiple-choice log-likelihood over answer labels across `biology/islamic_studies/physics/science/social` subjects, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
 | `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
 | `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
 | `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
@@ -250,18 +246,13 @@ logic, those implementation details can shift results.
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
 | `cnn_dailymail` | Generated summarization with ROUGE-1, ROUGE-2, and ROUGE-Lsum F1 | CNN/DailyMail `nallapati2016abstractive` |
-| `code2text_go` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
-| `code2text_java` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
-| `code2text_javascript` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
-| `code2text_php` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
-| `code2text_python` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
-| `code2text_ruby` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
+| `code_x_glue` | Code-to-docstring generation with corpus smoothed BLEU-4 across `go/java/javascript/php/python/ruby` language subsets | CodeXGLUE `lu2021codexglue` |
 | `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
 | `coqa` | Generated conversational QA exact match and token-overlap F1 with gold history turns | CoQA `reddy2019coqa` |
 | `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `copa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic COPA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
-| `copal_id_standard` | Multiple-choice log-likelihood, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
-| `copal_id_colloquial` | Multiple-choice log-likelihood, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
+| `copal_id` | Multiple-choice log-likelihood across `standard/colloquial` variants, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
+| `crows_pairs` | Pairwise full-sentence log-likelihood across `english/french` language splits and supported bias-category subsets, with stereotype-preference rate and average absolute log-likelihood gap | CrowS-Pairs `nangia-etal-2020-crows`, French CrowS-Pairs `neveol-etal-2022-french` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
 | `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `ethics_deontology` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
@@ -288,41 +279,10 @@ logic, those implementation details can shift results.
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
-| `paws_x_de` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
-| `paws_x_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
-| `paws_x_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
-| `paws_x_fr` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
-| `paws_x_ja` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
-| `paws_x_ko` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
-| `paws_x_zh` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
-| `xcopa_et` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_ht` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_id` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_it` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_qu` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_sw` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_ta` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_th` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_tr` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_vi` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xcopa_zh` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `xstorycloze_ar` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_en` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_es` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_eu` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_hi` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_id` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_my` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_ru` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_sw` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_te` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xstorycloze_zh` | Multiple-choice log-likelihood over translated StoryCloze endings, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xwinograd_en` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
-| `xwinograd_fr` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
-| `xwinograd_jp` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
-| `xwinograd_pt` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
-| `xwinograd_ru` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
-| `xwinograd_zh` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `paws_x` | Multiple-choice log-likelihood across `de/en/es/fr/ja/ko/zh` language subsets, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `xcopa` | Multiple-choice log-likelihood over option labels across `et/ht/id/it/qu/sw/ta/th/tr/vi/zh` language subsets, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xstorycloze` | Multiple-choice log-likelihood over translated StoryCloze endings across `ar/en/es/eu/hi/id/my/ru/sw/te/zh` subsets, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
+| `xwinograd` | Partial-evaluation multiple-choice log-likelihood over blank replacements across `en/fr/jp/pt/ru/zh` language subsets, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `piqa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic PIQA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
 | `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
@@ -341,13 +301,7 @@ logic, those implementation details can shift results.
 | `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
 | `wikitext` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | WikiText-2 `merity2016pointer` |
-| `winogender_all` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
-| `winogender_female` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
-| `winogender_gotcha` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
-| `winogender_gotcha_female` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
-| `winogender_gotcha_male` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
-| `winogender_male` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
-| `winogender_neutral` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender` | Multiple-choice log-likelihood over pronoun-reference prompts across `all/gotcha` variants and `female/male/neutral` gender filters, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
 | `wsc273` | Partial-evaluation multiple-choice log-likelihood, raw + length-normalized accuracy | WSC273 `levesque2012winograd` |
 | `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
@@ -376,6 +330,8 @@ Metric key glossary:
 - `byte_perplexity`: exponentiated negative mean log-likelihood per original-document byte, weighted across samples.
 - `bits_per_byte`: negative mean log-likelihood per original-document byte in base-2 units.
 - `choice_label`: extracted option-label match such as `A/B/C/D`.
+- `pct_stereotype`: fraction of sentence pairs where the more stereotypical sentence receives the higher score.
+- `likelihood_diff`: average absolute log-likelihood gap between paired candidate sentences.
 - `label_perm:<fraction>`: permutation-averaged label-only accuracy using the configured fraction
   of all label permutations.
 - `f1`: F1 score derived from the suite's predicted labels.
@@ -423,6 +379,8 @@ The current built-in suite coverage maps to these benchmark citations:
 - `coqa`: CoQA `reddy2019coqa`
 - `copa_ar`, `piqa_ar`: AlGhafa Arabic translations `almazrouei-etal-2023-alghafa`
 - `copal_id_standard`, `copal_id_colloquial`: COPAL-ID `wibowo-etal-2024-copal`
+- `crows_pairs_english`, `crows_pairs_english_age`, `crows_pairs_english_autre`, `crows_pairs_english_disability`, `crows_pairs_english_gender`, `crows_pairs_english_nationality`, `crows_pairs_english_physical_appearance`, `crows_pairs_english_race_color`, `crows_pairs_english_religion`, `crows_pairs_english_sexual_orientation`, `crows_pairs_english_socioeconomic`: CrowS-Pairs `nangia-etal-2020-crows`
+- `crows_pairs_french`, `crows_pairs_french_age`, `crows_pairs_french_autre`, `crows_pairs_french_disability`, `crows_pairs_french_gender`, `crows_pairs_french_nationality`, `crows_pairs_french_physical_appearance`, `crows_pairs_french_race_color`, `crows_pairs_french_religion`, `crows_pairs_french_sexual_orientation`, `crows_pairs_french_socioeconomic`: French CrowS-Pairs `neveol-etal-2022-french`
 - `drop`: DROP `dua2019drop`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
@@ -687,6 +645,27 @@ The current built-in suite coverage maps to these benchmark citations:
   volume = {7},
   pages = {249--266},
   year = {2019},
+}
+
+# CrowS-Pairs
+@inproceedings{nangia-etal-2020-crows,
+  title = {CrowS-Pairs: A Challenge Dataset for Measuring Social Biases in Masked Language Models},
+  author = {Nikita Nangia and Clara Vania and Rasika Bhalerao and Samuel R. Bowman},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year = {2020},
+  pages = {1953--1967},
+  url = {https://aclanthology.org/2020.emnlp-main.154/},
+  doi = {10.18653/v1/2020.emnlp-main.154},
+}
+
+@inproceedings{neveol-etal-2022-french,
+  title = {French CrowS-Pairs: Extending a challenge dataset for measuring social bias in masked language models to a language other than English},
+  author = {Aur{\'e}lie N{\'e}v{\'e}ol and Yoann Dupont and Julien Bezan{\c{c}}on and Kar{\"e}n Fort},
+  booktitle = {Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  year = {2022},
+  pages = {8521--8531},
+  url = {https://aclanthology.org/2022.acl-long.583/},
+  doi = {10.18653/v1/2022.acl-long.583},
 }
 
 # COPAL-ID
