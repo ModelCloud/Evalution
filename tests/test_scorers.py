@@ -6,6 +6,11 @@
 from __future__ import annotations
 
 from evalution.scorers.choice_label import choice_label_exact_match
+from evalution.scorers.math_exact_match import (
+    extract_math_answer,
+    math_exact_match,
+    normalize_math_string,
+)
 from evalution.scorers.multiple_choice import (
     build_choice_scores,
     exam_score_outcome,
@@ -63,3 +68,14 @@ def test_label_permutation_fraction_uses_balanced_minimum() -> None:
     assert len(label_permutations_for_mode(4, 0.5)) == 12
     assert len(label_permutations_for_mode(4, 0.75)) == 18
     assert len(label_permutations_for_mode(4, 1.0)) == 24
+
+
+def test_math_exact_match_handles_boxed_and_fraction_normalization() -> None:
+    assert extract_math_answer("Reasoning... \\boxed{033}") == "033"
+    assert normalize_math_string("0.5") == "\\frac{1}{2}"
+    assert math_exact_match("Reasoning... \\boxed{033}", "33") == 0.0
+    assert math_exact_match("Reasoning... \\boxed{\\frac12}", "\\frac{1}{2}") == 1.0
+
+
+def test_math_exact_match_extracts_simple_dollar_delimited_answer() -> None:
+    assert extract_math_answer("Final answer is $42$") == "42"

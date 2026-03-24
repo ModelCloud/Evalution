@@ -22,6 +22,10 @@ def test_package_import() -> None:
 
 
 def test_package_exports_benchmarks_namespace() -> None:
+    assert evalution.benchmarks.AIME is not None
+    assert callable(evalution.benchmarks.aime)
+    assert callable(evalution.benchmarks.aime24)
+    assert callable(evalution.benchmarks.aime25)
     assert evalution.benchmarks.ANLI is not None
     assert callable(evalution.benchmarks.anli_r1)
     assert callable(evalution.benchmarks.anli_r2)
@@ -30,22 +34,58 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.arc_challenge)
     assert evalution.benchmarks.ARCEasy is not None
     assert callable(evalution.benchmarks.arc_easy)
+    assert evalution.benchmarks.Arithmetic is not None
+    for factory_name in (
+        "arithmetic_1dc",
+        "arithmetic_2da",
+        "arithmetic_2dm",
+        "arithmetic_2ds",
+        "arithmetic_3da",
+        "arithmetic_3ds",
+        "arithmetic_4da",
+        "arithmetic_4ds",
+        "arithmetic_5da",
+        "arithmetic_5ds",
+    ):
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.ASDiv is not None
     assert evalution.benchmarks.ASDivCoTLlama is not None
     assert callable(evalution.benchmarks.asdiv)
     assert callable(evalution.benchmarks.asdiv_cot_llama)
     assert evalution.benchmarks.BABI is not None
     assert callable(evalution.benchmarks.babi)
+    assert evalution.benchmarks.BEAR is not None
+    assert callable(evalution.benchmarks.bear)
+    assert callable(evalution.benchmarks.bear_big)
+    assert evalution.benchmarks.BLiMP is not None
+    assert evalution.benchmarks.BLIMP_SUBSETS
+    assert callable(evalution.benchmarks.blimp)
+    assert evalution.benchmarks.BaseRollingPerplexitySuite is not None
+    assert evalution.benchmarks.C4 is not None
+    assert callable(evalution.benchmarks.c4)
+    assert evalution.benchmarks.CEval is not None
+    assert evalution.benchmarks.CEVAL_SUBSETS
+    assert callable(evalution.benchmarks.ceval)
     assert evalution.benchmarks.BoolQ is not None
     assert callable(evalution.benchmarks.boolq)
     assert evalution.benchmarks.CB is not None
     assert callable(evalution.benchmarks.cb)
     assert evalution.benchmarks.CoLA is not None
     assert callable(evalution.benchmarks.cola)
+    assert evalution.benchmarks.CNNDailyMail is not None
+    assert callable(evalution.benchmarks.cnn_dailymail)
     assert evalution.benchmarks.CommonsenseQA is not None
     assert callable(evalution.benchmarks.commonsense_qa)
+    assert evalution.benchmarks.COPALID is not None
+    assert callable(evalution.benchmarks.copal_id)
+    assert callable(evalution.benchmarks.copal_id_standard)
+    assert callable(evalution.benchmarks.copal_id_colloquial)
+    assert evalution.benchmarks.CoQA is not None
+    assert callable(evalution.benchmarks.coqa)
     assert evalution.benchmarks.COPA is not None
     assert callable(evalution.benchmarks.copa)
+    assert evalution.benchmarks.DROP is not None
+    assert callable(evalution.benchmarks.drop)
     assert evalution.benchmarks.HendrycksEthics is not None
     assert callable(evalution.benchmarks.ethics_cm)
     assert callable(evalution.benchmarks.ethics_deontology)
@@ -63,6 +103,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.lambada_openai_cloze)
     assert callable(evalution.benchmarks.lambada_standard)
     assert callable(evalution.benchmarks.lambada_standard_cloze)
+    assert evalution.benchmarks.LogiQA is not None
+    assert callable(evalution.benchmarks.logiqa)
+    assert evalution.benchmarks.MathQA is not None
+    assert callable(evalution.benchmarks.mathqa)
+    assert evalution.benchmarks.MCTACO is not None
+    assert callable(evalution.benchmarks.mc_taco)
     assert evalution.benchmarks.MedMCQA is not None
     assert callable(evalution.benchmarks.medmcqa)
     assert evalution.benchmarks.MedQA is not None
@@ -75,26 +121,88 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mnli)
     assert evalution.benchmarks.MRPC is not None
     assert callable(evalution.benchmarks.mrpc)
+    assert evalution.benchmarks.NQOpen is not None
+    assert callable(evalution.benchmarks.nq_open)
     assert evalution.benchmarks.OpenBookQA is not None
     assert callable(evalution.benchmarks.openbookqa)
+    assert evalution.benchmarks.PAWSX is not None
+    assert callable(evalution.benchmarks.paws_x)
+    assert callable(evalution.benchmarks.paws_x_de)
+    assert callable(evalution.benchmarks.paws_x_en)
+    assert callable(evalution.benchmarks.paws_x_es)
+    assert callable(evalution.benchmarks.paws_x_fr)
+    assert callable(evalution.benchmarks.paws_x_ja)
+    assert callable(evalution.benchmarks.paws_x_ko)
+    assert callable(evalution.benchmarks.paws_x_zh)
     assert evalution.benchmarks.PIQA is not None
     assert callable(evalution.benchmarks.piqa)
+    assert evalution.benchmarks.Pile10K is not None
+    assert callable(evalution.benchmarks.pile_10k)
+    assert evalution.benchmarks.Prost is not None
+    assert callable(evalution.benchmarks.prost)
+    assert evalution.benchmarks.PubMedQA is not None
+    assert callable(evalution.benchmarks.pubmedqa)
     assert evalution.benchmarks.QNLI is not None
     assert callable(evalution.benchmarks.qnli)
     assert evalution.benchmarks.QQP is not None
     assert callable(evalution.benchmarks.qqp)
+    assert evalution.benchmarks.RACE is not None
+    assert callable(evalution.benchmarks.race)
+    assert evalution.benchmarks.RollingPerplexitySample is not None
     assert evalution.benchmarks.RTE is not None
     assert callable(evalution.benchmarks.rte)
     assert evalution.benchmarks.SciQ is not None
     assert callable(evalution.benchmarks.sciq)
+    assert evalution.benchmarks.SIQA is not None
+    assert callable(evalution.benchmarks.siqa)
     assert evalution.benchmarks.SWAG is not None
     assert callable(evalution.benchmarks.swag)
     assert evalution.benchmarks.SST2 is not None
     assert callable(evalution.benchmarks.sst2)
+    assert evalution.benchmarks.SQuADV2 is not None
+    assert callable(evalution.benchmarks.squadv2)
+    assert evalution.benchmarks.TriviaQA is not None
+    assert callable(evalution.benchmarks.triviaqa)
     assert evalution.benchmarks.WiC is not None
     assert callable(evalution.benchmarks.wic)
+    assert evalution.benchmarks.WebQS is not None
+    assert callable(evalution.benchmarks.webqs)
+    assert evalution.benchmarks.WikiText is not None
+    assert callable(evalution.benchmarks.wikitext)
+    assert evalution.benchmarks.WinoGender is not None
+    assert callable(evalution.benchmarks.winogender)
+    assert callable(evalution.benchmarks.winogender_all)
+    assert callable(evalution.benchmarks.winogender_female)
+    assert callable(evalution.benchmarks.winogender_gotcha)
+    assert callable(evalution.benchmarks.winogender_gotcha_female)
+    assert callable(evalution.benchmarks.winogender_gotcha_male)
+    assert callable(evalution.benchmarks.winogender_male)
+    assert callable(evalution.benchmarks.winogender_neutral)
+    assert evalution.benchmarks.WSC273 is not None
+    assert callable(evalution.benchmarks.wsc273)
     assert evalution.benchmarks.WNLI is not None
     assert callable(evalution.benchmarks.wnli)
+    assert evalution.benchmarks.XCOPA is not None
+    assert callable(evalution.benchmarks.xcopa)
+    assert callable(evalution.benchmarks.xcopa_et)
+    assert callable(evalution.benchmarks.xcopa_ht)
+    assert callable(evalution.benchmarks.xcopa_id)
+    assert callable(evalution.benchmarks.xcopa_it)
+    assert callable(evalution.benchmarks.xcopa_qu)
+    assert callable(evalution.benchmarks.xcopa_sw)
+    assert callable(evalution.benchmarks.xcopa_ta)
+    assert callable(evalution.benchmarks.xcopa_th)
+    assert callable(evalution.benchmarks.xcopa_tr)
+    assert callable(evalution.benchmarks.xcopa_vi)
+    assert callable(evalution.benchmarks.xcopa_zh)
+    assert evalution.benchmarks.XWinograd is not None
+    assert callable(evalution.benchmarks.xwinograd)
+    assert callable(evalution.benchmarks.xwinograd_en)
+    assert callable(evalution.benchmarks.xwinograd_fr)
+    assert callable(evalution.benchmarks.xwinograd_jp)
+    assert callable(evalution.benchmarks.xwinograd_pt)
+    assert callable(evalution.benchmarks.xwinograd_ru)
+    assert callable(evalution.benchmarks.xwinograd_zh)
     assert evalution.benchmarks.WinoGrande is not None
     assert callable(evalution.benchmarks.winogrande)
     assert callable(evalution.benchmarks.f1_for_label)

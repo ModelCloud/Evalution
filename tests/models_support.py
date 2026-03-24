@@ -57,6 +57,86 @@ MMLU_PRO_STEM_SUBSETS = {
     "stem.math",
     "stem.physics",
 }
+AIME_TASKS = ("aime", "aime24", "aime25")
+ARITHMETIC_TASKS = (
+    "arithmetic_1dc",
+    "arithmetic_2da",
+    "arithmetic_2dm",
+    "arithmetic_2ds",
+    "arithmetic_3da",
+    "arithmetic_3ds",
+    "arithmetic_4da",
+    "arithmetic_4ds",
+    "arithmetic_5da",
+    "arithmetic_5ds",
+)
+BEAR_TASKS = (
+    "bear",
+    "bear_big",
+)
+PAWS_X_TASKS = (
+    "paws_x_de",
+    "paws_x_en",
+    "paws_x_es",
+    "paws_x_fr",
+    "paws_x_ja",
+    "paws_x_ko",
+    "paws_x_zh",
+)
+XCOPA_TASKS = (
+    "xcopa_et",
+    "xcopa_ht",
+    "xcopa_id",
+    "xcopa_it",
+    "xcopa_qu",
+    "xcopa_sw",
+    "xcopa_ta",
+    "xcopa_th",
+    "xcopa_tr",
+    "xcopa_vi",
+    "xcopa_zh",
+)
+XWINOGRAD_TASKS = (
+    "xwinograd_en",
+    "xwinograd_fr",
+    "xwinograd_jp",
+    "xwinograd_pt",
+    "xwinograd_ru",
+    "xwinograd_zh",
+)
+WINOGENDER_TASKS = (
+    "winogender_all",
+    "winogender_female",
+    "winogender_gotcha",
+    "winogender_gotcha_female",
+    "winogender_gotcha_male",
+    "winogender_male",
+    "winogender_neutral",
+)
+BLIMP_INTEGRATION_SUBSETS = (
+    "adjunct_island",
+    "anaphor_gender_agreement",
+    "animate_subject_passive",
+    "animate_subject_trans",
+    "complex_NP_island",
+    "determiner_noun_agreement_1",
+    "matrix_question_npi_licensor_present",
+    "npi_present_1",
+)
+BLIMP_TASKS = tuple(
+    f"blimp_{subset.lower()}"
+    for subset in BLIMP_INTEGRATION_SUBSETS
+)
+COPAL_ID_TASKS = (
+    "copal_id_standard",
+    "copal_id_colloquial",
+)
+CEVAL_TASKS = (
+    "ceval_accountant",
+    "ceval_computer_network",
+    "ceval_high_school_physics",
+    "ceval_law",
+)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -133,6 +213,32 @@ def run_llama3_2_suite(
     assert result.engine["execution"]["paged_attention"] is True
     assert len(result.tests) == 1
     return result, result.tests[0]
+
+
+def run_llama3_2_suites(
+    capsys: pytest.CaptureFixture[str],
+    suites: list[Any],
+) -> tuple[Any, list[Any]]:
+    with capsys.disabled():
+        evaluation = evalution.Transformers(
+            dtype="bfloat16",
+            attn_implementation="paged|flash_attention_2",
+            device=LLAMA3_2_TRANSFORMERS_DEVICE,
+            batch_size="auto",
+        ).model(evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)))
+        for suite in suites:
+            evaluation = evaluation.run(suite)
+        result = evaluation.result()
+
+    assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
+    assert result.engine["dtype"] == "bfloat16"
+    assert result.engine["attn_implementation"] == "paged|flash_attention_2"
+    assert result.engine["batch_size"] == "auto"
+    assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
+    assert result.engine["execution"]["generation_backend"] == "continuous_batching"
+    assert result.engine["execution"]["paged_attention"] is True
+    assert len(result.tests) == len(suites)
+    return result, result.tests
 
 
 def run_llama3_2_compare_suite(
@@ -298,6 +404,129 @@ def _assert_multiple_choice_loglikelihood_label_perm_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_blimp_sample(sample: Any, index: int, *, subset: str) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["subset"] == subset
+    assert sample.metadata["field"] in {
+        "morphology",
+        "semantics",
+        "syntax",
+        "syntax_semantics",
+        "syntax-semantics",
+    }
+    assert sample.metadata["linguistics_term"]
+    assert sample.metadata["uid"]
+    assert isinstance(sample.metadata["simple_lm_method"], bool)
+    assert isinstance(sample.metadata["one_prefix_method"], bool)
+    assert isinstance(sample.metadata["two_prefix_method"], bool)
+    assert isinstance(sample.metadata["lexically_identical"], bool)
+    assert sample.metadata["pair_id"] >= 0
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_bear_sample(
+    sample: Any,
+    index: int,
+    *,
+    variant: str,
+    min_choice_count: int,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["composite_id"]
+    assert sample.metadata["relation"]
+    assert sample.metadata["template"]
+    assert sample.metadata["subject"]
+    assert sample.metadata["item"] >= 0
+    assert sample.metadata["template_index"] >= 0
+    assert sample.metadata["choice_count"] >= min_choice_count
+    assert len(sample.metadata["answer_options"]) == sample.metadata["choice_count"]
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_xwinograd_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert "_" in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["language"] == language
+    assert sample.metadata["sentence"] == sample.prompt
+    assert sample.metadata["answer_label"] in {"1", "2"}
+    assert sample.metadata["blank_index"] >= 0
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert sample.metadata["choice_labels"] == ["A", "B"]
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_winogender_sample(
+    sample: Any,
+    index: int,
+    *,
+    variant: str,
+    gender: str | None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt.endswith("' refers to the")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["sentid"]
+    assert sample.metadata["sentence"]
+    assert sample.metadata["pronoun"]
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert sample.metadata["gender"] in {"male", "female", "neutral"}
+    if gender is not None:
+        assert sample.metadata["gender"] == gender
+    assert isinstance(sample.metadata["gotcha"], bool)
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
 def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -323,6 +552,39 @@ def _assert_asdiv_cot_llama_sample(sample: Any, index: int) -> None:
     assert set(sample.scores) == {"acc,num"}
     assert sample.metadata["solution_type"]
     assert sample.metadata["formula"]
+
+
+def _assert_aime_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "answer-extract",
+        "prediction-normalized",
+        "target-normalized",
+    }
+    assert set(sample.scores) == {"em"}
+    assert sample.metadata["problem_id"]
+
+
+def _assert_arithmetic_sample(sample: Any, index: int, *, task_name: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target.startswith(" ")
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "greedy_match",
+        "token_count",
+    }
+    assert set(sample.scores) == {"acc,ll"}
+    assert sample.metadata["variant"] == task_name
+    assert sample.metadata["source_file"].startswith("data/")
+    assert sample.metadata["raw_context"]
+    assert sample.metadata["raw_completion"]
 
 
 def _assert_arc_exam_sample(sample: Any, index: int) -> None:
@@ -400,6 +662,40 @@ def _assert_generated_exact_match_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_generated_summary_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "reference-stripped",
+    }
+    assert set(sample.scores) == {"rouge1", "rouge2", "rougeLsum"}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
+def _assert_cnn_dailymail_metadata(metadata: dict[str, Any]) -> None:
+    assert metadata["id"]
+    assert metadata["article_chars"] > 0
+    assert metadata["reference_lines"] >= 1
+
+
 def _assert_single_continuation_loglikelihood_sample(
     sample: Any,
     index: int,
@@ -434,6 +730,149 @@ def _assert_single_continuation_loglikelihood_sample(
     assert "is_greedy" in sample.metadata
     if metadata_validator is not None:
         metadata_validator(sample.metadata)
+
+
+def _assert_webqs_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "greedy_alias_index",
+        "highest_logprob_alias_index",
+    }
+    assert set(sample.scores) == {"em"}
+    assert sample.metadata["question"]
+    assert sample.metadata["url"]
+    assert sample.metadata["accepted_answers"]
+    assert sample.metadata["choice_texts"] == sample.metadata["accepted_answers"]
+    assert len(sample.metadata["choice_logprobs"]) == len(sample.metadata["accepted_answers"])
+    assert len(sample.metadata["choice_greedy"]) == len(sample.metadata["accepted_answers"])
+
+
+def _assert_wikitext_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target == "[document]"
+    assert sample.prediction == "[rolling-loglikelihood]"
+    assert set(sample.extracted) == {"token_count", "word_count", "byte_count"}
+    assert set(sample.scores) == {"word_perplexity", "byte_perplexity", "bits_per_byte"}
+    assert sample.metadata["page_preview"]
+    assert sample.metadata["detokenized_preview"]
+    assert sample.metadata["page_char_count"] > 0
+    assert "logprob" in sample.metadata
+    assert sample.metadata["token_count"] >= 1
+
+
+def _assert_c4_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target == "[document]"
+    assert sample.prediction == "[rolling-loglikelihood]"
+    assert set(sample.extracted) == {"token_count", "word_count", "byte_count"}
+    assert set(sample.scores) == {"word_perplexity", "byte_perplexity", "bits_per_byte"}
+    assert sample.metadata["text_preview"]
+    assert sample.metadata["text_char_count"] > 0
+    assert sample.metadata["url"]
+    assert sample.metadata["timestamp"]
+    assert "logprob" in sample.metadata
+    assert sample.metadata["token_count"] >= 1
+
+
+def _assert_pile_10k_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target == "[document]"
+    assert sample.prediction == "[rolling-loglikelihood]"
+    assert set(sample.extracted) == {"token_count", "word_count", "byte_count"}
+    assert set(sample.scores) == {"word_perplexity", "byte_perplexity", "bits_per_byte"}
+    assert sample.metadata["text_preview"]
+    assert sample.metadata["text_char_count"] > 0
+    assert sample.metadata["pile_set_name"]
+    assert "logprob" in sample.metadata
+    assert sample.metadata["token_count"] >= 1
+
+
+def _assert_squadv2_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Title: ")
+    assert "\nContext: " in sample.prompt
+    assert "\nQuestion: " in sample.prompt
+    assert "unanswerable" in sample.prompt
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["id"]
+    assert sample.metadata["title"] is not None
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_texts"]
+    assert "has_answer" in sample.metadata
+
+
+def _assert_triviaqa_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["question_id"]
+    assert sample.metadata["question_source"]
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_aliases"]
+    assert sample.metadata["answer_type"]
+    assert sample.metadata["answer_value"]
+
+
+def _assert_nq_open_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_aliases"]
+
+
+def _assert_coqa_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Story: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["source"]
+    assert sample.metadata["conversation_index"] >= 0
+    assert sample.metadata["turn_index"] >= 1
+    assert sample.metadata["turn_count"] >= sample.metadata["turn_index"]
+    assert sample.metadata["history_turns"] == sample.metadata["turn_index"] - 1
+    assert sample.metadata["question"]
+    assert isinstance(sample.metadata["answer_start"], int)
+    assert isinstance(sample.metadata["answer_end"], int)
+    assert sample.prompt.count("\nQuestion: ") == sample.metadata["history_turns"] + 1
+    assert sample.prompt.count("\nAnswer:") == sample.metadata["history_turns"] + 1
+
+
+def _assert_drop_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Passage: ")
+    assert "\nQuestion: " in sample.prompt
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["section_id"]
+    assert sample.metadata["query_id"]
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_spans"]
+    assert sample.metadata["answer_types"]
 
 
 def _assert_mmlu_pro_sample(
@@ -531,6 +970,24 @@ def _metadata_fields_truthy(*fields: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_question_and_variant(variant: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["question"] in {"cause", "effect"}
+        assert metadata["variant"] == variant
+        assert len(metadata["raw_choices"]) == 2
+
+    return validate
+
+
+def _metadata_ceval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["answer_label"] in {"A", "B", "C", "D"}
+        assert len(metadata["raw_choices"]) == 4
+
+    return validate
+
+
 def _metadata_sentence_has_blank(metadata: dict[str, Any]) -> None:
     assert " _ " in metadata["sentence"]
 
@@ -549,7 +1006,258 @@ def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[di
     return validate
 
 
+def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline={
+            "acc,ll": baseline,
+        },
+        expected_metrics=frozenset({"acc,ll"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/arithmetic",
+            "dataset_name": task_name,
+            "split": "validation",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, task_name=task_name: _assert_arithmetic_sample(
+            sample,
+            index,
+            task_name=task_name,
+        ),
+    )
+
+
+def _metadata_language_and_id(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["id"] is not None
+
+    return validate
+
+
+def _metadata_language_and_idx(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["idx"] is not None
+        assert metadata["question"] in {"cause", "effect"}
+        assert len(metadata["raw_choices"]) == 2
+
+    return validate
+
+
+def _paws_x_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.paws_x(
+            language=language,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset(
+            {
+                "acc,ll",
+                "acc,ll_avg",
+                "f1,ll_yes",
+                "f1,ll_avg_yes",
+            }
+        ),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "paws-x",
+            "dataset_name": language,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"yes", "no"},
+            prediction_values={"yes", "no"},
+            prompt_substrings=(
+                "Sentence 1: ",
+                "\nSentence 2: ",
+                "\nQuestion: Do both sentences mean the same thing?\nAnswer:",
+            ),
+            metadata_validator=_metadata_language_and_id(language),
+        ),
+    )
+
+
+def _xcopa_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.xcopa(
+            language=language,
+            batch_size=24,
+            max_rows=100,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "xcopa",
+            "dataset_name": language,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=100,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B"},
+            prediction_values={"A", "B"},
+            prompt_substrings=(
+                "Premise: ",
+                "\nQuestion: Which option is the more likely ",
+                "\nA. ",
+                "\nB. ",
+                "\nAnswer:",
+            ),
+            metadata_validator=_metadata_language_and_idx(language),
+        ),
+    )
+
+
+def _blimp_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    task_name = f"blimp_{subset.lower()}"
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.blimp(
+            subset=subset,
+            batch_size=32,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "blimp",
+            "dataset_name": subset,
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "full_sentence_pair",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_blimp_sample(
+            sample,
+            index,
+            subset=subset,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _ceval_suite_spec(
+    *,
+    subset: str,
+    baseline: dict[str, float],
+    expected_sample_count: int,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.ceval(
+            subset=subset,
+            batch_size=24,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name=f"ceval_{subset}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "ceval/ceval-exam",
+            "dataset_name": subset,
+            "split": "val",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=expected_sample_count,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="\n答案：",
+            metadata_validator=_metadata_ceval_subset(subset),
+        ),
+        abs_tolerance=2 / expected_sample_count,
+    )
+
+
+def _aime_suite_spec(
+    task_name: str,
+    *,
+    dataset_path: str,
+    split: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            batch_size=24,
+            max_new_tokens=512,
+            streaming=True,
+            max_rows=30,
+        ),
+        expected_name=task_name,
+        baseline={"em": baseline},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": dataset_path,
+            "dataset_name": None,
+            "split": split,
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_math_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=30,
+        sample_validator=_assert_aime_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 SUITE_SPECS = {
+    "aime": _aime_suite_spec(
+        "aime",
+        dataset_path="gneubig/aime-1983-2024",
+        split="train",
+        baseline=0.06666666666666667,
+    ),
+    "aime24": _aime_suite_spec(
+        "aime24",
+        dataset_path="Maxwell-Jia/AIME_2024",
+        split="train",
+        baseline=0.03333333333333333,
+    ),
+    "aime25": _aime_suite_spec(
+        "aime25",
+        dataset_path="math-ai/aime25",
+        split="test",
+        baseline=0.0,
+    ),
     "asdiv": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, streaming=True, max_rows=128),
         expected_name="asdiv",
@@ -638,6 +1346,64 @@ SUITE_SPECS = {
             prompt_substrings=("Question: ",),
             metadata_validator=_metadata_field_truthy("task"),
         ),
+    ),
+    "bear": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.bear(
+            batch_size=8,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name="bear",
+        baseline={
+            "acc,ll": 0.40625,
+            "acc,ll_avg": 0.28125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "lm-pub-quiz/BEAR",
+            "dataset_name": "BEAR",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "empty_context_full_statement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_bear_sample(
+            sample,
+            index,
+            variant="bear",
+            min_choice_count=50,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "bear_big": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.bear_big(
+            batch_size=8,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name="bear_big",
+        baseline={
+            "acc,ll": 0.34375,
+            "acc,ll_avg": 0.03125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "lm-pub-quiz/BEAR",
+            "dataset_name": "BEAR_big",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "empty_context_full_statement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_bear_sample(
+            sample,
+            index,
+            variant="bear_big",
+            min_choice_count=150,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "gsm8k": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.gsm8k(
@@ -861,6 +1627,38 @@ SUITE_SPECS = {
             prompt_substrings=("\nQuestion: Does this sentence make sense?\nAnswer:",),
         ),
     ),
+    "cnn_dailymail": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.cnn_dailymail(
+            batch_size=8,
+            max_new_tokens=96,
+            max_rows=32,
+        ),
+        expected_name="cnn_dailymail",
+        baseline={
+            "rouge1": 0.3200104088411268,
+            "rouge2": 0.11965895439917622,
+            "rougeLsum": 0.2568289407320166,
+        },
+        expected_metrics=frozenset({"rouge1", "rouge2", "rougeLsum"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "cnn_dailymail",
+            "dataset_name": "3.0.0",
+            "split": "validation",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_summary_rouge",
+            "primary_metric": "rougeLsum",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_generated_summary_sample(
+            sample,
+            index,
+            prompt_prefix="Summarize the following news article.\n\nArticle:\n",
+            prompt_suffix="\n\nSummary:",
+            metadata_validator=_assert_cnn_dailymail_metadata,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "commonsense_qa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.commonsense_qa(
             batch_size=24,
@@ -912,6 +1710,58 @@ SUITE_SPECS = {
             sample,
             index,
             metadata_validator=_metadata_field_in("question", {"cause", "effect"}),
+        ),
+    ),
+    "copal_id_standard": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.copal_id_standard(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="copal_id_standard",
+        baseline={
+            "acc,ll": 0.5078125,
+            "acc,ll_avg": 0.546875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "haryoaw/COPAL",
+            "dataset_name": "id",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_question_and_variant("standard"),
+        ),
+    ),
+    "copal_id_colloquial": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.copal_id_colloquial(
+            batch_size=24,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name="copal_id_colloquial",
+        baseline={
+            "acc,ll": 0.4140625,
+            "acc,ll_avg": 0.4140625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "haryoaw/COPAL",
+            "dataset_name": "id",
+            "split": "test_colloquial",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_question_and_variant("colloquial"),
         ),
     ),
     "ethics_cm": SuiteSpec(
@@ -1333,6 +2183,88 @@ SUITE_SPECS = {
             metadata_validator=_metadata_fields_truthy("text", "target_token", "prompt_variant"),
         ),
     ),
+    "logiqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.logiqa(batch_size=24, max_rows=128),
+        expected_name="logiqa",
+        baseline={
+            "acc,ll": 0.1875,
+            "acc,ll_avg": 0.34375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "EleutherAI/logiqa",
+            "dataset_name": "logiqa",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Passage: ",
+            prompt_substrings=("\nQuestion: ", "\nChoices:\n", "\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "mathqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mathqa(batch_size=24, max_rows=128),
+        expected_name="mathqa",
+        baseline={
+            "acc,ll": 0.359375,
+            "acc,ll_avg": 0.3515625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "math_qa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_choice_labels(exact_count=5),
+        ),
+    ),
+    "mc_taco": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mc_taco(batch_size=24, max_rows=128),
+        expected_name="mc_taco",
+        baseline={
+            "acc,ll": 0.609375,
+            "acc,ll_avg": 0.609375,
+            "f1,ll_yes": 0.596774193548387,
+            "f1,ll_avg_yes": 0.596774193548387,
+        },
+        expected_metrics=frozenset(
+            {
+                "acc,ll",
+                "acc,ll_avg",
+                "f1,ll_yes",
+                "f1,ll_avg_yes",
+            }
+        ),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CogComp/mc_taco",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"no", "yes"},
+            prediction_values={"no", "yes"},
+            prompt_substrings=("\nQuestion: ", "\nAnswer: ", "\nPlausible:"),
+            metadata_validator=_metadata_field_truthy("category"),
+        ),
+    ),
     "medmcqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, streaming=True, max_rows=128),
         expected_name="medmcqa",
@@ -1604,6 +2536,78 @@ SUITE_SPECS = {
             prompt_substrings=("\nAnswer:",),
         ),
     ),
+    "pile_10k": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.pile_10k(batch_size=1, max_rows=32),
+        expected_name="pile_10k",
+        baseline={
+            "word_perplexity": 49.77654296230349,
+            "byte_perplexity": 1.8463441469459794,
+            "bits_per_byte": 0.884671487337572,
+        },
+        expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "monology/pile-uncopyrighted",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "rolling_loglikelihood_perplexity",
+            "primary_metric": "word_perplexity",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_pile_10k_sample,
+        abs_tolerance=0.05,
+    ),
+    "prost": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.prost(batch_size=24, max_rows=128),
+        expected_name="prost",
+        baseline={
+            "acc,ll": 0.1640625,
+            "acc,ll_avg": 0.1640625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "corypaik/prost",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=("\nQuestion: ",),
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy("group", "name"),
+        ),
+    ),
+    "pubmedqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.pubmedqa(batch_size=24, max_rows=128),
+        expected_name="pubmedqa",
+        baseline={
+            "acc,ll": 0.9765625,
+            "acc,ll_avg": 0.9765625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "bigbio/pubmed_qa",
+            "dataset_name": "pubmed_qa_labeled_fold0_source",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"yes", "no", "maybe"},
+            prediction_values={"yes", "no", "maybe"},
+            prompt_prefix="Abstract: ",
+            prompt_substrings=("\nQuestion: ",),
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy("pubid", "long_answer"),
+        ),
+    ),
     "qnli": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.qnli(batch_size=24, streaming=True, max_rows=128),
         expected_name="qnli",
@@ -1665,6 +2669,29 @@ SUITE_SPECS = {
             ),
         ),
     ),
+    "race": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.race(batch_size=24, max_rows=128),
+        expected_name="race",
+        baseline={
+            "acc,ll": 0.4609375,
+            "acc,ll_avg": 0.4375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "EleutherAI/race",
+            "dataset_name": "high",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Article: ",
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
     "rte": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.rte(batch_size=24, streaming=True, max_rows=128),
         expected_name="rte",
@@ -1710,6 +2737,29 @@ SUITE_SPECS = {
             index,
             prompt_substrings=("Question: ", "\nAnswer:"),
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "siqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.siqa(batch_size=24, max_rows=128),
+        expected_name="siqa",
+        baseline={
+            "acc,ll": 0.3984375,
+            "acc,ll_avg": 0.453125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "allenai/social_i_qa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Q: ",
+            prompt_suffix="\nA:",
         ),
     ),
     "swag": SuiteSpec(
@@ -1758,6 +2808,108 @@ SUITE_SPECS = {
             prompt_substrings=("\nQuestion: Is this sentence positive or negative?\nAnswer:",),
         ),
     ),
+    "squadv2": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.squadv2(batch_size=16, max_rows=32),
+        expected_name="squadv2",
+        baseline={
+            "em": 0.375,
+            "f1": 0.3819444444444444,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "squad_v2",
+            "dataset_name": "squad_v2",
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+            "no_answer_token": "unanswerable",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_squadv2_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "triviaqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.triviaqa(batch_size=16, max_rows=32),
+        expected_name="triviaqa",
+        baseline={
+            "em": 0.1875,
+            "f1": 0.25358089581501343,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "trivia_qa",
+            "dataset_name": "rc.nocontext",
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_triviaqa_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "nq_open": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.nq_open(batch_size=16, max_rows=32),
+        expected_name="nq_open",
+        baseline={
+            "em": 0.15625,
+            "f1": 0.2424139492753623,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "nq_open",
+            "dataset_name": "nq_open",
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_nq_open_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "coqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.coqa(batch_size=16, max_rows=32),
+        expected_name="coqa",
+        baseline={
+            "em": 0.3125,
+            "f1": 0.46814123376623373,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "coqa",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+            "prompt_mode": "gold_history_conversation",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_coqa_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "drop": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.drop(batch_size=16, max_rows=32),
+        expected_name="drop",
+        baseline={
+            "em": 0.21875,
+            "f1": 0.3130140692640693,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "drop",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_drop_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "wic": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wic(batch_size=24, streaming=True, max_rows=128),
         expected_name="wic",
@@ -1782,6 +2934,314 @@ SUITE_SPECS = {
             prompt_prefix="Sentence 1: ",
             prompt_substrings=("\nSentence 2: ", "used in the same way"),
             metadata_validator=_metadata_field_truthy("word"),
+        ),
+    ),
+    "webqs": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.webqs(batch_size=24, streaming=True, max_rows=128),
+        expected_name="webqs",
+        baseline={
+            "em": 0.1328125,
+        },
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "web_questions",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "accepted_alias_greedy_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_webqs_sample,
+    ),
+    "xwinograd_en": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_en(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_en",
+        baseline={"acc,ll": 0.75, "acc,ll_avg": 0.75},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "en",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="en"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_fr": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_fr(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_fr",
+        baseline={"acc,ll": 0.71875, "acc,ll_avg": 0.71875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "fr",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="fr"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_jp": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_jp(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_jp",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "jp",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="jp"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_pt": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_pt(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_pt",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "pt",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="pt"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_ru": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_ru(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_ru",
+        baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.65625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "ru",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="ru"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "xwinograd_zh": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xwinograd_zh(batch_size=16, streaming=True, max_rows=32),
+        expected_name="xwinograd_zh",
+        baseline={"acc,ll": 0.6875, "acc,ll_avg": 0.6875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Muennighoff/xwinograd",
+            "dataset_name": "zh",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation_blank_replacement",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_xwinograd_sample(sample, index, language="zh"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_all": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_all(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_all",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "all",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="all", gender=None),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_female": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_female(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_female",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "all",
+            "split": "test",
+            "gender_filter": "female",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="all", gender="female"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_gotcha": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_gotcha",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "gotcha",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="gotcha", gender=None),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_gotcha_female": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha_female(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_gotcha_female",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "gotcha",
+            "split": "test",
+            "gender_filter": "female",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="gotcha", gender="female"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_gotcha_male": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha_male(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_gotcha_male",
+        baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "gotcha",
+            "split": "test",
+            "gender_filter": "male",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="gotcha", gender="male"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_male": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_male(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_male",
+        baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "all",
+            "split": "test",
+            "gender_filter": "male",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="all", gender="male"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "winogender_neutral": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.winogender_neutral(batch_size=24, streaming=True, max_rows=32),
+        expected_name="winogender_neutral",
+        baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.65625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "oskarvanderwal/winogender",
+            "dataset_name": "all",
+            "split": "test",
+            "gender_filter": "neutral",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "pronoun_reference_prompt",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_winogender_sample(sample, index, variant="all", gender="neutral"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "c4": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.c4(batch_size=1, max_rows=32),
+        expected_name="c4",
+        baseline={
+            "word_perplexity": 44.857430232245065,
+            "byte_perplexity": 1.914216519142986,
+            "bits_per_byte": 0.9367540238818579,
+        },
+        expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "allenai/c4",
+            "dataset_name": "en",
+            "split": "validation",
+            "scoring_mode": "rolling_loglikelihood_perplexity",
+            "primary_metric": "word_perplexity",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_c4_sample,
+        abs_tolerance=0.05,
+    ),
+    "wikitext": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.wikitext(batch_size=1, max_rows=62),
+        expected_name="wikitext",
+        baseline={
+            "word_perplexity": 16.73750168679846,
+            "byte_perplexity": 1.6936991338088203,
+            "bits_per_byte": 0.7601776192318436,
+        },
+        expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "EleutherAI/wikitext_document_level",
+            "dataset_name": "wikitext-2-raw-v1",
+            "split": "test",
+            "scoring_mode": "rolling_loglikelihood_perplexity",
+            "primary_metric": "word_perplexity",
+        },
+        expected_sample_count=62,
+        sample_validator=_assert_wikitext_sample,
+    ),
+    "wsc273": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.wsc273(batch_size=24, max_rows=128),
+        expected_name="wsc273",
+        baseline={
+            "acc,ll": 0.7734375,
+            "acc,ll_avg": 0.7734375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "winograd_wsc",
+            "dataset_name": "wsc273",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "partial_evaluation",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_has_choice_labels(exact_count=2),
         ),
     ),
     "wnli": SuiteSpec(
@@ -1900,6 +3360,221 @@ SUITE_SPECS = {
     ),
 }
 
+for _task_name, _baseline in {
+    "arithmetic_1dc": 0.2421875,
+    "arithmetic_2da": 1.0,
+    "arithmetic_2dm": 0.625,
+    "arithmetic_2ds": 0.609375,
+    "arithmetic_3da": 0.78125,
+    "arithmetic_3ds": 0.640625,
+    "arithmetic_4da": 0.4453125,
+    "arithmetic_4ds": 0.1953125,
+    "arithmetic_5da": 0.203125,
+    "arithmetic_5ds": 0.3203125,
+}.items():
+    SUITE_SPECS[_task_name] = _arithmetic_suite_spec(_task_name, _baseline)
+
+for _task_name, _language in (
+    ("paws_x_de", "de"),
+    ("paws_x_en", "en"),
+    ("paws_x_es", "es"),
+    ("paws_x_fr", "fr"),
+    ("paws_x_ja", "ja"),
+    ("paws_x_ko", "ko"),
+    ("paws_x_zh", "zh"),
+):
+    SUITE_SPECS[_task_name] = _paws_x_suite_spec(
+        _task_name,
+        language=_language,
+        baseline={
+            "paws_x_de": {
+                "acc,ll": 0.4296875,
+                "acc,ll_avg": 0.4296875,
+                "f1,ll_yes": 0.6010928961748634,
+                "f1,ll_avg_yes": 0.6010928961748634,
+            },
+            "paws_x_en": {
+                "acc,ll": 0.4765625,
+                "acc,ll_avg": 0.4765625,
+                "f1,ll_yes": 0.588957055214724,
+                "f1,ll_avg_yes": 0.588957055214724,
+            },
+            "paws_x_es": {
+                "acc,ll": 0.4921875,
+                "acc,ll_avg": 0.4921875,
+                "f1,ll_yes": 0.5806451612903226,
+                "f1,ll_avg_yes": 0.5806451612903226,
+            },
+            "paws_x_fr": {
+                "acc,ll": 0.46875,
+                "acc,ll_avg": 0.46875,
+                "f1,ll_yes": 0.24444444444444444,
+                "f1,ll_avg_yes": 0.24444444444444444,
+            },
+            "paws_x_ja": {
+                "acc,ll": 0.4375,
+                "acc,ll_avg": 0.4375,
+                "f1,ll_yes": 0.6086956521739131,
+                "f1,ll_avg_yes": 0.6086956521739131,
+            },
+            "paws_x_ko": {
+                "acc,ll": 0.421875,
+                "acc,ll_avg": 0.421875,
+                "f1,ll_yes": 0.5934065934065934,
+                "f1,ll_avg_yes": 0.5934065934065934,
+            },
+            "paws_x_zh": {
+                "acc,ll": 0.453125,
+                "acc,ll_avg": 0.453125,
+                "f1,ll_yes": 0.6195652173913043,
+                "f1,ll_avg_yes": 0.6195652173913043,
+            },
+        }[_task_name],
+    )
+
+for _task_name, _language in (
+    ("xcopa_et", "et"),
+    ("xcopa_ht", "ht"),
+    ("xcopa_id", "id"),
+    ("xcopa_it", "it"),
+    ("xcopa_qu", "qu"),
+    ("xcopa_sw", "sw"),
+    ("xcopa_ta", "ta"),
+    ("xcopa_th", "th"),
+    ("xcopa_tr", "tr"),
+    ("xcopa_vi", "vi"),
+    ("xcopa_zh", "zh"),
+):
+    SUITE_SPECS[_task_name] = _xcopa_suite_spec(
+        _task_name,
+        language=_language,
+        baseline={
+            "xcopa_et": {
+                "acc,ll": 0.52,
+                "acc,ll_avg": 0.52,
+            },
+            "xcopa_ht": {
+                "acc,ll": 0.56,
+                "acc,ll_avg": 0.56,
+            },
+            "xcopa_id": {
+                "acc,ll": 0.62,
+                "acc,ll_avg": 0.62,
+            },
+            "xcopa_it": {
+                "acc,ll": 0.57,
+                "acc,ll_avg": 0.57,
+            },
+            "xcopa_qu": {
+                "acc,ll": 0.61,
+                "acc,ll_avg": 0.61,
+            },
+            "xcopa_sw": {
+                "acc,ll": 0.51,
+                "acc,ll_avg": 0.51,
+            },
+            "xcopa_ta": {
+                "acc,ll": 0.52,
+                "acc,ll_avg": 0.52,
+            },
+            "xcopa_th": {
+                "acc,ll": 0.54,
+                "acc,ll_avg": 0.54,
+            },
+            "xcopa_tr": {
+                "acc,ll": 0.6,
+                "acc,ll_avg": 0.6,
+            },
+            "xcopa_vi": {
+                "acc,ll": 0.61,
+                "acc,ll_avg": 0.61,
+            },
+            "xcopa_zh": {
+                "acc,ll": 0.67,
+                "acc,ll_avg": 0.67,
+            },
+        }[_task_name],
+    )
+
+for _subset, _baseline in {
+    "adjunct_island": {
+        "acc,ll": 0.8125,
+        "acc,ll_avg": 0.8125,
+    },
+    "anaphor_gender_agreement": {
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
+    },
+    "animate_subject_passive": {
+        "acc,ll": 0.84375,
+        "acc,ll_avg": 0.875,
+    },
+    "animate_subject_trans": {
+        "acc,ll": 0.9375,
+        "acc,ll_avg": 0.75,
+    },
+    "complex_NP_island": {
+        "acc,ll": 0.78125,
+        "acc,ll_avg": 0.78125,
+    },
+    "determiner_noun_agreement_1": {
+        "acc,ll": 0.96875,
+        "acc,ll_avg": 0.96875,
+    },
+    "matrix_question_npi_licensor_present": {
+        "acc,ll": 0.40625,
+        "acc,ll_avg": 0.28125,
+    },
+    "npi_present_1": {
+        "acc,ll": 0.59375,
+        "acc,ll_avg": 0.59375,
+    },
+}.items():
+    SUITE_SPECS[f"blimp_{_subset.lower()}"] = _blimp_suite_spec(
+        subset=_subset,
+        baseline=_baseline,
+    )
+
+for _subset, _baseline, _sample_count in (
+    (
+        "accountant",
+        {
+            "acc,ll": 0.3125,
+            "acc,ll_avg": 0.3125,
+        },
+        32,
+    ),
+    (
+        "computer_network",
+        {
+            "acc,ll": 0.2631578947368421,
+            "acc,ll_avg": 0.2631578947368421,
+        },
+        19,
+    ),
+    (
+        "high_school_physics",
+        {
+            "acc,ll": 0.47368421052631576,
+            "acc,ll_avg": 0.47368421052631576,
+        },
+        19,
+    ),
+    (
+        "law",
+        {
+            "acc,ll": 0.3333333333333333,
+            "acc,ll_avg": 0.3333333333333333,
+        },
+        24,
+    ),
+):
+    SUITE_SPECS[f"ceval_{_subset}"] = _ceval_suite_spec(
+        subset=_subset,
+        baseline=_baseline,
+        expected_sample_count=_sample_count,
+    )
+
 
 def run_suite_spec(
     capsys: pytest.CaptureFixture[str],
@@ -1907,22 +3582,31 @@ def run_suite_spec(
 ) -> tuple[Any, Any]:
     spec = SUITE_SPECS[suite_key]
     result, test_result = run_llama3_2_suite(capsys, spec.suite_factory())
-    assert test_result.name == spec.expected_name
-    for key, expected_value in spec.expected_metadata.items():
-        assert test_result.metadata[key] == expected_value
-    assert len(test_result.samples) == spec.expected_sample_count
-    assert set(test_result.metrics) == spec.expected_metrics
-    assert_metrics_match_baseline(
-        test_result.metrics,
-        spec.baseline,
-        abs_tolerance=spec.abs_tolerance,
-    )
-    for index, sample in enumerate(test_result.samples):
-        spec.sample_validator(sample, index)
-    if spec.result_validator is not None:
-        spec.result_validator(test_result)
+    _assert_suite_matches_spec(test_result, spec)
     assert_single_test_serialization(result, test_result)
     return result, test_result
+
+
+def run_suite_specs(
+    capsys: pytest.CaptureFixture[str],
+    suite_keys: tuple[str, ...] | list[str],
+) -> tuple[Any, list[Any]]:
+    suite_keys = list(suite_keys)
+    specs = [SUITE_SPECS[suite_key] for suite_key in suite_keys]
+    result, test_results = run_llama3_2_suites(
+        capsys,
+        [spec.suite_factory() for spec in specs],
+    )
+    for test_result, spec in zip(test_results, specs, strict=True):
+        _assert_suite_matches_spec(test_result, spec)
+    serialized = result.to_dict()
+    assert len(serialized["tests"]) == len(test_results)
+    for serialized_test, test_result in zip(serialized["tests"], test_results, strict=True):
+        assert serialized_test["name"] == test_result.name
+        assert len(serialized_test["samples"]) == len(test_result.samples)
+        if test_result.samples:
+            assert serialized_test["samples"][0]["prediction"]
+    return result, test_results
 
 
 def run_compare_suite_spec(
@@ -1982,3 +3666,20 @@ def run_compare_suite_spec(
     assert serialized_test["left"]["name"] == left_test.name
     assert serialized_test["right"]["name"] == right_test.name
     return result, compare_test_result
+
+
+def _assert_suite_matches_spec(test_result: Any, spec: SuiteSpec) -> None:
+    assert test_result.name == spec.expected_name
+    for key, expected_value in spec.expected_metadata.items():
+        assert test_result.metadata[key] == expected_value
+    assert len(test_result.samples) == spec.expected_sample_count
+    assert set(test_result.metrics) == spec.expected_metrics
+    assert_metrics_match_baseline(
+        test_result.metrics,
+        spec.baseline,
+        abs_tolerance=spec.abs_tolerance,
+    )
+    for index, sample in enumerate(test_result.samples):
+        spec.sample_validator(sample, index)
+    if spec.result_validator is not None:
+        spec.result_validator(test_result)

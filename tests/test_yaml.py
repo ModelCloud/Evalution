@@ -14,6 +14,19 @@ from evalution import yaml as evalution_yaml
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
+_AIME_TASKS = ["aime", "aime24", "aime25"]
+_ARITHMETIC_TASKS = [
+    "arithmetic_1dc",
+    "arithmetic_2da",
+    "arithmetic_2dm",
+    "arithmetic_2ds",
+    "arithmetic_3da",
+    "arithmetic_3ds",
+    "arithmetic_4da",
+    "arithmetic_4ds",
+    "arithmetic_5da",
+    "arithmetic_5ds",
+]
 
 
 class FakeEngine(BaseEngine):
@@ -113,6 +126,18 @@ tests:
     max_rows: 18
   - type: babi
     max_rows: 18
+  - type: bear
+    max_rows: 18
+  - type: bear_big
+    max_rows: 18
+  - type: blimp
+    subset: adjunct_island
+    max_rows: 18
+  - type: c4
+    max_rows: 8
+  - type: ceval
+    subset: accountant
+    max_rows: 18
   - type: gsm8k_platinum
     max_rows: 128
   - type: headqa_en
@@ -127,6 +152,12 @@ tests:
     max_rows: 18
   - type: lambada_standard_cloze
     max_rows: 18
+  - type: logiqa
+    max_rows: 18
+  - type: mathqa
+    max_rows: 18
+  - type: mc_taco
+    max_rows: 18
   - type: medmcqa
     max_rows: 18
   - type: medqa_4options
@@ -137,10 +168,20 @@ tests:
     max_rows: 56
   - type: cola
     max_rows: 52
+  - type: cnn_dailymail
+    max_rows: 8
   - type: commonsense_qa
     max_rows: 18
+  - type: copal_id_standard
+    max_rows: 18
+  - type: copal_id_colloquial
+    max_rows: 18
+  - type: coqa
+    max_rows: 16
   - type: copa
     max_rows: 12
+  - type: drop
+    max_rows: 16
   - type: ethics_cm
     max_rows: 18
   - type: ethics_deontology
@@ -167,23 +208,107 @@ tests:
     max_rows: 44
   - type: mrpc
     max_rows: 28
+  - type: nq_open
+    max_rows: 16
   - type: openbookqa
     max_rows: 20
+  - type: paws_x_de
+    max_rows: 16
+  - type: paws_x_en
+    max_rows: 16
+  - type: paws_x_es
+    max_rows: 16
+  - type: paws_x_fr
+    max_rows: 16
+  - type: paws_x_ja
+    max_rows: 16
+  - type: paws_x_ko
+    max_rows: 16
+  - type: paws_x_zh
+    max_rows: 16
+  - type: xcopa_et
+    max_rows: 16
+  - type: xcopa_ht
+    max_rows: 16
+  - type: xcopa_id
+    max_rows: 16
+  - type: xcopa_it
+    max_rows: 16
+  - type: xcopa_qu
+    max_rows: 16
+  - type: xcopa_sw
+    max_rows: 16
+  - type: xcopa_ta
+    max_rows: 16
+  - type: xcopa_th
+    max_rows: 16
+  - type: xcopa_tr
+    max_rows: 16
+  - type: xcopa_vi
+    max_rows: 16
+  - type: xcopa_zh
+    max_rows: 16
+  - type: xwinograd_en
+    max_rows: 16
+  - type: xwinograd_fr
+    max_rows: 16
+  - type: xwinograd_jp
+    max_rows: 16
+  - type: xwinograd_pt
+    max_rows: 16
+  - type: xwinograd_ru
+    max_rows: 16
+  - type: xwinograd_zh
+    max_rows: 16
   - type: piqa
     max_rows: 16
+  - type: pile_10k
+    max_rows: 8
+  - type: prost
+    max_rows: 18
+  - type: pubmedqa
+    max_rows: 18
   - type: qnli
     max_rows: 26
   - type: qqp
     max_rows: 24
+  - type: race
+    max_rows: 18
   - type: rte
     max_rows: 18
   - type: sciq
+    max_rows: 20
+  - type: siqa
     max_rows: 20
   - type: swag
     max_rows: 18
   - type: sst2
     max_rows: 22
+  - type: squadv2
+    max_rows: 16
+  - type: triviaqa
+    max_rows: 16
   - type: wic
+    max_rows: 14
+  - type: webqs
+    max_rows: 18
+  - type: wikitext
+    max_rows: 8
+  - type: winogender_all
+    max_rows: 16
+  - type: winogender_female
+    max_rows: 16
+  - type: winogender_gotcha
+    max_rows: 16
+  - type: winogender_gotcha_female
+    max_rows: 16
+  - type: winogender_gotcha_male
+    max_rows: 16
+  - type: winogender_male
+    max_rows: 16
+  - type: winogender_neutral
+    max_rows: 16
+  - type: wsc273
     max_rows: 14
   - type: wnli
     max_rows: 12
@@ -204,6 +329,11 @@ tests:
     assert ".run(benchmarks.asdiv(" in script
     assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script
+    assert ".run(benchmarks.bear(" in script
+    assert ".run(benchmarks.bear_big(" in script
+    assert ".run(benchmarks.blimp(" in script
+    assert ".run(benchmarks.c4(" in script
+    assert ".run(benchmarks.ceval(" in script
     assert ".run(benchmarks.gsm8k_platinum(" in script
     assert ".run(benchmarks.headqa_en(" in script
     assert ".run(benchmarks.headqa_es(" in script
@@ -211,13 +341,21 @@ tests:
     assert ".run(benchmarks.lambada_openai_cloze(" in script
     assert ".run(benchmarks.lambada_standard(" in script
     assert ".run(benchmarks.lambada_standard_cloze(" in script
+    assert ".run(benchmarks.logiqa(" in script
+    assert ".run(benchmarks.mathqa(" in script
+    assert ".run(benchmarks.mc_taco(" in script
     assert ".run(benchmarks.medmcqa(" in script
     assert ".run(benchmarks.medqa_4options(" in script
     assert ".run(benchmarks.boolq(" in script
     assert ".run(benchmarks.cb(" in script
     assert ".run(benchmarks.cola(" in script
+    assert ".run(benchmarks.cnn_dailymail(" in script
     assert ".run(benchmarks.commonsense_qa(" in script
+    assert ".run(benchmarks.copal_id_standard(" in script
+    assert ".run(benchmarks.copal_id_colloquial(" in script
+    assert ".run(benchmarks.coqa(" in script
     assert ".run(benchmarks.copa(" in script
+    assert ".run(benchmarks.drop(" in script
     assert ".run(benchmarks.ethics_cm(" in script
     assert ".run(benchmarks.ethics_deontology(" in script
     assert ".run(benchmarks.ethics_justice(" in script
@@ -230,17 +368,93 @@ tests:
     assert ".run(benchmarks.mmlu_pro(" in script
     assert ".run(benchmarks.mnli(" in script
     assert ".run(benchmarks.mrpc(" in script
+    assert ".run(benchmarks.nq_open(" in script
     assert ".run(benchmarks.openbookqa(" in script
+    assert ".run(benchmarks.paws_x_de(" in script
+    assert ".run(benchmarks.paws_x_en(" in script
+    assert ".run(benchmarks.paws_x_es(" in script
+    assert ".run(benchmarks.paws_x_fr(" in script
+    assert ".run(benchmarks.paws_x_ja(" in script
+    assert ".run(benchmarks.paws_x_ko(" in script
+    assert ".run(benchmarks.paws_x_zh(" in script
+    assert ".run(benchmarks.xcopa_et(" in script
+    assert ".run(benchmarks.xcopa_ht(" in script
+    assert ".run(benchmarks.xcopa_id(" in script
+    assert ".run(benchmarks.xcopa_it(" in script
+    assert ".run(benchmarks.xcopa_qu(" in script
+    assert ".run(benchmarks.xcopa_sw(" in script
+    assert ".run(benchmarks.xcopa_ta(" in script
+    assert ".run(benchmarks.xcopa_th(" in script
+    assert ".run(benchmarks.xcopa_tr(" in script
+    assert ".run(benchmarks.xcopa_vi(" in script
+    assert ".run(benchmarks.xcopa_zh(" in script
+    assert ".run(benchmarks.xwinograd_en(" in script
+    assert ".run(benchmarks.xwinograd_fr(" in script
+    assert ".run(benchmarks.xwinograd_jp(" in script
+    assert ".run(benchmarks.xwinograd_pt(" in script
+    assert ".run(benchmarks.xwinograd_ru(" in script
+    assert ".run(benchmarks.xwinograd_zh(" in script
     assert ".run(benchmarks.piqa(" in script
+    assert ".run(benchmarks.pile_10k(" in script
+    assert ".run(benchmarks.prost(" in script
+    assert ".run(benchmarks.pubmedqa(" in script
     assert ".run(benchmarks.qnli(" in script
     assert ".run(benchmarks.qqp(" in script
+    assert ".run(benchmarks.race(" in script
     assert ".run(benchmarks.rte(" in script
     assert ".run(benchmarks.sciq(" in script
+    assert ".run(benchmarks.siqa(" in script
     assert ".run(benchmarks.swag(" in script
     assert ".run(benchmarks.sst2(" in script
+    assert ".run(benchmarks.squadv2(" in script
+    assert ".run(benchmarks.triviaqa(" in script
     assert ".run(benchmarks.wic(" in script
+    assert ".run(benchmarks.webqs(" in script
+    assert ".run(benchmarks.wikitext(" in script
+    assert ".run(benchmarks.winogender_all(" in script
+    assert ".run(benchmarks.winogender_female(" in script
+    assert ".run(benchmarks.winogender_gotcha(" in script
+    assert ".run(benchmarks.winogender_gotcha_female(" in script
+    assert ".run(benchmarks.winogender_gotcha_male(" in script
+    assert ".run(benchmarks.winogender_male(" in script
+    assert ".run(benchmarks.winogender_neutral(" in script
+    assert ".run(benchmarks.wsc273(" in script
     assert ".run(benchmarks.wnli(" in script
     assert ".run(benchmarks.winogrande(" in script
+
+
+def test_python_from_yaml_emits_arithmetic_variants() -> None:
+    task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _ARITHMETIC_TASKS)
+    script = evalution.python_from_yaml(
+        f"""
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+{task_lines}
+"""
+    )
+
+    for task in _ARITHMETIC_TASKS:
+        assert f".run(benchmarks.{task}(" in script
+
+
+def test_python_from_yaml_emits_aime_variants() -> None:
+    task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _AIME_TASKS)
+    script = evalution.python_from_yaml(
+        f"""
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+{task_lines}
+"""
+    )
+
+    for task in _AIME_TASKS:
+        assert f".run(benchmarks.{task}(" in script
 
 
 def test_run_yaml_requires_tests_section() -> None:

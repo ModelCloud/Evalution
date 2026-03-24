@@ -213,52 +213,120 @@ numerics details such as hardware behavior, dtype and normalization choices, ker
 and attention or matmul approximation and accumulation behavior. Even with the same benchmark
 logic, those implementation details can shift results.
 
-| Suite | Hugging Face dataset | Default split | Scoring | Original benchmark |
-| --- | --- | --- | --- | --- |
-| `anli_r1` | `facebook/anli` | `test_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `anli_r2` | `facebook/anli` | `test_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `anli_r3` | `facebook/anli` | `test_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `arc_challenge` | `allenai/ai2_arc` / `ARC-Challenge` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
-| `arc_easy` | `allenai/ai2_arc` / `ARC-Easy` | `test` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
-| `asdiv` | `EleutherAI/asdiv` | `validation` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
-| `asdiv_cot_llama` | `EleutherAI/asdiv` | `validation` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
-| `babi` | `Muennighoff/babi` | `test` | Generated exact match | bAbI `weston2015towards` |
-| `boolq` | `super_glue` / `boolq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `cb` | `super_glue` / `cb` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
-| `cola` | `nyu-mll/glue` / `cola` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
-| `commonsense_qa` | `tau/commonsense_qa` | `validation` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
-| `copa` | `super_glue` / `copa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `ethics_cm` | `EleutherAI/hendrycks_ethics` / `commonsense` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_deontology` | `EleutherAI/hendrycks_ethics` / `deontology` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_justice` | `EleutherAI/hendrycks_ethics` / `justice` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_utilitarianism` | `EleutherAI/hendrycks_ethics` / `utilitarianism` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_virtue` | `EleutherAI/hendrycks_ethics` / `virtue` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `gsm8k` | `openai/gsm8k` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
-| `gsm8k_platinum` | `madrylab/gsm8k-platinum` / `main` | `test` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
-| `hellaswag` | `Rowan/hellaswag` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
-| `headqa_en` | `EleutherAI/headqa` / `en` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
-| `headqa_es` | `EleutherAI/headqa` / `es` | `test` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
-| `lambada_openai` | `EleutherAI/lambada_openai` / `default` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_openai_cloze` | `EleutherAI/lambada_openai` / `default` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_standard` | `cimec/lambada` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_standard_cloze` | `cimec/lambada` | `test` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `medmcqa` | `openlifescienceai/medmcqa` | `validation` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
-| `medqa_4options` | `GBaker/MedQA-USMLE-4-options-hf` | `test` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
-| `mmlu` | `cais/mmlu` / `<subsets>` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
-| `mmlu_pro` | `TIGER-Lab/MMLU-Pro` / `<subsets>` | `test` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
-| `mnli` | `nyu-mll/glue` / `mnli` | `validation_matched` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `mrpc` | `nyu-mll/glue` / `mrpc` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
-| `openbookqa` | `allenai/openbookqa` / `main` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
-| `piqa` | `baber/piqa` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
-| `qnli` | `nyu-mll/glue` / `qnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `qqp` | `nyu-mll/glue` / `qqp` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
-| `rte` | `super_glue` / `rte` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `sciq` | `allenai/sciq` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
-| `swag` | `swag` / `regular` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
-| `sst2` | `nyu-mll/glue` / `sst2` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `wic` | `super_glue` / `wic` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `wnli` | `nyu-mll/glue` / `wnli` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `winogrande` | `winogrande` / `winogrande_xl` | `validation` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
+| Suite | Scoring | Original benchmark |
+| --- | --- | --- |
+| `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
+| `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
+| `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
+| `anli_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `anli_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
+| `arc_easy` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
+| `arithmetic_1dc` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_2da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_2dm` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_2ds` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_3da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_3ds` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_4da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_4ds` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_5da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arithmetic_5ds` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
+| `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
+| `babi` | Generated exact match | bAbI `weston2015towards` |
+| `bear` | Full-statement multiple-choice log-likelihood over balanced relational distractors, raw + length-normalized accuracy | BEAR `wiland2024bear` |
+| `bear_big` | Full-statement multiple-choice log-likelihood over the larger BEAR probe, raw + length-normalized accuracy | BEAR `wiland2024bear` |
+| `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
+| `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
+| `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
+| `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
+| `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
+| `cnn_dailymail` | Generated summarization with ROUGE-1, ROUGE-2, and ROUGE-Lsum F1 | CNN/DailyMail `nallapati2016abstractive` |
+| `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
+| `coqa` | Generated conversational QA exact match and token-overlap F1 with gold history turns | CoQA `reddy2019coqa` |
+| `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `copal_id_standard` | Multiple-choice log-likelihood, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
+| `copal_id_colloquial` | Multiple-choice log-likelihood, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
+| `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
+| `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_deontology` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_justice` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_utilitarianism` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `ethics_virtue` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
+| `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
+| `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
+| `mathqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MathQA `amini2019mathqa` |
+| `mc_taco` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | MC-TACO `zhou2019mctaco` |
+| `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
+| `medqa_4options` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
+| `mmlu` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
+| `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
+| `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
+| `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
+| `paws_x_de` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_fr` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_ja` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_ko` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `paws_x_zh` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
+| `xcopa_et` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_ht` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_id` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_it` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_qu` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_sw` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_ta` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_th` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_tr` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_vi` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xcopa_zh` | Multiple-choice log-likelihood over option labels, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `xwinograd_en` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_fr` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_jp` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_pt` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_ru` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `xwinograd_zh` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
+| `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
+| `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
+| `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
+| `pubmedqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PubMedQA `jin2019pubmedqa` |
+| `qnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `race` | Multiple-choice log-likelihood, raw + length-normalized accuracy | RACE `lai-etal-2017-race` |
+| `rte` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `sciq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
+| `siqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | Social IQA `sap2019social` |
+| `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
+| `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `squadv2` | Generated QA exact match and token-overlap F1 with explicit no-answer handling | SQuAD 2.0 `rajpurkar2018know` |
+| `triviaqa` | Generated QA exact match and token-overlap F1 over answer aliases | TriviaQA `joshi2017triviaqa` |
+| `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
+| `wikitext` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | WikiText-2 `merity2016pointer` |
+| `winogender_all` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_female` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_gotcha` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_gotcha_female` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_gotcha_male` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_male` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `winogender_neutral` | Multiple-choice log-likelihood over pronoun-reference prompts, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `wsc273` | Partial-evaluation multiple-choice log-likelihood, raw + length-normalized accuracy | WSC273 `levesque2012winograd` |
+| `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
+| `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
 
 `arc_challenge` and `arc_easy`: choose among answer options and score the question as an exam
 item, including partial credit when multiple top-scoring choices tie.
@@ -280,6 +348,9 @@ Metric key glossary:
 - `num`: numeric-answer match after numeric extraction and canonicalization.
 - `em`: exact match after the suite's task-specific extraction step.
 - `ppl`: perplexity from exponentiated negative mean continuation log-likelihood. Lower is better.
+- `word_perplexity`: exponentiated negative mean log-likelihood per original-document word, weighted across samples.
+- `byte_perplexity`: exponentiated negative mean log-likelihood per original-document byte, weighted across samples.
+- `bits_per_byte`: negative mean log-likelihood per original-document byte in base-2 units.
 - `choice_label`: extracted option-label match such as `A/B/C/D`.
 - `label_perm:<fraction>`: permutation-averaged label-only accuracy using the configured fraction
   of all label permutations.
@@ -311,29 +382,82 @@ original benchmark papers below.
 The current built-in suite coverage maps to these benchmark citations:
 
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
+- `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
+- `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
+- `bear`, `bear_big`: BEAR `wiland2024bear`
+- `blimp`: BLiMP `warstadt2020blimp`
+- `c4`: C4 `raffel2020exploring`
+- `ceval`: C-Eval `huang2023ceval`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
+- `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
+- `coqa`: CoQA `reddy2019coqa`
+- `copal_id_standard`, `copal_id_colloquial`: COPAL-ID `wibowo-etal-2024-copal`
+- `drop`: DROP `dua2019drop`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
+- `logiqa`: LogiQA `liu2020logiqa`
+- `mathqa`: MathQA `amini2019mathqa`
+- `mc_taco`: MC-TACO `zhou2019mctaco`
 - `medmcqa`: MedMCQA `pmlr-v174-pal22a`
 - `medqa_4options`: MedQA `jin2020disease`
 - `mmlu`: MMLU `hendryckstest2021`
 - `mmlu_pro`: MMLU-Pro `wang2024mmlupro`
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
+- `nq_open`: Natural Questions `kwiatkowski2019natural`
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
+- `paws_x_de`, `paws_x_en`, `paws_x_es`, `paws_x_fr`, `paws_x_ja`, `paws_x_ko`, `paws_x_zh`: PAWS-X `yang2019pawsx`
 - `piqa`: PIQA `bisk2020piqa`
+- `pile_10k`: The Pile `gao2020pile`
+- `prost`: PROST `aroca-ouellette-etal-2021-prost`
+- `pubmedqa`: PubMedQA `jin2019pubmedqa`
+- `squadv2`: SQuAD 2.0 `rajpurkar2018know`
+- `triviaqa`: TriviaQA `joshi2017triviaqa`
+- `race`: RACE `lai-etal-2017-race`
 - `sciq`: SciQ `welbl2017crowdsourcing`
+- `siqa`: Social IQA `sap2019social`
 - `swag`: SWAG `zellers2018swagaf`
+- `webqs`: WebQuestions `berant-etal-2013-semantic`
+- `wikitext`: WikiText-2 `merity2016pointer`
+- `winogender_all`, `winogender_female`, `winogender_gotcha`, `winogender_gotcha_female`, `winogender_gotcha_male`, `winogender_male`, `winogender_neutral`: WinoGender `rudinger2018winogender`
+- `wsc273`: WSC273 `levesque2012winograd`
 - `winogrande`: WinoGrande `sakaguchi2019winogrande`
+- `xcopa_et`, `xcopa_ht`, `xcopa_id`, `xcopa_it`, `xcopa_qu`, `xcopa_sw`, `xcopa_ta`, `xcopa_th`, `xcopa_tr`, `xcopa_vi`, `xcopa_zh`: XCOPA `ponti2020xcopa`
+- `xwinograd_en`, `xwinograd_fr`, `xwinograd_jp`, `xwinograd_pt`, `xwinograd_ru`, `xwinograd_zh`: XWinograd `tikhonov2021heads`
 
 ```bibtex
+
+# AIME
+@dataset{aime_1983_2024,
+  author = {Hemish Veeraboina},
+  title = {AIME Problem Set 1983-2024},
+  year = {2024},
+  publisher = {Kaggle},
+  url = {https://www.kaggle.com/datasets/hemishveeraboina/aime-problem-set-1983-2024},
+}
+
+@dataset{aime_2024,
+  author = {Maxwell Jia},
+  title = {AIME Problem Set 2024},
+  year = {2024},
+  publisher = {Hugging Face},
+  url = {https://huggingface.co/datasets/Maxwell-Jia/AIME_2024},
+}
+
+@dataset{aime_2025,
+  author = {math-ai},
+  title = {AIME Problem Set 2025},
+  year = {2025},
+  publisher = {Hugging Face},
+  url = {https://huggingface.co/datasets/math-ai/aime25},
+}
 
 # ANLI
 @inproceedings{nie-etal-2020-adversarial,
@@ -349,6 +473,48 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Jason Weston and Antoine Bordes and Sumit Chopra and Alexander M. Rush and Bart van Merri{\"e}nboer and Armand Joulin and Tomas Mikolov},
   journal = {arXiv preprint arXiv:1502.05698},
   year = {2015},
+}
+
+# BEAR
+@article{wiland2024bear,
+  title = {BEAR: A Unified Framework for Evaluating Relational Knowledge in Causal and Masked Language Models},
+  author = {Jacek Wiland and Max Ploner and Alan Akbik},
+  journal = {arXiv preprint arXiv:2404.04113},
+  year = {2024},
+  url = {https://arxiv.org/abs/2404.04113},
+}
+
+# BLiMP
+@article{warstadt2020blimp,
+  title = {BLiMP: The Benchmark of Linguistic Minimal Pairs for English},
+  author = {Alex Warstadt and Alicia Parrish and Haokun Liu and Anhad Mohananey and Wei Peng and Sheng-Fu Wang and Samuel R. Bowman},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume = {8},
+  pages = {377--392},
+  year = {2020},
+  doi = {10.1162/tacl_a_00321},
+  url = {https://doi.org/10.1162/tacl_a_00321},
+}
+
+# C4
+@article{raffel2020exploring,
+  title = {Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer},
+  author = {Colin Raffel and Noam Shazeer and Adam Roberts and Katherine Lee and Sharan Narang and Michael Matena and Yanqi Zhou and Wei Li and Peter J. Liu},
+  journal = {Journal of Machine Learning Research},
+  volume = {21},
+  number = {140},
+  pages = {1--67},
+  year = {2020},
+  url = {https://jmlr.org/papers/v21/20-074.html},
+}
+
+# C-Eval
+@article{huang2023ceval,
+  title = {C-Eval: A Multi-Level Multi-Discipline Chinese Evaluation Suite for Foundation Models},
+  author = {Yuzhen Huang and Yidong Wang and Chunyang Wang and Lei Chen and Xiaonan Luo and Yuxin Tang and Zhilin Yang and Qianqian Wang and Cheng Li and Weijian Yin and others},
+  journal = {arXiv preprint arXiv:2305.08322},
+  year = {2023},
+  url = {https://arxiv.org/abs/2305.08322},
 }
 
 # GSM8K-Platinum
@@ -375,6 +541,14 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2018},
 }
 
+# GPT-3 Arithmetic
+@inproceedings{brown2020gpt3,
+  title = {Language Models are Few-Shot Learners},
+  author = {Tom Brown and Benjamin Mann and Nick Ryder and Melanie Subbiah and Jared Kaplan and Prafulla Dhariwal and Arvind Neelakantan and Pranav Shyam and Girish Sastry and Amanda Askell and Sandhini Agarwal and Ariel Herbert-Voss and Gretchen Krueger and Tom Henighan and Rewon Child and Aditya Ramesh and Daniel Ziegler and Jeffrey Wu and Clemens Winter and Chris Hesse and Mark Chen and Eric Sigler and Mateusz Litwin and Scott Gray and Benjamin Chess and Jack Clark and Christopher Berner and Sam McCandlish and Alec Radford and Ilya Sutskever and Dario Amodei},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year = {2020},
+}
+
 # ASDiv
 @article{miao2021diverse,
   title = {A Diverse Corpus for Evaluating and Developing English Math Word Problem Solvers},
@@ -391,10 +565,91 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2020},
 }
 
+# The Pile
+@article{gao2020pile,
+  title = {The Pile: An 800GB Dataset of Diverse Text for Language Modeling},
+  author = {Leo Gao and Stella Biderman and Sid Black and Laurence Golding and Travis Hoppe and Charles Foster and Jason Phang and Horace He and Anish Thite and Noa Nabeshima and Shawn Presser and Connor Leahy},
+  journal = {arXiv preprint arXiv:2101.00027},
+  year = {2020},
+}
+
+# PROST
+@inproceedings{aroca-ouellette-etal-2021-prost,
+  title = {{PROST}: Physical Reasoning about Objects through Space and Time},
+  author = {St{\'e}phane Aroca-Ouellette and Cory Paik and Alessandro Roncone and Katharina Kann},
+  booktitle = {Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021},
+  year = {2021},
+  pages = {4597--4608},
+  url = {https://aclanthology.org/2021.findings-acl.404},
+}
+
+# SQuAD 2.0
+@article{rajpurkar2018know,
+  title = {Know What You Don’t Know: Unanswerable Questions for SQuAD},
+  author = {Pranav Rajpurkar and Robin Jia and Percy Liang},
+  journal = {arXiv preprint arXiv:1806.03822},
+  year = {2018},
+}
+
+# TriviaQA
+@article{joshi2017triviaqa,
+  title = {TriviaQA: A Large Scale Distantly Supervised Challenge Dataset for Reading Comprehension},
+  author = {Mandar Joshi and Eunsol Choi and Daniel Weld and Luke Zettlemoyer},
+  journal = {Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics},
+  year = {2017},
+}
+
+# Natural Questions
+@article{kwiatkowski2019natural,
+  title = {Natural Questions: A Benchmark for Question Answering Research},
+  author = {Tom Kwiatkowski and Jennimaria Palomaki and Olivia Redfield and Michael Collins and Ankur Parikh and Chris Alberti and Danielle Epstein and Illia Polosukhin and Jacob Devlin and Kenton Lee and Kristina Toutanova and Llion Jones and Matthew Kelcey and Ming-Wei Chang and Andrew M. Dai and Jakob Uszkoreit and Quoc Le and Slav Petrov},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume = {7},
+  pages = {452--466},
+  year = {2019},
+}
+
+# PubMedQA
+@inproceedings{jin2019pubmedqa,
+  title = {PubMedQA: A Dataset for Biomedical Research Question Answering},
+  author = {Qiao Jin and Bhuwan Dhingra and Zhengping Liu and William Cohen and Xinghua Lu},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
+  year = {2019},
+  pages = {2567--2577},
+}
+
 # CommonsenseQA
 @inproceedings{talmor2019commonsenseqa,
   title = {CommonsenseQA: A Question Answering Challenge Targeting Commonsense Knowledge},
   author = {Alon Talmor and Jonathan Herzig and Nicholas Lourie and Jonathan Berant},
+  booktitle = {Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers)},
+  year = {2019},
+}
+
+# CoQA
+@article{reddy2019coqa,
+  title = {CoQA: A Conversational Question Answering Challenge},
+  author = {Siva Reddy and Danqi Chen and Christopher D. Manning},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume = {7},
+  pages = {249--266},
+  year = {2019},
+}
+
+# COPAL-ID
+@inproceedings{wibowo-etal-2024-copal,
+  title = {COPAL-ID: Indonesian Language Reasoning with Local Culture and Nuances},
+  author = {Haryo Akbarianto Wibowo and Swandana Rama Sandhiyudha and Genta Indra Winata and Ayu Purwarianti and Sebastian Ruder and Rahmad Mahardhika and Pascale Fung},
+  booktitle = {Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers)},
+  pages = {1393--1410},
+  year = {2024},
+  url = {https://aclanthology.org/2024.naacl-long.77/},
+}
+
+# DROP
+@inproceedings{dua2019drop,
+  title = {DROP: A Reading Comprehension Benchmark Requiring Discrete Reasoning Over Paragraphs},
+  author = {Dheeru Dua and Yizhong Wang and Pradeep Dasigi and Gabriel Stanovsky and Sameer Singh and Matt Gardner},
   booktitle = {Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers)},
   year = {2019},
 }
@@ -464,6 +719,34 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2016},
 }
 
+# LogiQA
+@misc{liu2020logiqa,
+  title = {LogiQA: A Challenge Dataset for Machine Reading Comprehension with Logical Reasoning},
+  author = {Jian Liu and Leyang Cui and Hanmeng Liu and Dandan Huang and Yile Wang and Yue Zhang},
+  year = {2020},
+  eprint = {2007.08124},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+}
+
+# MathQA
+@misc{amini2019mathqa,
+  title = {MathQA: Towards Interpretable Math Word Problem Solving with Operation-Based Formalisms},
+  author = {Aida Amini and Saadia Gabriel and Peter Lin and Rik Koncel-Kedziorski and Yejin Choi and Hannaneh Hajishirzi},
+  year = {2019},
+  eprint = {1905.13319},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+}
+
+# MC-TACO
+@inproceedings{zhou2019mctaco,
+  title = {Going on a vacation takes longer than going for a walk: A Study of Temporal Commonsense Understanding},
+  author = {Ben Zhou and Daniel Khashabi and Qiang Ning and Dan Roth},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing},
+  year = {2019},
+}
+
 # MedMCQA
 @inproceedings{pmlr-v174-pal22a,
   title = {MedMCQA: A Large-scale Multi-Subject Multi-Choice Dataset for Medical domain Question Answering},
@@ -488,6 +771,30 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2018},
 }
 
+# PAWS-X
+@inproceedings{yang2019pawsx,
+  title = {PAWS-X: A Cross-lingual Adversarial Dataset for Paraphrase Identification},
+  author = {Yinfei Yang and Yuan Zhang and Chris Tar and Jason Baldridge},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
+  year = {2019},
+}
+
+# CNN/DailyMail
+@article{nallapati2016abstractive,
+  title = {Abstractive Text Summarization using Sequence-to-Sequence RNNs and Beyond},
+  author = {Ramesh Nallapati and Bowen Zhou and Cicero dos Santos and {\c{C}}aglar Gul{\c{c}}ehre and Bing Xiang},
+  journal = {arXiv preprint arXiv:1602.06023},
+  year = {2016},
+}
+
+# XCOPA
+@inproceedings{ponti2020xcopa,
+  title = {XCOPA: A Multilingual Dataset for Causal Commonsense Reasoning},
+  author = {Edoardo M. Ponti and Rahul Gupta and Ivan Vuli{\'c} and Goran Glava{\v{s}} and Anna Korhonen},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing},
+  year = {2020},
+}
+
 # SciQ
 @inproceedings{welbl2017crowdsourcing,
   title = {Crowdsourcing Multiple Choice Science Questions},
@@ -496,12 +803,66 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2017},
 }
 
+# Social IQA
+@inproceedings{sap2019social,
+  title = {Social IQa: Commonsense Reasoning about Social Interactions},
+  author = {Maarten Sap and Hannah Rashkin and Derek Chen and Ronan Le Bras and Yejin Choi},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
+  year = {2019},
+}
+
 # SWAG
 @inproceedings{zellers2018swagaf,
   title = {SWAG: A Large-Scale Adversarial Dataset for Grounded Commonsense Inference},
   author = {Rowan Zellers and Yonatan Bisk and Roy Schwartz and Yejin Choi},
   booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
   year = {2018},
+}
+
+# WebQuestions
+@inproceedings{berant-etal-2013-semantic,
+  title = {Semantic Parsing on Freebase from Question-Answer Pairs},
+  author = {Jonathan Berant and Andrew Chou and Roy Frostig and Percy Liang},
+  booktitle = {Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing},
+  year = {2013},
+  pages = {1533--1544},
+  url = {https://aclanthology.org/D13-1160},
+}
+
+# WikiText-2
+@misc{merity2016pointer,
+  title = {Pointer Sentinel Mixture Models},
+  author = {Stephen Merity and Caiming Xiong and James Bradbury and Richard Socher},
+  year = {2016},
+  eprint = {1609.07843},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+}
+
+# WinoGender
+@inproceedings{rudinger2018winogender,
+  title = {Gender Bias in Coreference Resolution},
+  author = {Rachel Rudinger and Jason Naradowsky and Brian Leonard and Benjamin Van Durme},
+  booktitle = {Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies},
+  year = {2018},
+}
+
+# WSC273
+@inproceedings{levesque2012winograd,
+  title = {The Winograd Schema Challenge},
+  author = {Hector Levesque and Ernest Davis and Leora Morgenstern},
+  booktitle = {Thirteenth International Conference on the Principles of Knowledge Representation and Reasoning},
+  year = {2012},
+}
+
+# XWinograd
+@misc{tikhonov2021heads,
+  title = {It's All in the Heads: Using Attention Heads as a Baseline for Cross-Lingual Transfer in Commonsense Reasoning},
+  author = {Alexey Tikhonov and Max Ryabinin},
+  year = {2021},
+  eprint = {2106.12066},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
 }
 
 # WinoGrande

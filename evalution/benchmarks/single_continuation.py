@@ -135,7 +135,7 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
         denominator = max(len(sample_results), 1)
         metrics = {"acc,ll": accuracy_total / denominator}
         if include_perplexity:
-            # Match lm-eval's loglikelihood perplexity aggregation: exp(-mean(document_logprob)).
+            # Aggregate perplexity from the mean document log-probability.
             metrics["ppl,ll"] = math.exp(-(logprob_total / denominator))
         return TestResult(
             name=task_name,

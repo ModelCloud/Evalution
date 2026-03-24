@@ -36,6 +36,8 @@ from .multiple_choice import (
     normalize_label_permutation_fraction,
     normalized_logprob,
 )
+from .math_exact_match import extract_math_answer, math_exact_match, math_strings_equivalent, normalize_math_string
+from .summary_rouge import summary_rouge_scores
 
 __all__ = [
     "ChoiceScore",
@@ -65,9 +67,14 @@ __all__ = [
     "label_permutation_outcome",
     "label_permutations_for_mode",
     "macro_f1",
+    "math_exact_match",
+    "math_strings_equivalent",
     "matthews_corrcoef",
     "multiple_choice_outcome",
     "normalize_label_permutation_fraction",
+    "normalize_math_string",
     "normalized_logprob",
     "numbers_equal",
+    "extract_math_answer",
+    "summary_rouge_scores",
 ]

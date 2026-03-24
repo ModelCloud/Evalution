@@ -1354,9 +1354,11 @@ def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None
     class FakeModel:
         def __init__(self) -> None:
             self.config = SimpleNamespace(max_position_embeddings=4)
+            self.calls = 0
 
         def __call__(self, *, input_ids, attention_mask=None):
             del attention_mask
+            self.calls += 1
             batch_size, sequence_length = input_ids.shape
             vocab_size = 16
             logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
@@ -1366,10 +1368,11 @@ def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None
                     logits[row, position, next_token] = 3.0
             return SimpleNamespace(logits=logits)
 
+    model = FakeModel()
     session = TransformersSession(
         config=Transformers(batch_size=2),
         model_config=Model(path="/tmp/model"),
-        model=FakeModel(),
+        model=model,
         tokenizer=FakeTokenizer(),
         input_device=torch.device("cpu"),
     )
@@ -1394,6 +1397,7 @@ def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None
     assert len(outputs) == 1
     assert outputs[0].token_count == 4
     assert outputs[0].logprob == pytest.approx(expected_token_logprob * 4, abs=1e-6)
+    assert model.calls == 1
 
 
 def test_transformer_session_loglikelihood_temporarily_restores_base_attention() -> None:

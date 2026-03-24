@@ -194,7 +194,7 @@ class BaseTransformerSession(BaseInferenceSession):
                 )
             return totals
 
-    # Mirror lm-eval batching by scoring longer token sequences first and breaking ties deterministically.
+    # Score longer token sequences first and break ties deterministically.
     def _loglikelihood_request_sort_key(
         self,
         item: tuple[int, tuple[list[int], list[int], dict[str, Any]]],
@@ -213,24 +213,50 @@ class BaseTransformerSession(BaseInferenceSession):
         if not requests:
             return []
 
-        scoring_requests = [
-            LoglikelihoodRequest(
-                context="",
-                continuation=request.text,
-                continuation_input_ids=list(request.input_ids) if request.input_ids is not None else None,
-                metadata=dict(request.metadata),
-            )
-            for request in requests
-        ]
+        scoring_requests: list[LoglikelihoodRequest] = []
+        request_window_counts: list[int] = []
+        with self._tokenizer_lock:
+            for request in requests:
+                token_list = (
+                    list(request.input_ids)
+                    if request.input_ids is not None
+                    else self._tokenize_loglikelihood_context(request.text)
+                )
+                windows = list(self._rolling_loglikelihood_windows(token_list))
+                request_window_counts.append(len(windows))
+                for context_ids, continuation_ids in windows:
+                    scoring_requests.append(
+                        LoglikelihoodRequest(
+                            context_input_ids=context_ids,
+                            continuation_input_ids=continuation_ids,
+                            metadata=dict(request.metadata),
+                        )
+                    )
+
         scored = self.loglikelihood(scoring_requests, batch_size=batch_size)
-        return [
-            RollingLoglikelihoodOutput(
-                logprob=output.logprob,
-                token_count=output.token_count,
-                metadata=output.metadata,
+        outputs: list[RollingLoglikelihoodOutput] = []
+        cursor = 0
+        for request, window_count in zip(requests, request_window_counts, strict=True):
+            if window_count == 0:
+                outputs.append(
+                    RollingLoglikelihoodOutput(
+                        logprob=0.0,
+                        token_count=0,
+                        metadata=dict(request.metadata),
+                    )
+                )
+                continue
+
+            request_outputs = scored[cursor : cursor + window_count]
+            cursor += window_count
+            outputs.append(
+                RollingLoglikelihoodOutput(
+                    logprob=sum(output.logprob for output in request_outputs),
+                    token_count=sum(output.token_count for output in request_outputs),
+                    metadata=dict(request.metadata),
+                )
             )
-            for output in scored
-        ]
+        return outputs
 
     # Emulate continuous refill on top of fixed batches so suite execution code can stay unchanged.
     def generate_continuous(
@@ -692,7 +718,7 @@ class BaseTransformerSession(BaseInferenceSession):
             raise ValueError("loglikelihood requests must provide a non-empty continuation")
         return list(prefix_ids), list(target_ids), dict(request.metadata)
 
-    # Match lm-eval/HF tokenizer defaults for scoring contexts while avoiding a doubled BOS prefix.
+    # Use tokenizer defaults for scored contexts while avoiding a doubled BOS prefix.
     def _tokenize_loglikelihood_context(self, text: str) -> list[int]:
         tokenizer_kwargs: dict[str, Any] = {}
         prefix_text = self._decoded_prefix_token_text()
@@ -725,6 +751,9 @@ class BaseTransformerSession(BaseInferenceSession):
         metadata: dict[str, Any],
     ) -> list[_ScoringChunk]:
         max_input_length = self._max_scoring_input_length()
+        # Decoder-only scoring can carry one extra request token because the model input drops the
+        # final token while still predicting the full continuation span in that window.
+        max_scored_window = max_input_length + 1
         history_ids = list(prefix_ids)
         if not history_ids:
             history_ids = [self._prefix_token_id()]
@@ -733,8 +762,8 @@ class BaseTransformerSession(BaseInferenceSession):
         cursor = 0
         while cursor < len(target_ids):
             remaining = len(target_ids) - cursor
-            target_count = min(remaining, max_input_length - 1)
-            context_count = min(len(history_ids), max_input_length - target_count)
+            target_count = min(remaining, max_input_length)
+            context_count = min(len(history_ids), max_scored_window - target_count)
             if context_count <= 0:
                 raise ValueError("model context window is too small to score continuation tokens")
 
@@ -752,6 +781,45 @@ class BaseTransformerSession(BaseInferenceSession):
             history_ids.extend(continuation_slice)
             cursor += target_count
         return chunks
+
+    # Expand one rolling-perplexity request into disjoint token windows.
+    def _rolling_loglikelihood_windows(
+        self,
+        token_list: list[int],
+    ) -> Any:
+        if not token_list:
+            return
+
+        max_seq_len = self._max_scoring_input_length()
+        prefix_token = self._prefix_token_id()
+        pred_len = max_seq_len
+        predicted = 0
+
+        first_seq_len = min(max_seq_len, len(token_list))
+        first_window = (
+            [prefix_token] + token_list[: first_seq_len - 1],
+            token_list[:first_seq_len],
+        )
+        yield self._make_disjoint_window(first_window)
+        predicted += first_seq_len
+
+        while predicted < len(token_list):
+            window_pred_len = min(len(token_list) - predicted, pred_len)
+            window_end = predicted + window_pred_len
+            window = (
+                token_list[window_end - max_seq_len - 1 : window_end - 1],
+                token_list[window_end - window_pred_len : window_end],
+            )
+            yield self._make_disjoint_window(window)
+            predicted += window_pred_len
+
+    # Trim overlapping context tokens because the scorer already conditions continuation tokens on their prefix.
+    def _make_disjoint_window(
+        self,
+        pair: tuple[list[int], list[int]],
+    ) -> tuple[list[int], list[int]]:
+        context_ids, continuation_ids = pair
+        return context_ids[: len(context_ids) - (len(continuation_ids) - 1)], continuation_ids
 
     # Run padded forwards over chunk batches and gather the exact token log-probs being evaluated.
     def _score_chunks(
