@@ -381,6 +381,12 @@ tests:
     max_rows: 18
   - type: pubmedqa
     max_rows: 18
+  - type: qa4mre_2011
+    max_rows: 16
+  - type: qa4mre_2012
+    max_rows: 16
+  - type: qa4mre_2013
+    max_rows: 16
   - type: qnli
     max_rows: 26
   - type: qqp
@@ -566,6 +572,9 @@ tests:
     assert ".run(benchmarks.pile_10k(" in script
     assert ".run(benchmarks.prost(" in script
     assert ".run(benchmarks.pubmedqa(" in script
+    assert ".run(benchmarks.qa4mre_2011(" in script
+    assert ".run(benchmarks.qa4mre_2012(" in script
+    assert ".run(benchmarks.qa4mre_2013(" in script
     assert ".run(benchmarks.qnli(" in script
     assert ".run(benchmarks.qqp(" in script
     assert ".run(benchmarks.race(" in script

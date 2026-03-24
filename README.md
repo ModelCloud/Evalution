@@ -298,6 +298,7 @@ logic, those implementation details can shift results.
 | `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
 | `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
 | `pubmedqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PubMedQA `jin2019pubmedqa` |
+| `qa4mre` | Multiple-choice log-likelihood across `2011/2012/2013` English machine reading evaluation sets, raw + length-normalized accuracy | QA4MRE `Peas2013QA4MRE2O` |
 | `qnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `race` | Multiple-choice log-likelihood, raw + length-normalized accuracy | RACE `lai-etal-2017-race` |
@@ -423,6 +424,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `pile_10k`: The Pile `gao2020pile`
 - `prost`: PROST `aroca-ouellette-etal-2021-prost`
 - `pubmedqa`: PubMedQA `jin2019pubmedqa`
+- `qa4mre_2011`, `qa4mre_2012`, `qa4mre_2013`: QA4MRE `Peas2013QA4MRE2O`
 - `squadv2`: SQuAD 2.0 `rajpurkar2018know`
 - `triviaqa`: TriviaQA `joshi2017triviaqa`
 - `race`: RACE `lai-etal-2017-race`
@@ -717,6 +719,14 @@ The current built-in suite coverage maps to these benchmark citations:
   booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing},
   year = {2019},
   pages = {2567--2577},
+}
+
+# QA4MRE
+@inproceedings{Peas2013QA4MRE2O,
+  title = {QA4MRE 2011-2013: Overview of Question Answering for Machine Reading Evaluation},
+  author = {Pe{\~n}as, Anselmo and Hovy, Eduard H. and Forner, Pamela and Rodrigo, {\'A}lvaro and Sutcliffe, Richard F. E. and Morante, Roser},
+  booktitle = {CLEF},
+  year = {2013},
 }
 
 # CommonsenseQA

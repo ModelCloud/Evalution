@@ -94,6 +94,7 @@ from .piqa import PIQA, piqa
 from .pile_10k import Pile10K, pile_10k
 from .prost import Prost, prost
 from .pubmedqa import PubMedQA, pubmedqa
+from .qa4mre import QA4MRE, qa4mre, qa4mre_2011, qa4mre_2012, qa4mre_2013
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .race import RACE, race
@@ -204,6 +205,7 @@ __all__ = [
     "Pile10K",
     "Prost",
     "PubMedQA",
+    "QA4MRE",
     "QNLI",
     "QQP",
     "RACE",
@@ -376,6 +378,10 @@ __all__ = [
     "pile_10k",
     "prost",
     "pubmedqa",
+    "qa4mre",
+    "qa4mre_2011",
+    "qa4mre_2012",
+    "qa4mre_2013",
     "qnli",
     "qqp",
     "race",

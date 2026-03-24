@@ -3670,6 +3670,75 @@ SUITE_SPECS = {
             metadata_validator=_metadata_fields_truthy("pubid", "long_answer"),
         ),
     ),
+    "qa4mre_2011": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.qa4mre_2011(batch_size=1, max_rows=32),
+        expected_name="qa4mre_2011",
+        baseline={"acc,ll": 0.40625, "acc,ll_avg": 0.5},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "qa4mre",
+            "dataset_name": "2011.main.EN",
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy(
+                "year", "topic_id", "topic_name", "test_id", "document_id", "question_id", "question", "correct_answer_id"
+            ),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "qa4mre_2012": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.qa4mre_2012(batch_size=1, max_rows=32),
+        expected_name="qa4mre_2012",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "qa4mre",
+            "dataset_name": "2012.main.EN",
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy(
+                "year", "topic_id", "topic_name", "test_id", "document_id", "question_id", "question", "correct_answer_id"
+            ),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "qa4mre_2013": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.qa4mre_2013(batch_size=1, max_rows=32),
+        expected_name="qa4mre_2013",
+        baseline={"acc,ll": 0.46875, "acc,ll_avg": 0.59375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "qa4mre",
+            "dataset_name": "2013.main.EN",
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_fields_truthy(
+                "year", "topic_id", "topic_name", "test_id", "document_id", "question_id", "question", "correct_answer_id"
+            ),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "qnli": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.qnli(batch_size=24, streaming=True, max_rows=128),
         expected_name="qnli",

@@ -233,6 +233,11 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.prost)
     assert evalution.benchmarks.PubMedQA is not None
     assert callable(evalution.benchmarks.pubmedqa)
+    assert evalution.benchmarks.QA4MRE is not None
+    assert callable(evalution.benchmarks.qa4mre)
+    assert callable(evalution.benchmarks.qa4mre_2011)
+    assert callable(evalution.benchmarks.qa4mre_2012)
+    assert callable(evalution.benchmarks.qa4mre_2013)
     assert evalution.benchmarks.QNLI is not None
     assert callable(evalution.benchmarks.qnli)
     assert evalution.benchmarks.QQP is not None
