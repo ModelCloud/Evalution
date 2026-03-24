@@ -16,6 +16,7 @@ from typing import Any
 
 import pcre
 from packaging.version import Version
+from tokenicer import Tokenicer
 
 from evalution.config import Model
 from evalution.engines.base import (
@@ -984,7 +985,7 @@ def load_transformer_runtime(
     model_config: Model,
 ) -> _LoadedTransformerRuntime:
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoModelForCausalLM
 
     _seed_transformer_runtime(config.seed)
 
@@ -993,20 +994,14 @@ def load_transformer_runtime(
         if config.trust_remote_code is not None
         else model_config.trust_remote_code
     )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_config.tokenizer_path or model_config.path,
+    tokenizer_source = _resolve_tokenizer_source(model_config)
+    tokenizer = _load_tokenizer_from_model(
+        tokenizer_source,
         revision=model_config.revision,
         trust_remote_code=trust_remote_code,
         **model_config.tokenizer_kwargs,
     )
     tokenizer.padding_side = config.padding_side
-    if tokenizer.pad_token_id is None:
-        if tokenizer.eos_token is not None:
-            tokenizer.pad_token = tokenizer.eos_token
-        elif tokenizer.unk_token is not None:
-            tokenizer.pad_token = tokenizer.unk_token
-        else:
-            raise ValueError("tokenizer must define either a pad_token, eos_token, or unk_token")
 
     load_kwargs = {
         **model_config.model_kwargs,
@@ -1032,6 +1027,7 @@ def load_transformer_runtime(
         model_config.path,
         load_kwargs,
     )
+    _seed_with_internal_apis(model, config.seed)
     freeze = getattr(model, "requires_grad_", None)
     if callable(freeze):
         freeze(False)
@@ -1066,6 +1062,8 @@ def load_transformer_runtime(
     else:
         input_device = _resolve_input_device(model, prefer=config.device)
 
+    _normalize_tokenizer_special_tokens(tokenizer=tokenizer, model=model)
+
     requested_attn_implementation = (
         raw_attn_implementation
         or getattr(model.config, "_attn_implementation", None)
@@ -1079,10 +1077,45 @@ def load_transformer_runtime(
             tokenizer=tokenizer,
             model_config=model_config,
             trust_remote_code=trust_remote_code,
+            model=model,
         ),
         input_device=input_device,
         requested_attn_implementation=requested_attn_implementation,
     )
+
+
+def _resolve_tokenizer_source(model_config: Model) -> Any:
+    if model_config.tokenizer is not None:
+        return model_config.tokenizer
+    if model_config.tokenizer_path is not None:
+        return model_config.tokenizer_path
+    return model_config.path
+
+
+def _load_tokenizer_from_model(
+    pretrained_model_name_or_path_or_tokenizer: Any,
+    **kwargs: Any,
+) -> Any:
+    return Tokenicer.load(pretrained_model_name_or_path_or_tokenizer, strict=False, **kwargs)
+
+
+def _normalize_tokenizer_special_tokens(tokenizer: Any, *, model: Any | None = None) -> None:
+    if tokenizer is None:
+        return
+
+    auto_fix_pad_token = getattr(tokenizer, "auto_fix_pad_token", None)
+    if not callable(auto_fix_pad_token):
+        return
+
+    if model is None:
+        try:
+            auto_fix_pad_token(strict=False)
+        except Exception:
+            return
+        return
+
+    with suppress(Exception):
+        auto_fix_pad_token(model, strict=False)
 
 
 def _seed_transformer_runtime(seed: int | None) -> None:
@@ -1108,6 +1141,17 @@ def _seed_transformer_runtime(seed: int | None) -> None:
         if torch.cuda.is_available():
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
+
+
+def _seed_with_internal_apis(obj: Any, seed: int | None) -> None:
+    if seed is None:
+        return
+    for method_name in ("set_seed", "manual_seed", "seed", "reset_rng"):
+        method = getattr(obj, method_name, None)
+        if callable(method):
+            with suppress(Exception):
+                method(seed)
+                return
 
 
 # Guard modern paged-attention engines with the package version that first shipped continuous batching.
@@ -1209,24 +1253,21 @@ def _clone_prepare_tokenizer(
     tokenizer: Any,
     model_config: Model,
     trust_remote_code: bool | None,
+    model: Any | None = None,
 ) -> Any | None:
     with suppress(Exception):
-        from transformers import AutoTokenizer
-
-        prepare_tokenizer = AutoTokenizer.from_pretrained(
-            model_config.tokenizer_path or model_config.path,
+        resolved_trust_remote_code = (
+            trust_remote_code if trust_remote_code is not None else False
+        )
+        tokenizer_source = _resolve_tokenizer_source(model_config)
+        prepare_tokenizer = _load_tokenizer_from_model(
+            tokenizer_source,
             revision=model_config.revision,
-            trust_remote_code=trust_remote_code,
+            trust_remote_code=resolved_trust_remote_code,
             **model_config.tokenizer_kwargs,
         )
         prepare_tokenizer.padding_side = tokenizer.padding_side
-        if prepare_tokenizer.pad_token_id is None:
-            if tokenizer.pad_token is not None:
-                prepare_tokenizer.pad_token = tokenizer.pad_token
-            elif tokenizer.eos_token is not None:
-                prepare_tokenizer.pad_token = tokenizer.eos_token
-            elif tokenizer.unk_token is not None:
-                prepare_tokenizer.pad_token = tokenizer.unk_token
+        _normalize_tokenizer_special_tokens(tokenizer=prepare_tokenizer, model=model)
         return prepare_tokenizer
     return None
 

@@ -13,6 +13,7 @@ from typing import Any
 class Model:
     path: str
     label: str | None = None
+    tokenizer: Any | None = None
     tokenizer_path: str | None = None
     revision: str | None = None
     trust_remote_code: bool = False

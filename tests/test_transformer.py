@@ -5,12 +5,13 @@
 
 from __future__ import annotations
 
-import sys
 import threading
+import sys
 from types import SimpleNamespace
 
 import pytest
 import torch
+import transformers
 from transformers import PretrainedConfig
 
 from evalution.config import Model
@@ -77,8 +78,7 @@ def test_transformer_session_from_config_seeds_runtime(monkeypatch) -> None:
         lambda seed: seed_calls.append(seed),
     )
     monkeypatch.setattr(
-        transformers.AutoTokenizer,
-        "from_pretrained",
+        "evalution.engines.transformers_common._load_tokenizer_from_model",
         lambda *args, **kwargs: FakeTokenizer(),
     )
     monkeypatch.setattr(
@@ -319,8 +319,7 @@ def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatc
 
     fake_model = FakeModel()
     monkeypatch.setattr(
-        transformers.AutoTokenizer,
-        "from_pretrained",
+        "evalution.engines.transformers_common._load_tokenizer_from_model",
         lambda *args, **kwargs: FakeTokenizer(),
     )
     monkeypatch.setattr(
@@ -370,8 +369,7 @@ def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch)
     loader_calls: list[dict[str, object]] = []
 
     monkeypatch.setattr(
-        transformers.AutoTokenizer,
-        "from_pretrained",
+        "evalution.engines.transformers_common._load_tokenizer_from_model",
         lambda *args, **kwargs: FakeTokenizer(),
     )
 
@@ -397,6 +395,58 @@ def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch)
     assert len(loader_calls) == 1
     assert loader_calls[0]["dtype"] == torch.bfloat16
     assert "torch_dtype" not in loader_calls[0]
+
+
+def test_transformer_session_from_config_uses_preinitialized_tokenizer(
+    monkeypatch,
+) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        pad_token = "<pad>"
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+
+        def requires_grad_(self, value: bool):
+            return self
+
+        def eval(self):
+            return self
+
+        def to(self, device):
+            return self
+
+    load_calls: list[object] = []
+    provided_tokenizer = FakeTokenizer()
+
+    def fake_load_tokenizer(source: object, **kwargs: object) -> object:
+        load_calls.append(source)
+        return provided_tokenizer
+
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._load_tokenizer_from_model",
+        fake_load_tokenizer,
+    )
+    monkeypatch.setattr(
+        transformers.AutoModelForCausalLM,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeModel(),
+    )
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._clone_prepare_tokenizer",
+        lambda **kwargs: provided_tokenizer,
+    )
+
+    TransformersSession.from_config(
+        Transformers(device="cpu"),
+        Model(path="/tmp/model", tokenizer=provided_tokenizer),
+    )
+
+    assert load_calls == [provided_tokenizer]
 
 
 def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypatch) -> None:
@@ -425,8 +475,7 @@ def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypat
     loader_calls: list[dict[str, object]] = []
 
     monkeypatch.setattr(
-        transformers.AutoTokenizer,
-        "from_pretrained",
+        "evalution.engines.transformers_common._load_tokenizer_from_model",
         lambda *args, **kwargs: FakeTokenizer(),
     )
 
@@ -497,8 +546,7 @@ def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_e
     ]
 
     monkeypatch.setattr(
-        transformers.AutoTokenizer,
-        "from_pretrained",
+        "evalution.engines.transformers_common._load_tokenizer_from_model",
         lambda *args, **kwargs: FakeTokenizer(),
     )
 
@@ -555,6 +603,58 @@ def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_
 
     assert session is fake_session
     assert engine.resolved_engine == "TransformersCompat"
+
+
+def test_transformer_compat_uses_preinitialized_tokenizer(monkeypatch) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        pad_token = "<pad>"
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+
+        def requires_grad_(self, value: bool):
+            return self
+
+        def eval(self):
+            return self
+
+        def to(self, device):
+            return self
+
+    load_calls: list[object] = []
+    provided_tokenizer = FakeTokenizer()
+
+    def fake_load_tokenizer(source: object, **kwargs: object) -> object:
+        load_calls.append(source)
+        return provided_tokenizer
+
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._load_tokenizer_from_model",
+        fake_load_tokenizer,
+    )
+    monkeypatch.setattr(
+        transformers.AutoModelForCausalLM,
+        "from_pretrained",
+        lambda *args, **kwargs: FakeModel(),
+    )
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common._clone_prepare_tokenizer",
+        lambda **kwargs: provided_tokenizer,
+    )
+
+    engine = TransformersCompat(
+        device="cpu",
+        trust_remote_code=False,
+    )
+    session = engine.build(Model(path="/tmp/model", tokenizer=provided_tokenizer))
+
+    assert session.model is not None
+    assert load_calls == [provided_tokenizer]
 
 
 def test_transformer_build_rejects_paged_attn_when_continuous_batching_is_unavailable(

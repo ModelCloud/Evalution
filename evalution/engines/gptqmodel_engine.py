@@ -24,8 +24,12 @@ from evalution.engines.transformers_common import (
     _TransformersCommonConfig,
     _base_attn_implementation,
     _clone_prepare_tokenizer,
+    _normalize_tokenizer_special_tokens,
+    _load_tokenizer_from_model,
+    _resolve_tokenizer_source,
     _requests_paged_attention,
     _resolve_input_device,
+    _seed_with_internal_apis,
     _seed_transformer_runtime,
     transformers_continuous_batching_support,
 )
@@ -157,14 +161,12 @@ class GPTQModelSession(TransformersSession):
         super(GPTQModelSession, self).close()
 
 
-# Load the tokenizer through transformers for Evalution's shared session logic, then attach the
-# already-initialized inner HF model returned by GPTQModel.
+# Load tokenizer metadata through Tokenicer, then attach the already-initialized inner HF model.
 def load_gptqmodel_runtime(
     config: GPTQModel,
     model_config: Model,
 ) -> _LoadedGPTQModelRuntime:
     import torch
-    from transformers import AutoTokenizer
 
     _seed_transformer_runtime(config.seed)
 
@@ -173,20 +175,13 @@ def load_gptqmodel_runtime(
         if config.trust_remote_code is not None
         else model_config.trust_remote_code
     )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_config.tokenizer_path or model_config.path,
+    tokenizer = _load_tokenizer_from_model(
+        _resolve_tokenizer_source(model_config),
         revision=model_config.revision,
         trust_remote_code=trust_remote_code,
         **model_config.tokenizer_kwargs,
     )
     tokenizer.padding_side = config.padding_side
-    if tokenizer.pad_token_id is None:
-        if tokenizer.eos_token is not None:
-            tokenizer.pad_token = tokenizer.eos_token
-        elif tokenizer.unk_token is not None:
-            tokenizer.pad_token = tokenizer.unk_token
-        else:
-            raise ValueError("tokenizer must define either a pad_token, eos_token, or unk_token")
 
     backend = _normalize_gptqmodel_backend(config.backend)
     _validate_gptqmodel_backend(backend)
@@ -224,10 +219,13 @@ def load_gptqmodel_runtime(
     wrapper.eval()
 
     model = getattr(wrapper, "model", wrapper)
+    _seed_with_internal_apis(model, config.seed)
+    _seed_with_internal_apis(wrapper, config.seed)
     if config.device_map is None:
         input_device = torch.device(device)
     else:
         input_device = _resolve_input_device(model, prefer=config.device)
+    _normalize_tokenizer_special_tokens(tokenizer=tokenizer, model=model)
 
     requested_attn_implementation = (
         raw_attn_implementation
@@ -244,6 +242,7 @@ def load_gptqmodel_runtime(
             tokenizer=tokenizer,
             model_config=model_config,
             trust_remote_code=trust_remote_code,
+            model=model,
         ),
         input_device=input_device,
         requested_attn_implementation=requested_attn_implementation,
