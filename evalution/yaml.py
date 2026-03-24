@@ -28,6 +28,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "aexams_science": benchmarks.aexams_science,
     "aexams_social": benchmarks.aexams_social,
     "agieval": benchmarks.agieval,
+    "afrimgsm": benchmarks.afrimgsm,
     "afrixnli": benchmarks.afrixnli,
     "afrixnli_amh": benchmarks.afrixnli_amh,
     "afrixnli_eng": benchmarks.afrixnli_eng,
@@ -224,6 +225,11 @@ for _agieval_task in benchmarks.AGIEVAL_TASKS:
     _TEST_FACTORIES[_agieval_task] = getattr(benchmarks, _agieval_task)
 
 del _agieval_task
+
+for _afrimgsm_task in benchmarks.AFRIMGSM_TASKS:
+    _TEST_FACTORIES[_afrimgsm_task] = getattr(benchmarks, _afrimgsm_task)
+
+del _afrimgsm_task
 
 for _crows_pairs_task in benchmarks.CROWS_PAIRS_TASKS:
     _TEST_FACTORIES[_crows_pairs_task] = getattr(benchmarks, _crows_pairs_task)

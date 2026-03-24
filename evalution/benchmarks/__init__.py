@@ -7,6 +7,8 @@ from evalution.scorers.classification import f1_for_label, macro_f1, matthews_co
 from .aexams import AEXAMS, AEXAMS_SUBJECTS, aexams, aexams_biology, aexams_islamic_studies, aexams_physics, aexams_science, aexams_social
 from . import agieval as _agieval_module
 from .agieval import AGIEVAL_SUBSETS, AGIEVAL_TASKS, AGIEval, agieval
+from . import afrimgsm as _afrimgsm_module
+from .afrimgsm import AFRIMGSM_LANGUAGES, AFRIMGSM_TASKS, AfriMGSM, afrimgsm
 from .afrixnli import AFRIXNLI_LANGUAGES, AFRIXNLI_TASKS, AfriXNLI, afrixnli, afrixnli_amh, afrixnli_eng, afrixnli_ewe, afrixnli_fra, afrixnli_hau, afrixnli_ibo, afrixnli_kin, afrixnli_lin, afrixnli_lug, afrixnli_orm, afrixnli_sna, afrixnli_sot, afrixnli_swa, afrixnli_twi, afrixnli_wol, afrixnli_xho, afrixnli_yor, afrixnli_zul
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
 from .aime import AIME, aime, aime24, aime25
@@ -136,6 +138,11 @@ for _agieval_task in AGIEVAL_TASKS:
 
 del _agieval_task
 
+for _afrimgsm_task in AFRIMGSM_TASKS:
+    globals()[_afrimgsm_task] = getattr(_afrimgsm_module, _afrimgsm_task)
+
+del _afrimgsm_task
+
 for _bbh_task in BBH_TASKS:
     globals()[_bbh_task] = getattr(_bbh_module, _bbh_task)
 
@@ -159,6 +166,9 @@ __all__ = [
     "AGIEVAL_SUBSETS",
     "AGIEVAL_TASKS",
     "AGIEval",
+    "AFRIMGSM_LANGUAGES",
+    "AFRIMGSM_TASKS",
+    "AfriMGSM",
     "AFRIXNLI_LANGUAGES",
     "AFRIXNLI_TASKS",
     "AfriXNLI",
@@ -281,6 +291,7 @@ __all__ = [
     "aexams_science",
     "aexams_social",
     "agieval",
+    "afrimgsm",
     "afrixnli",
     "afrixnli_amh",
     "afrixnli_eng",
@@ -488,4 +499,5 @@ __all__ = [
 __all__.extend(BBH_TASKS)
 __all__.extend(BABILONG_TASKS)
 __all__.extend(AGIEVAL_TASKS)
+__all__.extend(AFRIMGSM_TASKS)
 __all__.extend(ARABICMMLU_TASKS)

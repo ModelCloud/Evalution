@@ -76,6 +76,12 @@ AGIEVAL_TASKS = (
     "agieval_sat_math",
     "agieval_gaokao_english",
 )
+AFRIMGSM_TASKS = (
+    "afrimgsm_eng",
+    "afrimgsm_fra",
+    "afrimgsm_swa",
+    "afrimgsm_yor",
+)
 ARABICMMLU_TASKS = (
     "arabicmmlu_all",
     "arabicmmlu_islamic_studies",
@@ -700,6 +706,19 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert set(sample.scores) == {"acc,num"}
 
 
+def _assert_afrimgsm_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert set(sample.scores) == {"acc,num"}
+    assert sample.metadata["language"] == language
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_number"]
+
+
 def _assert_asdiv_cot_llama_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -1220,6 +1239,15 @@ def _metadata_agieval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
         assert metadata["choice_labels"]
         assert metadata["raw_choices"]
         assert len(metadata["choice_labels"]) == len(metadata["raw_choices"])
+
+    return validate
+
+
+def _metadata_afrimgsm_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["question"]
+        assert metadata["answer_number"]
 
     return validate
 
@@ -2066,7 +2094,68 @@ def _agieval_suite_spec(
     )
 
 
+def _afrimgsm_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.afrimgsm(
+            language=language,
+            batch_size=24,
+            max_new_tokens=96,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline={"acc,num": baseline},
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "streaming": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 0,
+            "dataset_path": "masakhane/afrimgsm",
+            "dataset_name": language,
+            "split": "test",
+            "language": language,
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, language=language: _assert_afrimgsm_sample(
+            sample,
+            index,
+            language=language,
+        ),
+        result_validator=_validate_gsm8k_like_result,
+    )
+
+
 SUITE_SPECS = {
+    "afrimgsm_eng": _afrimgsm_suite_spec(
+        "afrimgsm_eng",
+        language="eng",
+        baseline=0.1640625,
+    ),
+    "afrimgsm_fra": _afrimgsm_suite_spec(
+        "afrimgsm_fra",
+        language="fra",
+        baseline=0.0703125,
+    ),
+    "afrimgsm_swa": _afrimgsm_suite_spec(
+        "afrimgsm_swa",
+        language="swa",
+        baseline=0.046875,
+    ),
+    "afrimgsm_yor": _afrimgsm_suite_spec(
+        "afrimgsm_yor",
+        language="yor",
+        baseline=0.015625,
+    ),
     "agieval_aqua_rat": _agieval_suite_spec(
         "agieval_aqua_rat",
         subset="aqua-rat",

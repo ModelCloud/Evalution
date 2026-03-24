@@ -129,6 +129,11 @@ tests:
     max_rows: 16
   - type: agieval_aqua_rat
     max_rows: 16
+  - type: afrimgsm
+    language: eng
+    max_rows: 16
+  - type: afrimgsm_eng
+    max_rows: 16
   - type: afrixnli_amh
     max_rows: 16
   - type: afrixnli_eng
@@ -469,6 +474,8 @@ tests:
     assert ".run(benchmarks.aexams_social(" in script
     assert ".run(benchmarks.agieval(" in script
     assert ".run(benchmarks.agieval_aqua_rat(" in script
+    assert ".run(benchmarks.afrimgsm(" in script
+    assert ".run(benchmarks.afrimgsm_eng(" in script
     assert ".run(benchmarks.afrixnli_amh(" in script
     assert ".run(benchmarks.afrixnli_eng(" in script
     assert ".run(benchmarks.afrixnli_ewe(" in script
