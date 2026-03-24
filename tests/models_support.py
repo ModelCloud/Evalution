@@ -2536,6 +2536,34 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=5),
         ),
     ),
+    "darijahellaswag": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.darijahellaswag(
+            batch_size=24,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name="darijahellaswag",
+        baseline={
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.28125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "MBZUAI-Paris/DarijaHellaSwag",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=(":",),
+            metadata_validator=_metadata_fields_truthy("activity_label", "source_id", "split_type"),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "copa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, streaming=True, max_rows=100),
         expected_name="copa",

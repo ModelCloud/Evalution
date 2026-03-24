@@ -108,6 +108,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "copal_id_standard": benchmarks.copal_id_standard,
     "coqa": benchmarks.coqa,
     "copa": benchmarks.copa,
+    "darijahellaswag": benchmarks.darijahellaswag,
     "drop": benchmarks.drop,
     "gpqa": benchmarks.gpqa,
     "gpqa_main": benchmarks.gpqa_main,
