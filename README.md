@@ -278,6 +278,7 @@ logic, those implementation details can shift results.
 | `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
 | `careqa` | Multiple-choice log-likelihood across supported closed-ended healthcare QA subsets `en/es`, raw + length-normalized accuracy | CareQA `arias-duart-etal-2025-automatic` |
 | `cabbq` | Multiple-choice log-likelihood across Catalan BBQ bias categories, raw + length-normalized accuracy | CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
+| `esbbq` | Multiple-choice log-likelihood across Spanish BBQ bias categories, raw + length-normalized accuracy | EsBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
@@ -430,6 +431,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `c4`: C4 `raffel2020exploring`
 - `careqa_en`, `careqa_es`: CareQA `arias-duart-etal-2025-automatic`
 - `cabbq_<category>` for the built-in Catalan BBQ categories: CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan`
+- `esbbq_<category>` for the built-in Spanish BBQ categories: EsBBQ `ruizfernández2025esbbqcabbqspanishcatalan`
 - `ceval`: C-Eval `huang2023ceval`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`

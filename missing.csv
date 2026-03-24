@@ -24,7 +24,6 @@ darija_bench,37,darija_bench/darija_sentiment/darija_sentiment.yaml,darija_bench
 discrim_eval,2,discrim_eval/discrim_eval_explicit.yaml,discrim_eval/discrim_eval_implicit.yaml
 e2lmc,20,e2lmc/mmlu_early_training/mmlu_early_training.yaml,e2lmc/noor/noor_abstract_algebra.yaml
 eq_bench,3,eq_bench/default.yaml,eq_bench/multilingual/eqbench_ca.yaml
-esbbq,11,esbbq/esbbq.yaml,esbbq/esbbq_age.yaml
 eus_proficiency,1,eus_proficiency/eus_proficiency.yaml,
 eus_reading,1,eus_reading/eus_reading.yaml,
 eus_trivia,1,eus_trivia/eus_trivia.yaml,

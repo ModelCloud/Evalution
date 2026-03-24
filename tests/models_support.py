@@ -116,6 +116,12 @@ CABBQ_TASKS = (
     "cabbq_gender",
     "cabbq_nationality",
 )
+ESBBQ_TASKS = (
+    "esbbq_age",
+    "esbbq_disability_status",
+    "esbbq_gender",
+    "esbbq_nationality",
+)
 ARABICMMLU_TASKS = (
     "arabicmmlu_all",
     "arabicmmlu_islamic_studies",
@@ -2451,6 +2457,52 @@ def _cabbq_suite_spec(
     )
 
 
+def _metadata_esbbq_category(category: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["category"] == category
+        assert metadata["question_polarity"]
+        assert metadata["context_condition"]
+        assert metadata["question_type"]
+        assert len(metadata["raw_choices"]) == 3
+
+    return validate
+
+
+def _esbbq_suite_spec(
+    task_name: str,
+    *,
+    category: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda category=category: evalution.benchmarks.esbbq(
+            category=category,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "BSC-LT/EsBBQ",
+            "dataset_name": category,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, category=category: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C"},
+            prediction_values={"A", "B", "C"},
+            prompt_prefix="Context: ",
+            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nAnswer:"),
+            metadata_validator=_metadata_esbbq_category(category),
+        ),
+    )
+
+
 SUITE_SPECS = {
     "cabbq_age": _cabbq_suite_spec(
         "cabbq_age",
@@ -2481,6 +2533,26 @@ SUITE_SPECS = {
         "careqa_es",
         language="es",
         baseline={"acc,ll": 0.2890625, "acc,ll_avg": 0.2890625},
+    ),
+    "esbbq_age": _esbbq_suite_spec(
+        "esbbq_age",
+        category="Age",
+        baseline={"acc,ll": 0.3828125, "acc,ll_avg": 0.3828125},
+    ),
+    "esbbq_disability_status": _esbbq_suite_spec(
+        "esbbq_disability_status",
+        category="DisabilityStatus",
+        baseline={"acc,ll": 0.4609375, "acc,ll_avg": 0.4609375},
+    ),
+    "esbbq_gender": _esbbq_suite_spec(
+        "esbbq_gender",
+        category="Gender",
+        baseline={"acc,ll": 0.3828125, "acc,ll_avg": 0.3828125},
+    ),
+    "esbbq_nationality": _esbbq_suite_spec(
+        "esbbq_nationality",
+        category="Nationality",
+        baseline={"acc,ll": 0.4765625, "acc,ll_avg": 0.4765625},
     ),
     "eus_exams_eu_opeosakiadmineu": _eus_exams_suite_spec(
         "eus_exams_eu_opeosakiadmineu",

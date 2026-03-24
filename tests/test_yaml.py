@@ -211,6 +211,11 @@ tests:
     max_rows: 16
   - type: cabbq_gender
     max_rows: 16
+  - type: esbbq
+    category: Age
+    max_rows: 16
+  - type: esbbq_gender
+    max_rows: 16
   - type: arc_mt
     language: da
     max_rows: 16
@@ -541,6 +546,8 @@ tests:
     assert ".run(benchmarks.careqa_es(" in script
     assert ".run(benchmarks.cabbq(" in script
     assert ".run(benchmarks.cabbq_gender(" in script
+    assert ".run(benchmarks.esbbq(" in script
+    assert ".run(benchmarks.esbbq_gender(" in script
     assert ".run(benchmarks.arc_mt(" in script
     assert ".run(benchmarks.arc_mt_is(" in script
     assert ".run(benchmarks.asdiv(" in script

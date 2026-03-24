@@ -47,6 +47,8 @@ from .blimp import BLiMP, BLIMP_SUBSETS, blimp
 from .c4 import C4, c4
 from . import cabbq as _cabbq_module
 from .cabbq import CABBQ_CATEGORIES, CABBQ_TASKS, CaBBQ, cabbq
+from . import esbbq as _esbbq_module
+from .esbbq import ESBBQ_CATEGORIES, ESBBQ_TASKS, EsBBQ, esbbq
 from .ceval import CEVAL_SUBSETS, CEval, ceval
 from .careqa import CAREQA_CONFIGS, CAREQA_TASKS, CareQA, careqa, careqa_en, careqa_es
 from .boolq import BoolQ, boolq
@@ -174,6 +176,11 @@ for _cabbq_task in CABBQ_TASKS:
 
 del _cabbq_task
 
+for _esbbq_task in ESBBQ_TASKS:
+    globals()[_esbbq_task] = getattr(_esbbq_module, _esbbq_task)
+
+del _esbbq_task
+
 for _afrimmlu_task in AFRIMMLU_TASKS:
     globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
 
@@ -270,6 +277,10 @@ __all__ = [
     "EGYMMLU_TASKS",
     "EgyHellaSwag",
     "EgyMMLU",
+    "ESBBQ_CATEGORIES",
+    "ESBBQ_TASKS",
+    "EsBBQ",
+    "esbbq",
     "EUS_EXAMS_SUBSETS",
     "EUS_EXAMS_TASKS",
     "EusExams",
