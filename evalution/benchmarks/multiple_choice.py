@@ -44,6 +44,9 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     # Dataset location and execution options shared by multiple-choice benchmark families.
     dataset_path: str = ""
     dataset_name: str | None = None
+    # Concrete benchmarks must set their own canonical split. Many Hugging Face tasks expose
+    # validation-only public evaluation rows or use nonstandard split names, so a blanket test
+    # default here would silently change benchmark semantics.
     split: str = "validation"
     max_rows: int | None = None
     batch_size: int | None = None

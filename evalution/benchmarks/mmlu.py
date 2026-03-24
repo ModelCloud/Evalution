@@ -120,7 +120,9 @@ def _fewshot_prompt(subject: str, fewshot_docs: list[dict[str, Any]]) -> str:
 class MMLU(TestSuite):
     dataset_path: str = "cais/mmlu"
     subsets: str | list[str] = "all"
-    split: str = "validation"
+    # Default to the benchmark-reporting split. Callers can still override `split=` explicitly
+    # for development or cross-framework alignment checks.
+    split: str = "test"
     fewshot_split: str = "dev"
     num_fewshot: int = 5
     max_rows: int | None = None
