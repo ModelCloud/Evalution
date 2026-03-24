@@ -113,6 +113,7 @@ from .mmlu import MMLU, mmlu
 from .mmlu_pro import MMLUPro, mmlu_pro
 from .mnli import MNLI, mnli
 from .mrpc import MRPC, mrpc
+from .mutual import MuTual, mutual
 from .nq_open import NQOpen, nq_open
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
@@ -356,6 +357,7 @@ __all__ = [
     "MMLUPro",
     "MNLI",
     "MRPC",
+    "MuTual",
     "NQOpen",
     "MultipleChoiceSample",
     "OpenBookQA",
@@ -550,6 +552,7 @@ __all__ = [
     "mmlu_pro",
     "mnli",
     "mrpc",
+    "mutual",
     "nq_open",
     "openbookqa",
     "paws_x",

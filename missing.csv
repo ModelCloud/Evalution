@@ -81,7 +81,6 @@ model_written_evals,187,model_written_evals/advanced_ai_risk/fewshot-coordinate-
 moral_stories,1,moral_stories/moral_stories.yaml,
 mts_dialog,2,mts_dialog/mts_dialog.yaml,mts_dialog/mts_dialog_perplexity.yaml
 multiblimp,101,multiblimp/multiblimp_abk.yaml,multiblimp/multiblimp_aln.yaml
-mutual,2,mutual/multual_plus.yaml,mutual/mutual.yaml
 noreval,116,noreval/ask_gec/ask_gec_p0.yaml,noreval/ask_gec/ask_gec_p1.yaml
 noticia,1,noticia/noticia.yaml,
 okapi,157,okapi/arc_multilingual/arc_ar.yaml,okapi/arc_multilingual/arc_bn.yaml

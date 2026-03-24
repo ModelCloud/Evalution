@@ -324,6 +324,7 @@ logic, those implementation details can shift results.
 | `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `mutual` | Multiple-choice dialogue response selection log-likelihood, raw + length-normalized accuracy | MuTual `cui2020mutual` |
 | `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
 | `paws_x` | Multiple-choice log-likelihood across `de/en/es/fr/ja/ko/zh` language subsets, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
@@ -472,6 +473,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `mmlu`: MMLU `hendryckstest2021`
 - `mmlu_pro`: MMLU-Pro `wang2024mmlupro`
 - `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
+- `mutual`: MuTual `cui2020mutual`
 - `nq_open`: Natural Questions `kwiatkowski2019natural`
 - `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
 - `paws_x_de`, `paws_x_en`, `paws_x_es`, `paws_x_fr`, `paws_x_ja`, `paws_x_ko`, `paws_x_zh`: PAWS-X `yang2019pawsx`
@@ -1090,6 +1092,15 @@ The current built-in suite coverage maps to these benchmark citations:
   eprint = {2203.15796},
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
+}
+
+# MuTual
+@inproceedings{cui2020mutual,
+  title = {MuTual: A Dataset for Multi-Turn Dialogue Reasoning},
+  author = {Cui, Leyang and Wu, Yu and Liu, Shujie and Zhang, Yue and Zhou, Ming},
+  booktitle = {Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics},
+  year = {2020},
+  url = {https://aclanthology.org/2020.acl-main.130/},
 }
 
 # MathQA

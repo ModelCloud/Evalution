@@ -369,6 +369,8 @@ tests:
     max_rows: 44
   - type: mrpc
     max_rows: 28
+  - type: mutual
+    max_rows: 16
   - type: nq_open
     max_rows: 16
   - type: openbookqa
@@ -651,6 +653,7 @@ tests:
     assert ".run(benchmarks.mmlu_pro(" in script
     assert ".run(benchmarks.mnli(" in script
     assert ".run(benchmarks.mrpc(" in script
+    assert ".run(benchmarks.mutual(" in script
     assert ".run(benchmarks.nq_open(" in script
     assert ".run(benchmarks.openbookqa(" in script
     assert ".run(benchmarks.paws_x_de(" in script
