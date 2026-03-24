@@ -70,6 +70,12 @@ AEXAMS_TASKS = (
     "aexams_science",
     "aexams_social",
 )
+AGIEVAL_TASKS = (
+    "agieval_aqua_rat",
+    "agieval_logiqa_en",
+    "agieval_sat_math",
+    "agieval_gaokao_english",
+)
 ARABICMMLU_TASKS = (
     "arabicmmlu_all",
     "arabicmmlu_islamic_studies",
@@ -280,7 +286,7 @@ def run_llama3_2_suite(
                 device=LLAMA3_2_TRANSFORMERS_DEVICE,
                 batch_size="auto",
             )
-            .model(evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)))
+            .model(path=str(LLAMA3_2_1B_INSTRUCT))
             .run(suite)
             .result()
         )
@@ -306,7 +312,7 @@ def run_llama3_2_suites(
             attn_implementation="paged|flash_attention_2",
             device=LLAMA3_2_TRANSFORMERS_DEVICE,
             batch_size="auto",
-        ).model(evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)))
+        ).model(path=str(LLAMA3_2_1B_INSTRUCT))
         for suite in suites:
             evaluation = evaluation.run(suite)
         result = evaluation.result()
@@ -335,7 +341,7 @@ def run_llama3_2_compare_suite(
                     device=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                     batch_size="auto",
                 ).model(
-                    evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
+                    path=str(LLAMA3_2_1B_INSTRUCT),
                     label=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                 ),
                 evalution.Transformers(
@@ -344,7 +350,7 @@ def run_llama3_2_compare_suite(
                     device=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
                     batch_size="auto",
                 ).model(
-                    evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
+                    path=str(LLAMA3_2_1B_INSTRUCT),
                     label=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
                 ),
             )
@@ -1206,6 +1212,18 @@ def _metadata_ceval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_agieval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["question"]
+        assert metadata["answer_label"] in {"A", "B", "C", "D", "E"}
+        assert metadata["choice_labels"]
+        assert metadata["raw_choices"]
+        assert len(metadata["choice_labels"]) == len(metadata["raw_choices"])
+
+    return validate
+
+
 def _metadata_arabicmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -2014,7 +2032,73 @@ def _aime_suite_spec(
     )
 
 
+def _agieval_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.agieval(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "RUCAIBox/AGIEval",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D", "E"},
+            prediction_values={"A", "B", "C", "D", "E"},
+            prompt_substrings=("Question: ", "\nAnswer:"),
+            metadata_validator=_metadata_agieval_subset(subset),
+        ),
+    )
+
+
 SUITE_SPECS = {
+    "agieval_aqua_rat": _agieval_suite_spec(
+        "agieval_aqua_rat",
+        subset="aqua-rat",
+        baseline={
+            "acc,ll": 0.296875,
+            "acc,ll_avg": 0.296875,
+        },
+    ),
+    "agieval_logiqa_en": _agieval_suite_spec(
+        "agieval_logiqa_en",
+        subset="logiqa-en",
+        baseline={
+            "acc,ll": 0.3203125,
+            "acc,ll_avg": 0.3203125,
+        },
+    ),
+    "agieval_sat_math": _agieval_suite_spec(
+        "agieval_sat_math",
+        subset="sat-math",
+        baseline={
+            "acc,ll": 0.3046875,
+            "acc,ll_avg": 0.3046875,
+        },
+    ),
+    "agieval_gaokao_english": _agieval_suite_spec(
+        "agieval_gaokao_english",
+        subset="gaokao-english",
+        baseline={
+            "acc,ll": 0.609375,
+            "acc,ll_avg": 0.609375,
+        },
+    ),
     "aime": _aime_suite_spec(
         "aime",
         dataset_path="gneubig/aime-1983-2024",

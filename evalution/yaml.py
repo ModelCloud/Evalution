@@ -27,6 +27,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "aexams_physics": benchmarks.aexams_physics,
     "aexams_science": benchmarks.aexams_science,
     "aexams_social": benchmarks.aexams_social,
+    "agieval": benchmarks.agieval,
     "afrixnli": benchmarks.afrixnli,
     "afrixnli_amh": benchmarks.afrixnli_amh,
     "afrixnli_eng": benchmarks.afrixnli_eng,
@@ -219,6 +220,11 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xwinograd_zh": benchmarks.xwinograd_zh,
 }
 
+for _agieval_task in benchmarks.AGIEVAL_TASKS:
+    _TEST_FACTORIES[_agieval_task] = getattr(benchmarks, _agieval_task)
+
+del _agieval_task
+
 for _crows_pairs_task in benchmarks.CROWS_PAIRS_TASKS:
     _TEST_FACTORIES[_crows_pairs_task] = getattr(benchmarks, _crows_pairs_task)
 
@@ -242,7 +248,8 @@ del _arabicmmlu_task
 
 def run_yaml(source: str | Path) -> EvaluationRun:
     spec = _load_yaml_spec(source)
-    evaluation = _build_engine(spec["engine"]).model(_build_model(spec["model"]))
+    model_config = _build_model(spec["model"])
+    evaluation = _build_engine(spec["engine"]).model(**model_config.to_dict())
     for test in _build_tests(spec["tests"]):
         evaluation.run(test)
     return evaluation
@@ -265,6 +272,8 @@ def python_from_yaml(source: str | Path) -> str:
         engine_alias = "TransformersCompat"
     else:
         engine_alias = engine_name
+    model_config = _build_model(model_spec)
+    model_kwargs = _build_model_emit_kwargs(model_config)
     lines = [
         "import evalution as eval",
         "import evalution.benchmarks as benchmarks",
@@ -272,8 +281,8 @@ def python_from_yaml(source: str | Path) -> str:
         "",
         "result = (",
         f"    {_emit_call(f'engines.{engine_alias}', _mapping_without_name(engine_spec), indent='    ')}",
-        f"    .model({_emit_call('eval.Model', model_spec, indent='    ')})",
     ]
+    lines.extend(_emit_keyword_call("model", model_kwargs, indent="    "))
     for test_spec in test_specs:
         test_mapping = _coerce_named_mapping(test_spec, label="test")
         test_name = _extract_name(test_mapping, label="test")
@@ -379,3 +388,37 @@ def _emit_call(name: str, kwargs: dict[str, Any], *, indent: str) -> str:
             lines.append(f"    {continuation}")
     lines.append(")")
     return "\n".join(f"{indent}{line}" if index else line for index, line in enumerate(lines))
+
+
+def _emit_keyword_call(name: str, kwargs: dict[str, Any], *, indent: str) -> list[str]:
+    lines: list[str] = []
+    if not kwargs:
+        lines.append(f"{indent}.{name}()")
+        return lines
+
+    lines.append(f"{indent}.{name}(")
+    for key, value in kwargs.items():
+        rendered_value = pformat(value, sort_dicts=False)
+        rendered_lines = rendered_value.splitlines() or [rendered_value]
+        lines.append(f"        {key}={rendered_lines[0]},")
+        for continuation in rendered_lines[1:]:
+            lines.append(f"        {continuation}")
+    lines.append("    )")
+    return lines
+
+
+def _build_model_emit_kwargs(model: Model) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {"path": model.path}
+    if model.tokenizer is not None:
+        kwargs["tokenizer"] = model.tokenizer
+    if model.tokenizer_path is not None:
+        kwargs["tokenizer_path"] = model.tokenizer_path
+    if model.revision is not None:
+        kwargs["revision"] = model.revision
+    if model.trust_remote_code:
+        kwargs["trust_remote_code"] = model.trust_remote_code
+    if model.model_kwargs:
+        kwargs["model_kwargs"] = model.model_kwargs
+    if model.tokenizer_kwargs:
+        kwargs["tokenizer_kwargs"] = model.tokenizer_kwargs
+    return kwargs

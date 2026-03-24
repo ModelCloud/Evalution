@@ -124,6 +124,11 @@ tests:
     max_rows: 18
   - type: aexams_social
     max_rows: 18
+  - type: agieval
+    subset: aqua-rat
+    max_rows: 16
+  - type: agieval_aqua_rat
+    max_rows: 16
   - type: afrixnli_amh
     max_rows: 16
   - type: afrixnli_eng
@@ -456,12 +461,14 @@ tests:
     assert "import evalution.engines as engines" in script
     assert "engines.Transformers(" in script
     assert "eval(engines." not in script
-    assert ".model(eval.Model(" in script
+    assert ".model(\n        path=" in script
     assert ".run(benchmarks.aexams_biology(" in script
     assert ".run(benchmarks.aexams_islamic_studies(" in script
     assert ".run(benchmarks.aexams_physics(" in script
     assert ".run(benchmarks.aexams_science(" in script
     assert ".run(benchmarks.aexams_social(" in script
+    assert ".run(benchmarks.agieval(" in script
+    assert ".run(benchmarks.agieval_aqua_rat(" in script
     assert ".run(benchmarks.afrixnli_amh(" in script
     assert ".run(benchmarks.afrixnli_eng(" in script
     assert ".run(benchmarks.afrixnli_ewe(" in script

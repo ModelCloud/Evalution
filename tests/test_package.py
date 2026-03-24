@@ -34,6 +34,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.aexams_physics)
     assert callable(evalution.benchmarks.aexams_science)
     assert callable(evalution.benchmarks.aexams_social)
+    assert evalution.benchmarks.AGIEval is not None
+    assert evalution.benchmarks.AGIEVAL_SUBSETS
+    assert evalution.benchmarks.AGIEVAL_TASKS
+    assert callable(evalution.benchmarks.agieval)
+    for factory_name in evalution.benchmarks.AGIEVAL_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert callable(evalution.benchmarks.afrixnli)
     assert callable(evalution.benchmarks.afrixnli_amh)
     assert callable(evalution.benchmarks.afrixnli_eng)
@@ -365,7 +371,7 @@ def test_engine_model_starts_evaluation_run() -> None:
             del model
             raise AssertionError("evaluation creation should not build a session")
 
-    evaluation = DummyEngine().model({"path": "/tmp/model"})
+    evaluation = DummyEngine().model(path="/tmp/model")
 
     assert isinstance(evaluation, evalution.EvaluationRun)
 

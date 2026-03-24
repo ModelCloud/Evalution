@@ -5,6 +5,8 @@
 
 from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
 from .aexams import AEXAMS, AEXAMS_SUBJECTS, aexams, aexams_biology, aexams_islamic_studies, aexams_physics, aexams_science, aexams_social
+from . import agieval as _agieval_module
+from .agieval import AGIEVAL_SUBSETS, AGIEVAL_TASKS, AGIEval, agieval
 from .afrixnli import AFRIXNLI_LANGUAGES, AFRIXNLI_TASKS, AfriXNLI, afrixnli, afrixnli_amh, afrixnli_eng, afrixnli_ewe, afrixnli_fra, afrixnli_hau, afrixnli_ibo, afrixnli_kin, afrixnli_lin, afrixnli_lug, afrixnli_orm, afrixnli_sna, afrixnli_sot, afrixnli_swa, afrixnli_twi, afrixnli_wol, afrixnli_xho, afrixnli_yor, afrixnli_zul
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
 from .aime import AIME, aime, aime24, aime25
@@ -129,6 +131,11 @@ for _crows_pairs_task in CROWS_PAIRS_TASKS:
 
 del _crows_pairs_task
 
+for _agieval_task in AGIEVAL_TASKS:
+    globals()[_agieval_task] = getattr(_agieval_module, _agieval_task)
+
+del _agieval_task
+
 for _bbh_task in BBH_TASKS:
     globals()[_bbh_task] = getattr(_bbh_module, _bbh_task)
 
@@ -149,6 +156,9 @@ __all__ = [
     "AIME",
     "AEXAMS",
     "AEXAMS_SUBJECTS",
+    "AGIEVAL_SUBSETS",
+    "AGIEVAL_TASKS",
+    "AGIEval",
     "AFRIXNLI_LANGUAGES",
     "AFRIXNLI_TASKS",
     "AfriXNLI",
@@ -270,6 +280,7 @@ __all__ = [
     "aexams_physics",
     "aexams_science",
     "aexams_social",
+    "agieval",
     "afrixnli",
     "afrixnli_amh",
     "afrixnli_eng",
@@ -476,4 +487,5 @@ __all__ = [
 
 __all__.extend(BBH_TASKS)
 __all__.extend(BABILONG_TASKS)
+__all__.extend(AGIEVAL_TASKS)
 __all__.extend(ARABICMMLU_TASKS)

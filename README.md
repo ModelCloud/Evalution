@@ -17,6 +17,7 @@ pip install .
 ```
 
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
+The package also depends on `tokenicer` for tokenizer loading and normalization.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
 Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
@@ -30,7 +31,7 @@ import evalution.engines as engines
 
 result = (
     engines.Transformers()
-    .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
     .run(benchmarks.gsm8k_platinum())
 )
 ```
@@ -52,11 +53,7 @@ result = (
         use_async_batching=None,
         max_new_tokens=256,
     )
-    .model(
-        eval.Model(
-            path="/monster/data/model/Llama-3.2-1B-Instruct",
-        )
-    )
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
     .run(
         benchmarks.gsm8k_platinum(
             variant="cot",
@@ -88,11 +85,11 @@ import evalution.engines as engines
 result = (
     eval.compare(
         engines.Transformers(dtype="bfloat16", device="cuda:0").model(
-            {"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
+            path="/monster/data/model/Llama-3.2-1B-Instruct",
             label="llama",
         ),
         engines.TransformersCompat(device="cuda:1").model(
-            {"path": "/monster/data/model/Qwen2.5-1.5B-Instruct"},
+            path="/monster/data/Qwen2.5-1.5B-Instruct",
             label="qwen",
         ),
     )
@@ -176,7 +173,7 @@ import evalution.engines as engines
 
 result = (
     engines.Transformers()
-    .model(eval.Model(path="/monster/data/model/Llama-3.2-1B-Instruct"))
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
     .run(benchmarks.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
     .run(benchmarks.mmlu_pro(subsets="stem.math"))
 )
@@ -199,6 +196,31 @@ tests:
 Use `engines.TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you
 want the compatibility engine explicitly.
 
+`Tokenicer` is used to load tokenizers for the transformer and transformer-compat engines. When
+`engine.model(...)` is called with a model config, Evalution resolves tokenizer loading in this order:
+`tokenizer` (preinitialized object), `tokenizer_path`, then `path`.
+`Tokenicer` also applies its normalization stage so pad/eos/bos token IDs are corrected before evaluation.
+To inject a custom tokenizer, pass it through `.model(...)` on the model config:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+custom_tokenizer = ...
+
+result = (
+    engines.Transformers()
+    .model(
+        path="/monster/data/model/Llama-3.2-1B-Instruct",
+        tokenizer=custom_tokenizer,
+    )
+    .run(benchmarks.gsm8k_platinum(max_rows=128))
+)
+```
+
+YAML flows can only configure `tokenizer_path`; passing a live tokenizer object is Python-only.
+
 ## Supported Benchmarks
 
 Evalution currently ships the following built-in benchmarks:
@@ -216,6 +238,7 @@ logic, those implementation details can shift results.
 | Suite | Scoring | Original benchmark |
 | --- | --- | --- |
 | `aexams` | Multiple-choice log-likelihood over answer labels across `biology/islamic_studies/physics/science/social` subjects, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
+| `agieval` | Multiple-choice log-likelihood across supported AGIEval subject subsets, raw + length-normalized accuracy | AGIEval `zhong2023agieval` |
 | `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
 | `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
 | `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
@@ -376,6 +399,7 @@ original benchmark papers below.
 The current built-in suite coverage maps to these benchmark citations:
 
 - `aexams_biology`, `aexams_islamic_studies`, `aexams_physics`, `aexams_science`, `aexams_social`: EXAMS `hardalov-etal-2020-exams`
+- `agieval_<subset>` for the built-in single-answer AGIEval subsets: AGIEval `zhong2023agieval`
 - `afrixnli_amh`, `afrixnli_eng`, `afrixnli_ewe`, `afrixnli_fra`, `afrixnli_hau`, `afrixnli_ibo`, `afrixnli_kin`, `afrixnli_lin`, `afrixnli_lug`, `afrixnli_orm`, `afrixnli_sna`, `afrixnli_sot`, `afrixnli_swa`, `afrixnli_twi`, `afrixnli_wol`, `afrixnli_xho`, `afrixnli_yor`, `afrixnli_zul`: IrokoBench AfriXNLI `adelani2025irokobench`
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `arabicmmlu_<subset>` for the built-in ArabicMMLU subsets: ArabicMMLU `koto2024arabicmmlu`
@@ -482,6 +506,15 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2025},
   publisher = {Hugging Face},
   url = {https://huggingface.co/datasets/math-ai/aime25},
+}
+
+# AGIEval
+@article{zhong2023agieval,
+  title = {AGIEval: A Human-Centric Benchmark for Evaluating Foundation Models},
+  author = {Wanjun Zhong and Zijie Huang and Shirong Ma and Angelica Chen and Yuxin Wang and Li Dong and Jie Tang and Nan Duan},
+  journal = {arXiv preprint arXiv:2304.06364},
+  year = {2023},
+  url = {https://arxiv.org/abs/2304.06364},
 }
 
 # ANLI
