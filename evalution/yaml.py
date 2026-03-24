@@ -117,6 +117,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "darijahellaswag": benchmarks.darijahellaswag,
     "egyhellaswag": benchmarks.egyhellaswag,
     "drop": benchmarks.drop,
+    "darijammlu": benchmarks.darijammlu,
     "gpqa": benchmarks.gpqa,
     "gpqa_main": benchmarks.gpqa_main,
     "gpqa_diamond": benchmarks.gpqa_diamond,
@@ -221,6 +222,11 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xwinograd_ru": benchmarks.xwinograd_ru,
     "xwinograd_zh": benchmarks.xwinograd_zh,
 }
+
+for _task_name in benchmarks.DARIJAMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
 
 for _agieval_task in benchmarks.AGIEVAL_TASKS:
     _TEST_FACTORIES[_agieval_task] = getattr(benchmarks, _agieval_task)

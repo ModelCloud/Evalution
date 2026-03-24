@@ -249,6 +249,7 @@ logic, those implementation details can shift results.
 | `anli_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `arabicmmlu` | Multiple-choice log-likelihood across configurable ArabicMMLU subject subsets, raw + length-normalized accuracy | ArabicMMLU `koto2024arabicmmlu` |
+| `darijammlu` | Multiple-choice log-likelihood across configurable DarijaMMLU subject subsets, raw + length-normalized accuracy | DarijaMMLU `shang2024atlaschatadaptinglargelanguage` |
 | `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_mt` | Multiple-choice exam score with tie-aware partial credit across translated ARC Challenge subsets `da/de/el/es/fi/hu/is/it/nb/pl/pt/sv` | ARC `clark2018arc` |
@@ -407,6 +408,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `afrixnli_amh`, `afrixnli_eng`, `afrixnli_ewe`, `afrixnli_fra`, `afrixnli_hau`, `afrixnli_ibo`, `afrixnli_kin`, `afrixnli_lin`, `afrixnli_lug`, `afrixnli_orm`, `afrixnli_sna`, `afrixnli_sot`, `afrixnli_swa`, `afrixnli_twi`, `afrixnli_wol`, `afrixnli_xho`, `afrixnli_yor`, `afrixnli_zul`: IrokoBench AfriXNLI `adelani2025irokobench`
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
 - `arabicmmlu_<subset>` for the built-in ArabicMMLU subsets: ArabicMMLU `koto2024arabicmmlu`
+- `darijammlu_<subset>` for the built-in DarijaMMLU subsets: DarijaMMLU `shang2024atlaschatadaptinglargelanguage`
 - `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
 - `arc_mt_da`, `arc_mt_de`, `arc_mt_el`, `arc_mt_es`, `arc_mt_fi`, `arc_mt_hu`, `arc_mt_is`, `arc_mt_it`, `arc_mt_nb`, `arc_mt_pl`, `arc_mt_pt`, `arc_mt_sv`: ARC `clark2018arc`
@@ -879,6 +881,17 @@ The current built-in suite coverage maps to these benchmark citations:
   eprint = {2402.12840},
   archivePrefix = {arXiv},
   url = {https://arxiv.org/abs/2402.12840},
+}
+
+# DarijaMMLU
+@article{shang2024atlaschatadaptinglargelanguage,
+  title = {Atlas-Chat: Adapting Large Language Models for Low-Resource Moroccan Arabic Dialect},
+  author = {Guokan Shang and Hadi Abdine and Yousef Khoubrane and Amr Mohamed and Yassine Abbahaddou and Sofiane Ennadir and Imane Momayiz and Xuguang Ren and Eric Moulines and Preslav Nakov and Michalis Vazirgiannis and Eric Xing},
+  year = {2024},
+  eprint = {2409.17912},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2409.17912},
 }
 
 # GLUE
