@@ -306,6 +306,7 @@ logic, those implementation details can shift results.
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
@@ -459,6 +460,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
 - `hellaswag`: HellaSwag `zellers2019hellaswag`
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
+- `hendrycks_math_<subset>` for the built-in subject subsets: MATH `hendrycks2021measuring`
 - `histoires_morales`: Histoires Morales `leteno2025histoiresmorales`
 - `icelandic_winogrande`: Icelandic WinoGrande `snaebjarnarson-etal-2022-warm`
 - `inverse_scaling_<subset>` for the built-in inverse-scaling subsets: Inverse Scaling Prize `mckenzie2023inverse`
@@ -1111,6 +1113,17 @@ The current built-in suite coverage maps to these benchmark citations:
   eprint = {1905.13319},
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
+}
+
+# MATH
+@article{hendrycks2021measuring,
+  title = {Measuring Mathematical Problem Solving With the MATH Dataset},
+  author = {Hendrycks, Dan and Burns, Collin and Kadavath, Saurav and Arora, Akul and Basart, Steven and Tang, Eric and Song, Dawn and Steinhardt, Jacob},
+  journal = {Advances in Neural Information Processing Systems},
+  volume = {34},
+  pages = {5325--5337},
+  year = {2021},
+  url = {https://proceedings.neurips.cc/paper/2021/hash/be83ab3ecd0db773eb2dc1b0a17836a1-Abstract.html},
 }
 
 # MC-TACO

@@ -38,7 +38,6 @@ graphwalks,3,graphwalks/graphwalks.yaml,graphwalks/graphwalks_128k.yaml
 groundcocoa,1,groundcocoa/groundcocoa.yaml,
 gsm_plus,2,gsm_plus/gsm_plus.yaml,gsm_plus/gsm_plus_mini.yaml
 haerae,6,haerae/haerae_gk.yaml,haerae/haerae_hi.yaml
-hendrycks_math,9,hendrycks_math/hendrycks_math.yaml,hendrycks_math/hendrycks_math500.yaml
 hrm8k,12,hrm8k/default/hrm8k.yaml,hrm8k/default/hrm8k_gsm8k.yaml
 humaneval,5,humaneval/humaneval.yaml,humaneval/humaneval_64.yaml
 humaneval_infilling,5,humaneval_infilling/humaneval_infilling.yaml,humaneval_infilling/multi_line_infilling.yaml

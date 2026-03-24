@@ -15,6 +15,15 @@ from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationO
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 _AIME_TASKS = ["aime", "aime24", "aime25"]
+_HENDRYCKS_MATH_TASKS = [
+    "hendrycks_math_algebra",
+    "hendrycks_math_counting_and_probability",
+    "hendrycks_math_geometry",
+    "hendrycks_math_intermediate_algebra",
+    "hendrycks_math_number_theory",
+    "hendrycks_math_prealgebra",
+    "hendrycks_math_precalculus",
+]
 _ARITHMETIC_TASKS = [
     "arithmetic_1dc",
     "arithmetic_2da",
@@ -276,6 +285,11 @@ tests:
     max_rows: 18
   - type: headqa_es
     max_rows: 18
+  - type: hendrycks_math
+    subset: algebra
+    max_rows: 16
+  - type: hendrycks_math_geometry
+    max_rows: 16
   - type: histoires_morales
     max_rows: 16
   - type: lambada_openai
@@ -648,6 +662,8 @@ tests:
     assert ".run(benchmarks.ethics_virtue(" in script
     assert ".run(benchmarks.arc_easy(" in script
     assert ".run(benchmarks.arc_challenge(" in script
+    assert ".run(benchmarks.hendrycks_math(" in script
+    assert ".run(benchmarks.hendrycks_math_geometry(" in script
     assert ".run(benchmarks.hellaswag(" in script
     assert ".run(benchmarks.mmlu(" in script
     assert ".run(benchmarks.mmlu_pro(" in script

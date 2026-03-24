@@ -129,6 +129,9 @@ ARABICMMLU_TASKS = (
     "arabicmmlu_driving_test",
 )
 AIME_TASKS = ("aime", "aime24", "aime25")
+HENDRYCKS_MATH_TASKS = (
+    "hendrycks_math_algebra",
+)
 ALGHAFA_TASKS = ("copa_ar", "piqa_ar")
 ARITHMETIC_TASKS = (
     "arithmetic_1dc",
@@ -804,6 +807,24 @@ def _assert_aime_sample(sample: Any, index: int) -> None:
     }
     assert set(sample.scores) == {"em"}
     assert sample.metadata["problem_id"]
+
+
+def _assert_hendrycks_math_sample(sample: Any, index: int, *, subset: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Problem: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "answer-extract",
+        "prediction-normalized",
+        "target-normalized",
+    }
+    assert set(sample.scores) == {"em"}
+    assert sample.metadata["subset"] == subset
+    assert sample.metadata["level"]
+    assert sample.metadata["problem_type"]
 
 
 def _assert_arithmetic_sample(sample: Any, index: int, *, task_name: str) -> None:
@@ -2341,6 +2362,42 @@ def _agieval_suite_spec(
     )
 
 
+def _hendrycks_math_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.hendrycks_math(
+            subset=subset,
+            batch_size=4,
+            max_new_tokens=256,
+            streaming=True,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline={"em": baseline},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "EleutherAI/hendrycks_math",
+            "dataset_name": subset,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_math_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_hendrycks_math_sample(
+            sample,
+            index,
+            subset=subset,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 def _afrimgsm_suite_spec(
     task_name: str,
     *,
@@ -2961,6 +3018,11 @@ SUITE_SPECS = {
         dataset_path="math-ai/aime25",
         split="test",
         baseline=0.0,
+    ),
+    "hendrycks_math_algebra": _hendrycks_math_suite_spec(
+        "hendrycks_math_algebra",
+        subset="algebra",
+        baseline=0.3125,
     ),
     "asdiv": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, streaming=True, max_rows=128),

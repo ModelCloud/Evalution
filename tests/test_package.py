@@ -242,6 +242,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.gpqa_diamond)
     assert callable(evalution.benchmarks.gpqa_extended)
     assert evalution.benchmarks.HendrycksEthics is not None
+    assert evalution.benchmarks.HendrycksMath is not None
+    assert evalution.benchmarks.HENDRYCKS_MATH_SUBSETS
+    assert evalution.benchmarks.HENDRYCKS_MATH_TASKS
+    assert callable(evalution.benchmarks.hendrycks_math)
+    for factory_name in evalution.benchmarks.HENDRYCKS_MATH_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert callable(evalution.benchmarks.ethics_cm)
     assert callable(evalution.benchmarks.ethics_deontology)
     assert callable(evalution.benchmarks.ethics_justice)

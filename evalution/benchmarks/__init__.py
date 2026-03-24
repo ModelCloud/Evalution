@@ -94,6 +94,8 @@ from .hendrycks_ethics import (
     ethics_utilitarianism,
     ethics_virtue,
 )
+from . import hendrycks_math as _hendrycks_math_module
+from .hendrycks_math import HENDRYCKS_MATH_SUBSETS, HENDRYCKS_MATH_TASKS, HendrycksMath, hendrycks_math
 from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
 from .histoires_morales import HistoiresMorales, histoires_morales
@@ -219,6 +221,11 @@ for _arabicmmlu_task in ARABICMMLU_TASKS:
 
 del _arabicmmlu_task
 
+for _hendrycks_math_task in HENDRYCKS_MATH_TASKS:
+    globals()[_hendrycks_math_task] = getattr(_hendrycks_math_module, _hendrycks_math_task)
+
+del _hendrycks_math_task
+
 for _xnli_task in XNLI_TASKS:
     globals()[_xnli_task] = getattr(_xnli_module, _xnli_task)
 
@@ -335,6 +342,9 @@ __all__ = [
     "GSM8K",
     "GSM8KPlatinum",
     "HendrycksEthics",
+    "HENDRYCKS_MATH_SUBSETS",
+    "HENDRYCKS_MATH_TASKS",
+    "HendrycksMath",
     "HEADQA",
     "HellaSwag",
     "HistoiresMorales",
@@ -526,6 +536,7 @@ __all__ = [
     "gsm8k_platinum",
     "headqa_en",
     "headqa_es",
+    "hendrycks_math",
     "hellaswag",
     "histoires_morales",
     "icelandic_winogrande",
@@ -648,6 +659,7 @@ __all__.extend(CABBQ_TASKS)
 __all__.extend(BBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
+__all__.extend(HENDRYCKS_MATH_TASKS)
 __all__.extend(WMDP_TASKS)
 __all__.extend(XNLI_TASKS)
 __all__.extend(XQUAD_TASKS)

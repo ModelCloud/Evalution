@@ -139,6 +139,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "gsm8k_platinum": benchmarks.gsm8k_platinum,
     "headqa_en": benchmarks.headqa_en,
     "headqa_es": benchmarks.headqa_es,
+    "hendrycks_math": benchmarks.hendrycks_math,
     "hellaswag": benchmarks.hellaswag,
     "histoires_morales": benchmarks.histoires_morales,
     "icelandic_winogrande": benchmarks.icelandic_winogrande,
@@ -327,6 +328,11 @@ for _arabicmmlu_task in benchmarks.ARABICMMLU_TASKS:
     _TEST_FACTORIES[_arabicmmlu_task] = getattr(benchmarks, _arabicmmlu_task)
 
 del _arabicmmlu_task
+
+for _hendrycks_math_task in benchmarks.HENDRYCKS_MATH_TASKS:
+    _TEST_FACTORIES[_hendrycks_math_task] = getattr(benchmarks, _hendrycks_math_task)
+
+del _hendrycks_math_task
 
 
 def run_yaml(source: str | Path) -> EvaluationRun:
