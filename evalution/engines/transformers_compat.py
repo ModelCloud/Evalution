@@ -35,6 +35,7 @@ class TransformersCompat(_TransformersCommonConfig):
             attn_implementation=getattr(engine, "attn_implementation", None),
             device=getattr(engine, "device", None),
             device_map=getattr(engine, "device_map", None),
+            seed=getattr(engine, "seed", None),
             batch_size=getattr(engine, "batch_size", "auto"),
             max_new_tokens=getattr(engine, "max_new_tokens", 256),
             trust_remote_code=getattr(engine, "trust_remote_code", None),
