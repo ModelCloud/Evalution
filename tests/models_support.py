@@ -1514,6 +1514,15 @@ def _metadata_has_wsc_fields(metadata: dict[str, Any]) -> None:
     assert isinstance(metadata["span2_index"], int)
 
 
+def _metadata_has_multirc_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["paragraph"]
+    assert metadata["question"]
+    assert metadata["answer"]
+    assert metadata["idx"]["paragraph"] >= 0
+    assert metadata["idx"]["question"] >= 0
+    assert metadata["idx"]["answer"] >= 0
+
+
 def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         subset = metadata["subset"]
@@ -4730,6 +4739,30 @@ SUITE_SPECS = {
                 "\nSentence 2: ",
                 "Do both sentences mean the same thing?",
             ),
+        ),
+    ),
+    "multirc": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.multirc(batch_size=24, stream=True, max_rows=128),
+        expected_name="multirc",
+        baseline={
+            "acc,ll": 0.421875,
+            "acc,ll_avg": 0.421875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "super_glue",
+            "dataset_name": "multirc",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "order": "native",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=("\nQuestion: ", "\nAnswer:"),
+            metadata_validator=_metadata_has_multirc_fields,
         ),
     ),
     "openbookqa": SuiteSpec(

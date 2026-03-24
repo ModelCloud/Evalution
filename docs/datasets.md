@@ -93,6 +93,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `mmlu_pro.MMLUPro` | `TIGER-Lab/MMLU-Pro` | `None` | `test` | `fewshot_split=validation` |
 | `mnli.MNLI` | `nyu-mll/glue` | `mnli` | `validation_matched` | none |
 | `mrpc.MRPC` | `nyu-mll/glue` | `mrpc` | `validation` | none |
+| `multirc.MultiRC` | `super_glue` | `multirc` | `validation` | none |
 | `nq_open.NQOpen` | `nq_open` | `nq_open` | `validation` | none |
 | `openbookqa.OpenBookQA` | `allenai/openbookqa` | `main` | `test` | none |
 | `paws_x.PAWSX` | `paws-x` | `en` | `test` | none |

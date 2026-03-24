@@ -364,6 +364,7 @@ logic, those implementation details can shift results.
 | `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `multirc` | Multiple-choice log-likelihood over candidate answers with yes/no verification, raw + length-normalized accuracy | SuperGLUE MultiRC `wang2019superglue` |
 | `mutual` | Multiple-choice dialogue response selection log-likelihood, raw + length-normalized accuracy | MuTual `cui2020mutual` |
 | `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |

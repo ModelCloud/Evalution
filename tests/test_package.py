@@ -303,6 +303,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mnli)
     assert evalution.benchmarks.MRPC is not None
     assert callable(evalution.benchmarks.mrpc)
+    assert evalution.benchmarks.MultiRC is not None
+    assert callable(evalution.benchmarks.multirc)
     assert evalution.benchmarks.MuTual is not None
     assert callable(evalution.benchmarks.mutual)
     assert evalution.benchmarks.NQOpen is not None
