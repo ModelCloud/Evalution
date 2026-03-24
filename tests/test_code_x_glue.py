@@ -91,6 +91,7 @@ def test_code_x_glue_scores_corpus_bleu(monkeypatch) -> None:
         "dataset_path": "CM/codexglue_code2text_go",
         "dataset_name": None,
         "split": "test",
+        "order": "native",
         "stream": True,
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_docstring_corpus_bleu4",
