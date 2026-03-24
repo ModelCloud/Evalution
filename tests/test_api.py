@@ -123,7 +123,7 @@ def test_engine_runner_chains_model_and_test_runs(monkeypatch) -> None:
     monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     engine = FakeEngine()
-    result = engine.model({"path": "/tmp/model"}).run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
+    result = engine.model(path="/tmp/model").run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
 
     assert result.model["path"] == "/tmp/model"
     assert result.engine["name"] == "fake"
@@ -146,7 +146,7 @@ def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
 
     result = (
         FakeEngine()
-        .model({"path": "/tmp/model"}, label="llama")
+        .model(path="/tmp/model", label="llama")
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
         .result()
     )
@@ -158,6 +158,15 @@ def test_engine_requires_model_before_run() -> None:
     engine = FakeEngine()
 
     assert not hasattr(engine, "run")
+
+
+def test_model_accepts_tokenizer_override() -> None:
+    tokenizer = object()
+
+    engine = FakeEngine()
+    evaluation = engine.model(path="/tmp/model", tokenizer=tokenizer)
+
+    assert evaluation._model_config.tokenizer is tokenizer
 
 
 def test_run_rejects_engines_that_return_non_session_objects(monkeypatch) -> None:
@@ -273,7 +282,7 @@ def test_engine_runner_calls_session_gc_between_test_runs(monkeypatch) -> None:
     engine = FakeEngine()
     result = (
         engine
-        .model({"path": "/tmp/model"})
+        .model(path="/tmp/model")
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
         .run(evalution.benchmarks.gsm8k_platinum(max_rows=1))
     )

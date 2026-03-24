@@ -34,6 +34,24 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.aexams_physics)
     assert callable(evalution.benchmarks.aexams_science)
     assert callable(evalution.benchmarks.aexams_social)
+    assert evalution.benchmarks.AGIEval is not None
+    assert evalution.benchmarks.AGIEVAL_SUBSETS
+    assert evalution.benchmarks.AGIEVAL_TASKS
+    assert callable(evalution.benchmarks.agieval)
+    for factory_name in evalution.benchmarks.AGIEVAL_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.AfriMGSM is not None
+    assert evalution.benchmarks.AFRIMGSM_LANGUAGES
+    assert evalution.benchmarks.AFRIMGSM_TASKS
+    assert callable(evalution.benchmarks.afrimgsm)
+    for factory_name in evalution.benchmarks.AFRIMGSM_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.AfriMMLU is not None
+    assert evalution.benchmarks.AFRIMMLU_LANGUAGES
+    assert evalution.benchmarks.AFRIMMLU_TASKS
+    assert callable(evalution.benchmarks.afrimmlu)
+    for factory_name in evalution.benchmarks.AFRIMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert callable(evalution.benchmarks.afrixnli)
     assert callable(evalution.benchmarks.afrixnli_amh)
     assert callable(evalution.benchmarks.afrixnli_eng)
@@ -60,6 +78,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.anli_r1)
     assert callable(evalution.benchmarks.anli_r2)
     assert callable(evalution.benchmarks.anli_r3)
+    assert evalution.benchmarks.ArabicMMLU is not None
+    assert evalution.benchmarks.ARABICMMLU_SUBSETS
+    assert evalution.benchmarks.ARABICMMLU_TASKS
+    assert callable(evalution.benchmarks.arabicmmlu)
+    for factory_name in evalution.benchmarks.ARABICMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.ARCChallenge is not None
     assert evalution.benchmarks.ARCMT is not None
     assert evalution.benchmarks.ARC_MT_LANGUAGES
@@ -90,6 +114,13 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.asdiv_cot_llama)
     assert evalution.benchmarks.BABI is not None
     assert callable(evalution.benchmarks.babi)
+    assert evalution.benchmarks.BABILong is not None
+    assert evalution.benchmarks.BABILONG_CONTEXT_LENGTHS
+    assert evalution.benchmarks.BABILONG_TASK_SPLITS
+    assert evalution.benchmarks.BABILONG_TASKS
+    assert callable(evalution.benchmarks.babilong)
+    for factory_name in evalution.benchmarks.BABILONG_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.BBH is not None
     assert evalution.benchmarks.BBH_SUBSETS
     assert evalution.benchmarks.BBH_TASKS
@@ -352,7 +383,7 @@ def test_engine_model_starts_evaluation_run() -> None:
             del model
             raise AssertionError("evaluation creation should not build a session")
 
-    evaluation = DummyEngine().model({"path": "/tmp/model"})
+    evaluation = DummyEngine().model(path="/tmp/model")
 
     assert isinstance(evaluation, evalution.EvaluationRun)
 

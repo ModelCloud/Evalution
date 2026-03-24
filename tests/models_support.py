@@ -70,6 +70,30 @@ AEXAMS_TASKS = (
     "aexams_science",
     "aexams_social",
 )
+AGIEVAL_TASKS = (
+    "agieval_aqua_rat",
+    "agieval_logiqa_en",
+    "agieval_sat_math",
+    "agieval_gaokao_english",
+)
+AFRIMGSM_TASKS = (
+    "afrimgsm_eng",
+    "afrimgsm_fra",
+    "afrimgsm_swa",
+    "afrimgsm_yor",
+)
+AFRIMMLU_TASKS = (
+    "afrimmlu_eng",
+    "afrimmlu_fra",
+    "afrimmlu_hau",
+    "afrimmlu_swa",
+)
+ARABICMMLU_TASKS = (
+    "arabicmmlu_all",
+    "arabicmmlu_islamic_studies",
+    "arabicmmlu_computer_science_high_school",
+    "arabicmmlu_driving_test",
+)
 AIME_TASKS = ("aime", "aime24", "aime25")
 ALGHAFA_TASKS = ("copa_ar", "piqa_ar")
 ARITHMETIC_TASKS = (
@@ -88,6 +112,7 @@ BEAR_TASKS = (
     "bear",
     "bear_big",
 )
+BABILONG_TASKS = tuple(evalution.benchmarks.BABILONG_TASKS)
 BBH_TASKS = tuple(evalution.benchmarks.BBH_TASKS)
 BANGLA_TASKS = (
     "bangla_boolqa",
@@ -273,7 +298,7 @@ def run_llama3_2_suite(
                 device=LLAMA3_2_TRANSFORMERS_DEVICE,
                 batch_size="auto",
             )
-            .model(evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)))
+            .model(path=str(LLAMA3_2_1B_INSTRUCT))
             .run(suite)
             .result()
         )
@@ -299,7 +324,7 @@ def run_llama3_2_suites(
             attn_implementation="paged|flash_attention_2",
             device=LLAMA3_2_TRANSFORMERS_DEVICE,
             batch_size="auto",
-        ).model(evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)))
+        ).model(path=str(LLAMA3_2_1B_INSTRUCT))
         for suite in suites:
             evaluation = evaluation.run(suite)
         result = evaluation.result()
@@ -328,7 +353,7 @@ def run_llama3_2_compare_suite(
                     device=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                     batch_size="auto",
                 ).model(
-                    evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
+                    path=str(LLAMA3_2_1B_INSTRUCT),
                     label=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                 ),
                 evalution.Transformers(
@@ -337,7 +362,7 @@ def run_llama3_2_compare_suite(
                     device=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
                     batch_size="auto",
                 ).model(
-                    evalution.Model(path=str(LLAMA3_2_1B_INSTRUCT)),
+                    path=str(LLAMA3_2_1B_INSTRUCT),
                     label=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
                 ),
             )
@@ -687,6 +712,19 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert set(sample.scores) == {"acc,num"}
 
 
+def _assert_afrimgsm_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Question: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert set(sample.scores) == {"acc,num"}
+    assert sample.metadata["language"] == language
+    assert sample.metadata["question"]
+    assert sample.metadata["answer_number"]
+
+
 def _assert_asdiv_cot_llama_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -814,6 +852,22 @@ def _assert_generated_exact_match_sample(
     assert set(sample.scores) == {"em"}
     if metadata_validator is not None:
         metadata_validator(sample.metadata)
+
+
+def _assert_babilong_sample(
+    sample: Any,
+    index: int,
+    *,
+    qa_split: str,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Context:\n")
+    assert sample.prompt.endswith("\n\nAnswer:")
+    assert "\n\nQuestion:\n" in sample.prompt
+    assert sample.target
+    assert set(sample.extracted) == {"prediction-stripped", "target-stripped"}
+    assert set(sample.scores) == {"em"}
+    _metadata_babilong_split(qa_split)(sample.metadata)
 
 
 def _assert_generated_summary_sample(
@@ -1183,6 +1237,53 @@ def _metadata_ceval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_agieval_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["question"]
+        assert metadata["answer_label"] in {"A", "B", "C", "D", "E"}
+        assert metadata["choice_labels"]
+        assert metadata["raw_choices"]
+        assert len(metadata["choice_labels"]) == len(metadata["raw_choices"])
+
+    return validate
+
+
+def _metadata_afrimgsm_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["question"]
+        assert metadata["answer_number"]
+
+    return validate
+
+
+def _metadata_afrimmlu_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["subject"]
+        assert metadata["question"]
+        assert metadata["answer_label"] in {"A", "B", "C", "D"}
+        assert metadata["raw_choices"]
+        assert len(metadata["raw_choices"]) == 4
+
+    return validate
+
+
+def _metadata_arabicmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["group"]
+        assert metadata["subject"]
+        assert metadata["question"]
+        assert metadata["answer_label"] in {"A", "B", "C", "D", "E"}
+        assert metadata["choice_labels"]
+        assert metadata["raw_choices"]
+        assert len(metadata["choice_labels"]) == len(metadata["raw_choices"])
+
+    return validate
+
+
 def _metadata_afrixnli_language(language: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["language"] == language
@@ -1219,6 +1320,15 @@ def _metadata_bbh_subset(subset: str) -> Callable[[dict[str, Any]], None]:
         assert metadata["subset"] == subset
         assert metadata["input"]
         assert metadata["target_text"]
+
+    return validate
+
+
+def _metadata_babilong_split(qa_split: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["context_length"] == "0k"
+        assert metadata["qa_split"] == qa_split
+        assert metadata["question"]
 
     return validate
 
@@ -1350,6 +1460,36 @@ def _bbh_suite_spec(task_name: str, subset: str, baseline: float) -> SuiteSpec:
             prompt_prefix="Q: ",
             prompt_suffix="\nA:",
             metadata_validator=_metadata_bbh_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _babilong_suite_spec(task_name: str, qa_split: str, baseline: float) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
+            batch_size=4,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline={"em": baseline},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "RMT-team/babilong",
+            "dataset_name": "0k",
+            "split": qa_split,
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+            "context_length": "0k",
+            "qa_split": qa_split,
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, qa_split=qa_split: _assert_babilong_sample(
+            sample,
+            index,
+            qa_split=qa_split,
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     )
@@ -1762,6 +1902,42 @@ def _gpqa_suite_spec(
     )
 
 
+def _arabicmmlu_suite_spec(
+    *,
+    task_name: str,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.arabicmmlu(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "MBZUAI/ArabicMMLU",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D", "E"},
+            prediction_values={"A", "B", "C", "D", "E"},
+            prompt_prefix="This is a ",
+            prompt_suffix="\n\nAnswer:",
+            prompt_substrings=("\n\nQuestion: ",),
+            metadata_validator=_metadata_arabicmmlu_subset(subset),
+        ),
+    )
+
+
 def _blimp_suite_spec(
     *,
     subset: str,
@@ -1902,7 +2078,202 @@ def _aime_suite_spec(
     )
 
 
+def _agieval_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.agieval(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "RUCAIBox/AGIEval",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D", "E"},
+            prediction_values={"A", "B", "C", "D", "E"},
+            prompt_substrings=("Question: ", "\nAnswer:"),
+            metadata_validator=_metadata_agieval_subset(subset),
+        ),
+    )
+
+
+def _afrimgsm_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.afrimgsm(
+            language=language,
+            batch_size=24,
+            max_new_tokens=96,
+            streaming=True,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline={"acc,num": baseline},
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "streaming": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 0,
+            "dataset_path": "masakhane/afrimgsm",
+            "dataset_name": language,
+            "split": "test",
+            "language": language,
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, language=language: _assert_afrimgsm_sample(
+            sample,
+            index,
+            language=language,
+        ),
+        result_validator=_validate_gsm8k_like_result,
+    )
+
+
+def _afrimmlu_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.afrimmlu(
+            language=language,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "masakhane/afrimmlu",
+            "dataset_name": language,
+            "split": "test",
+            "language": language,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_substrings=("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_afrimmlu_language(language),
+        ),
+    )
+
+
 SUITE_SPECS = {
+    "afrimmlu_eng": _afrimmlu_suite_spec(
+        "afrimmlu_eng",
+        language="eng",
+        baseline={
+            "acc,ll": 0.3828125,
+            "acc,ll_avg": 0.3828125,
+        },
+    ),
+    "afrimmlu_fra": _afrimmlu_suite_spec(
+        "afrimmlu_fra",
+        language="fra",
+        baseline={
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.28125,
+        },
+    ),
+    "afrimmlu_hau": _afrimmlu_suite_spec(
+        "afrimmlu_hau",
+        language="hau",
+        baseline={
+            "acc,ll": 0.2578125,
+            "acc,ll_avg": 0.2578125,
+        },
+    ),
+    "afrimmlu_swa": _afrimmlu_suite_spec(
+        "afrimmlu_swa",
+        language="swa",
+        baseline={
+            "acc,ll": 0.2890625,
+            "acc,ll_avg": 0.2890625,
+        },
+    ),
+    "afrimgsm_eng": _afrimgsm_suite_spec(
+        "afrimgsm_eng",
+        language="eng",
+        baseline=0.1640625,
+    ),
+    "afrimgsm_fra": _afrimgsm_suite_spec(
+        "afrimgsm_fra",
+        language="fra",
+        baseline=0.0703125,
+    ),
+    "afrimgsm_swa": _afrimgsm_suite_spec(
+        "afrimgsm_swa",
+        language="swa",
+        baseline=0.046875,
+    ),
+    "afrimgsm_yor": _afrimgsm_suite_spec(
+        "afrimgsm_yor",
+        language="yor",
+        baseline=0.015625,
+    ),
+    "agieval_aqua_rat": _agieval_suite_spec(
+        "agieval_aqua_rat",
+        subset="aqua-rat",
+        baseline={
+            "acc,ll": 0.296875,
+            "acc,ll_avg": 0.296875,
+        },
+    ),
+    "agieval_logiqa_en": _agieval_suite_spec(
+        "agieval_logiqa_en",
+        subset="logiqa-en",
+        baseline={
+            "acc,ll": 0.3203125,
+            "acc,ll_avg": 0.3203125,
+        },
+    ),
+    "agieval_sat_math": _agieval_suite_spec(
+        "agieval_sat_math",
+        subset="sat-math",
+        baseline={
+            "acc,ll": 0.3046875,
+            "acc,ll_avg": 0.3046875,
+        },
+    ),
+    "agieval_gaokao_english": _agieval_suite_spec(
+        "agieval_gaokao_english",
+        subset="gaokao-english",
+        baseline={
+            "acc,ll": 0.609375,
+            "acc,ll_avg": 0.609375,
+        },
+    ),
     "aime": _aime_suite_spec(
         "aime",
         dataset_path="gneubig/aime-1983-2024",
@@ -4751,6 +5122,50 @@ for _task_name, _subset, _baseline in (
     ("bbh_word_sorting", "word_sorting", 0.0),
 ):
     SUITE_SPECS[_task_name] = _bbh_suite_spec(_task_name, _subset, _baseline)
+
+for _task_name, _subset, _baseline in (
+    ("arabicmmlu_all", "All", {"acc,ll": 0.2890625, "acc,ll_avg": 0.2890625}),
+    (
+        "arabicmmlu_islamic_studies",
+        "Islamic Studies",
+        {"acc,ll": 0.2890625, "acc,ll_avg": 0.2890625},
+    ),
+    (
+        "arabicmmlu_computer_science_high_school",
+        "Computer Science (High School)",
+        {"acc,ll": 0.3515625, "acc,ll_avg": 0.3515625},
+    ),
+    ("arabicmmlu_driving_test", "Driving Test", {"acc,ll": 0.453125, "acc,ll_avg": 0.453125}),
+):
+    SUITE_SPECS[_task_name] = _arabicmmlu_suite_spec(
+        task_name=_task_name,
+        subset=_subset,
+        baseline=_baseline,
+    )
+
+for _task_name, _qa_split, _baseline in (
+    ("babilong_qa1", "qa1", 0.0625),
+    ("babilong_qa2", "qa2", 0.0),
+    ("babilong_qa3", "qa3", 0.0),
+    ("babilong_qa4", "qa4", 0.0),
+    ("babilong_qa5", "qa5", 0.40625),
+    ("babilong_qa6", "qa6", 0.03125),
+    ("babilong_qa7", "qa7", 0.0),
+    ("babilong_qa8", "qa8", 0.15625),
+    ("babilong_qa9", "qa9", 0.40625),
+    ("babilong_qa10", "qa10", 0.15625),
+    ("babilong_qa11", "qa11", 0.0),
+    ("babilong_qa12", "qa12", 0.0),
+    ("babilong_qa13", "qa13", 0.0),
+    ("babilong_qa14", "qa14", 0.03125),
+    ("babilong_qa15", "qa15", 0.0),
+    ("babilong_qa16", "qa16", 0.53125),
+    ("babilong_qa17", "qa17", 0.25),
+    ("babilong_qa18", "qa18", 0.0),
+    ("babilong_qa19", "qa19", 0.0),
+    ("babilong_qa20", "qa20", 0.0),
+):
+    SUITE_SPECS[_task_name] = _babilong_suite_spec(_task_name, _qa_split, _baseline)
 
 for _task_name, _language in (
     ("paws_x_de", "de"),

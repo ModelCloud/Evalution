@@ -5,10 +5,18 @@
 
 from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
 from .aexams import AEXAMS, AEXAMS_SUBJECTS, aexams, aexams_biology, aexams_islamic_studies, aexams_physics, aexams_science, aexams_social
+from . import agieval as _agieval_module
+from .agieval import AGIEVAL_SUBSETS, AGIEVAL_TASKS, AGIEval, agieval
+from . import afrimgsm as _afrimgsm_module
+from .afrimgsm import AFRIMGSM_LANGUAGES, AFRIMGSM_TASKS, AfriMGSM, afrimgsm
+from . import afrimmlu as _afrimmlu_module
+from .afrimmlu import AFRIMMLU_LANGUAGES, AFRIMMLU_TASKS, AfriMMLU, afrimmlu
 from .afrixnli import AFRIXNLI_LANGUAGES, AFRIXNLI_TASKS, AfriXNLI, afrixnli, afrixnli_amh, afrixnli_eng, afrixnli_ewe, afrixnli_fra, afrixnli_hau, afrixnli_ibo, afrixnli_kin, afrixnli_lin, afrixnli_lug, afrixnli_orm, afrixnli_sna, afrixnli_sot, afrixnli_swa, afrixnli_twi, afrixnli_wol, afrixnli_xho, afrixnli_yor, afrixnli_zul
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
 from .aime import AIME, aime, aime24, aime25
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
+from . import arabicmmlu as _arabicmmlu_module
+from .arabicmmlu import ARABICMMLU_SUBSETS, ARABICMMLU_TASKS, ArabicMMLU, arabicmmlu
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .arc_mt import ARCMT, ARC_MT_LANGUAGES, ARC_MT_TASKS, arc_mt, arc_mt_da, arc_mt_de, arc_mt_el, arc_mt_es, arc_mt_fi, arc_mt_hu, arc_mt_is, arc_mt_it, arc_mt_nb, arc_mt_pl, arc_mt_pt, arc_mt_sv
@@ -27,6 +35,8 @@ from .arithmetic import (
 )
 from .asdiv import ASDiv, ASDivCoTLlama, asdiv, asdiv_cot_llama
 from .babi import BABI, babi
+from . import babilong as _babilong_module
+from .babilong import BABILong, BABILONG_CONTEXT_LENGTHS, BABILONG_TASK_SPLITS, BABILONG_TASKS, babilong
 from . import bbh as _bbh_module
 from .bbh import BBH, BBH_SUBSETS, BBH_TASKS, bbh
 from .bangla import BANGLA_SUBSETS, BANGLA_TASKS, Bangla, bangla, bangla_boolqa, bangla_commonsenseqa, bangla_mmlu, bangla_openbookqa, bangla_piqa
@@ -125,29 +135,70 @@ for _crows_pairs_task in CROWS_PAIRS_TASKS:
 
 del _crows_pairs_task
 
+for _agieval_task in AGIEVAL_TASKS:
+    globals()[_agieval_task] = getattr(_agieval_module, _agieval_task)
+
+del _agieval_task
+
+for _afrimgsm_task in AFRIMGSM_TASKS:
+    globals()[_afrimgsm_task] = getattr(_afrimgsm_module, _afrimgsm_task)
+
+del _afrimgsm_task
+
+for _afrimmlu_task in AFRIMMLU_TASKS:
+    globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
+
+del _afrimmlu_task
+
 for _bbh_task in BBH_TASKS:
     globals()[_bbh_task] = getattr(_bbh_module, _bbh_task)
 
 del _bbh_task
+
+for _babilong_task in BABILONG_TASKS:
+    globals()[_babilong_task] = getattr(_babilong_module, _babilong_task)
+
+del _babilong_task
+
+for _arabicmmlu_task in ARABICMMLU_TASKS:
+    globals()[_arabicmmlu_task] = getattr(_arabicmmlu_module, _arabicmmlu_task)
+
+del _arabicmmlu_task
 
 __all__ = [
     "ANLI",
     "AIME",
     "AEXAMS",
     "AEXAMS_SUBJECTS",
+    "AGIEVAL_SUBSETS",
+    "AGIEVAL_TASKS",
+    "AGIEval",
+    "AFRIMGSM_LANGUAGES",
+    "AFRIMGSM_TASKS",
+    "AfriMGSM",
+    "AFRIMMLU_LANGUAGES",
+    "AFRIMMLU_TASKS",
+    "AfriMMLU",
     "AFRIXNLI_LANGUAGES",
     "AFRIXNLI_TASKS",
     "AfriXNLI",
+    "ARABICMMLU_SUBSETS",
+    "ARABICMMLU_TASKS",
     "ARCEasy",
     "ARCChallenge",
     "ARCMT",
     "ARC_MT_LANGUAGES",
     "ARC_MT_TASKS",
+    "ArabicMMLU",
     "COPAArabic",
     "Arithmetic",
     "ASDiv",
     "ASDivCoTLlama",
     "BABI",
+    "BABILong",
+    "BABILONG_CONTEXT_LENGTHS",
+    "BABILONG_TASK_SPLITS",
+    "BABILONG_TASKS",
     "BBH",
     "BBH_SUBSETS",
     "BBH_TASKS",
@@ -249,6 +300,9 @@ __all__ = [
     "aexams_physics",
     "aexams_science",
     "aexams_social",
+    "agieval",
+    "afrimgsm",
+    "afrimmlu",
     "afrixnli",
     "afrixnli_amh",
     "afrixnli_eng",
@@ -271,6 +325,7 @@ __all__ = [
     "anli_r1",
     "anli_r2",
     "anli_r3",
+    "arabicmmlu",
     "copa_ar",
     "arc_easy",
     "arc_challenge",
@@ -300,6 +355,7 @@ __all__ = [
     "asdiv",
     "asdiv_cot_llama",
     "babi",
+    "babilong",
     "bbh",
     "bangla",
     "bangla_boolqa",
@@ -452,3 +508,8 @@ __all__ = [
 ]
 
 __all__.extend(BBH_TASKS)
+__all__.extend(BABILONG_TASKS)
+__all__.extend(AGIEVAL_TASKS)
+__all__.extend(AFRIMGSM_TASKS)
+__all__.extend(AFRIMMLU_TASKS)
+__all__.extend(ARABICMMLU_TASKS)

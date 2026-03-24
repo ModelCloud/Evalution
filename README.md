@@ -17,6 +17,7 @@ pip install .
 ```
 
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
+The package also depends on `tokenicer` for tokenizer loading and normalization.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
 Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
@@ -30,7 +31,7 @@ import evalution.engines as engines
 
 result = (
     engines.Transformers()
-    .model({"path": "/monster/data/model/Llama-3.2-1B-Instruct"})
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
     .run(benchmarks.gsm8k_platinum())
 )
 ```
@@ -52,11 +53,7 @@ result = (
         use_async_batching=None,
         max_new_tokens=256,
     )
-    .model(
-        eval.Model(
-            path="/monster/data/model/Llama-3.2-1B-Instruct",
-        )
-    )
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
     .run(
         benchmarks.gsm8k_platinum(
             variant="cot",
@@ -88,11 +85,11 @@ import evalution.engines as engines
 result = (
     eval.compare(
         engines.Transformers(dtype="bfloat16", device="cuda:0").model(
-            {"path": "/monster/data/model/Llama-3.2-1B-Instruct"},
+            path="/monster/data/model/Llama-3.2-1B-Instruct",
             label="llama",
         ),
         engines.TransformersCompat(device="cuda:1").model(
-            {"path": "/monster/data/model/Qwen2.5-1.5B-Instruct"},
+            path="/monster/data/Qwen2.5-1.5B-Instruct",
             label="qwen",
         ),
     )
@@ -176,7 +173,7 @@ import evalution.engines as engines
 
 result = (
     engines.Transformers()
-    .model(eval.Model(path="/monster/data/model/Llama-3.2-1B-Instruct"))
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
     .run(benchmarks.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
     .run(benchmarks.mmlu_pro(subsets="stem.math"))
 )
@@ -199,6 +196,31 @@ tests:
 Use `engines.TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you
 want the compatibility engine explicitly.
 
+`Tokenicer` is used to load tokenizers for the transformer and transformer-compat engines. When
+`engine.model(...)` is called with a model config, Evalution resolves tokenizer loading in this order:
+`tokenizer` (preinitialized object), `tokenizer_path`, then `path`.
+`Tokenicer` also applies its normalization stage so pad/eos/bos token IDs are corrected before evaluation.
+To inject a custom tokenizer, pass it through `.model(...)` on the model config:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+custom_tokenizer = ...
+
+result = (
+    engines.Transformers()
+    .model(
+        path="/monster/data/model/Llama-3.2-1B-Instruct",
+        tokenizer=custom_tokenizer,
+    )
+    .run(benchmarks.gsm8k_platinum(max_rows=128))
+)
+```
+
+YAML flows can only configure `tokenizer_path`; passing a live tokenizer object is Python-only.
+
 ## Supported Benchmarks
 
 Evalution currently ships the following built-in benchmarks:
@@ -216,6 +238,9 @@ logic, those implementation details can shift results.
 | Suite | Scoring | Original benchmark |
 | --- | --- | --- |
 | `aexams` | Multiple-choice log-likelihood over answer labels across `biology/islamic_studies/physics/science/social` subjects, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
+| `agieval` | Multiple-choice log-likelihood across supported AGIEval subject subsets, raw + length-normalized accuracy | AGIEval `zhong2023agieval` |
+| `afrimgsm` | Generated numeric exact match across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/vai/wol/xho/yor/zul` translated grade-school math subsets | IrokoBench AfriMGSM `adelani2025irokobench` |
+| `afrimmlu` | Multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` translated MMLU subsets, raw + length-normalized accuracy | IrokoBench AfriMMLU `adelani2025irokobench` |
 | `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
 | `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
 | `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
@@ -223,6 +248,7 @@ logic, those implementation details can shift results.
 | `anli_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `arabicmmlu` | Multiple-choice log-likelihood across configurable ArabicMMLU subject subsets, raw + length-normalized accuracy | ArabicMMLU `koto2024arabicmmlu` |
 | `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_easy` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
 | `arc_mt` | Multiple-choice exam score with tie-aware partial credit across translated ARC Challenge subsets `da/de/el/es/fi/hu/is/it/nb/pl/pt/sv` | ARC `clark2018arc` |
@@ -239,6 +265,7 @@ logic, those implementation details can shift results.
 | `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
 | `babi` | Generated exact match | bAbI `weston2015towards` |
+| `babilong` | Generated normalized exact match across `qa1` to `qa20` with configurable context lengths | BABILong `kuratov2024babilong` |
 | `bbh` | Generated exact match across 27 BIG-Bench Hard subsets selected through the `subset` parameter | BIG-Bench Hard `suzgun2022challenging` |
 | `bangla` | Multiple-choice log-likelihood across `boolqa/commonsenseqa/mmlu/openbookqa/piqa` Bangla subsets, raw + length-normalized accuracy | TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms` |
 | `bear` | Full-statement multiple-choice log-likelihood over balanced relational distractors, raw + length-normalized accuracy | BEAR `wiland2024bear` |
@@ -374,14 +401,19 @@ original benchmark papers below.
 The current built-in suite coverage maps to these benchmark citations:
 
 - `aexams_biology`, `aexams_islamic_studies`, `aexams_physics`, `aexams_science`, `aexams_social`: EXAMS `hardalov-etal-2020-exams`
+- `agieval_<subset>` for the built-in single-answer AGIEval subsets: AGIEval `zhong2023agieval`
+- `afrimgsm_<language>` for the built-in AfriMGSM language subsets: IrokoBench AfriMGSM `adelani2025irokobench`
+- `afrimmlu_<language>` for the built-in AfriMMLU language subsets: IrokoBench AfriMMLU `adelani2025irokobench`
 - `afrixnli_amh`, `afrixnli_eng`, `afrixnli_ewe`, `afrixnli_fra`, `afrixnli_hau`, `afrixnli_ibo`, `afrixnli_kin`, `afrixnli_lin`, `afrixnli_lug`, `afrixnli_orm`, `afrixnli_sna`, `afrixnli_sot`, `afrixnli_swa`, `afrixnli_twi`, `afrixnli_wol`, `afrixnli_xho`, `afrixnli_yor`, `afrixnli_zul`: IrokoBench AfriXNLI `adelani2025irokobench`
 - `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
+- `arabicmmlu_<subset>` for the built-in ArabicMMLU subsets: ArabicMMLU `koto2024arabicmmlu`
 - `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
 - `arc_challenge`, `arc_easy`: ARC `clark2018arc`
 - `arc_mt_da`, `arc_mt_de`, `arc_mt_el`, `arc_mt_es`, `arc_mt_fi`, `arc_mt_hu`, `arc_mt_is`, `arc_mt_it`, `arc_mt_nb`, `arc_mt_pl`, `arc_mt_pt`, `arc_mt_sv`: ARC `clark2018arc`
 - `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
 - `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
 - `babi`: bAbI `weston2015towards`
+- `babilong_<qa_split>` for `qa1` through `qa20`: BABILong `kuratov2024babilong`
 - `bbh_<subset>` for all BIG-Bench Hard subsets: BIG-Bench Hard `suzgun2022challenging`
 - `bangla_boolqa`, `bangla_commonsenseqa`, `bangla_mmlu`, `bangla_openbookqa`, `bangla_piqa`: TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms`
 - `bear`, `bear_big`: BEAR `wiland2024bear`
@@ -480,6 +512,15 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://huggingface.co/datasets/math-ai/aime25},
 }
 
+# AGIEval
+@article{zhong2023agieval,
+  title = {AGIEval: A Human-Centric Benchmark for Evaluating Foundation Models},
+  author = {Wanjun Zhong and Zijie Huang and Shirong Ma and Angelica Chen and Yuxin Wang and Li Dong and Jie Tang and Nan Duan},
+  journal = {arXiv preprint arXiv:2304.06364},
+  year = {2023},
+  url = {https://arxiv.org/abs/2304.06364},
+}
+
 # ANLI
 @inproceedings{nie-etal-2020-adversarial,
   title = {Adversarial NLI: A New Benchmark for Natural Language Understanding},
@@ -546,6 +587,15 @@ The current built-in suite coverage maps to these benchmark citations:
   journal = {arXiv preprint arXiv:2210.09261},
   year = {2022},
   url = {https://arxiv.org/abs/2210.09261},
+}
+
+# BABILong
+@article{kuratov2024babilong,
+  title = {BABILong: Testing the Limits of LLMs with Long Context Reasoning-in-a-Haystack},
+  author = {Kuratov, Yuri and Bulatov, Aydar and Anokhin, Petr and Rodkin, Ivan and Sorokin, Dmitry and Burtsev, Mikhail},
+  journal = {arXiv preprint arXiv:2406.10149},
+  year = {2024},
+  url = {https://arxiv.org/abs/2406.10149},
 }
 
 # C4
@@ -819,6 +869,16 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Yubo Wang and Xueguang Ma and Ge Zhang and Yuansheng Ni and Abhranil Chandra and Shiguang Guo and Weiming Ren and Aaran Arulraj and Xuan He and Ziyan Jiang and Tianle Li and Max Ku and Kai Wang and Alex Zhuang and Rongqi Fan and Xiang Yue and Wenhu Chen},
   journal = {arXiv preprint arXiv:2406.01574},
   year = {2024},
+}
+
+# ArabicMMLU
+@misc{koto2024arabicmmlu,
+  title = {ArabicMMLU: Assessing Massive Multitask Language Understanding in Arabic},
+  author = {Koto, Fajri and Li, Haonan and Shatnawi, Sara and Doughman, Jad and Sadallah, Abdelrahman Boda and Alraeesi, Aisha and Almubarak, Khalid and Alyafeai, Zaid and Sengupta, Neha and Shehata, Shady and Habash, Nizar and Nakov, Preslav and Baldwin, Timothy},
+  year = {2024},
+  eprint = {2402.12840},
+  archivePrefix = {arXiv},
+  url = {https://arxiv.org/abs/2402.12840},
 }
 
 # GLUE

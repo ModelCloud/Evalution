@@ -124,6 +124,21 @@ tests:
     max_rows: 18
   - type: aexams_social
     max_rows: 18
+  - type: agieval
+    subset: aqua-rat
+    max_rows: 16
+  - type: agieval_aqua_rat
+    max_rows: 16
+  - type: afrimgsm
+    language: eng
+    max_rows: 16
+  - type: afrimgsm_eng
+    max_rows: 16
+  - type: afrimmlu
+    language: eng
+    max_rows: 16
+  - type: afrimmlu_eng
+    max_rows: 16
   - type: afrixnli_amh
     max_rows: 16
   - type: afrixnli_eng
@@ -166,6 +181,11 @@ tests:
     max_rows: 18
   - type: anli_r3
     max_rows: 18
+  - type: arabicmmlu
+    subset: All
+    max_rows: 16
+  - type: arabicmmlu_islamic_studies
+    max_rows: 16
   - type: arc_mt
     language: da
     max_rows: 16
@@ -176,6 +196,11 @@ tests:
   - type: asdiv_cot_llama
     max_rows: 18
   - type: babi
+    max_rows: 18
+  - type: babilong
+    qa_split: qa1
+    max_rows: 18
+  - type: babilong_qa2
     max_rows: 18
   - type: bbh
     subset: boolean_expressions
@@ -446,12 +471,18 @@ tests:
     assert "import evalution.engines as engines" in script
     assert "engines.Transformers(" in script
     assert "eval(engines." not in script
-    assert ".model(eval.Model(" in script
+    assert ".model(\n        path=" in script
     assert ".run(benchmarks.aexams_biology(" in script
     assert ".run(benchmarks.aexams_islamic_studies(" in script
     assert ".run(benchmarks.aexams_physics(" in script
     assert ".run(benchmarks.aexams_science(" in script
     assert ".run(benchmarks.aexams_social(" in script
+    assert ".run(benchmarks.agieval(" in script
+    assert ".run(benchmarks.agieval_aqua_rat(" in script
+    assert ".run(benchmarks.afrimgsm(" in script
+    assert ".run(benchmarks.afrimgsm_eng(" in script
+    assert ".run(benchmarks.afrimmlu(" in script
+    assert ".run(benchmarks.afrimmlu_eng(" in script
     assert ".run(benchmarks.afrixnli_amh(" in script
     assert ".run(benchmarks.afrixnli_eng(" in script
     assert ".run(benchmarks.afrixnli_ewe(" in script
@@ -473,11 +504,15 @@ tests:
     assert ".run(benchmarks.anli_r1(" in script
     assert ".run(benchmarks.anli_r2(" in script
     assert ".run(benchmarks.anli_r3(" in script
+    assert ".run(benchmarks.arabicmmlu(" in script
+    assert ".run(benchmarks.arabicmmlu_islamic_studies(" in script
     assert ".run(benchmarks.arc_mt(" in script
     assert ".run(benchmarks.arc_mt_is(" in script
     assert ".run(benchmarks.asdiv(" in script
     assert ".run(benchmarks.asdiv_cot_llama(" in script
     assert ".run(benchmarks.babi(" in script
+    assert ".run(benchmarks.babilong(" in script
+    assert ".run(benchmarks.babilong_qa2(" in script
     assert ".run(benchmarks.bbh(" in script
     assert ".run(benchmarks.bbh_date_understanding(" in script
     assert ".run(benchmarks.bangla(" in script

@@ -52,8 +52,6 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
 
 
 def test_load_gptqmodel_runtime_seeds_runtime(monkeypatch) -> None:
-    import transformers
-
     class FakeTokenizer:
         pad_token_id = 0
         pad_token = "<pad>"
@@ -81,8 +79,7 @@ def test_load_gptqmodel_runtime_seeds_runtime(monkeypatch) -> None:
         lambda seed: seed_calls.append(seed),
     )
     monkeypatch.setattr(
-        transformers.AutoTokenizer,
-        "from_pretrained",
+        "evalution.engines.gptqmodel_engine._load_tokenizer_from_model",
         lambda *args, **kwargs: FakeTokenizer(),
     )
     monkeypatch.setattr(
@@ -169,8 +166,6 @@ def test_import_gptqmodel_uses_checkout_fallback(monkeypatch, tmp_path) -> None:
 
 
 def test_load_gptqmodel_runtime_uses_quantized_loader(monkeypatch) -> None:
-    import transformers
-
     class FakeTokenizer:
         pad_token_id = None
         pad_token = None
@@ -206,8 +201,7 @@ def test_load_gptqmodel_runtime_uses_quantized_loader(monkeypatch) -> None:
     fake_wrapper = FakeWrapper()
 
     monkeypatch.setattr(
-        transformers.AutoTokenizer,
-        "from_pretrained",
+        "evalution.engines.gptqmodel_engine._load_tokenizer_from_model",
         lambda *args, **kwargs: FakeTokenizer(),
     )
     monkeypatch.setattr(
