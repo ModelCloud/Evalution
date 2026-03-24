@@ -80,7 +80,8 @@ def _load_mathqa_dataset(
 @dataclass(slots=True)
 class MathQA(BaseMultipleChoiceSuite):
     dataset_path: str = "math_qa"
-    split: str = "validation"
+    # Align the default split with current benchmark-style harness usage.
+    split: str = "test"
     streaming: bool = False
 
     def dataset_loader(self) -> Any:

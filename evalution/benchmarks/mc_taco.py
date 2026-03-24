@@ -55,7 +55,8 @@ def _load_mc_taco_dataset(
 @dataclass(slots=True)
 class MCTACO(BaseMultipleChoiceSuite):
     dataset_path: str = "CogComp/mc_taco"
-    split: str = "validation"
+    # Align the default split with current benchmark-style harness usage.
+    split: str = "test"
 
     def dataset_loader(self) -> Any:
         return _load_mc_taco_dataset

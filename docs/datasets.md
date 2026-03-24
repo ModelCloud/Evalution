@@ -14,6 +14,7 @@ This document records the dataset identifier and split semantics for each Evalut
 
 - `mmlu`: defaults to `split="test"` and `fewshot_split="dev"`. This matches benchmark-style reporting and keeps few-shot examples on the development split.
 - `mmlu_pro`: defaults to `split="test"` and `fewshot_split="validation"`.
+- `openbookqa`, `sciq`, `paws_x`, `xcopa`, `mathqa`, and `mc_taco` default to `split="test"` after auditing against the current `lm_eval` task configs, which declare an explicit `test_split`.
 - `ceval`: uses `split="val"` because that dataset names its public evaluation rows `val`, not `validation` or `test`.
 - `babilong`: uses task-specific split names such as `qa1`; both `split` and `qa_split` must agree.
 - `anli`: uses round-specific splits like `test_r1`.
@@ -77,8 +78,8 @@ This document records the dataset identifier and split semantics for each Evalut
 | `lambada.LAMBADA` | `EleutherAI/lambada_openai` | `default` | `test` | none |
 | `logiqa.LogiQA` | `EleutherAI/logiqa` | `logiqa` | `validation` | none |
 | `logiqa2.LogiQA2` | `datatune/LogiQA2.0` | `None` | `test` | none |
-| `mathqa.MathQA` | `math_qa` | `None` | `validation` | none |
-| `mc_taco.MCTACO` | `CogComp/mc_taco` | `None` | `validation` | none |
+| `mathqa.MathQA` | `math_qa` | `None` | `test` | none |
+| `mc_taco.MCTACO` | `CogComp/mc_taco` | `None` | `test` | none |
 | `medmcqa.MedMCQA` | `openlifescienceai/medmcqa` | `None` | `validation` | none |
 | `medqa.MedQA` | `GBaker/MedQA-USMLE-4-options-hf` | `None` | `test` | none |
 | `mmlu.MMLU` | `cais/mmlu` | `all` or leaf subset name | `test` | `fewshot_split=dev` |
@@ -86,8 +87,8 @@ This document records the dataset identifier and split semantics for each Evalut
 | `mnli.MNLI` | `nyu-mll/glue` | `mnli` | `validation_matched` | none |
 | `mrpc.MRPC` | `nyu-mll/glue` | `mrpc` | `validation` | none |
 | `nq_open.NQOpen` | `nq_open` | `nq_open` | `validation` | none |
-| `openbookqa.OpenBookQA` | `allenai/openbookqa` | `main` | `validation` | none |
-| `paws_x.PAWSX` | `paws-x` | `en` | `validation` | none |
+| `openbookqa.OpenBookQA` | `allenai/openbookqa` | `main` | `test` | none |
+| `paws_x.PAWSX` | `paws-x` | `en` | `test` | none |
 | `pile_10k.Pile10K` | `monology/pile-uncopyrighted` | `None` | `train` | none |
 | `piqa.PIQA` | `baber/piqa` | `None` | `validation` | none |
 | `prost.Prost` | `corypaik/prost` | `None` | `test` | none |
@@ -97,7 +98,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `qqp.QQP` | `nyu-mll/glue` | `qqp` | `validation` | none |
 | `race.RACE` | `EleutherAI/race` | `high` | `test` | none |
 | `rte.RTE` | `super_glue` | `rte` | `validation` | none |
-| `sciq.SciQ` | `allenai/sciq` | `None` | `validation` | none |
+| `sciq.SciQ` | `allenai/sciq` | `None` | `test` | none |
 | `siqa.SIQA` | `allenai/social_i_qa` | `None` | `validation` | none |
 | `squadv2.SQuADV2` | `squad_v2` | `squad_v2` | `validation` | none |
 | `sst2.SST2` | `nyu-mll/glue` | `sst2` | `validation` | none |
@@ -111,7 +112,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `winogrande.WinoGrande` | `winogrande` | `winogrande_xl` | `validation` | none |
 | `wnli.WNLI` | `nyu-mll/glue` | `wnli` | `validation` | none |
 | `wsc273.WSC273` | `winograd_wsc` | `wsc273` | `test` | none |
-| `xcopa.XCOPA` | `xcopa` | `it` | `validation` | none |
+| `xcopa.XCOPA` | `xcopa` | `it` | `test` | none |
 | `xnli.XNLI` | `facebook/xnli` | `en` | `validation` | none |
 | `xquad.XQuAD` | `google/xquad` | `xquad.en` | `validation` | none |
 | `xstorycloze.XStoryCloze` | `juletxara/xstory_cloze` | `en` | `eval` | none |

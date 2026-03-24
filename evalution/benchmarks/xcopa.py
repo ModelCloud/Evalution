@@ -42,7 +42,8 @@ def _xcopa_prompt(
 class XCOPA(BaseMultipleChoiceSuite):
     dataset_path: str = "xcopa"
     dataset_name: str | None = "it"
-    split: str = "validation"
+    # Align the default split with current benchmark-style harness usage.
+    split: str = "test"
     language: str = "it"
 
     def __post_init__(self) -> None:

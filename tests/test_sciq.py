@@ -59,7 +59,7 @@ def test_sciq_scores_four_way_multiple_choice_accuracy(monkeypatch) -> None:
     }
     assert result.metadata["dataset_path"] == "allenai/sciq"
     assert result.metadata["dataset_name"] is None
-    assert result.metadata["split"] == "validation"
+    assert result.metadata["split"] == "test"
     assert len(result.samples) == 1
 
     sample = result.samples[0]

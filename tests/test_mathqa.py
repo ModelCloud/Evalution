@@ -59,7 +59,7 @@ def test_mathqa_scores_five_way_multiple_choice_accuracy(monkeypatch) -> None:
     }
     assert result.metadata["dataset_path"] == "math_qa"
     assert result.metadata["dataset_name"] is None
-    assert result.metadata["split"] == "validation"
+    assert result.metadata["split"] == "test"
     assert result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"
     assert len(result.samples) == 1
 

@@ -29,7 +29,8 @@ def _paws_x_prompt(sentence1: str, sentence2: str) -> str:
 class PAWSX(BaseMultipleChoiceSuite):
     dataset_path: str = "paws-x"
     dataset_name: str | None = "en"
-    split: str = "validation"
+    # Align the default split with current benchmark-style harness usage.
+    split: str = "test"
     language: str = "en"
 
     def __post_init__(self) -> None:

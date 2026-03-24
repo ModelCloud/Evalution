@@ -17,9 +17,10 @@ from evalution.benchmarks.multiple_choice_utils import choice_index_from_labels,
 @dataclass(slots=True)
 class OpenBookQA(BaseMultipleChoiceSuite):
     # Evaluate elementary science questions by ranking four answer choices with token log-likelihood.
+    # Align the default split with current benchmark-style harness usage.
     dataset_path: str = "allenai/openbookqa"
     dataset_name: str | None = "main"
-    split: str = "validation"
+    split: str = "test"
 
     # Use the Hugging Face datasets loader for the public OpenBookQA benchmark.
     def dataset_loader(self) -> Any:
