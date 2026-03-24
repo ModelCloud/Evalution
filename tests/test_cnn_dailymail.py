@@ -57,7 +57,7 @@ def test_cnn_dailymail_scores_generated_summary_rouge(monkeypatch) -> None:
         "dataset_path": "cnn_dailymail",
         "dataset_name": "3.0.0",
         "split": "validation",
-        "stream": False,
+        "stream": True,
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_summary_rouge",
         "primary_metric": "rougeLsum",

@@ -47,7 +47,7 @@ class BaseTestSuite(TestSuite):
     dataset_name: str | None = None
     split: str = "test"
     order: str = "native"
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

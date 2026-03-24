@@ -392,39 +392,6 @@ def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> No
     assert calls[0]["streaming"] is True
 
 
-def test_gsm8k_platinum_stream_alias_passes_streaming_flag_to_load_dataset(monkeypatch) -> None:
-    dataset = Dataset.from_list(
-        [
-            {
-                "question": "What is 40 plus 2?",
-                "answer": "40 + 2 = 42\n#### 42",
-                "cleaning_status": "consensus",
-            }
-        ]
-    )
-    calls: list[dict[str, object]] = []
-
-    def fake_load_dataset(*args, **kwargs):
-        del args
-        calls.append(kwargs)
-        return dataset
-
-    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", fake_load_dataset)
-
-    suite = evalution.benchmarks.gsm8k_platinum(
-        variant="cot",
-        apply_chat_template=False,
-        stream=True,
-    )
-    session = FakeSession(["The answer is 42."])
-    result = suite.evaluate(session)
-
-    assert result.metadata["stream"] is True
-    assert result.metadata["stream"] is True
-    assert calls
-    assert calls[0]["streaming"] is True
-
-
 def test_gsm8k_platinum_stream_rejects_non_native_order(monkeypatch) -> None:
     dataset = Dataset.from_list(
         [

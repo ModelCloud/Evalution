@@ -39,7 +39,7 @@ class BaseRollingPerplexitySuite(TestSuite, ABC):
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
