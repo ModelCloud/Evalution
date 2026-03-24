@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,6 +13,7 @@ from urllib.request import urlretrieve
 from zipfile import ZipFile
 
 from datasets import Dataset
+import pcre
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
@@ -51,7 +51,7 @@ def _ensure_mathqa_archive(*, cache_dir: str | None) -> Path:
 def _parse_mathqa_options(options_text: str) -> list[str]:
     return [
         choice[4:].rstrip(" ,")
-        for choice in re.findall(r"[abcd] \) .*?, |e \) .*?$", options_text)
+        for choice in pcre.findall(r"[abcd] \) .*?, |e \) .*?$", options_text)
     ]
 
 

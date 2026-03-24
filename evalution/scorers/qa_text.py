@@ -5,12 +5,12 @@
 
 from __future__ import annotations
 
-import re
 import string
 from collections import Counter
+import pcre
 
-_ARTICLES_RE = re.compile(r"\b(a|an|the)\b")
-_WHITESPACE_RE = re.compile(r"\s+")
+_ARTICLES_RE = pcre.compile(r"\b(a|an|the)\b")
+_WHITESPACE_RE = pcre.compile(r"\s+")
 _NO_ANSWER_CANONICAL = "unanswerable"
 _NO_ANSWER_ALIASES = {
     "",

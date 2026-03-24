@@ -5,15 +5,15 @@
 
 from __future__ import annotations
 
-import re
+import pcre
 
 
 CHOICE_LABELS = ("A", "B", "C")
 
 
 def slugify_config_name(name: str) -> str:
-    slug = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
-    return re.sub(r"[^a-z0-9]+", "_", slug).strip("_")
+    slug = pcre.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+    return pcre.sub(r"[^a-z0-9]+", "_", slug).strip("_")
 
 
 def bbq_prompt(context: str, question: str, choices: list[str]) -> str:

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import re
+import pcre
 import subprocess
 import sys
 import textwrap
@@ -90,10 +90,10 @@ def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
         text=True,
         check=True,
     )
-    match = re.search(
+    match = pcre.search(
         r"RESULT_JSON_START\n(.*?)\nRESULT_JSON_END",
         completed.stdout,
-        re.S,
+        pcre.DOTALL,
     )
     assert match is not None, completed.stdout
     return json.loads(match.group(1))
