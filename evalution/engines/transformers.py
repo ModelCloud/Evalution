@@ -35,6 +35,7 @@ _PENDING_NOGIL_TRANSFORMERS_PR_WARNED = False
 _PENDING_NOGIL_TRANSFORMERS_PR_WARN_LOCK = threading.Lock()
 # Serialize the one-time Evalution-side stop-gap patch for transformers continuous batching.
 _CONTINUOUS_BATCHING_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
+_FLASH_ATTN_VARLEN_FWD_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
 
 
 @dataclass(slots=True)
@@ -65,6 +66,7 @@ class Transformers(_TransformersCommonConfig):
             return TransformersCompat.from_transformers(self).build(model)
 
         _warn_pending_nogil_transformers_pr_once()
+        _patch_flash_attn_varlen_fwd_cuda_context_once()
         self.resolved_engine = "Transformers"
         return TransformersSession.from_config(self, model)
 
@@ -138,6 +140,46 @@ def _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManag
         # Mark the wrapper so repeated manager construction in the same process stays idempotent.
         _wrapped_run_generation_loop.__evalution_cuda_context_patch__ = True
         ContinuousBatchingManager._run_generation_loop = _wrapped_run_generation_loop
+
+
+def _patch_flash_attn_varlen_fwd_cuda_context_once() -> None:
+    """Enter the query tensor's CUDA device before calling flash_attn varlen_fwd.
+
+    FlashAttention's Python wrapper forwards directly into the extension entrypoint without any
+    device-context guard. In Evalution's no-GIL dual-lane compare runs, different threads can
+    drive different GPUs at the same time, so make the extension observe the device that matches
+    the actual query tensor for that call.
+    """
+    try:
+        import flash_attn.flash_attn_interface as flash_attn_interface
+    except Exception:
+        return
+
+    flash_attn_gpu = getattr(flash_attn_interface, "flash_attn_gpu", None)
+    current = getattr(flash_attn_gpu, "varlen_fwd", None)
+    if not callable(current):
+        return
+
+    with _FLASH_ATTN_VARLEN_FWD_CUDA_CONTEXT_PATCH_LOCK:
+        current = getattr(flash_attn_gpu, "varlen_fwd", None)
+        if not callable(current) or getattr(current, "__evalution_cuda_context_patch__", False):
+            return
+
+        def _wrapped_varlen_fwd(*args: Any, **kwargs: Any) -> Any:
+            import torch
+
+            query = args[0] if args else None
+            query_device = getattr(query, "device", None)
+            maybe_device = (
+                torch.cuda.device(query_device)
+                if getattr(query_device, "type", None) == "cuda"
+                else nullcontext()
+            )
+            with maybe_device:
+                return current(*args, **kwargs)
+
+        _wrapped_varlen_fwd.__evalution_cuda_context_patch__ = True
+        flash_attn_gpu.varlen_fwd = _wrapped_varlen_fwd
 
 
 @dataclass(slots=True)
