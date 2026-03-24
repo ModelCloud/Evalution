@@ -63,7 +63,8 @@ def test_arc_easy_scores_original_style_exam_score(monkeypatch) -> None:
         "dataset_path": "allenai/ai2_arc",
         "dataset_name": "ARC-Easy",
         "split": "test",
-        "streaming": False,
+        "order": "native",
+        "stream": True,
         "scoring_mode": "multiple_choice_exam_score",
         "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
     }

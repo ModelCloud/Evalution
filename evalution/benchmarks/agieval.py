@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import re
+import pcre
 from typing import Any
 
 from datasets import get_dataset_config_names, load_dataset
@@ -26,7 +26,7 @@ AGIEVAL_SUBSETS = tuple(
     for subset in get_dataset_config_names("RUCAIBox/AGIEval")
     if subset not in _UNSUPPORTED_SUBSETS
 )
-_OPTION_LABEL_RE = re.compile(r"^\(?([A-Z])\)?(?:[.:：、]|．)?\s*")
+_OPTION_LABEL_RE = pcre.compile(r"^\(?([A-Z])\)?(?:[.:：、]|．)?\s*")
 
 
 def _slugify_subset_name(subset: str) -> str:

@@ -15,6 +15,15 @@ from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationO
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 _AIME_TASKS = ["aime", "aime24", "aime25"]
+_HENDRYCKS_MATH_TASKS = [
+    "hendrycks_math_algebra",
+    "hendrycks_math_counting_and_probability",
+    "hendrycks_math_geometry",
+    "hendrycks_math_intermediate_algebra",
+    "hendrycks_math_number_theory",
+    "hendrycks_math_prealgebra",
+    "hendrycks_math_precalculus",
+]
 _ARITHMETIC_TASKS = [
     "arithmetic_1dc",
     "arithmetic_2da",
@@ -186,6 +195,36 @@ tests:
     max_rows: 16
   - type: arabicmmlu_islamic_studies
     max_rows: 16
+  - type: darijammlu
+    subset: accounting
+    max_rows: 16
+  - type: darijammlu_biology
+    max_rows: 16
+  - type: egymmlu
+    subset: accounting
+    max_rows: 16
+  - type: egymmlu_biology
+    max_rows: 16
+  - type: eus_exams
+    subset: es_ejadministrativo
+    max_rows: 16
+  - type: eus_exams_eu_opeosakiadmineu
+    max_rows: 16
+  - type: careqa
+    language: en
+    max_rows: 16
+  - type: careqa_es
+    max_rows: 16
+  - type: cabbq
+    category: Age
+    max_rows: 16
+  - type: cabbq_gender
+    max_rows: 16
+  - type: esbbq
+    category: Age
+    max_rows: 16
+  - type: esbbq_gender
+    max_rows: 16
   - type: arc_mt
     language: da
     max_rows: 16
@@ -227,6 +266,11 @@ tests:
   - type: belebele
     language: eng_Latn
     max_rows: 16
+  - type: bbq
+    category: Age
+    max_rows: 16
+  - type: bbq_gender_identity
+    max_rows: 16
   - type: blimp
     subset: adjunct_island
     max_rows: 18
@@ -241,6 +285,11 @@ tests:
     max_rows: 18
   - type: headqa_es
     max_rows: 18
+  - type: hendrycks_math
+    subset: algebra
+    max_rows: 16
+  - type: hendrycks_math_geometry
+    max_rows: 16
   - type: histoires_morales
     max_rows: 16
   - type: lambada_openai
@@ -253,7 +302,14 @@ tests:
     max_rows: 18
   - type: icelandic_winogrande
     max_rows: 16
+  - type: inverse_scaling
+    subset: hindsight-neglect
+    max_rows: 16
+  - type: inverse_scaling_hindsight_neglect
+    max_rows: 16
   - type: logiqa
+    max_rows: 18
+  - type: logiqa2
     max_rows: 18
   - type: mathqa
     max_rows: 18
@@ -327,6 +383,8 @@ tests:
     max_rows: 44
   - type: mrpc
     max_rows: 28
+  - type: mutual
+    max_rows: 16
   - type: nq_open
     max_rows: 16
   - type: openbookqa
@@ -367,6 +425,11 @@ tests:
     max_rows: 16
   - type: xcopa_zh
     max_rows: 16
+  - type: xquad
+    language: en
+    max_rows: 16
+  - type: xquad_es
+    max_rows: 16
   - type: xstorycloze_ar
     max_rows: 16
   - type: xstorycloze_en
@@ -388,6 +451,11 @@ tests:
   - type: xstorycloze_te
     max_rows: 16
   - type: xstorycloze_zh
+    max_rows: 16
+  - type: xnli
+    language: en
+    max_rows: 16
+  - type: xnli_fr
     max_rows: 16
   - type: xwinograd_en
     max_rows: 16
@@ -435,6 +503,11 @@ tests:
     max_rows: 22
   - type: squadv2
     max_rows: 16
+  - type: truthfulqa
+    variant: mc1
+    max_rows: 16
+  - type: truthfulqa_mc2
+    max_rows: 16
   - type: triviaqa
     max_rows: 16
   - type: wic
@@ -443,6 +516,11 @@ tests:
     max_rows: 18
   - type: wikitext
     max_rows: 8
+  - type: wmdp
+    subset: bio
+    max_rows: 16
+  - type: wmdp_chem
+    max_rows: 16
   - type: winogender_all
     max_rows: 16
   - type: winogender_female
@@ -506,6 +584,18 @@ tests:
     assert ".run(benchmarks.anli_r3(" in script
     assert ".run(benchmarks.arabicmmlu(" in script
     assert ".run(benchmarks.arabicmmlu_islamic_studies(" in script
+    assert ".run(benchmarks.darijammlu(" in script
+    assert ".run(benchmarks.darijammlu_biology(" in script
+    assert ".run(benchmarks.egymmlu(" in script
+    assert ".run(benchmarks.egymmlu_biology(" in script
+    assert ".run(benchmarks.eus_exams(" in script
+    assert ".run(benchmarks.eus_exams_eu_opeosakiadmineu(" in script
+    assert ".run(benchmarks.careqa(" in script
+    assert ".run(benchmarks.careqa_es(" in script
+    assert ".run(benchmarks.cabbq(" in script
+    assert ".run(benchmarks.cabbq_gender(" in script
+    assert ".run(benchmarks.esbbq(" in script
+    assert ".run(benchmarks.esbbq_gender(" in script
     assert ".run(benchmarks.arc_mt(" in script
     assert ".run(benchmarks.arc_mt_is(" in script
     assert ".run(benchmarks.asdiv(" in script
@@ -524,6 +614,8 @@ tests:
     assert ".run(benchmarks.bear(" in script
     assert ".run(benchmarks.bear_big(" in script
     assert ".run(benchmarks.belebele(" in script
+    assert ".run(benchmarks.bbq(" in script
+    assert ".run(benchmarks.bbq_gender_identity(" in script
     assert ".run(benchmarks.blimp(" in script
     assert ".run(benchmarks.c4(" in script
     assert ".run(benchmarks.ceval(" in script
@@ -536,7 +628,10 @@ tests:
     assert ".run(benchmarks.lambada_standard(" in script
     assert ".run(benchmarks.lambada_standard_cloze(" in script
     assert ".run(benchmarks.icelandic_winogrande(" in script
+    assert ".run(benchmarks.inverse_scaling(" in script
+    assert ".run(benchmarks.inverse_scaling_hindsight_neglect(" in script
     assert ".run(benchmarks.logiqa(" in script
+    assert ".run(benchmarks.logiqa2(" in script
     assert ".run(benchmarks.mathqa(" in script
     assert ".run(benchmarks.mc_taco(" in script
     assert ".run(benchmarks.medmcqa(" in script
@@ -567,11 +662,14 @@ tests:
     assert ".run(benchmarks.ethics_virtue(" in script
     assert ".run(benchmarks.arc_easy(" in script
     assert ".run(benchmarks.arc_challenge(" in script
+    assert ".run(benchmarks.hendrycks_math(" in script
+    assert ".run(benchmarks.hendrycks_math_geometry(" in script
     assert ".run(benchmarks.hellaswag(" in script
     assert ".run(benchmarks.mmlu(" in script
     assert ".run(benchmarks.mmlu_pro(" in script
     assert ".run(benchmarks.mnli(" in script
     assert ".run(benchmarks.mrpc(" in script
+    assert ".run(benchmarks.mutual(" in script
     assert ".run(benchmarks.nq_open(" in script
     assert ".run(benchmarks.openbookqa(" in script
     assert ".run(benchmarks.paws_x_de(" in script
@@ -594,6 +692,8 @@ tests:
     assert ".run(benchmarks.xcopa_tr(" in script
     assert ".run(benchmarks.xcopa_vi(" in script
     assert ".run(benchmarks.xcopa_zh(" in script
+    assert ".run(benchmarks.xquad(" in script
+    assert ".run(benchmarks.xquad_es(" in script
     assert ".run(benchmarks.xstorycloze_ar(" in script
     assert ".run(benchmarks.xstorycloze_en(" in script
     assert ".run(benchmarks.xstorycloze_es(" in script
@@ -605,6 +705,8 @@ tests:
     assert ".run(benchmarks.xstorycloze_sw(" in script
     assert ".run(benchmarks.xstorycloze_te(" in script
     assert ".run(benchmarks.xstorycloze_zh(" in script
+    assert ".run(benchmarks.xnli(" in script
+    assert ".run(benchmarks.xnli_fr(" in script
     assert ".run(benchmarks.xwinograd_en(" in script
     assert ".run(benchmarks.xwinograd_fr(" in script
     assert ".run(benchmarks.xwinograd_jp(" in script
@@ -626,10 +728,14 @@ tests:
     assert ".run(benchmarks.swag(" in script
     assert ".run(benchmarks.sst2(" in script
     assert ".run(benchmarks.squadv2(" in script
+    assert ".run(benchmarks.truthfulqa(" in script
+    assert ".run(benchmarks.truthfulqa_mc2(" in script
     assert ".run(benchmarks.triviaqa(" in script
     assert ".run(benchmarks.wic(" in script
     assert ".run(benchmarks.webqs(" in script
     assert ".run(benchmarks.wikitext(" in script
+    assert ".run(benchmarks.wmdp(" in script
+    assert ".run(benchmarks.wmdp_chem(" in script
     assert ".run(benchmarks.winogender_all(" in script
     assert ".run(benchmarks.winogender_female(" in script
     assert ".run(benchmarks.winogender_gotcha(" in script

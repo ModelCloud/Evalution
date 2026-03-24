@@ -120,14 +120,15 @@ def _fewshot_prompt(subject: str, fewshot_docs: list[dict[str, Any]]) -> str:
 class MMLU(TestSuite):
     dataset_path: str = "cais/mmlu"
     subsets: str | list[str] = "all"
-    split: str = "validation"
+    # Default to the benchmark-reporting split. Callers can still override `split=` explicitly
+    # for development or cross-framework alignment checks.
+    split: str = "test"
     fewshot_split: str = "dev"
     num_fewshot: int = 5
+    stream: bool = False
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
-
     def dataset_name(self) -> str:
         resolved_subsets = self._resolved_subsets()
         if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "leaf":
@@ -156,7 +157,7 @@ class MMLU(TestSuite):
             "split": self.split,
             "fewshot_split": self.fewshot_split,
             "num_fewshot": self.num_fewshot,
-            "streaming": self.streaming,
+            "stream": self.stream,
             "scoring_mode": "multiple_choice_loglikelihood",
         }
 
@@ -170,7 +171,7 @@ class MMLU(TestSuite):
             dataset_name=self.dataset_name(),
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
         docs = self._select_docs(list(loaded_docs))
         docs = limit_docs(docs, self.max_rows)
@@ -192,7 +193,7 @@ class MMLU(TestSuite):
             dataset_name=self.dataset_name(),
             split=self.fewshot_split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
         fewshot_docs = self._select_docs(list(fewshot_loaded_docs))
         fewshot_by_subject: dict[str, list[dict[str, Any]]] = defaultdict(list)

@@ -46,7 +46,7 @@ def test_wikitext_scores_weighted_perplexity_metrics(monkeypatch) -> None:
         "dataset_path": "EleutherAI/wikitext_document_level",
         "dataset_name": "wikitext-2-raw-v1",
         "split": "test",
-        "streaming": False,
+        "stream": True,
         "scoring_mode": "rolling_loglikelihood_perplexity",
         "primary_metric": "word_perplexity",
     }

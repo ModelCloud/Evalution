@@ -48,7 +48,7 @@ def test_c4_scores_weighted_perplexity_metrics(monkeypatch) -> None:
         "dataset_path": "allenai/c4",
         "dataset_name": "en",
         "split": "validation",
-        "streaming": True,
+        "stream": True,
         "scoring_mode": "rolling_loglikelihood_perplexity",
         "primary_metric": "word_perplexity",
     }

@@ -43,7 +43,7 @@ def _load_race_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Dataset:
     if dataset_path != "EleutherAI/race":
         raise ValueError(f"unsupported RACE dataset path: {dataset_path!r}")
@@ -55,10 +55,10 @@ def _load_race_dataset(
         dataset_name,
         split=split,
         cache_dir=cache_dir,
-        streaming=streaming,
+        streaming=stream,
     )
-    if streaming:
-        raise ValueError("RACE flattening requires non-streaming dataset materialization")
+    if stream:
+        raise ValueError("RACE flattening requires non-stream dataset materialization")
 
     flattened_rows: list[dict[str, Any]] = []
     for article_index, article_row in enumerate(article_dataset):
@@ -91,7 +91,7 @@ class RACE(BaseMultipleChoiceSuite):
     dataset_path: str = "EleutherAI/race"
     dataset_name: str | None = "high"
     split: str = "test"
-    streaming: bool = False
+    stream: bool = False
 
     def dataset_loader(self) -> Any:
         return _load_race_dataset

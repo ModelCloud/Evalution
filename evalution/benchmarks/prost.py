@@ -45,7 +45,7 @@ class Prost(BaseMultipleChoiceSuite):
     # Score PROST by ranking the answer text choices after the zero-shot prompt stem.
     dataset_path: str = "corypaik/prost"
     split: str = "test"
-    streaming: bool = False
+    stream: bool = False
 
     def dataset_loader(self) -> Any:
         return _load_prost_dataset

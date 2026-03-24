@@ -46,7 +46,7 @@ def _load_coqa_turns(
     streaming: bool,
 ) -> Dataset:
     if streaming:
-        raise ValueError("coqa turn flattening requires non-streaming dataset loading")
+        raise ValueError("coqa turn flattening requires non-stream dataset loading")
 
     conversations = load_dataset(
         dataset_path,
@@ -102,7 +102,7 @@ class CoQA(BaseTestSuite):
     max_new_tokens: int = 32
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
+    stream: bool = False
     do_sample: bool = False
     temperature: float = 0.0
 

@@ -198,9 +198,9 @@ def _load_hendrycks_ethics_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> list[dict[str, Any]]:
-    del dataset_path, streaming
+    del dataset_path, stream
     split_files = _ETHICS_SPLIT_FILES.get(dataset_name)
     if split_files is None:
         raise KeyError(f"unknown hendrycks_ethics subset: {dataset_name!r}")

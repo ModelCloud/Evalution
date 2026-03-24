@@ -5,11 +5,11 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any
 
 from datasets import load_dataset
+import pcre
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -48,8 +48,11 @@ BBH_SUBSETS = (
 )
 BBH_TASKS = tuple(f"bbh_{subset}" for subset in BBH_SUBSETS)
 _STOP_STRINGS = ("\n",)
-_ANSWER_PREFIX_RE = re.compile(r"^(?:A:|Answer:|The answer is)\s*", re.IGNORECASE)
-_LETTER_RE = re.compile(r"\(([A-Z])\)")
+_ANSWER_PREFIX_RE = pcre.compile(r"^(?:A:|Answer:|The answer is)\s*", pcre.IGNORECASE)
+_LETTER_RE = pcre.compile(r"\(([A-Z])\)")
+_BOOLEAN_TOKEN_RE = pcre.compile(r"\b(True|False|Yes|No)\b")
+_PAREN_LETTER_TARGET_RE = pcre.compile(r"\([A-Z]\)")
+_LETTER_TARGET_RE = pcre.compile(r"[A-Z]")
 
 
 def _bbh_prompt(input_text: str) -> str:
@@ -62,14 +65,14 @@ def _normalize_bbh_prediction(prediction: str, *, target: str) -> str:
         candidate = candidate.splitlines()[0].strip()
     candidate = _ANSWER_PREFIX_RE.sub("", candidate).strip()
     if target in {"True", "False", "Yes", "No"}:
-        match = re.search(r"\b(True|False|Yes|No)\b", candidate)
+        match = _BOOLEAN_TOKEN_RE.search(candidate)
         if match is not None:
             return match.group(1)
-    if re.fullmatch(r"\([A-Z]\)", target):
+    if _PAREN_LETTER_TARGET_RE.fullmatch(target):
         match = _LETTER_RE.search(candidate)
         if match is not None:
             return f"({match.group(1)})"
-        if re.fullmatch(r"[A-Z]", candidate):
+        if _LETTER_TARGET_RE.fullmatch(candidate):
             return f"({candidate})"
     if candidate.endswith(".") and not target.endswith("."):
         candidate = candidate[:-1].rstrip()

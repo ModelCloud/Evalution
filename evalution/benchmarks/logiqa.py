@@ -63,9 +63,9 @@ def _load_logiqa_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Dataset:
-    del streaming
+    del stream
     if dataset_path != "EleutherAI/logiqa":
         raise ValueError(f"unsupported LogiQA dataset path: {dataset_path!r}")
     if dataset_name != "logiqa":
@@ -92,7 +92,7 @@ class LogiQA(BaseMultipleChoiceSuite):
     dataset_path: str = "EleutherAI/logiqa"
     dataset_name: str | None = "logiqa"
     split: str = "validation"
-    streaming: bool = False
+    stream: bool = False
 
     def dataset_loader(self) -> Any:
         return _load_logiqa_dataset

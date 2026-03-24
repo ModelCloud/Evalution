@@ -87,7 +87,7 @@ def test_arithmetic_scores_loglikelihood_without_perplexity(monkeypatch) -> None
         "dataset_path": "EleutherAI/arithmetic",
         "dataset_name": "arithmetic_2da",
         "split": "validation",
-        "streaming": False,
+        "stream": False,
         "scoring_mode": "single_continuation_loglikelihood",
     }
 

@@ -26,8 +26,9 @@ def _sciq_prompt(*, support: str, question: str) -> str:
 @dataclass(slots=True)
 class SciQ(BaseMultipleChoiceSuite):
     # Evaluate science question answering by ranking four answer strings with token log-likelihood.
+    # Align the default split with current benchmark-style harness usage.
     dataset_path: str = "allenai/sciq"
-    split: str = "validation"
+    split: str = "test"
 
     # Use the Hugging Face datasets loader for the public SciQ benchmark.
     def dataset_loader(self) -> Any:

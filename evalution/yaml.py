@@ -95,8 +95,14 @@ _TEST_FACTORIES: dict[str, Any] = {
     "bear": benchmarks.bear,
     "bear_big": benchmarks.bear_big,
     "belebele": benchmarks.belebele,
+    "bbq": benchmarks.bbq,
     "blimp": benchmarks.blimp,
     "c4": benchmarks.c4,
+    "careqa": benchmarks.careqa,
+    "careqa_en": benchmarks.careqa_en,
+    "careqa_es": benchmarks.careqa_es,
+    "cabbq": benchmarks.cabbq,
+    "esbbq": benchmarks.esbbq,
     "ceval": benchmarks.ceval,
     "boolq": benchmarks.boolq,
     "cb": benchmarks.cb,
@@ -117,6 +123,9 @@ _TEST_FACTORIES: dict[str, Any] = {
     "darijahellaswag": benchmarks.darijahellaswag,
     "egyhellaswag": benchmarks.egyhellaswag,
     "drop": benchmarks.drop,
+    "darijammlu": benchmarks.darijammlu,
+    "egymmlu": benchmarks.egymmlu,
+    "eus_exams": benchmarks.eus_exams,
     "gpqa": benchmarks.gpqa,
     "gpqa_main": benchmarks.gpqa_main,
     "gpqa_diamond": benchmarks.gpqa_diamond,
@@ -130,9 +139,11 @@ _TEST_FACTORIES: dict[str, Any] = {
     "gsm8k_platinum": benchmarks.gsm8k_platinum,
     "headqa_en": benchmarks.headqa_en,
     "headqa_es": benchmarks.headqa_es,
+    "hendrycks_math": benchmarks.hendrycks_math,
     "hellaswag": benchmarks.hellaswag,
     "histoires_morales": benchmarks.histoires_morales,
     "icelandic_winogrande": benchmarks.icelandic_winogrande,
+    "inverse_scaling": benchmarks.inverse_scaling,
     "kobest": benchmarks.kobest,
     "kobest_boolq": benchmarks.kobest_boolq,
     "kobest_copa": benchmarks.kobest_copa,
@@ -144,6 +155,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "lambada_standard": benchmarks.lambada_standard,
     "lambada_standard_cloze": benchmarks.lambada_standard_cloze,
     "logiqa": benchmarks.logiqa,
+    "logiqa2": benchmarks.logiqa2,
     "mathqa": benchmarks.mathqa,
     "mc_taco": benchmarks.mc_taco,
     "medmcqa": benchmarks.medmcqa,
@@ -152,6 +164,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "mmlu_pro": benchmarks.mmlu_pro,
     "mnli": benchmarks.mnli,
     "mrpc": benchmarks.mrpc,
+    "mutual": benchmarks.mutual,
     "nq_open": benchmarks.nq_open,
     "openbookqa": benchmarks.openbookqa,
     "paws_x_de": benchmarks.paws_x_de,
@@ -178,10 +191,14 @@ _TEST_FACTORIES: dict[str, Any] = {
     "swag": benchmarks.swag,
     "sst2": benchmarks.sst2,
     "squadv2": benchmarks.squadv2,
+    "truthfulqa": benchmarks.truthfulqa,
+    "truthfulqa_mc1": benchmarks.truthfulqa_mc1,
+    "truthfulqa_mc2": benchmarks.truthfulqa_mc2,
     "triviaqa": benchmarks.triviaqa,
     "wic": benchmarks.wic,
     "webqs": benchmarks.webqs,
     "wikitext": benchmarks.wikitext,
+    "wmdp": benchmarks.wmdp,
     "winogender_all": benchmarks.winogender_all,
     "winogender_female": benchmarks.winogender_female,
     "winogender_gotcha": benchmarks.winogender_gotcha,
@@ -203,6 +220,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xcopa_tr": benchmarks.xcopa_tr,
     "xcopa_vi": benchmarks.xcopa_vi,
     "xcopa_zh": benchmarks.xcopa_zh,
+    "xquad": benchmarks.xquad,
     "xstorycloze_ar": benchmarks.xstorycloze_ar,
     "xstorycloze_en": benchmarks.xstorycloze_en,
     "xstorycloze_es": benchmarks.xstorycloze_es,
@@ -214,6 +232,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xstorycloze_sw": benchmarks.xstorycloze_sw,
     "xstorycloze_te": benchmarks.xstorycloze_te,
     "xstorycloze_zh": benchmarks.xstorycloze_zh,
+    "xnli": benchmarks.xnli,
     "xwinograd_en": benchmarks.xwinograd_en,
     "xwinograd_fr": benchmarks.xwinograd_fr,
     "xwinograd_jp": benchmarks.xwinograd_jp,
@@ -221,6 +240,59 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xwinograd_ru": benchmarks.xwinograd_ru,
     "xwinograd_zh": benchmarks.xwinograd_zh,
 }
+
+for _task_name in benchmarks.CABBQ_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+for _task_name in benchmarks.ESBBQ_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.BBQ_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.XNLI_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.XQUAD_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.TRUTHFULQA_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.INVERSE_SCALING_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.WMDP_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.DARIJAMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.EGYMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.EUS_EXAMS_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
 
 for _agieval_task in benchmarks.AGIEVAL_TASKS:
     _TEST_FACTORIES[_agieval_task] = getattr(benchmarks, _agieval_task)
@@ -256,6 +328,11 @@ for _arabicmmlu_task in benchmarks.ARABICMMLU_TASKS:
     _TEST_FACTORIES[_arabicmmlu_task] = getattr(benchmarks, _arabicmmlu_task)
 
 del _arabicmmlu_task
+
+for _hendrycks_math_task in benchmarks.HENDRYCKS_MATH_TASKS:
+    _TEST_FACTORIES[_hendrycks_math_task] = getattr(benchmarks, _hendrycks_math_task)
+
+del _hendrycks_math_task
 
 
 def run_yaml(source: str | Path) -> EvaluationRun:

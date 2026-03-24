@@ -6,12 +6,12 @@
 from __future__ import annotations
 
 import math
-import re
 import sys
 from collections import Counter
 from collections.abc import Iterable, Sequence
+import pcre
 
-_SPLIT_PUNCTS_PATTERN = re.compile(r"[\w]+|[^\s\w]")
+_SPLIT_PUNCTS_PATTERN = pcre.compile(r"[\w]+|[^\s\w]")
 
 
 def _split_punct_tokens(text: str) -> list[str]:

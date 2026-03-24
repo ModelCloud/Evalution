@@ -20,7 +20,7 @@ from evalution.scorers.multiple_choice import (
     choice_logprobs,
     exam_score_outcome,
 )
-from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
+from evalution.benchmarks.data import apply_order, doc_count, limit_docs, load_suite_dataset, normalize_order
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from evalution.benchmarks.multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 
@@ -55,7 +55,8 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
-            "streaming": self.streaming,
+            "order": normalize_order(self.order),
+            "stream": self.stream,
             "scoring_mode": "multiple_choice_exam_score",
             "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
         }
@@ -64,6 +65,7 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
 
     def evaluate(self, session: InferenceSession) -> TestResult:
         task_name = self.task_name()
+        resolved_order = normalize_order(self.order)
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
             self.dataset_loader(),
@@ -72,10 +74,12 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)
+        if resolved_order != "native" and self.stream:
+            raise ValueError("benchmark `stream=True` requires `order='native'`")
         if not isinstance(docs, list):
             docs = list(docs)
 
@@ -88,6 +92,11 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
         logger.info("%s: evaluating %d sample(s)", task_name, total)
 
         samples = [self.build_sample(doc, index=index) for index, doc in enumerate(docs)]
+        samples = apply_order(
+            samples,
+            order=resolved_order,
+            length_key=self.order_length,
+        )
         requests: list[LoglikelihoodRequest] = []
         request_to_choice: list[tuple[int, int]] = []
         for sample in samples:

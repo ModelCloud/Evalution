@@ -84,6 +84,42 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.arabicmmlu)
     for factory_name in evalution.benchmarks.ARABICMMLU_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.DarijaMMLU is not None
+    assert evalution.benchmarks.DARIJAMMLU_SUBSETS
+    assert evalution.benchmarks.DARIJAMMLU_TASKS
+    assert callable(evalution.benchmarks.darijammlu)
+    for factory_name in evalution.benchmarks.DARIJAMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.EgyMMLU is not None
+    assert evalution.benchmarks.EGYMMLU_SUBSETS
+    assert evalution.benchmarks.EGYMMLU_TASKS
+    assert callable(evalution.benchmarks.egymmlu)
+    for factory_name in evalution.benchmarks.EGYMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.EusExams is not None
+    assert evalution.benchmarks.EUS_EXAMS_SUBSETS
+    assert evalution.benchmarks.EUS_EXAMS_TASKS
+    assert callable(evalution.benchmarks.eus_exams)
+    for factory_name in evalution.benchmarks.EUS_EXAMS_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.CareQA is not None
+    assert evalution.benchmarks.CAREQA_CONFIGS
+    assert evalution.benchmarks.CAREQA_TASKS
+    assert callable(evalution.benchmarks.careqa)
+    assert callable(evalution.benchmarks.careqa_en)
+    assert callable(evalution.benchmarks.careqa_es)
+    assert evalution.benchmarks.CaBBQ is not None
+    assert evalution.benchmarks.CABBQ_CATEGORIES
+    assert evalution.benchmarks.CABBQ_TASKS
+    assert callable(evalution.benchmarks.cabbq)
+    for factory_name in evalution.benchmarks.CABBQ_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.EsBBQ is not None
+    assert evalution.benchmarks.ESBBQ_CATEGORIES
+    assert evalution.benchmarks.ESBBQ_TASKS
+    assert callable(evalution.benchmarks.esbbq)
+    for factory_name in evalution.benchmarks.ESBBQ_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.ARCChallenge is not None
     assert evalution.benchmarks.ARCMT is not None
     assert evalution.benchmarks.ARC_MT_LANGUAGES
@@ -141,6 +177,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.bear_big)
     assert evalution.benchmarks.Belebele is not None
     assert callable(evalution.benchmarks.belebele)
+    assert evalution.benchmarks.BBQ is not None
+    assert evalution.benchmarks.BBQ_CATEGORIES
+    assert evalution.benchmarks.BBQ_TASKS
+    assert callable(evalution.benchmarks.bbq)
+    for factory_name in evalution.benchmarks.BBQ_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.BLiMP is not None
     assert evalution.benchmarks.BLIMP_SUBSETS
     assert callable(evalution.benchmarks.blimp)
@@ -200,6 +242,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.gpqa_diamond)
     assert callable(evalution.benchmarks.gpqa_extended)
     assert evalution.benchmarks.HendrycksEthics is not None
+    assert evalution.benchmarks.HendrycksMath is not None
+    assert evalution.benchmarks.HENDRYCKS_MATH_SUBSETS
+    assert evalution.benchmarks.HENDRYCKS_MATH_TASKS
+    assert callable(evalution.benchmarks.hendrycks_math)
+    for factory_name in evalution.benchmarks.HENDRYCKS_MATH_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert callable(evalution.benchmarks.ethics_cm)
     assert callable(evalution.benchmarks.ethics_deontology)
     assert callable(evalution.benchmarks.ethics_justice)
@@ -214,6 +262,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.histoires_morales)
     assert evalution.benchmarks.IcelandicWinoGrande is not None
     assert callable(evalution.benchmarks.icelandic_winogrande)
+    assert evalution.benchmarks.InverseScaling is not None
+    assert evalution.benchmarks.INVERSE_SCALING_SUBSETS
+    assert evalution.benchmarks.INVERSE_SCALING_TASKS
+    assert callable(evalution.benchmarks.inverse_scaling)
+    for factory_name in evalution.benchmarks.INVERSE_SCALING_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.KoBEST is not None
     assert evalution.benchmarks.KOBEST_SUBSETS
     assert evalution.benchmarks.KOBEST_TASKS
@@ -231,6 +285,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.lambada_standard_cloze)
     assert evalution.benchmarks.LogiQA is not None
     assert callable(evalution.benchmarks.logiqa)
+    assert evalution.benchmarks.LogiQA2 is not None
+    assert callable(evalution.benchmarks.logiqa2)
     assert evalution.benchmarks.MathQA is not None
     assert callable(evalution.benchmarks.mathqa)
     assert evalution.benchmarks.MCTACO is not None
@@ -247,6 +303,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mnli)
     assert evalution.benchmarks.MRPC is not None
     assert callable(evalution.benchmarks.mrpc)
+    assert evalution.benchmarks.MuTual is not None
+    assert callable(evalution.benchmarks.mutual)
     assert evalution.benchmarks.NQOpen is not None
     assert callable(evalution.benchmarks.nq_open)
     assert evalution.benchmarks.OpenBookQA is not None
@@ -294,6 +352,11 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.sst2)
     assert evalution.benchmarks.SQuADV2 is not None
     assert callable(evalution.benchmarks.squadv2)
+    assert evalution.benchmarks.TruthfulQAMC is not None
+    assert evalution.benchmarks.TRUTHFULQA_TASKS == ("truthfulqa_mc1", "truthfulqa_mc2")
+    assert callable(evalution.benchmarks.truthfulqa)
+    assert callable(evalution.benchmarks.truthfulqa_mc1)
+    assert callable(evalution.benchmarks.truthfulqa_mc2)
     assert evalution.benchmarks.TriviaQA is not None
     assert callable(evalution.benchmarks.triviaqa)
     assert evalution.benchmarks.WiC is not None
@@ -302,6 +365,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.webqs)
     assert evalution.benchmarks.WikiText is not None
     assert callable(evalution.benchmarks.wikitext)
+    assert evalution.benchmarks.WMDP is not None
+    assert evalution.benchmarks.WMDP_SUBSETS
+    assert evalution.benchmarks.WMDP_TASKS
+    assert callable(evalution.benchmarks.wmdp)
+    for factory_name in evalution.benchmarks.WMDP_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.WinoGender is not None
     assert callable(evalution.benchmarks.winogender)
     assert callable(evalution.benchmarks.winogender_all)
@@ -328,6 +397,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.xcopa_tr)
     assert callable(evalution.benchmarks.xcopa_vi)
     assert callable(evalution.benchmarks.xcopa_zh)
+    assert evalution.benchmarks.XQuAD is not None
+    assert evalution.benchmarks.XQUAD_LANGUAGES
+    assert evalution.benchmarks.XQUAD_TASKS
+    assert callable(evalution.benchmarks.xquad)
+    for factory_name in evalution.benchmarks.XQUAD_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.XStoryCloze is not None
     assert evalution.benchmarks.XSTORYCLOZE_LANGUAGES
     assert callable(evalution.benchmarks.xstorycloze)
@@ -342,6 +417,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.xstorycloze_sw)
     assert callable(evalution.benchmarks.xstorycloze_te)
     assert callable(evalution.benchmarks.xstorycloze_zh)
+    assert evalution.benchmarks.XNLI is not None
+    assert evalution.benchmarks.XNLI_LANGUAGES
+    assert evalution.benchmarks.XNLI_TASKS
+    assert callable(evalution.benchmarks.xnli)
+    for factory_name in evalution.benchmarks.XNLI_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.XWinograd is not None
     assert callable(evalution.benchmarks.xwinograd)
     assert callable(evalution.benchmarks.xwinograd_en)

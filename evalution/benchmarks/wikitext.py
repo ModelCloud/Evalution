@@ -5,11 +5,11 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any
 
 from datasets import load_dataset
+import pcre
 
 from evalution.benchmarks.rolling_perplexity import (
     BaseRollingPerplexitySuite,
@@ -21,7 +21,7 @@ from evalution.benchmarks.rolling_perplexity import (
 def _wikitext_detokenizer(doc: dict[str, Any]) -> str:
     string = str(doc["page"])
     string = string.replace("s '", "s'")
-    string = re.sub(r"/' [0-9]/", r"/'[0-9]/", string)
+    string = pcre.sub(r"/' [0-9]/", r"/'[0-9]/", string)
     string = string.replace(" @-@ ", "-")
     string = string.replace(" @,@ ", ",")
     string = string.replace(" @.@ ", ".")
@@ -31,11 +31,11 @@ def _wikitext_detokenizer(doc: dict[str, Any]) -> str:
     string = string.replace(" ! ", "! ")
     string = string.replace(" ? ", "? ")
     string = string.replace(" , ", ", ")
-    string = re.sub(r"\(\s*([^\)]*?)\s*\)", r"(\1)", string)
-    string = re.sub(r"\[\s*([^\]]*?)\s*\]", r"[\1]", string)
-    string = re.sub(r"{\s*([^}]*?)\s*}", r"{\1}", string)
-    string = re.sub(r"\"\s*([^\"]*?)\s*\"", r'"\1"', string)
-    string = re.sub(r"'\s*([^']*?)\s*'", r"'\1'", string)
+    string = pcre.sub(r"\(\s*([^\)]*?)\s*\)", r"(\1)", string)
+    string = pcre.sub(r"\[\s*([^\]]*?)\s*\]", r"[\1]", string)
+    string = pcre.sub(r"{\s*([^}]*?)\s*}", r"{\1}", string)
+    string = pcre.sub(r"\"\s*([^\"]*?)\s*\"", r'"\1"', string)
+    string = pcre.sub(r"'\s*([^']*?)\s*'", r"'\1'", string)
     string = string.replace("= = = =", "====")
     string = string.replace("= = =", "===")
     string = string.replace("= =", "==")
@@ -48,7 +48,7 @@ def _wikitext_detokenizer(doc: dict[str, Any]) -> str:
 
 
 def _wikitext_word_count(page: str) -> int:
-    return len(re.split(r"\s+", page))
+    return len(pcre.split(r"\s+", page))
 
 
 def _wikitext_byte_count(page: str) -> int:
@@ -63,7 +63,6 @@ class WikiText(BaseRollingPerplexitySuite):
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
 
     def dataset_loader(self) -> Any:
         return load_dataset

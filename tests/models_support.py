@@ -88,6 +88,40 @@ AFRIMMLU_TASKS = (
     "afrimmlu_hau",
     "afrimmlu_swa",
 )
+DARIJAMMLU_TASKS = (
+    "darijammlu_arabic_language",
+    "darijammlu_biology",
+    "darijammlu_computer_science",
+    "darijammlu_driving_test",
+)
+EGYMMLU_TASKS = (
+    "egymmlu_arabic_language",
+    "egymmlu_biology",
+    "egymmlu_computer_science",
+    "egymmlu_driving_test",
+)
+EUS_EXAMS_TASKS = (
+    "eus_exams_eu_opeosakiadmineu",
+    "eus_exams_eu_opeosakiauxenfeu",
+    "eus_exams_es_ejadministrativo",
+    "eus_exams_es_ejauxiliar",
+)
+CAREQA_TASKS = (
+    "careqa_en",
+    "careqa_es",
+)
+CABBQ_TASKS = (
+    "cabbq_age",
+    "cabbq_disability_status",
+    "cabbq_gender",
+    "cabbq_nationality",
+)
+ESBBQ_TASKS = (
+    "esbbq_age",
+    "esbbq_disability_status",
+    "esbbq_gender",
+    "esbbq_nationality",
+)
 ARABICMMLU_TASKS = (
     "arabicmmlu_all",
     "arabicmmlu_islamic_studies",
@@ -95,6 +129,9 @@ ARABICMMLU_TASKS = (
     "arabicmmlu_driving_test",
 )
 AIME_TASKS = ("aime", "aime24", "aime25")
+HENDRYCKS_MATH_TASKS = (
+    "hendrycks_math_algebra",
+)
 ALGHAFA_TASKS = ("copa_ar", "piqa_ar")
 ARITHMETIC_TASKS = (
     "arithmetic_1dc",
@@ -154,6 +191,22 @@ AFRIXNLI_TASKS = (
     "afrixnli_eng",
     "afrixnli_fra",
     "afrixnli_swa",
+)
+XNLI_TASKS = (
+    "xnli_ar",
+    "xnli_en",
+    "xnli_fr",
+    "xnli_sw",
+)
+XQUAD_TASKS = (
+    "xquad_ar",
+    "xquad_en",
+    "xquad_es",
+    "xquad_zh",
+)
+TRUTHFULQA_TASKS = (
+    "truthfulqa_mc1",
+    "truthfulqa_mc2",
 )
 XWINOGRAD_TASKS = (
     "xwinograd_en",
@@ -756,6 +809,24 @@ def _assert_aime_sample(sample: Any, index: int) -> None:
     assert sample.metadata["problem_id"]
 
 
+def _assert_hendrycks_math_sample(sample: Any, index: int, *, subset: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Problem: ")
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "answer-extract",
+        "prediction-normalized",
+        "target-normalized",
+    }
+    assert set(sample.scores) == {"em"}
+    assert sample.metadata["subset"] == subset
+    assert sample.metadata["level"]
+    assert sample.metadata["problem_type"]
+
+
 def _assert_arithmetic_sample(sample: Any, index: int, *, task_name: str) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Question: ")
@@ -1055,6 +1126,39 @@ def _assert_triviaqa_sample(sample: Any, index: int) -> None:
     assert sample.metadata["answer_value"]
 
 
+def _assert_xquad_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Context: ")
+    assert "\n\nQuestion: " in sample.prompt
+    assert sample.prompt.endswith("\n\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["id"]
+    assert sample.metadata["language"] == language
+    assert sample.metadata["question"]
+    assert sample.metadata["context"]
+    assert sample.metadata["answer_texts"]
+
+
+def _assert_truthfulqa_sample(sample: Any, index: int, *, variant: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Q: What is human life expectancy in the United States?")
+    assert "\n\nQ: " in sample.prompt
+    assert sample.prompt.endswith("\nA:")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"predicted_index", "correct_indices"}
+    assert set(sample.scores) == {"acc"}
+    assert sample.metadata["question"]
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["choice_texts"]
+    assert sample.metadata["choice_labels"]
+    assert sample.metadata["choice_logprobs"]
+    assert sample.metadata["choice_probs"]
+
+
 def _assert_nq_open_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Question: ")
@@ -1294,6 +1398,16 @@ def _metadata_afrixnli_language(language: str) -> Callable[[dict[str, Any]], Non
     return validate
 
 
+def _metadata_xnli_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["premise"]
+        assert metadata["hypothesis"]
+        assert metadata["choice_texts"] == ["entailment", "neutral", "contradiction"]
+
+    return validate
+
+
 def _metadata_belebele_language(language: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["language"] == language
@@ -1411,7 +1525,7 @@ def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
     return SuiteSpec(
         suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name=task_name,
@@ -1420,7 +1534,7 @@ def _arithmetic_suite_spec(task_name: str, baseline: float) -> SuiteSpec:
         },
         expected_metrics=frozenset({"acc,ll"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/arithmetic",
             "dataset_name": task_name,
             "split": "validation",
@@ -1445,7 +1559,7 @@ def _bbh_suite_spec(task_name: str, subset: str, baseline: float) -> SuiteSpec:
         baseline={"em": baseline},
         expected_metrics=frozenset({"em"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "lukaemon/bbh",
             "dataset_name": subset,
             "split": "test",
@@ -1475,7 +1589,7 @@ def _babilong_suite_spec(task_name: str, qa_split: str, baseline: float) -> Suit
         baseline={"em": baseline},
         expected_metrics=frozenset({"em"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "RMT-team/babilong",
             "dataset_name": "0k",
             "split": qa_split,
@@ -1536,10 +1650,10 @@ def _paws_x_suite_spec(
             }
         ),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "paws-x",
             "dataset_name": language,
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
@@ -1574,10 +1688,10 @@ def _xcopa_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "xcopa",
             "dataset_name": language,
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=100,
@@ -1613,7 +1727,7 @@ def _afrixnli_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "masakhane/afrixnli",
             "dataset_name": language,
             "split": "test",
@@ -1636,6 +1750,142 @@ def _afrixnli_suite_spec(
     )
 
 
+def _xnli_suite_spec(
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.xnli(
+            language=language,
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name=f"xnli_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "facebook/xnli",
+            "dataset_name": language,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"entailment", "neutral", "contradiction"},
+            prediction_values={"entailment", "neutral", "contradiction"},
+            prompt_substrings=(
+                "Premise: ",
+                "\nHypothesis: ",
+                "\nQuestion: What is the relationship between the premise and hypothesis: entailment, neutral, or contradiction?\nAnswer:",
+            ),
+            metadata_validator=_metadata_xnli_language(language),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _xquad_suite_spec(
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.xquad(
+            language=language,
+            batch_size=16,
+            max_rows=32,
+        ),
+        expected_name=f"xquad_{language}",
+        baseline=baseline,
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "google/xquad",
+            "dataset_name": f"xquad.{language}",
+            "split": "validation",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_xquad_sample(
+            sample,
+            index,
+            language=language,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _truthfulqa_suite_spec(
+    *,
+    variant: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda variant=variant: evalution.benchmarks.truthfulqa(
+            variant=variant,
+            batch_size=16,
+            max_rows=32,
+        ),
+        expected_name=f"truthfulqa_{variant}",
+        baseline={"acc": baseline},
+        expected_metrics=frozenset({"acc"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "truthfulqa/truthful_qa",
+            "dataset_name": "multiple_choice",
+            "split": "validation",
+            "scoring_mode": f"truthfulqa_{variant}_multiple_choice",
+            "primary_metric": "acc",
+            "variant": variant,
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, variant=variant: _assert_truthfulqa_sample(
+            sample,
+            index,
+            variant=variant,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _inverse_scaling_suite_spec(
+    *,
+    task_name: str,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.inverse_scaling(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "pminervini/inverse-scaling",
+            "dataset_name": subset,
+            "split": "data",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="Answer:",
+            metadata_validator=_metadata_fields_truthy("subset", "round", "part", "choice_labels", "choice_texts"),
+        ),
+    )
+
+
 def _belebele_suite_spec(
     *,
     language: str,
@@ -1651,7 +1901,7 @@ def _belebele_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "facebook/belebele",
             "dataset_name": language,
             "split": "test",
@@ -1684,7 +1934,7 @@ def _bangla_suite_spec(
     baseline: dict[str, float],
 ) -> SuiteSpec:
     expected_metadata = {
-        "streaming": False,
+        "stream": False,
         "split": "validation",
         "subset": subset,
         "scoring_mode": "multiple_choice_loglikelihood",
@@ -1778,7 +2028,7 @@ def _arc_mt_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"acc,exam"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": dataset_path,
             "dataset_name": dataset_name,
             "split": "test",
@@ -1843,7 +2093,7 @@ def _kobest_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "skt/kobest_v1",
             "dataset_name": subset,
             "split": "test",
@@ -1880,7 +2130,7 @@ def _gpqa_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"em,choice_label"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "Idavidrein/gpqa",
             "dataset_name": f"gpqa_{subset}",
             "split": "train",
@@ -1918,7 +2168,7 @@ def _arabicmmlu_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "MBZUAI/ArabicMMLU",
             "dataset_name": subset,
             "split": "test",
@@ -1948,14 +2198,14 @@ def _blimp_suite_spec(
         suite_factory=lambda subset=subset: evalution.benchmarks.blimp(
             subset=subset,
             batch_size=32,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name=task_name,
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "blimp",
             "dataset_name": subset,
             "split": "train",
@@ -1982,14 +2232,14 @@ def _ceval_suite_spec(
         suite_factory=lambda subset=subset: evalution.benchmarks.ceval(
             subset=subset,
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name=f"ceval_{subset}",
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "ceval/ceval-exam",
             "dataset_name": subset,
             "split": "val",
@@ -2025,7 +2275,7 @@ def _crows_pairs_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"pct_stereotype", "likelihood_diff"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "jannalu/crows_pairs_multilingual",
             "dataset_name": language,
             "split": "test",
@@ -2057,14 +2307,14 @@ def _aime_suite_spec(
         suite_factory=lambda task_name=task_name: getattr(evalution.benchmarks, task_name)(
             batch_size=24,
             max_new_tokens=512,
-            streaming=True,
+            stream=True,
             max_rows=30,
         ),
         expected_name=task_name,
         baseline={"em": baseline},
         expected_metrics=frozenset({"em"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": dataset_path,
             "dataset_name": None,
             "split": split,
@@ -2094,7 +2344,7 @@ def _agieval_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "RUCAIBox/AGIEval",
             "dataset_name": subset,
             "split": "test",
@@ -2112,6 +2362,42 @@ def _agieval_suite_spec(
     )
 
 
+def _hendrycks_math_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.hendrycks_math(
+            subset=subset,
+            batch_size=4,
+            max_new_tokens=256,
+            stream=True,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline={"em": baseline},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "EleutherAI/hendrycks_math",
+            "dataset_name": subset,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_math_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_hendrycks_math_sample(
+            sample,
+            index,
+            subset=subset,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 def _afrimgsm_suite_spec(
     task_name: str,
     *,
@@ -2123,7 +2409,7 @@ def _afrimgsm_suite_spec(
             language=language,
             batch_size=24,
             max_new_tokens=96,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name=task_name,
@@ -2133,7 +2419,7 @@ def _afrimgsm_suite_spec(
             "variant": "base",
             "apply_chat_template": False,
             "fewshot_as_multiturn": False,
-            "streaming": True,
+            "stream": True,
             "generation_submission_mode": "continuous_refill",
             "num_fewshot": 0,
             "dataset_path": "masakhane/afrimgsm",
@@ -2169,7 +2455,7 @@ def _afrimmlu_suite_spec(
         baseline=baseline,
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "masakhane/afrimmlu",
             "dataset_name": language,
             "split": "test",
@@ -2189,7 +2475,448 @@ def _afrimmlu_suite_spec(
     )
 
 
+def _metadata_darijammlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["subject"]
+        assert metadata["subject_darija"]
+        assert isinstance(metadata["raw_choices"], list)
+        assert 2 <= len(metadata["raw_choices"]) <= 4
+
+    return validate
+
+
+def _darijammlu_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.darijammlu(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "MBZUAI-Paris/DarijaMMLU",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="This is a DarijaMMLU multiple-choice question about ",
+            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_darijammlu_subset(subset),
+        ),
+    )
+
+
+def _metadata_egymmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["subject"]
+        assert metadata["egy_subject"]
+        assert isinstance(metadata["raw_choices"], list)
+        assert 2 <= len(metadata["raw_choices"]) <= 4
+
+    return validate
+
+
+def _egymmlu_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.egymmlu(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "UBC-NLP/EgyMMLU",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="This is a EgyMMLU multiple-choice question about ",
+            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_egymmlu_subset(subset),
+        ),
+    )
+
+
+def _metadata_eus_exams_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["language"] in {"eu", "es"}
+        assert metadata["question_id"]
+        assert metadata["link"].startswith("https://")
+        assert isinstance(metadata["raw_choices"], list)
+        assert len(metadata["raw_choices"]) == 4
+
+    return validate
+
+
+def _eus_exams_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+    expected_sample_count: int,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.eus_exams(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HiTZ/EusExams",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=expected_sample_count,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_substrings=("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_eus_exams_subset(subset),
+        ),
+        abs_tolerance=2 / expected_sample_count,
+    )
+
+
+def _metadata_careqa_language(language: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["language"] == language
+        assert metadata["category"]
+        assert metadata["exam_id"] > 0
+        assert metadata["year"] >= 2020
+        assert metadata["unique_id"]
+        assert len(metadata["raw_choices"]) == 4
+
+    return validate
+
+
+def _careqa_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.careqa(
+            language=language,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HPAI-BSC/CareQA",
+            "dataset_name": f"CareQA_{language}",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, language=language: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Question: ",
+            prompt_substrings=("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_careqa_language(language),
+        ),
+    )
+
+
+def _metadata_cabbq_category(category: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["category"] == category
+        assert metadata["question_polarity"]
+        assert metadata["context_condition"]
+        assert metadata["question_type"]
+        assert len(metadata["raw_choices"]) == 3
+
+    return validate
+
+
+def _cabbq_suite_spec(
+    task_name: str,
+    *,
+    category: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda category=category: evalution.benchmarks.cabbq(
+            category=category,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "BSC-LT/CaBBQ",
+            "dataset_name": category,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, category=category: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C"},
+            prediction_values={"A", "B", "C"},
+            prompt_prefix="Context: ",
+            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nAnswer:"),
+            metadata_validator=_metadata_cabbq_category(category),
+        ),
+    )
+
+
+def _metadata_bbq_category(category: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["category"] == category
+        assert metadata["question_polarity"]
+        assert metadata["context_condition"]
+        assert metadata["question_index"]
+        assert len(metadata["raw_choices"]) == 3
+
+    return validate
+
+
+def _bbq_suite_spec(
+    task_name: str,
+    *,
+    category: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda category=category: evalution.benchmarks.bbq(
+            category=category,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "heegyu/bbq",
+            "dataset_name": category,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, category=category: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C"},
+            prediction_values={"A", "B", "C"},
+            prompt_prefix="Context: ",
+            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nAnswer:"),
+            metadata_validator=_metadata_bbq_category(category),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _metadata_esbbq_category(category: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["category"] == category
+        assert metadata["question_polarity"]
+        assert metadata["context_condition"]
+        assert metadata["question_type"]
+        assert len(metadata["raw_choices"]) == 3
+
+    return validate
+
+
+def _esbbq_suite_spec(
+    task_name: str,
+    *,
+    category: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda category=category: evalution.benchmarks.esbbq(
+            category=category,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "BSC-LT/EsBBQ",
+            "dataset_name": category,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, category=category: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C"},
+            prediction_values={"A", "B", "C"},
+            prompt_prefix="Context: ",
+            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nAnswer:"),
+            metadata_validator=_metadata_esbbq_category(category),
+        ),
+    )
+
+
 SUITE_SPECS = {
+    "cabbq_age": _cabbq_suite_spec(
+        "cabbq_age",
+        category="Age",
+        baseline={"acc,ll": 0.3828125, "acc,ll_avg": 0.3828125},
+    ),
+    "cabbq_disability_status": _cabbq_suite_spec(
+        "cabbq_disability_status",
+        category="DisabilityStatus",
+        baseline={"acc,ll": 0.546875, "acc,ll_avg": 0.546875},
+    ),
+    "cabbq_gender": _cabbq_suite_spec(
+        "cabbq_gender",
+        category="Gender",
+        baseline={"acc,ll": 0.3984375, "acc,ll_avg": 0.3984375},
+    ),
+    "cabbq_nationality": _cabbq_suite_spec(
+        "cabbq_nationality",
+        category="Nationality",
+        baseline={"acc,ll": 0.3984375, "acc,ll_avg": 0.3984375},
+    ),
+    "careqa_en": _careqa_suite_spec(
+        "careqa_en",
+        language="en",
+        baseline={"acc,ll": 0.3359375, "acc,ll_avg": 0.3359375},
+    ),
+    "careqa_es": _careqa_suite_spec(
+        "careqa_es",
+        language="es",
+        baseline={"acc,ll": 0.2890625, "acc,ll_avg": 0.2890625},
+    ),
+    "esbbq_age": _esbbq_suite_spec(
+        "esbbq_age",
+        category="Age",
+        baseline={"acc,ll": 0.3828125, "acc,ll_avg": 0.3828125},
+    ),
+    "esbbq_disability_status": _esbbq_suite_spec(
+        "esbbq_disability_status",
+        category="DisabilityStatus",
+        baseline={"acc,ll": 0.4609375, "acc,ll_avg": 0.4609375},
+    ),
+    "esbbq_gender": _esbbq_suite_spec(
+        "esbbq_gender",
+        category="Gender",
+        baseline={"acc,ll": 0.3828125, "acc,ll_avg": 0.3828125},
+    ),
+    "esbbq_nationality": _esbbq_suite_spec(
+        "esbbq_nationality",
+        category="Nationality",
+        baseline={"acc,ll": 0.4765625, "acc,ll_avg": 0.4765625},
+    ),
+    "eus_exams_eu_opeosakiadmineu": _eus_exams_suite_spec(
+        "eus_exams_eu_opeosakiadmineu",
+        subset="eu_opeosakiadmineu",
+        baseline={"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
+        expected_sample_count=128,
+    ),
+    "eus_exams_eu_opeosakiauxenfeu": _eus_exams_suite_spec(
+        "eus_exams_eu_opeosakiauxenfeu",
+        subset="eu_opeosakiauxenfeu",
+        baseline={"acc,ll": 0.2734375, "acc,ll_avg": 0.2734375},
+        expected_sample_count=128,
+    ),
+    "eus_exams_es_ejadministrativo": _eus_exams_suite_spec(
+        "eus_exams_es_ejadministrativo",
+        subset="es_ejadministrativo",
+        baseline={"acc,ll": 0.3937007874015748, "acc,ll_avg": 0.3937007874015748},
+        expected_sample_count=127,
+    ),
+    "eus_exams_es_ejauxiliar": _eus_exams_suite_spec(
+        "eus_exams_es_ejauxiliar",
+        subset="es_ejauxiliar",
+        baseline={"acc,ll": 0.36220472440944884, "acc,ll_avg": 0.36220472440944884},
+        expected_sample_count=127,
+    ),
+    "egymmlu_arabic_language": _egymmlu_suite_spec(
+        "egymmlu_arabic_language",
+        subset="arabic_language",
+        baseline={"acc,ll": 0.3359375, "acc,ll_avg": 0.3359375},
+    ),
+    "egymmlu_biology": _egymmlu_suite_spec(
+        "egymmlu_biology",
+        subset="biology",
+        baseline={"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+    ),
+    "egymmlu_computer_science": _egymmlu_suite_spec(
+        "egymmlu_computer_science",
+        subset="computer_science",
+        baseline={"acc,ll": 0.40625, "acc,ll_avg": 0.40625},
+    ),
+    "egymmlu_driving_test": _egymmlu_suite_spec(
+        "egymmlu_driving_test",
+        subset="driving_test",
+        baseline={"acc,ll": 0.359375, "acc,ll_avg": 0.359375},
+    ),
+    "darijammlu_arabic_language": _darijammlu_suite_spec(
+        "darijammlu_arabic_language",
+        subset="arabic_language",
+        baseline={"acc,ll": 0.3203125, "acc,ll_avg": 0.3203125},
+    ),
+    "darijammlu_biology": _darijammlu_suite_spec(
+        "darijammlu_biology",
+        subset="biology",
+        baseline={"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
+    ),
+    "darijammlu_computer_science": _darijammlu_suite_spec(
+        "darijammlu_computer_science",
+        subset="computer_science",
+        baseline={"acc,ll": 0.5, "acc,ll_avg": 0.5},
+    ),
+    "darijammlu_driving_test": _darijammlu_suite_spec(
+        "darijammlu_driving_test",
+        subset="driving_test",
+        baseline={"acc,ll": 0.3203125, "acc,ll_avg": 0.3203125},
+    ),
     "afrimmlu_eng": _afrimmlu_suite_spec(
         "afrimmlu_eng",
         language="eng",
@@ -2292,15 +3019,20 @@ SUITE_SPECS = {
         split="test",
         baseline=0.0,
     ),
+    "hendrycks_math_algebra": _hendrycks_math_suite_spec(
+        "hendrycks_math_algebra",
+        subset="algebra",
+        baseline=0.3125,
+    ),
     "asdiv": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, stream=True, max_rows=128),
         expected_name="asdiv",
         baseline={
             "acc,ll": 0.0625,
         },
         expected_metrics=frozenset({"acc,ll"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/asdiv",
             "dataset_name": None,
             "split": "validation",
@@ -2327,7 +3059,7 @@ SUITE_SPECS = {
             apply_chat_template=True,
             batch_size=24,
             max_new_tokens=96,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="asdiv_cot_llama",
@@ -2339,7 +3071,7 @@ SUITE_SPECS = {
             "variant": "cot_llama",
             "apply_chat_template": True,
             "fewshot_as_multiturn": True,
-            "streaming": True,
+            "stream": True,
             "generation_submission_mode": "continuous_refill",
             "num_fewshot": 8,
             "dataset_path": "EleutherAI/asdiv",
@@ -2356,7 +3088,7 @@ SUITE_SPECS = {
         baseline={"acc,ll": 0.34285714285714286, "acc,ll_avg": 0.34285714285714286},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "Hennara/aexams",
             "dataset_name": "Biology",
             "split": "test",
@@ -2379,7 +3111,7 @@ SUITE_SPECS = {
         baseline={"acc,ll": 0.4246575342465753, "acc,ll_avg": 0.4246575342465753},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "Hennara/aexams",
             "dataset_name": "IslamicStudies",
             "split": "test",
@@ -2402,7 +3134,7 @@ SUITE_SPECS = {
         baseline={"acc,ll": 0.2857142857142857, "acc,ll_avg": 0.2857142857142857},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "Hennara/aexams",
             "dataset_name": "Physics",
             "split": "test",
@@ -2425,7 +3157,7 @@ SUITE_SPECS = {
         baseline={"acc,ll": 0.34782608695652173, "acc,ll_avg": 0.34782608695652173},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "Hennara/aexams",
             "dataset_name": "Science",
             "split": "test",
@@ -2448,7 +3180,7 @@ SUITE_SPECS = {
         baseline={"acc,ll": 0.29044117647058826, "acc,ll_avg": 0.29044117647058826},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "Hennara/aexams",
             "dataset_name": "Social",
             "split": "test",
@@ -2469,7 +3201,7 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.babi(
             batch_size=24,
             max_new_tokens=16,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="babi",
@@ -2478,7 +3210,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"em"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Muennighoff/babi",
             "dataset_name": None,
             "split": "test",
@@ -2499,7 +3231,7 @@ SUITE_SPECS = {
     "bear": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.bear(
             batch_size=8,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name="bear",
@@ -2509,7 +3241,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "lm-pub-quiz/BEAR",
             "dataset_name": "BEAR",
             "split": "test",
@@ -2528,7 +3260,7 @@ SUITE_SPECS = {
     "bear_big": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.bear_big(
             batch_size=8,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name="bear_big",
@@ -2538,7 +3270,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "lm-pub-quiz/BEAR",
             "dataset_name": "BEAR_big",
             "split": "test",
@@ -2560,7 +3292,7 @@ SUITE_SPECS = {
             apply_chat_template=True,
             batch_size=24,
             max_new_tokens=96,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="gsm8k_cot",
@@ -2572,7 +3304,7 @@ SUITE_SPECS = {
             "variant": "cot",
             "apply_chat_template": True,
             "fewshot_as_multiturn": True,
-            "streaming": True,
+            "stream": True,
             "generation_submission_mode": "continuous_refill",
             "num_fewshot": 8,
             "dataset_path": "openai/gsm8k",
@@ -2589,7 +3321,7 @@ SUITE_SPECS = {
             apply_chat_template=True,
             batch_size=24,
             max_new_tokens=96,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="gsm8k_platinum_cot",
@@ -2601,7 +3333,7 @@ SUITE_SPECS = {
             "variant": "cot",
             "apply_chat_template": True,
             "fewshot_as_multiturn": True,
-            "streaming": True,
+            "stream": True,
             "generation_submission_mode": "continuous_refill",
             "num_fewshot": 8,
             "scoring_mode": "numeric_format_insensitive",
@@ -2612,7 +3344,7 @@ SUITE_SPECS = {
         result_validator=_validate_gsm8k_like_result,
     ),
     "anli_r1": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.anli_r1(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.anli_r1(batch_size=24, stream=True, max_rows=128),
         expected_name="anli_r1",
         baseline={
             "acc,ll": 0.328125,
@@ -2620,7 +3352,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "facebook/anli",
             "dataset_name": None,
             "split": "test_r1",
@@ -2637,7 +3369,7 @@ SUITE_SPECS = {
         ),
     ),
     "anli_r2": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.anli_r2(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.anli_r2(batch_size=24, stream=True, max_rows=128),
         expected_name="anli_r2",
         baseline={
             "acc,ll": 0.375,
@@ -2645,7 +3377,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "facebook/anli",
             "dataset_name": None,
             "split": "test_r2",
@@ -2662,7 +3394,7 @@ SUITE_SPECS = {
         ),
     ),
     "anli_r3": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.anli_r3(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.anli_r3(batch_size=24, stream=True, max_rows=128),
         expected_name="anli_r3",
         baseline={
             "acc,ll": 0.3671875,
@@ -2670,7 +3402,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "facebook/anli",
             "dataset_name": None,
             "split": "test_r3",
@@ -2687,7 +3419,7 @@ SUITE_SPECS = {
         ),
     ),
     "boolq": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.boolq(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.boolq(batch_size=24, stream=True, max_rows=128),
         expected_name="boolq",
         baseline={
             "acc,ll": 0.6796875,
@@ -2695,7 +3427,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "super_glue",
             "dataset_name": "boolq",
             "split": "validation",
@@ -2711,7 +3443,7 @@ SUITE_SPECS = {
         ),
     ),
     "cb": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.cb(batch_size=24, streaming=True, max_rows=56),
+        suite_factory=lambda: evalution.benchmarks.cb(batch_size=24, stream=True, max_rows=56),
         expected_name="cb",
         baseline={
             "acc,ll": 0.5714285714285714,
@@ -2728,7 +3460,7 @@ SUITE_SPECS = {
             }
         ),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "super_glue",
             "dataset_name": "cb",
             "split": "validation",
@@ -2744,7 +3476,7 @@ SUITE_SPECS = {
         ),
     ),
     "cola": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.cola(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.cola(batch_size=24, stream=True, max_rows=128),
         expected_name="cola",
         baseline={
             "acc,ll": 0.6484375,
@@ -2761,7 +3493,7 @@ SUITE_SPECS = {
             }
         ),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "nyu-mll/glue",
             "dataset_name": "cola",
             "split": "validation",
@@ -2790,7 +3522,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"rouge1", "rouge2", "rougeLsum"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "cnn_dailymail",
             "dataset_name": "3.0.0",
             "split": "validation",
@@ -2814,7 +3546,7 @@ SUITE_SPECS = {
         baseline={"bleu4": 0.12701024051547405},
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "CM/codexglue_code2text_go",
             "dataset_name": None,
             "split": "test",
@@ -2834,7 +3566,7 @@ SUITE_SPECS = {
         baseline={"bleu4": 0.7372980967711409},
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "CM/codexglue_code2text_java",
             "dataset_name": None,
             "split": "test",
@@ -2854,7 +3586,7 @@ SUITE_SPECS = {
         baseline={"bleu4": 0.24753010988524},
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "CM/codexglue_code2text_javascript",
             "dataset_name": None,
             "split": "test",
@@ -2874,7 +3606,7 @@ SUITE_SPECS = {
         baseline={"bleu4": 0.2931185120841358},
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "CM/codexglue_code2text_php",
             "dataset_name": None,
             "split": "test",
@@ -2894,7 +3626,7 @@ SUITE_SPECS = {
         baseline={"bleu4": 0.14476427430734137},
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "CM/codexglue_code2text_python",
             "dataset_name": None,
             "split": "test",
@@ -2914,7 +3646,7 @@ SUITE_SPECS = {
         baseline={"bleu4": 0.3812030669921292},
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "CM/codexglue_code2text_ruby",
             "dataset_name": None,
             "split": "test",
@@ -2943,7 +3675,7 @@ SUITE_SPECS = {
     "commonsense_qa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.commonsense_qa(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="commonsense_qa",
@@ -2953,7 +3685,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "tau/commonsense_qa",
             "dataset_name": None,
             "split": "validation",
@@ -2974,7 +3706,7 @@ SUITE_SPECS = {
     "darijahellaswag": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.darijahellaswag(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name="darijahellaswag",
@@ -2984,7 +3716,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "MBZUAI-Paris/DarijaHellaSwag",
             "dataset_name": None,
             "split": "validation",
@@ -3002,7 +3734,7 @@ SUITE_SPECS = {
     "egyhellaswag": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.egyhellaswag(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name="egyhellaswag",
@@ -3012,7 +3744,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "UBC-NLP/EgyHellaSwag",
             "dataset_name": None,
             "split": "validation",
@@ -3028,7 +3760,7 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "copa": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, streaming=True, max_rows=100),
+        suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, stream=True, max_rows=100),
         expected_name="copa",
         baseline={
             "acc,ll": 0.74,
@@ -3036,7 +3768,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "super_glue",
             "dataset_name": "copa",
             "split": "validation",
@@ -3050,7 +3782,7 @@ SUITE_SPECS = {
         ),
     ),
     "copa_ar": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.copa_ar(batch_size=24, streaming=True, max_rows=89),
+        suite_factory=lambda: evalution.benchmarks.copa_ar(batch_size=24, stream=True, max_rows=89),
         expected_name="copa_ar",
         baseline={
             "acc,ll": 0.5730337078651685,
@@ -3058,7 +3790,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Hennara/copa_ar",
             "dataset_name": None,
             "split": "test",
@@ -3077,7 +3809,7 @@ SUITE_SPECS = {
     "copal_id_standard": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copal_id_standard(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="copal_id_standard",
@@ -3087,7 +3819,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "haryoaw/COPAL",
             "dataset_name": "id",
             "split": "test",
@@ -3103,7 +3835,7 @@ SUITE_SPECS = {
     "copal_id_colloquial": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copal_id_colloquial(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="copal_id_colloquial",
@@ -3113,7 +3845,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "haryoaw/COPAL",
             "dataset_name": "id",
             "split": "test_colloquial",
@@ -3127,7 +3859,7 @@ SUITE_SPECS = {
         ),
     ),
     "ethics_cm": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.ethics_cm(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.ethics_cm(batch_size=24, stream=True, max_rows=128),
         expected_name="ethics_cm",
         baseline={
             "acc,ll": 0.5,
@@ -3135,7 +3867,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/hendrycks_ethics",
             "dataset_name": "commonsense",
             "split": "test",
@@ -3153,7 +3885,7 @@ SUITE_SPECS = {
         ),
     ),
     "ethics_deontology": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.ethics_deontology(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.ethics_deontology(batch_size=24, stream=True, max_rows=128),
         expected_name="ethics_deontology",
         baseline={
             "acc,ll": 0.546875,
@@ -3161,7 +3893,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/hendrycks_ethics",
             "dataset_name": "deontology",
             "split": "test",
@@ -3179,7 +3911,7 @@ SUITE_SPECS = {
         ),
     ),
     "ethics_justice": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.ethics_justice(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.ethics_justice(batch_size=24, stream=True, max_rows=128),
         expected_name="ethics_justice",
         baseline={
             "acc,ll": 0.4921875,
@@ -3187,7 +3919,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/hendrycks_ethics",
             "dataset_name": "justice",
             "split": "test",
@@ -3205,7 +3937,7 @@ SUITE_SPECS = {
         ),
     ),
     "ethics_utilitarianism": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.ethics_utilitarianism(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.ethics_utilitarianism(batch_size=24, stream=True, max_rows=128),
         expected_name="ethics_utilitarianism",
         baseline={
             "acc,ll": 0.4765625,
@@ -3213,7 +3945,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/hendrycks_ethics",
             "dataset_name": "utilitarianism",
             "split": "test",
@@ -3232,7 +3964,7 @@ SUITE_SPECS = {
         ),
     ),
     "ethics_virtue": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.ethics_virtue(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.ethics_virtue(batch_size=24, stream=True, max_rows=128),
         expected_name="ethics_virtue",
         baseline={
             "acc,ll": 0.2890625,
@@ -3240,7 +3972,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/hendrycks_ethics",
             "dataset_name": "virtue",
             "split": "test",
@@ -3259,14 +3991,14 @@ SUITE_SPECS = {
         ),
     ),
     "arc_easy": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.arc_easy(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.arc_easy(batch_size=24, stream=True, max_rows=128),
         expected_name="arc_easy",
         baseline={
             "acc,exam": 0.6640625,
         },
         expected_metrics=frozenset({"acc,exam"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "allenai/ai2_arc",
             "dataset_name": "ARC-Easy",
             "split": "test",
@@ -3280,7 +4012,7 @@ SUITE_SPECS = {
     "arc_challenge": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.arc_challenge(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="arc_challenge",
@@ -3289,7 +4021,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,exam"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "allenai/ai2_arc",
             "dataset_name": "ARC-Challenge",
             "split": "test",
@@ -3303,7 +4035,7 @@ SUITE_SPECS = {
     "arc_challenge_label_perm_0_25": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.arc_challenge(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
             label_permutations=0.25,
         ),
@@ -3319,7 +4051,7 @@ SUITE_SPECS = {
             }
         ),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "allenai/ai2_arc",
             "dataset_name": "ARC-Challenge",
             "split": "test",
@@ -3338,7 +4070,7 @@ SUITE_SPECS = {
         result_validator=_validate_arc_exam_result,
     ),
     "hellaswag": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.hellaswag(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.hellaswag(batch_size=24, stream=True, max_rows=128),
         expected_name="hellaswag",
         baseline={
             "acc,ll": 0.4375,
@@ -3346,7 +4078,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Rowan/hellaswag",
             "dataset_name": None,
             "split": "validation",
@@ -3368,7 +4100,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "LabHC/histoires_morales",
             "dataset_name": None,
             "split": "train",
@@ -3400,7 +4132,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "mideind/icelandic-winogrande",
             "dataset_name": None,
             "split": "train",
@@ -3414,7 +4146,7 @@ SUITE_SPECS = {
     "hellaswag_label_perm_0_25": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.hellaswag(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
             label_permutations=0.25,
         ),
@@ -3432,7 +4164,7 @@ SUITE_SPECS = {
             }
         ),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Rowan/hellaswag",
             "dataset_name": None,
             "split": "validation",
@@ -3485,7 +4217,7 @@ SUITE_SPECS = {
         },
     ),
     "headqa_en": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.headqa_en(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.headqa_en(batch_size=24, stream=True, max_rows=128),
         expected_name="headqa_en",
         baseline={
             "acc,ll": 0.3671875,
@@ -3493,7 +4225,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/headqa",
             "dataset_name": "en",
             "split": "test",
@@ -3509,7 +4241,7 @@ SUITE_SPECS = {
         ),
     ),
     "headqa_es": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.headqa_es(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.headqa_es(batch_size=24, stream=True, max_rows=128),
         expected_name="headqa_es",
         baseline={
             "acc,ll": 0.25,
@@ -3517,7 +4249,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/headqa",
             "dataset_name": "es",
             "split": "test",
@@ -3533,7 +4265,7 @@ SUITE_SPECS = {
         ),
     ),
     "lambada_openai": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.lambada_openai(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.lambada_openai(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai",
         baseline={
             "acc,ll": 0.5703125,
@@ -3541,7 +4273,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/lambada_openai",
             "dataset_name": "default",
             "split": "test",
@@ -3557,7 +4289,7 @@ SUITE_SPECS = {
     "lambada_openai_cloze": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_cloze(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="lambada_openai_cloze",
@@ -3567,7 +4299,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "EleutherAI/lambada_openai",
             "dataset_name": "default",
             "split": "test",
@@ -3583,7 +4315,7 @@ SUITE_SPECS = {
         ),
     ),
     "lambada_standard": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.lambada_standard(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.lambada_standard(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_standard",
         baseline={
             "acc,ll": 0.484375,
@@ -3591,7 +4323,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "cimec/lambada",
             "dataset_name": None,
             "split": "test",
@@ -3607,7 +4339,7 @@ SUITE_SPECS = {
     "lambada_standard_cloze": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_standard_cloze(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="lambada_standard_cloze",
@@ -3617,7 +4349,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "cimec/lambada",
             "dataset_name": None,
             "split": "test",
@@ -3641,10 +4373,34 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "EleutherAI/logiqa",
             "dataset_name": "logiqa",
             "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Passage: ",
+            prompt_substrings=("\nQuestion: ", "\nChoices:\n", "\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "logiqa2": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.logiqa2(batch_size=24, max_rows=128),
+        expected_name="logiqa2",
+        baseline={
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.3359375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "datatune/LogiQA2.0",
+            "dataset_name": None,
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
@@ -3665,10 +4421,10 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "math_qa",
             "dataset_name": None,
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
@@ -3678,6 +4434,30 @@ SUITE_SPECS = {
             prompt_prefix="Question: ",
             prompt_suffix="\nAnswer:",
             metadata_validator=_metadata_has_choice_labels(exact_count=5),
+        ),
+    ),
+    "mutual": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mutual(batch_size=24, max_rows=128),
+        expected_name="mutual",
+        baseline={
+            "acc,ll": 0.3984375,
+            "acc,ll_avg": 0.2734375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "tasksource/mutual",
+            "dataset_name": None,
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Dialogue: ",
+            prompt_substrings=("\nReply options:\n", "\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
     "mc_taco": SuiteSpec(
@@ -3698,10 +4478,10 @@ SUITE_SPECS = {
             }
         ),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "CogComp/mc_taco",
             "dataset_name": None,
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
@@ -3715,7 +4495,7 @@ SUITE_SPECS = {
         ),
     ),
     "medmcqa": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, stream=True, max_rows=128),
         expected_name="medmcqa",
         baseline={
             "acc,ll": 0.4296875,
@@ -3723,7 +4503,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "openlifescienceai/medmcqa",
             "dataset_name": None,
             "split": "validation",
@@ -3742,7 +4522,7 @@ SUITE_SPECS = {
         ),
     ),
     "medqa_4options": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.medqa_4options(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.medqa_4options(batch_size=24, stream=True, max_rows=128),
         expected_name="medqa_4options",
         baseline={
             "acc,ll": 0.4140625,
@@ -3750,7 +4530,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "GBaker/MedQA-USMLE-4-options-hf",
             "dataset_name": None,
             "split": "test",
@@ -3773,7 +4553,7 @@ SUITE_SPECS = {
             subsets="all",
             num_fewshot=5,
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
         ),
         expected_name="mmlu",
@@ -3783,7 +4563,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "cais/mmlu",
             "dataset_name": "all",
             "subsets": ["all"],
@@ -3810,7 +4590,7 @@ SUITE_SPECS = {
             subsets="stem",
             num_fewshot=5,
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name="mmlu_stem",
@@ -3820,7 +4600,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "cais/mmlu",
             "dataset_name": "all",
             "subsets": ["stem"],
@@ -3844,7 +4624,7 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "mnli": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.mnli(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.mnli(batch_size=24, stream=True, max_rows=128),
         expected_name="mnli",
         baseline={
             "acc,ll": 0.5078125,
@@ -3852,7 +4632,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "nyu-mll/glue",
             "dataset_name": "mnli",
             "split": "validation_matched",
@@ -3868,7 +4648,7 @@ SUITE_SPECS = {
         ),
     ),
     "mrpc": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.mrpc(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.mrpc(batch_size=24, stream=True, max_rows=128),
         expected_name="mrpc",
         baseline={
             "acc,ll": 0.6953125,
@@ -3885,7 +4665,7 @@ SUITE_SPECS = {
             }
         ),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "nyu-mll/glue",
             "dataset_name": "mrpc",
             "split": "validation",
@@ -3905,7 +4685,7 @@ SUITE_SPECS = {
         ),
     ),
     "openbookqa": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.openbookqa(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.openbookqa(batch_size=24, stream=True, max_rows=128),
         expected_name="openbookqa",
         baseline={
             "acc,ll": 0.25,
@@ -3913,10 +4693,10 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "allenai/openbookqa",
             "dataset_name": "main",
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
@@ -3931,7 +4711,7 @@ SUITE_SPECS = {
     "openbookqa_label_perm_0_25": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.openbookqa(
             batch_size=24,
-            streaming=True,
+            stream=True,
             max_rows=128,
             label_permutations=0.25,
         ),
@@ -3943,10 +4723,10 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg", "acc,label_perm:0.25"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "allenai/openbookqa",
             "dataset_name": "main",
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
             "extra_scoring_mode": "multiple_choice_label_permutation_average",
             "label_permutations": 0.25,
@@ -3963,7 +4743,7 @@ SUITE_SPECS = {
         ),
     ),
     "piqa": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.piqa(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.piqa(batch_size=24, stream=True, max_rows=128),
         expected_name="piqa",
         baseline={
             "acc,ll": 0.71875,
@@ -3971,7 +4751,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "baber/piqa",
             "dataset_name": None,
             "split": "validation",
@@ -3986,7 +4766,7 @@ SUITE_SPECS = {
         ),
     ),
     "piqa_ar": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.piqa_ar(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.piqa_ar(batch_size=24, stream=True, max_rows=128),
         expected_name="piqa_ar",
         baseline={
             "acc,ll": 0.5625,
@@ -3994,7 +4774,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Hennara/pica_ar",
             "dataset_name": None,
             "split": "test",
@@ -4019,7 +4799,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "monology/pile-uncopyrighted",
             "dataset_name": None,
             "split": "train",
@@ -4039,7 +4819,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "corypaik/prost",
             "dataset_name": None,
             "split": "test",
@@ -4063,7 +4843,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "bigbio/pubmed_qa",
             "dataset_name": "pubmed_qa_labeled_fold0_source",
             "split": "test",
@@ -4087,7 +4867,7 @@ SUITE_SPECS = {
         baseline={"acc,ll": 0.40625, "acc,ll_avg": 0.5},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "qa4mre",
             "dataset_name": "2011.main.EN",
             "split": "train",
@@ -4110,7 +4890,7 @@ SUITE_SPECS = {
         baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "qa4mre",
             "dataset_name": "2012.main.EN",
             "split": "train",
@@ -4133,7 +4913,7 @@ SUITE_SPECS = {
         baseline={"acc,ll": 0.46875, "acc,ll_avg": 0.59375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "qa4mre",
             "dataset_name": "2013.main.EN",
             "split": "train",
@@ -4151,7 +4931,7 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "qnli": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.qnli(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.qnli(batch_size=24, stream=True, max_rows=128),
         expected_name="qnli",
         baseline={
             "acc,ll": 0.4609375,
@@ -4159,7 +4939,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "nyu-mll/glue",
             "dataset_name": "qnli",
             "split": "validation",
@@ -4175,7 +4955,7 @@ SUITE_SPECS = {
         ),
     ),
     "qqp": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.qqp(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.qqp(batch_size=24, stream=True, max_rows=128),
         expected_name="qqp",
         baseline={
             "acc,ll": 0.34375,
@@ -4192,7 +4972,7 @@ SUITE_SPECS = {
             }
         ),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "nyu-mll/glue",
             "dataset_name": "qqp",
             "split": "validation",
@@ -4220,7 +5000,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "EleutherAI/race",
             "dataset_name": "high",
             "split": "test",
@@ -4235,7 +5015,7 @@ SUITE_SPECS = {
         ),
     ),
     "rte": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.rte(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.rte(batch_size=24, stream=True, max_rows=128),
         expected_name="rte",
         baseline={
             "acc,ll": 0.625,
@@ -4243,7 +5023,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "super_glue",
             "dataset_name": "rte",
             "split": "validation",
@@ -4259,7 +5039,7 @@ SUITE_SPECS = {
         ),
     ),
     "sciq": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.sciq(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.sciq(batch_size=24, stream=True, max_rows=128),
         expected_name="sciq",
         baseline={
             "acc,ll": 0.9296875,
@@ -4267,10 +5047,10 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "allenai/sciq",
             "dataset_name": None,
-            "split": "validation",
+            "split": "test",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
@@ -4290,7 +5070,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "allenai/social_i_qa",
             "dataset_name": None,
             "split": "validation",
@@ -4305,7 +5085,7 @@ SUITE_SPECS = {
         ),
     ),
     "swag": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.swag(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.swag(batch_size=24, stream=True, max_rows=128),
         expected_name="swag",
         baseline={
             "acc,ll": 0.4921875,
@@ -4313,7 +5093,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "swag",
             "dataset_name": "regular",
             "split": "validation",
@@ -4327,7 +5107,7 @@ SUITE_SPECS = {
         ),
     ),
     "sst2": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.sst2(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.sst2(batch_size=24, stream=True, max_rows=128),
         expected_name="sst2",
         baseline={
             "acc,ll": 0.5390625,
@@ -4335,7 +5115,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "nyu-mll/glue",
             "dataset_name": "sst2",
             "split": "validation",
@@ -4359,7 +5139,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"em", "f1"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "squad_v2",
             "dataset_name": "squad_v2",
             "split": "validation",
@@ -4380,7 +5160,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"em", "f1"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "trivia_qa",
             "dataset_name": "rc.nocontext",
             "split": "validation",
@@ -4400,7 +5180,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"em", "f1"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "nq_open",
             "dataset_name": "nq_open",
             "split": "validation",
@@ -4420,7 +5200,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"em", "f1"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "coqa",
             "dataset_name": None,
             "split": "validation",
@@ -4441,7 +5221,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"em", "f1"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "drop",
             "dataset_name": None,
             "split": "validation",
@@ -4453,7 +5233,7 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "wic": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.wic(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.wic(batch_size=24, stream=True, max_rows=128),
         expected_name="wic",
         baseline={
             "acc,ll": 0.5,
@@ -4461,7 +5241,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "super_glue",
             "dataset_name": "wic",
             "split": "validation",
@@ -4479,14 +5259,14 @@ SUITE_SPECS = {
         ),
     ),
     "webqs": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.webqs(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.webqs(batch_size=24, stream=True, max_rows=128),
         expected_name="webqs",
         baseline={
             "em": 0.1328125,
         },
         expected_metrics=frozenset({"em"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "web_questions",
             "dataset_name": None,
             "split": "test",
@@ -4497,12 +5277,12 @@ SUITE_SPECS = {
         sample_validator=_assert_webqs_sample,
     ),
     "xwinograd_en": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xwinograd_en(batch_size=16, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xwinograd_en(batch_size=16, stream=True, max_rows=32),
         expected_name="xwinograd_en",
         baseline={"acc,ll": 0.75, "acc,ll_avg": 0.75},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Muennighoff/xwinograd",
             "dataset_name": "en",
             "split": "test",
@@ -4514,12 +5294,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xwinograd_fr": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xwinograd_fr(batch_size=16, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xwinograd_fr(batch_size=16, stream=True, max_rows=32),
         expected_name="xwinograd_fr",
         baseline={"acc,ll": 0.71875, "acc,ll_avg": 0.71875},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Muennighoff/xwinograd",
             "dataset_name": "fr",
             "split": "test",
@@ -4531,12 +5311,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xwinograd_jp": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xwinograd_jp(batch_size=16, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xwinograd_jp(batch_size=16, stream=True, max_rows=32),
         expected_name="xwinograd_jp",
         baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Muennighoff/xwinograd",
             "dataset_name": "jp",
             "split": "test",
@@ -4548,12 +5328,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xwinograd_pt": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xwinograd_pt(batch_size=16, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xwinograd_pt(batch_size=16, stream=True, max_rows=32),
         expected_name="xwinograd_pt",
         baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Muennighoff/xwinograd",
             "dataset_name": "pt",
             "split": "test",
@@ -4565,12 +5345,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xwinograd_ru": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xwinograd_ru(batch_size=16, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xwinograd_ru(batch_size=16, stream=True, max_rows=32),
         expected_name="xwinograd_ru",
         baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.65625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Muennighoff/xwinograd",
             "dataset_name": "ru",
             "split": "test",
@@ -4582,12 +5362,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xwinograd_zh": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xwinograd_zh(batch_size=16, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xwinograd_zh(batch_size=16, stream=True, max_rows=32),
         expected_name="xwinograd_zh",
         baseline={"acc,ll": 0.6875, "acc,ll_avg": 0.6875},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "Muennighoff/xwinograd",
             "dataset_name": "zh",
             "split": "test",
@@ -4599,12 +5379,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_ar": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_ar(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_ar(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_ar",
         baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "ar",
             "split": "eval",
@@ -4615,12 +5395,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_en": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_en(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_en(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_en",
         baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.6875},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "en",
             "split": "eval",
@@ -4631,12 +5411,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_es": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_es(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_es(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_es",
         baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "es",
             "split": "eval",
@@ -4647,12 +5427,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_eu": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_eu(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_eu(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_eu",
         baseline={"acc,ll": 0.4375, "acc,ll_avg": 0.4375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "eu",
             "split": "eval",
@@ -4663,12 +5443,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_hi": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_hi(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_hi(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_hi",
         baseline={"acc,ll": 0.5, "acc,ll_avg": 0.59375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "hi",
             "split": "eval",
@@ -4679,12 +5459,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_id": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_id(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_id(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_id",
         baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "id",
             "split": "eval",
@@ -4695,12 +5475,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_my": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_my(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_my(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_my",
         baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "my",
             "split": "eval",
@@ -4711,12 +5491,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_ru": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_ru(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_ru(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_ru",
         baseline={"acc,ll": 0.625, "acc,ll_avg": 0.6875},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "ru",
             "split": "eval",
@@ -4727,12 +5507,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_sw": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_sw(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_sw(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_sw",
         baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.75},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "sw",
             "split": "eval",
@@ -4743,12 +5523,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_te": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_te(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_te(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_te",
         baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "te",
             "split": "eval",
@@ -4759,12 +5539,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_zh": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.xstorycloze_zh(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.xstorycloze_zh(batch_size=24, stream=True, max_rows=32),
         expected_name="xstorycloze_zh",
         baseline={"acc,ll": 0.5, "acc,ll_avg": 0.53125},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "juletxara/xstory_cloze",
             "dataset_name": "zh",
             "split": "eval",
@@ -4775,12 +5555,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "winogender_all": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.winogender_all(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.winogender_all(batch_size=24, stream=True, max_rows=32),
         expected_name="winogender_all",
         baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "oskarvanderwal/winogender",
             "dataset_name": "all",
             "split": "test",
@@ -4792,12 +5572,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "winogender_female": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.winogender_female(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.winogender_female(batch_size=24, stream=True, max_rows=32),
         expected_name="winogender_female",
         baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "oskarvanderwal/winogender",
             "dataset_name": "all",
             "split": "test",
@@ -4810,12 +5590,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "winogender_gotcha": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.winogender_gotcha(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha(batch_size=24, stream=True, max_rows=32),
         expected_name="winogender_gotcha",
         baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "oskarvanderwal/winogender",
             "dataset_name": "gotcha",
             "split": "test",
@@ -4827,12 +5607,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "winogender_gotcha_female": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.winogender_gotcha_female(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha_female(batch_size=24, stream=True, max_rows=32),
         expected_name="winogender_gotcha_female",
         baseline={"acc,ll": 0.5, "acc,ll_avg": 0.46875},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "oskarvanderwal/winogender",
             "dataset_name": "gotcha",
             "split": "test",
@@ -4845,12 +5625,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "winogender_gotcha_male": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.winogender_gotcha_male(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.winogender_gotcha_male(batch_size=24, stream=True, max_rows=32),
         expected_name="winogender_gotcha_male",
         baseline={"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "oskarvanderwal/winogender",
             "dataset_name": "gotcha",
             "split": "test",
@@ -4863,12 +5643,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "winogender_male": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.winogender_male(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.winogender_male(batch_size=24, stream=True, max_rows=32),
         expected_name="winogender_male",
         baseline={"acc,ll": 0.59375, "acc,ll_avg": 0.59375},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "oskarvanderwal/winogender",
             "dataset_name": "all",
             "split": "test",
@@ -4881,12 +5661,12 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "winogender_neutral": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.winogender_neutral(batch_size=24, streaming=True, max_rows=32),
+        suite_factory=lambda: evalution.benchmarks.winogender_neutral(batch_size=24, stream=True, max_rows=32),
         expected_name="winogender_neutral",
         baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.65625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "oskarvanderwal/winogender",
             "dataset_name": "all",
             "split": "test",
@@ -4908,7 +5688,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "allenai/c4",
             "dataset_name": "en",
             "split": "validation",
@@ -4929,7 +5709,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"word_perplexity", "byte_perplexity", "bits_per_byte"}),
         expected_metadata={
-            "streaming": False,
+            "stream": True,
             "dataset_path": "EleutherAI/wikitext_document_level",
             "dataset_name": "wikitext-2-raw-v1",
             "split": "test",
@@ -4948,7 +5728,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": False,
+            "stream": False,
             "dataset_path": "winograd_wsc",
             "dataset_name": "wsc273",
             "split": "test",
@@ -4963,7 +5743,7 @@ SUITE_SPECS = {
         ),
     ),
     "wnli": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.wnli(batch_size=24, streaming=True, max_rows=71),
+        suite_factory=lambda: evalution.benchmarks.wnli(batch_size=24, stream=True, max_rows=71),
         expected_name="wnli",
         baseline={
             "acc,ll": 0.4225352112676056,
@@ -4971,7 +5751,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "nyu-mll/glue",
             "dataset_name": "wnli",
             "split": "validation",
@@ -4987,7 +5767,7 @@ SUITE_SPECS = {
         ),
     ),
     "winogrande": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.winogrande(batch_size=24, streaming=True, max_rows=128),
+        suite_factory=lambda: evalution.benchmarks.winogrande(batch_size=24, stream=True, max_rows=128),
         expected_name="winogrande",
         baseline={
             "acc,ll": 0.5625,
@@ -4995,7 +5775,7 @@ SUITE_SPECS = {
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "winogrande",
             "dataset_name": "winogrande_xl",
             "split": "validation",
@@ -5014,14 +5794,14 @@ SUITE_SPECS = {
             num_fewshot=5,
             batch_size=4,
             max_new_tokens=512,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name="mmlu_pro",
         baseline={"em,choice_label": 0.125},
         expected_metrics=frozenset({"em,choice_label"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "TIGER-Lab/MMLU-Pro",
             "dataset_name": None,
             "split": "test",
@@ -5046,14 +5826,14 @@ SUITE_SPECS = {
             num_fewshot=5,
             batch_size=4,
             max_new_tokens=512,
-            streaming=True,
+            stream=True,
             max_rows=32,
         ),
         expected_name="mmlu_pro_stem",
         baseline={"em,choice_label": 0.34375},
         expected_metrics=frozenset({"em,choice_label"}),
         expected_metadata={
-            "streaming": True,
+            "stream": True,
             "dataset_path": "TIGER-Lab/MMLU-Pro",
             "dataset_name": None,
             "split": "test",
@@ -5376,6 +6156,89 @@ for _language, _baseline in {
 }.items():
     SUITE_SPECS[f"afrixnli_{_language}"] = _afrixnli_suite_spec(
         language=_language,
+        baseline=_baseline,
+    )
+
+for _language, _baseline in {
+    "ar": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+    "en": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+    "fr": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+    "sw": {"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+}.items():
+    SUITE_SPECS[f"xnli_{_language}"] = _xnli_suite_spec(
+        language=_language,
+        baseline=_baseline,
+    )
+
+for _language, _baseline in {
+    "ar": {"em": 0.1875, "f1": 0.339294733044733},
+    "en": {"em": 0.15625, "f1": 0.3847293331668331},
+    "es": {"em": 0.125, "f1": 0.5209415584415584},
+    "zh": {"em": 0.375, "f1": 0.45312499999999994},
+}.items():
+    SUITE_SPECS[f"xquad_{_language}"] = _xquad_suite_spec(
+        language=_language,
+        baseline=_baseline,
+    )
+
+for _variant, _baseline in {
+    "mc1": 0.3125,
+    "mc2": 0.5797437857629697,
+}.items():
+    SUITE_SPECS[f"truthfulqa_{_variant}"] = _truthfulqa_suite_spec(
+        variant=_variant,
+        baseline=_baseline,
+    )
+
+for _task_name, _category, _baseline in (
+    ("bbq_age", "Age", {"acc,ll": 0.34375, "acc,ll_avg": 0.34375}),
+    (
+        "bbq_disability_status",
+        "Disability_status",
+        {"acc,ll": 0.4765625, "acc,ll_avg": 0.4765625},
+    ),
+    (
+        "bbq_gender_identity",
+        "Gender_identity",
+        {"acc,ll": 0.4921875, "acc,ll_avg": 0.4921875},
+    ),
+    (
+        "bbq_nationality",
+        "Nationality",
+        {"acc,ll": 0.4140625, "acc,ll_avg": 0.4140625},
+    ),
+):
+    SUITE_SPECS[_task_name] = _bbq_suite_spec(
+        _task_name,
+        category=_category,
+        baseline=_baseline,
+    )
+
+for _task_name, _subset, _baseline in (
+    (
+        "inverse_scaling_hindsight_neglect",
+        "hindsight-neglect",
+        {"acc,ll": 0.375, "acc,ll_avg": 0.375},
+    ),
+    (
+        "inverse_scaling_into_the_unknown",
+        "into-the-unknown",
+        {"acc,ll": 0.296875, "acc,ll_avg": 0.296875},
+    ),
+    (
+        "inverse_scaling_resisting_correction",
+        "resisting-correction",
+        {"acc,ll": 0.796875, "acc,ll_avg": 0.828125},
+    ),
+    (
+        "inverse_scaling_sig_figs",
+        "sig-figs",
+        {"acc,ll": 0.0625, "acc,ll_avg": 0.0625},
+    ),
+):
+    SUITE_SPECS[_task_name] = _inverse_scaling_suite_spec(
+        task_name=_task_name,
+        subset=_subset,
         baseline=_baseline,
     )
 

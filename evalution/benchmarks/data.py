@@ -5,11 +5,51 @@
 
 from __future__ import annotations
 
+import random
 from itertools import islice
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from evalution.logbar import get_logger, spinner
+
+T = TypeVar("T")
+_DEFAULT_SHUFFLE_SEED = 7
+
+def normalize_order(order: str) -> str:
+    normalized = order.strip().lower()
+    if normalized in {"native", "length|asc", "length|desc"}:
+        return normalized
+    if normalized == "shuffle":
+        return f"shuffle|{_DEFAULT_SHUFFLE_SEED}"
+    if normalized.startswith("shuffle|"):
+        _, seed_text = normalized.split("|", maxsplit=1)
+        try:
+            seed = int(seed_text)
+        except ValueError as exc:
+            raise ValueError(f"unsupported benchmark order seed: {order!r}") from exc
+        return f"shuffle|{seed}"
+    raise ValueError(
+        f"unsupported benchmark order: {order!r}; expected one of native, shuffle, "
+        "shuffle|<seed>, length|asc, length|desc"
+    )
+
+
+def apply_order(
+    items: list[T],
+    *,
+    order: str,
+    length_key: Callable[[T], int],
+) -> list[T]:
+    normalized_order = normalize_order(order)
+    ordered = list(items)
+    if normalized_order == "native":
+        return ordered
+    if normalized_order.startswith("shuffle|"):
+        seed = int(normalized_order.split("|", maxsplit=1)[1])
+        random.Random(seed).shuffle(ordered)
+        return ordered
+    reverse = normalized_order == "length|desc"
+    return sorted(ordered, key=length_key, reverse=reverse)
 
 
  # Load the suite dataset and return both the rows object and wall-clock load time.
