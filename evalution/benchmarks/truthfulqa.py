@@ -55,11 +55,10 @@ class TruthfulQAMC(TestSuite):
     dataset_name: str | None = "multiple_choice"
     split: str = "validation"
     variant: str = "mc1"
+    stream: bool = False
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
-
     def __post_init__(self) -> None:
         if self.variant not in {"mc1", "mc2"}:
             raise ValueError(f"unsupported truthfulqa variant: {self.variant!r}")
@@ -78,7 +77,7 @@ class TruthfulQAMC(TestSuite):
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
-            "streaming": self.streaming,
+            "stream": self.stream,
             "scoring_mode": f"truthfulqa_{self.variant}_multiple_choice",
             "primary_metric": "acc",
             "variant": self.variant,
@@ -94,7 +93,7 @@ class TruthfulQAMC(TestSuite):
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
         docs = limit_docs(loaded_docs, self.max_rows)
         if not isinstance(docs, list):

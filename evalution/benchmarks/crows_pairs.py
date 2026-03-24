@@ -92,10 +92,10 @@ class CrowSPairs:
     dataset_path: str = _CROWS_PAIRS_DATASET_PATH
     dataset_name: str | None = "english"
     split: str = "test"
+    stream: bool = False
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
     language: str = "english"
     bias_type: str | None = None
 
@@ -121,7 +121,7 @@ class CrowSPairs:
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
-            "streaming": self.streaming,
+            "stream": self.stream,
             "language": self.language,
             "bias_type": self.bias_type,
             "scoring_mode": "pairwise_sentence_loglikelihood_bias_preference",
@@ -139,7 +139,7 @@ class CrowSPairs:
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)
@@ -289,4 +289,3 @@ for _language in CROWS_PAIRS_LANGUAGES:
 del _bias_type
 del _language
 del _task_name
-

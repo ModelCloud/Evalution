@@ -10,10 +10,10 @@ This document records the dataset identifier and split semantics for each Evalut
 - Use the benchmark's canonical evaluation split for default reporting when the dataset exposes one.
 - Keep non-`test` defaults when the public benchmark rows live under another name such as `validation`, `val`, `train`, `eval`, `test_r1`, or task-specific names like `qa1`.
 - Internal split-like fields such as `fewshot_split` and `qa_split` are documented alongside the main evaluation split.
-- Supported `order=` values are `native`, `shuffle`, `random`, `shuffle|<seed>`, `random|<seed>`, `length|asc`, and `length|desc`.
+- Supported `order=` values are `native`, `shuffle`, `shuffle|<seed>`, `length|asc`, and `length|desc`.
 - `order=` changes dataset row traversal only. It does not replace engine-internal request reordering used for batching efficiency.
-- `shuffle` and `random` are deterministic aliases with an implicit seed of `7`; `random|<seed>` normalizes to `shuffle|<seed>`.
-- Non-`native` ordering on streaming datasets requires materializing rows, so use `max_rows` or disable streaming.
+- `shuffle` uses an implicit seed of `7` when no explicit `shuffle|<seed>` suffix is provided.
+- When `stream=True`, `order` must stay `native`.
 
 ## Notable Cases
 

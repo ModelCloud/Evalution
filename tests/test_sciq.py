@@ -8,6 +8,7 @@ from __future__ import annotations
 import importlib
 
 from datasets import Dataset
+import pytest
 
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
@@ -139,3 +140,27 @@ def test_sciq_can_emit_label_permutation_metric(monkeypatch) -> None:
     assert result.metadata["label_permutation_metric"] == "acc,label_perm:0.25"
     assert result.samples[0].extracted["predicted_index_label_perm:0.25"] == "3"
     assert result.samples[0].metadata["label_permutation_count"] == 6
+
+
+def test_sciq_stream_rejects_non_native_order(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "Who proposed the theory of evolution by natural selection?",
+                "distractor1": "Linnaeus",
+                "distractor2": "shaw",
+                "distractor3": "Scopes",
+                "correct_answer": "darwin",
+                "support": "Darwin studied finches in the Galapagos Islands.",
+            }
+        ]
+    )
+    monkeypatch.setattr(sciq_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    with pytest.raises(ValueError, match="order='native'"):
+        evalution.benchmarks.sciq(
+            max_rows=1,
+            batch_size=6,
+            stream=True,
+            order="length|desc",
+        ).evaluate(FakeSession())

@@ -115,7 +115,7 @@ def test_multiple_choice_length_order_uses_prompt_and_choice_length(monkeypatch)
     assert result.metadata["order"] == "length|asc"
 
 
-def test_random_order_aliases_shuffle_with_seed(monkeypatch) -> None:
+def test_shuffle_order_with_seed_is_deterministic(monkeypatch) -> None:
     dataset = Dataset.from_list(
         [
             {
@@ -134,21 +134,21 @@ def test_random_order_aliases_shuffle_with_seed(monkeypatch) -> None:
     )
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
 
-    random_session = RecordingGenerationSession(["0", "1", "2"])
-    shuffle_session = RecordingGenerationSession(["0", "1", "2"])
-    random_result = evalution.benchmarks.gsm8k(
-        variant="base",
-        max_rows=3,
-        batch_size=3,
-        order="random|7",
-    ).evaluate(random_session)
-    shuffle_result = evalution.benchmarks.gsm8k(
+    left_session = RecordingGenerationSession(["0", "1", "2"])
+    right_session = RecordingGenerationSession(["0", "1", "2"])
+    left_result = evalution.benchmarks.gsm8k(
         variant="base",
         max_rows=3,
         batch_size=3,
         order="shuffle|7",
-    ).evaluate(shuffle_session)
+    ).evaluate(left_session)
+    right_result = evalution.benchmarks.gsm8k(
+        variant="base",
+        max_rows=3,
+        batch_size=3,
+        order="shuffle|7",
+    ).evaluate(right_session)
 
-    assert random_session.prompts == shuffle_session.prompts
-    assert random_result.metadata["order"] == "shuffle|7"
-    assert shuffle_result.metadata["order"] == "shuffle|7"
+    assert left_session.prompts == right_session.prompts
+    assert left_result.metadata["order"] == "shuffle|7"
+    assert right_result.metadata["order"] == "shuffle|7"

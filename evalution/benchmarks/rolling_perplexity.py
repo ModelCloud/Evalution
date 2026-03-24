@@ -39,10 +39,10 @@ class BaseRollingPerplexitySuite(TestSuite, ABC):
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
+    stream: bool = False
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
 
     @abstractmethod
     def dataset_loader(self) -> Any:
@@ -64,7 +64,7 @@ class BaseRollingPerplexitySuite(TestSuite, ABC):
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
-            "streaming": self.streaming,
+            "stream": self.stream,
             "scoring_mode": "rolling_loglikelihood_perplexity",
             "primary_metric": self.primary_metric(),
         }
@@ -79,7 +79,7 @@ class BaseRollingPerplexitySuite(TestSuite, ABC):
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)

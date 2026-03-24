@@ -387,9 +387,65 @@ def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> No
     session = FakeSession(["The answer is 42."])
     result = suite.evaluate(session)
 
-    assert result.metadata["streaming"] is True
+    assert result.metadata["stream"] is True
     assert calls
     assert calls[0]["streaming"] is True
+
+
+def test_gsm8k_platinum_stream_alias_passes_streaming_flag_to_load_dataset(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+        ]
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_load_dataset(*args, **kwargs):
+        del args
+        calls.append(kwargs)
+        return dataset
+
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", fake_load_dataset)
+
+    suite = evalution.benchmarks.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+        stream=True,
+    )
+    session = FakeSession(["The answer is 42."])
+    result = suite.evaluate(session)
+
+    assert result.metadata["stream"] is True
+    assert result.metadata["stream"] is True
+    assert calls
+    assert calls[0]["streaming"] is True
+
+
+def test_gsm8k_platinum_stream_rejects_non_native_order(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": "What is 40 plus 2?",
+                "answer": "40 + 2 = 42\n#### 42",
+                "cleaning_status": "consensus",
+            }
+        ]
+    )
+    monkeypatch.setattr(gsm8k_platinum_module, "load_dataset", lambda *args, **kwargs: dataset)
+
+    suite = evalution.benchmarks.gsm8k_platinum(
+        variant="cot",
+        apply_chat_template=False,
+        stream=True,
+        order="length|desc",
+    )
+
+    with pytest.raises(ValueError, match="order='native'"):
+        suite.evaluate(FakeSession(["The answer is 42."]))
 
 
 def test_gsm8k_platinum_prefetches_remaining_streaming_batches_on_background_thread(monkeypatch) -> None:

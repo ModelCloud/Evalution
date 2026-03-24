@@ -162,8 +162,8 @@ reordering used for batching efficiency.
 Supported values:
 
 - `native`: preserve the dataset loader's row order. This is the default.
-- `shuffle` or `random`: shuffle rows deterministically with an implicit seed of `7`.
-- `shuffle|245` or `random|245`: shuffle rows deterministically with the provided integer seed.
+- `shuffle`: shuffle rows deterministically with an implicit seed of `7`.
+- `shuffle|245`: shuffle rows deterministically with the provided integer seed.
 - `length|asc`: execute shorter prepared requests first.
 - `length|desc`: execute longer prepared requests first.
 
@@ -188,12 +188,9 @@ tests:
 
 Notes:
 
-- `random` is an alias of `shuffle`.
 - `shuffle` without an explicit seed is normalized to `shuffle|7`.
-- `random|245` is normalized to `shuffle|245` in result metadata.
 - Ordering is applied after the benchmark's selected rows are loaded and capped by `max_rows`.
-- For streaming datasets, non-`native` ordering requires materializing rows. Set `max_rows` or
-  disable streaming when using `shuffle` or `length|...`.
+- When `stream=True`, `order` must stay `native`.
 
 ## Subset Selection
 

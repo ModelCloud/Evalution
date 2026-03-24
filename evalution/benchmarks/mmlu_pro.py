@@ -271,10 +271,10 @@ class MMLUPro(TestSuite):
     fewshot_split: str = "validation"
     subsets: str | list[str] = "all"
     num_fewshot: int = 5
+    stream: bool = False
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
     apply_chat_template: bool = False
     max_new_tokens: int = 1024
     do_sample: bool = False
@@ -311,7 +311,7 @@ class MMLUPro(TestSuite):
             "subset_kinds": list(resolved_subsets.kinds),
             "selection_mode": resolved_subsets.selection_mode,
             "num_fewshot": self.num_fewshot,
-            "streaming": self.streaming,
+            "stream": self.stream,
             "apply_chat_template": self.apply_chat_template,
             "generation_submission_mode": generation_submission_mode,
             "scoring_mode": "generated_choice_label_exact_match",
@@ -346,7 +346,7 @@ class MMLUPro(TestSuite):
             dataset_name=None,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
         docs = self._select_docs([_preprocess_doc(doc) for doc in loaded_docs])
         docs = limit_docs(docs, self.max_rows)
@@ -362,7 +362,7 @@ class MMLUPro(TestSuite):
             dataset_name=None,
             split=self.fewshot_split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
         self._fewshot_by_subset_value = defaultdict(list)
         for doc in self._select_docs([_preprocess_doc(doc) for doc in fewshot_loaded_docs]):

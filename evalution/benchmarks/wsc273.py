@@ -126,11 +126,10 @@ class WSC273:
     dataset_path: str = "winograd_wsc"
     dataset_name: str | None = "wsc273"
     split: str = "test"
+    stream: bool = False
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
-
     def dataset_loader(self) -> Any:
         return _load_wsc273_dataset
 
@@ -142,7 +141,7 @@ class WSC273:
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
-            "streaming": self.streaming,
+            "stream": self.stream,
             "scoring_mode": "multiple_choice_loglikelihood",
             "prompt_variant": "partial_evaluation",
         }
@@ -157,7 +156,7 @@ class WSC273:
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)

@@ -26,7 +26,13 @@ from evalution.scorers.multiple_choice import (
     normalize_label_permutation_fraction,
 )
 from evalution.benchmarks.base import TestSuite
-from evalution.benchmarks.data import apply_order, doc_count, limit_docs, load_suite_dataset, normalize_order
+from evalution.benchmarks.data import (
+    apply_order,
+    doc_count,
+    limit_docs,
+    load_suite_dataset,
+    normalize_order,
+)
 
 
 @dataclass(slots=True)
@@ -49,10 +55,10 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     # default here would silently change benchmark semantics.
     split: str = "validation"
     order: str = "native"
+    stream: bool = False
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
     # Optional extra label-only scorer that averages over a subset of label permutations to reduce
     # fixed-label priors without replacing the benchmark-native score. Use any float in [0.0, 1.0].
     label_permutations: float = 0.0
@@ -109,7 +115,7 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             "dataset_name": self.dataset_name,
             "split": self.split,
             "order": normalize_order(self.order),
-            "streaming": self.streaming,
+            "stream": self.stream,
             "scoring_mode": "multiple_choice_loglikelihood",
         }
         metadata.update(self._label_permutation_metadata())
@@ -208,14 +214,12 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)
-        if resolved_order != "native" and self.streaming and self.max_rows is None:
-            raise ValueError(
-                "benchmark order requires materialized rows; set `max_rows` or disable streaming"
-            )
+        if resolved_order != "native" and self.stream:
+            raise ValueError("benchmark `stream=True` requires `order='native'`")
         if not isinstance(docs, list) or resolved_order != "native":
             docs = list(docs)
 

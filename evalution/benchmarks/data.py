@@ -19,19 +19,18 @@ def normalize_order(order: str) -> str:
     normalized = order.strip().lower()
     if normalized in {"native", "length|asc", "length|desc"}:
         return normalized
-    if normalized in {"shuffle", "random"}:
+    if normalized == "shuffle":
         return f"shuffle|{_DEFAULT_SHUFFLE_SEED}"
-    if normalized.startswith("shuffle|") or normalized.startswith("random|"):
-        mode, seed_text = normalized.split("|", maxsplit=1)
+    if normalized.startswith("shuffle|"):
+        _, seed_text = normalized.split("|", maxsplit=1)
         try:
             seed = int(seed_text)
         except ValueError as exc:
             raise ValueError(f"unsupported benchmark order seed: {order!r}") from exc
-        del mode
         return f"shuffle|{seed}"
     raise ValueError(
-        f"unsupported benchmark order: {order!r}; expected one of native, shuffle, random, "
-        "shuffle|<seed>, random|<seed>, length|asc, length|desc"
+        f"unsupported benchmark order: {order!r}; expected one of native, shuffle, "
+        "shuffle|<seed>, length|asc, length|desc"
     )
 
 

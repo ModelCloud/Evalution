@@ -15,7 +15,13 @@ from typing import Any
 from evalution.engines.base import GenerationOutput, InferenceSession
 from evalution.logbar import get_logger, manual_progress
 from evalution.results import SampleResult, TestResult
-from evalution.benchmarks.data import apply_order, doc_count, limit_docs, load_suite_dataset, normalize_order
+from evalution.benchmarks.data import (
+    apply_order,
+    doc_count,
+    limit_docs,
+    load_suite_dataset,
+    normalize_order,
+)
 from evalution.benchmarks.execution import (
     AUTO_BATCH_PREVIEW_ROWS,
     PreparedSample,
@@ -41,10 +47,10 @@ class BaseTestSuite(TestSuite):
     dataset_name: str | None = None
     split: str = "test"
     order: str = "native"
+    stream: bool = False
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
-    streaming: bool = False
 
     # Return the callable used to fetch the underlying dataset rows.
     @abstractmethod
@@ -127,7 +133,7 @@ class BaseTestSuite(TestSuite):
             "dataset_name": self.dataset_name,
             "split": self.split,
             "order": normalize_order(self.order),
-            "streaming": self.streaming,
+            "stream": self.stream,
             "generation_submission_mode": generation_submission_mode,
         }
 
@@ -143,14 +149,12 @@ class BaseTestSuite(TestSuite):
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.streaming,
+            streaming=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)
-        if resolved_order != "native" and self.streaming and self.max_rows is None:
-            raise ValueError(
-                "benchmark order requires materialized rows; set `max_rows` or disable streaming"
-            )
+        if resolved_order != "native" and self.stream:
+            raise ValueError("benchmark `stream=True` requires `order='native'`")
         if self.requires_full_doc_materialization() or resolved_order != "native":
             docs = list(docs)
 
