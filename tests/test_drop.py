@@ -57,6 +57,7 @@ def test_drop_scores_best_alias(monkeypatch) -> None:
         "dataset_name": None,
         "split": "validation",
         "stream": False,
+        "order": "native",
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_qa_exact_match_f1",
         "primary_metric": "f1",

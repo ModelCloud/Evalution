@@ -10,6 +10,7 @@ import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import pytest
 from datasets import IterableDataset, load_dataset
 
 
@@ -25,7 +26,7 @@ def _is_runtime_nogil() -> bool:
 
 def test_streaming_dataset_supports_many_threads_in_nogil_mode(tmp_path) -> None:
     if not _is_runtime_nogil():
-        raise AssertionError(
+        pytest.skip(
             "This test validates free-threaded datasets behavior and must run with "
             "PYTHON_GIL=0 / no-GIL runtime."
         )

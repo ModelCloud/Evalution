@@ -67,6 +67,7 @@ def test_base_suite_length_order_uses_generation_prompt_length(monkeypatch) -> N
         max_rows=2,
         batch_size=2,
         order="length|desc",
+        stream=False,
     ).evaluate(session)
 
     assert session.prompts[0].startswith(
@@ -104,6 +105,7 @@ def test_multiple_choice_length_order_uses_prompt_and_choice_length(monkeypatch)
         max_rows=2,
         batch_size=8,
         order="length|asc",
+        stream=False,
     ).evaluate(session)
 
     assert session.contexts[0].startswith("Tiny support.\nQuestion: Short?\nAnswer:")
@@ -141,12 +143,14 @@ def test_shuffle_order_with_seed_is_deterministic(monkeypatch) -> None:
         max_rows=3,
         batch_size=3,
         order="shuffle|7",
+        stream=False,
     ).evaluate(left_session)
     right_result = evalution.benchmarks.gsm8k(
         variant="base",
         max_rows=3,
         batch_size=3,
         order="shuffle|7",
+        stream=False,
     ).evaluate(right_session)
 
     assert left_session.prompts == right_session.prompts

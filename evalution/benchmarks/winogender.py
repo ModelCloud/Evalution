@@ -27,7 +27,7 @@ def _load_winogender_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    streaming: bool = False,
     gender_filter: str | None = None,
 ) -> Any:
     if dataset_path != "oskarvanderwal/winogender":
@@ -41,7 +41,7 @@ def _load_winogender_dataset(
         dataset_name,
         split=split,
         cache_dir=cache_dir,
-        streaming=stream,
+        streaming=streaming,
     )
     if gender_filter is None:
         return dataset

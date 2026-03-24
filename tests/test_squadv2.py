@@ -63,6 +63,7 @@ def test_squadv2_scores_best_alias_and_no_answer(monkeypatch) -> None:
         "dataset_name": "squad_v2",
         "split": "validation",
         "stream": False,
+        "order": "native",
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_qa_exact_match_f1",
         "primary_metric": "f1",
