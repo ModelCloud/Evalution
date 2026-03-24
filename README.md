@@ -248,6 +248,7 @@ logic, those implementation details can shift results.
 | `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
 | `coqa` | Generated conversational QA exact match and token-overlap F1 with gold history turns | CoQA `reddy2019coqa` |
 | `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
+| `copa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic COPA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
 | `copal_id_standard` | Multiple-choice log-likelihood, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
 | `copal_id_colloquial` | Multiple-choice log-likelihood, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
@@ -312,6 +313,7 @@ logic, those implementation details can shift results.
 | `xwinograd_ru` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `xwinograd_zh` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
+| `piqa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic PIQA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
 | `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
 | `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
 | `pubmedqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PubMedQA `jin2019pubmedqa` |
@@ -406,6 +408,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
 - `coqa`: CoQA `reddy2019coqa`
+- `copa_ar`, `piqa_ar`: AlGhafa Arabic translations `almazrouei-etal-2023-alghafa`
 - `copal_id_standard`, `copal_id_colloquial`: COPAL-ID `wibowo-etal-2024-copal`
 - `drop`: DROP `dua2019drop`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
@@ -575,6 +578,20 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Yonatan Bisk and Rowan Zellers and Ronan Le Bras and Jianfeng Gao and Yejin Choi},
   booktitle = {AAAI Conference on Artificial Intelligence},
   year = {2020},
+}
+
+# AlGhafa
+@inproceedings{almazrouei-etal-2023-alghafa,
+  title = {AlGhafa Evaluation Benchmark for Arabic Language Models},
+  author = {Almazrouei, Ebtesam and Cojocaru, Ruxandra and Baldo, Michele and Malartic, Quentin and Alobeidli, Hamza and Mazzotta, Daniele and Penedo, Guilherme and Campesan, Giulia and Farooq, Mugariya and Alhammadi, Maitha and Launay, Julien and Noune, Badreddine},
+  booktitle = {Proceedings of ArabicNLP 2023},
+  month = dec,
+  year = {2023},
+  address = {Singapore (Hybrid)},
+  publisher = {Association for Computational Linguistics},
+  url = {https://aclanthology.org/2023.arabicnlp-1.21},
+  doi = {10.18653/v1/2023.arabicnlp-1.21},
+  pages = {244--275},
 }
 
 # The Pile

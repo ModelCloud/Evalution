@@ -76,6 +76,7 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.cnn_dailymail)
     assert evalution.benchmarks.CommonsenseQA is not None
     assert callable(evalution.benchmarks.commonsense_qa)
+    assert evalution.benchmarks.COPAArabic is not None
     assert evalution.benchmarks.COPALID is not None
     assert callable(evalution.benchmarks.copal_id)
     assert callable(evalution.benchmarks.copal_id_standard)
@@ -84,6 +85,7 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.coqa)
     assert evalution.benchmarks.COPA is not None
     assert callable(evalution.benchmarks.copa)
+    assert callable(evalution.benchmarks.copa_ar)
     assert evalution.benchmarks.DROP is not None
     assert callable(evalution.benchmarks.drop)
     assert evalution.benchmarks.HendrycksEthics is not None
@@ -134,8 +136,10 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.paws_x_ja)
     assert callable(evalution.benchmarks.paws_x_ko)
     assert callable(evalution.benchmarks.paws_x_zh)
+    assert evalution.benchmarks.PIQAArabic is not None
     assert evalution.benchmarks.PIQA is not None
     assert callable(evalution.benchmarks.piqa)
+    assert callable(evalution.benchmarks.piqa_ar)
     assert evalution.benchmarks.Pile10K is not None
     assert callable(evalution.benchmarks.pile_10k)
     assert evalution.benchmarks.Prost is not None

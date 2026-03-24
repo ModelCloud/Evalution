@@ -4,6 +4,7 @@
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
 from evalution.scorers.classification import f1_for_label, macro_f1, matthews_corrcoef
+from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
 from .aime import AIME, aime, aime24, aime25
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
 from .arc_easy import ARCEasy, arc_easy
@@ -97,6 +98,7 @@ __all__ = [
     "AIME",
     "ARCEasy",
     "ARCChallenge",
+    "COPAArabic",
     "Arithmetic",
     "ASDiv",
     "ASDivCoTLlama",
@@ -140,6 +142,7 @@ __all__ = [
     "MultipleChoiceSample",
     "OpenBookQA",
     "PAWSX",
+    "PIQAArabic",
     "PIQA",
     "Pile10K",
     "Prost",
@@ -174,6 +177,7 @@ __all__ = [
     "anli_r1",
     "anli_r2",
     "anli_r3",
+    "copa_ar",
     "arc_easy",
     "arc_challenge",
     "arithmetic_1dc",
@@ -243,6 +247,7 @@ __all__ = [
     "paws_x_ko",
     "paws_x_zh",
     "piqa",
+    "piqa_ar",
     "pile_10k",
     "prost",
     "pubmedqa",

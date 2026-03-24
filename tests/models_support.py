@@ -28,6 +28,7 @@ LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE = os.environ.get(
 )
 SCORE_BASELINE_ABS_TOLERANCE = 2 / 128
 SCORE_BASELINE_ABS_TOLERANCE_32 = 2 / 32
+SCORE_BASELINE_ABS_TOLERANCE_89 = 2 / 89
 MMLU_STEM_SUBSETS = {
     "stem.abstract_algebra",
     "stem.anatomy",
@@ -58,6 +59,7 @@ MMLU_PRO_STEM_SUBSETS = {
     "stem.physics",
 }
 AIME_TASKS = ("aime", "aime24", "aime25")
+ALGHAFA_TASKS = ("copa_ar", "piqa_ar")
 ARITHMETIC_TASKS = (
     "arithmetic_1dc",
     "arithmetic_2da",
@@ -1747,6 +1749,31 @@ SUITE_SPECS = {
             metadata_validator=_metadata_field_in("question", {"cause", "effect"}),
         ),
     ),
+    "copa_ar": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.copa_ar(batch_size=24, streaming=True, max_rows=89),
+        expected_name="copa_ar",
+        baseline={
+            "acc,ll": 0.5730337078651685,
+            "acc,ll_avg": 0.4943820224719101,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Hennara/copa_ar",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=89,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="السؤال: ",
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("source_benchmark", {"copa"}),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_89,
+    ),
     "copal_id_standard": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copal_id_standard(
             batch_size=24,
@@ -2569,6 +2596,30 @@ SUITE_SPECS = {
             index,
             prompt_prefix="Question: ",
             prompt_substrings=("\nAnswer:",),
+        ),
+    ),
+    "piqa_ar": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.piqa_ar(batch_size=24, streaming=True, max_rows=128),
+        expected_name="piqa_ar",
+        baseline={
+            "acc,ll": 0.5625,
+            "acc,ll_avg": 0.5390625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": True,
+            "dataset_path": "Hennara/pica_ar",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="السؤال: ",
+            prompt_suffix="\nالجواب:",
+            metadata_validator=_metadata_field_in("source_benchmark", {"piqa"}),
         ),
     ),
     "pile_10k": SuiteSpec(

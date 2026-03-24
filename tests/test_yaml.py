@@ -180,6 +180,8 @@ tests:
     max_rows: 16
   - type: copa
     max_rows: 12
+  - type: copa_ar
+    max_rows: 12
   - type: drop
     max_rows: 16
   - type: ethics_cm
@@ -284,6 +286,8 @@ tests:
     max_rows: 16
   - type: piqa
     max_rows: 16
+  - type: piqa_ar
+    max_rows: 16
   - type: pile_10k
     max_rows: 8
   - type: prost
@@ -377,6 +381,7 @@ tests:
     assert ".run(benchmarks.copal_id_colloquial(" in script
     assert ".run(benchmarks.coqa(" in script
     assert ".run(benchmarks.copa(" in script
+    assert ".run(benchmarks.copa_ar(" in script
     assert ".run(benchmarks.drop(" in script
     assert ".run(benchmarks.ethics_cm(" in script
     assert ".run(benchmarks.ethics_deontology(" in script
@@ -399,6 +404,8 @@ tests:
     assert ".run(benchmarks.paws_x_ja(" in script
     assert ".run(benchmarks.paws_x_ko(" in script
     assert ".run(benchmarks.paws_x_zh(" in script
+    assert ".run(benchmarks.piqa(" in script
+    assert ".run(benchmarks.piqa_ar(" in script
     assert ".run(benchmarks.xcopa_et(" in script
     assert ".run(benchmarks.xcopa_ht(" in script
     assert ".run(benchmarks.xcopa_id(" in script
@@ -427,7 +434,6 @@ tests:
     assert ".run(benchmarks.xwinograd_pt(" in script
     assert ".run(benchmarks.xwinograd_ru(" in script
     assert ".run(benchmarks.xwinograd_zh(" in script
-    assert ".run(benchmarks.piqa(" in script
     assert ".run(benchmarks.pile_10k(" in script
     assert ".run(benchmarks.prost(" in script
     assert ".run(benchmarks.pubmedqa(" in script
