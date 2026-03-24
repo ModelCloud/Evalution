@@ -180,6 +180,18 @@ tests:
     max_rows: 52
   - type: cnn_dailymail
     max_rows: 8
+  - type: code2text_go
+    max_rows: 8
+  - type: code2text_java
+    max_rows: 8
+  - type: code2text_javascript
+    max_rows: 8
+  - type: code2text_php
+    max_rows: 8
+  - type: code2text_python
+    max_rows: 8
+  - type: code2text_ruby
+    max_rows: 8
   - type: commonsense_qa
     max_rows: 18
   - type: copal_id_standard
@@ -391,6 +403,12 @@ tests:
     assert ".run(benchmarks.cb(" in script
     assert ".run(benchmarks.cola(" in script
     assert ".run(benchmarks.cnn_dailymail(" in script
+    assert ".run(benchmarks.code2text_go(" in script
+    assert ".run(benchmarks.code2text_java(" in script
+    assert ".run(benchmarks.code2text_javascript(" in script
+    assert ".run(benchmarks.code2text_php(" in script
+    assert ".run(benchmarks.code2text_python(" in script
+    assert ".run(benchmarks.code2text_ruby(" in script
     assert ".run(benchmarks.commonsense_qa(" in script
     assert ".run(benchmarks.copal_id_standard(" in script
     assert ".run(benchmarks.copal_id_colloquial(" in script

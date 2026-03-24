@@ -34,6 +34,17 @@ from .boolq import BoolQ, boolq
 from .cb import CB, cb
 from .cola import CoLA, cola
 from .cnn_dailymail import CNNDailyMail, cnn_dailymail
+from .code_x_glue import (
+    CODE_X_GLUE_LANGUAGES,
+    CodeXGLUECodeToText,
+    code_x_glue,
+    code2text_go,
+    code2text_java,
+    code2text_javascript,
+    code2text_php,
+    code2text_python,
+    code2text_ruby,
+)
 from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
@@ -120,6 +131,8 @@ __all__ = [
     "CB",
     "CoLA",
     "CNNDailyMail",
+    "CODE_X_GLUE_LANGUAGES",
+    "CodeXGLUECodeToText",
     "CommonsenseQA",
     "COPALID",
     "CoQA",
@@ -211,6 +224,13 @@ __all__ = [
     "cb",
     "cola",
     "cnn_dailymail",
+    "code_x_glue",
+    "code2text_go",
+    "code2text_java",
+    "code2text_javascript",
+    "code2text_php",
+    "code2text_python",
+    "code2text_ruby",
     "commonsense_qa",
     "copal_id",
     "copal_id_colloquial",

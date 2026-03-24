@@ -30,7 +30,6 @@ catalan_bench,43,catalan_bench/arc_ca_challenge.yaml,catalan_bench/arc_ca_easy.y
 chartqa,3,chartqa/chartqa.yaml,chartqa/chartqa_llama.yaml
 click,14,click/click.yaml,click/click_cul/click_cul_economy.yaml
 cmmlu,68,cmmlu/cmmlu_agronomy.yaml,cmmlu/cmmlu_anatomy.yaml
-code_x_glue,7,code_x_glue/code-text/go.yaml,code_x_glue/code-text/java.yaml
 common_voice,1,common_voice/common_voice_en.yaml,
 crows_pairs,22,crows_pairs/crows_pairs_english.yaml,crows_pairs/crows_pairs_english_age.yaml
 csatqa,7,csatqa/csatqa_gr.yaml,csatqa/csatqa_li.yaml

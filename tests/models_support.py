@@ -164,6 +164,14 @@ CEVAL_TASKS = (
     "ceval_high_school_physics",
     "ceval_law",
 )
+CODE_X_GLUE_TASKS = (
+    "code2text_go",
+    "code2text_java",
+    "code2text_javascript",
+    "code2text_php",
+    "code2text_python",
+    "code2text_ruby",
+)
 
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
@@ -743,6 +751,26 @@ def _assert_cnn_dailymail_metadata(metadata: dict[str, Any]) -> None:
     assert metadata["id"]
     assert metadata["article_chars"] > 0
     assert metadata["reference_lines"] >= 1
+
+
+def _assert_code2text_sample(sample: Any, index: int, *, language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt == sample.prompt.strip()
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "reference-stripped",
+    }
+    assert sample.scores == {}
+    assert sample.metadata["language"] == language
+    assert sample.metadata["repo"]
+    assert sample.metadata["path"]
+    assert sample.metadata["func_name"]
+    assert sample.metadata["sha"]
+    assert sample.metadata["url"]
+    assert sample.metadata["code_token_count"] > 0
+    assert sample.metadata["docstring_token_count"] > 0
 
 
 def _assert_single_continuation_loglikelihood_sample(
@@ -1822,6 +1850,126 @@ SUITE_SPECS = {
             metadata_validator=_assert_cnn_dailymail_metadata,
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "code2text_go": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_go(batch_size=1, max_rows=16),
+        expected_name="code2text_go",
+        baseline={"bleu4": 0.12701024051547405},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_go",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "go",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="go"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_java": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_java(batch_size=1, max_rows=16),
+        expected_name="code2text_java",
+        baseline={"bleu4": 0.7372980967711409},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_java",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "java",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="java"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_javascript": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_javascript(batch_size=1, max_rows=16),
+        expected_name="code2text_javascript",
+        baseline={"bleu4": 0.24753010988524},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_javascript",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "javascript",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="javascript"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_php": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_php(batch_size=1, max_rows=16),
+        expected_name="code2text_php",
+        baseline={"bleu4": 0.2931185120841358},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_php",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "php",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="php"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_python": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_python(batch_size=1, max_rows=16),
+        expected_name="code2text_python",
+        baseline={"bleu4": 0.14476427430734137},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_python",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "python",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="python"),
+        abs_tolerance=0.05,
+    ),
+    "code2text_ruby": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.code2text_ruby(batch_size=1, max_rows=16),
+        expected_name="code2text_ruby",
+        baseline={"bleu4": 0.3812030669921292},
+        expected_metrics=frozenset({"bleu4"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "CM/codexglue_code2text_ruby",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_docstring_corpus_bleu4",
+            "primary_metric": "bleu4",
+            "language": "ruby",
+            "num_beams": 10,
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: _assert_code2text_sample(sample, index, language="ruby"),
+        abs_tolerance=0.05,
     ),
     "commonsense_qa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.commonsense_qa(

@@ -82,6 +82,15 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.cola)
     assert evalution.benchmarks.CNNDailyMail is not None
     assert callable(evalution.benchmarks.cnn_dailymail)
+    assert evalution.benchmarks.CodeXGLUECodeToText is not None
+    assert evalution.benchmarks.CODE_X_GLUE_LANGUAGES
+    assert callable(evalution.benchmarks.code_x_glue)
+    assert callable(evalution.benchmarks.code2text_go)
+    assert callable(evalution.benchmarks.code2text_java)
+    assert callable(evalution.benchmarks.code2text_javascript)
+    assert callable(evalution.benchmarks.code2text_php)
+    assert callable(evalution.benchmarks.code2text_python)
+    assert callable(evalution.benchmarks.code2text_ruby)
     assert evalution.benchmarks.CommonsenseQA is not None
     assert callable(evalution.benchmarks.commonsense_qa)
     assert evalution.benchmarks.COPAArabic is not None

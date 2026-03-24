@@ -409,6 +409,7 @@ class BaseTransformerSession(BaseInferenceSession):
                 stats["avg_prompt_tokens"],
                 stats["max_prompt_tokens"],
                 stats["max_new_tokens"],
+                stats["max_num_beams"],
                 stats["dtype_name"],
                 stats["dtype_bytes"],
                 stats["total_vram_gib"],
@@ -427,13 +428,14 @@ class BaseTransformerSession(BaseInferenceSession):
                 self.auto_batch_size_cache[cache_key] = resolved
             get_logger().info(
                 "auto batch size resolved to %d for %d row(s); prompt_tokens(min/avg/max)=%d/%.1f/%d, "
-                "max_new_tokens=%d, dtype=%s, total_vram_gib=%.1f",
+                "max_new_tokens=%d, max_num_beams=%d, dtype=%s, total_vram_gib=%.1f",
                 resolved,
                 stats["row_count"],
                 stats["min_prompt_tokens"],
                 stats["avg_prompt_tokens"],
                 stats["max_prompt_tokens"],
                 stats["max_new_tokens"],
+                stats["max_num_beams"],
                 stats["dtype_name"],
                 stats["total_vram_gib"],
             )
@@ -483,6 +485,7 @@ class BaseTransformerSession(BaseInferenceSession):
             request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
             for request in requests
         )
+        max_num_beams = max(max(request.num_beams, 1) for request in requests)
         memory_profile = build_memory_profile(
             self.model,
             input_device=self.input_device,
@@ -495,6 +498,7 @@ class BaseTransformerSession(BaseInferenceSession):
             "avg_prompt_tokens": float(mean(prompt_lengths)),
             "max_prompt_tokens": max(prompt_lengths),
             "max_new_tokens": max_new_tokens,
+            "max_num_beams": max_num_beams,
             "dtype_name": memory_profile.dtype_name,
             "dtype_bytes": memory_profile.dtype_bytes,
             "total_vram_gib": memory_profile.total_vram_gib,
@@ -506,7 +510,9 @@ class BaseTransformerSession(BaseInferenceSession):
     # Estimate a friendly batch size from prompt lengths and the live memory profile.
     def _estimate_auto_batch_size(self, stats: dict[str, Any]) -> int:
         row_count = stats["row_count"]
-        tokens_per_request = stats["avg_prompt_tokens"] + stats["max_new_tokens"]
+        tokens_per_request = (
+            stats["avg_prompt_tokens"] + stats["max_new_tokens"]
+        ) * max(stats["max_num_beams"], 1)
         if tokens_per_request <= 0:
             return 1
 
@@ -633,10 +639,12 @@ class BaseTransformerSession(BaseInferenceSession):
             request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
             for request in batch
         )
+        num_beams = max(max(request.num_beams, 1) for request in batch)
         do_sample = any(request.do_sample for request in batch)
         generation_kwargs = {
             "do_sample": do_sample,
             "max_new_tokens": max_new_tokens,
+            "num_beams": num_beams,
             "pad_token_id": self.tokenizer.pad_token_id,
         }
         if self.tokenizer.eos_token_id is not None:

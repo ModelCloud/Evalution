@@ -250,6 +250,12 @@ logic, those implementation details can shift results.
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
 | `cnn_dailymail` | Generated summarization with ROUGE-1, ROUGE-2, and ROUGE-Lsum F1 | CNN/DailyMail `nallapati2016abstractive` |
+| `code2text_go` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
+| `code2text_java` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
+| `code2text_javascript` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
+| `code2text_php` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
+| `code2text_python` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
+| `code2text_ruby` | Code-to-docstring generation with corpus smoothed BLEU-4 | CodeXGLUE `lu2021codexglue` |
 | `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
 | `coqa` | Generated conversational QA exact match and token-overlap F1 with gold history turns | CoQA `reddy2019coqa` |
 | `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
@@ -412,6 +418,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `ceval`: C-Eval `huang2023ceval`
 - `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
 - `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
+- `code2text_go`, `code2text_java`, `code2text_javascript`, `code2text_php`, `code2text_python`, `code2text_ruby`: CodeXGLUE `lu2021codexglue`
 - `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
 - `coqa`: CoQA `reddy2019coqa`
 - `copa_ar`, `piqa_ar`: AlGhafa Arabic translations `almazrouei-etal-2023-alghafa`
@@ -831,6 +838,14 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Ramesh Nallapati and Bowen Zhou and Cicero dos Santos and {\c{C}}aglar Gul{\c{c}}ehre and Bing Xiang},
   journal = {arXiv preprint arXiv:1602.06023},
   year = {2016},
+}
+
+# CodeXGLUE
+@inproceedings{lu2021codexglue,
+  title = {CodeXGLUE: A Machine Learning Benchmark Dataset for Code Understanding and Generation},
+  author = {Shuai Lu and Daya Guo and Shuo Ren and Junjie Huang and Alexey Svyatkovskiy and Ambrosio Blanco and Colin B. Clement and Dawn Drain and Daxin Jiang and Duyu Tang and Ge Li and Lidong Zhou and Linjun Shou and Long Zhou and Michele Tufano and Ming Gong and Ming Zhou and Nan Duan and Neel Sundaresan and Shao Kun Deng and Shengyu Fu and Shujie Liu},
+  booktitle = {Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks},
+  year = {2021},
 }
 
 # XCOPA
