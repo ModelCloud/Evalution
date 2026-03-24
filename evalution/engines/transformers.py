@@ -143,13 +143,7 @@ def _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManag
 
 
 def _patch_flash_attn_varlen_fwd_cuda_context_once() -> None:
-    """Enter the query tensor's CUDA device before calling flash_attn varlen_fwd.
-
-    FlashAttention's Python wrapper forwards directly into the extension entrypoint without any
-    device-context guard. In Evalution's no-GIL dual-lane compare runs, different threads can
-    drive different GPUs at the same time, so make the extension observe the device that matches
-    the actual query tensor for that call.
-    """
+    """Set the correct CUDA context before launching the FlashAttention kernel."""
     try:
         import flash_attn.flash_attn_interface as flash_attn_interface
     except Exception:
@@ -169,13 +163,7 @@ def _patch_flash_attn_varlen_fwd_cuda_context_once() -> None:
             import torch
 
             query = args[0] if args else None
-            query_device = getattr(query, "device", None)
-            maybe_device = (
-                torch.cuda.device(query_device)
-                if getattr(query_device, "type", None) == "cuda"
-                else nullcontext()
-            )
-            with maybe_device:
+            with torch.cuda.device(query.device):
                 return current(*args, **kwargs)
 
         _wrapped_varlen_fwd.__evalution_cuda_context_patch__ = True
