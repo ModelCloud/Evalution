@@ -191,6 +191,11 @@ tests:
     max_rows: 16
   - type: darijammlu_biology
     max_rows: 16
+  - type: egymmlu
+    subset: accounting
+    max_rows: 16
+  - type: egymmlu_biology
+    max_rows: 16
   - type: arc_mt
     language: da
     max_rows: 16
@@ -513,6 +518,8 @@ tests:
     assert ".run(benchmarks.arabicmmlu_islamic_studies(" in script
     assert ".run(benchmarks.darijammlu(" in script
     assert ".run(benchmarks.darijammlu_biology(" in script
+    assert ".run(benchmarks.egymmlu(" in script
+    assert ".run(benchmarks.egymmlu_biology(" in script
     assert ".run(benchmarks.arc_mt(" in script
     assert ".run(benchmarks.arc_mt_is(" in script
     assert ".run(benchmarks.asdiv(" in script

@@ -67,6 +67,8 @@ from .crows_pairs import CROWS_PAIRS_BIAS_TYPES, CROWS_PAIRS_LANGUAGES, CROWS_PA
 from . import darijammlu as _darijammlu_module
 from .darijammlu import DARIJAMMLU_SUBSETS, DARIJAMMLU_TASKS, DarijaMMLU, darijammlu
 from .darijahellaswag import DarijaHellaSwag, darijahellaswag
+from . import egymmlu as _egymmlu_module
+from .egymmlu import EGYMMLU_SUBSETS, EGYMMLU_TASKS, EgyMMLU, egymmlu
 from .egyhellaswag import EgyHellaSwag, egyhellaswag
 from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
@@ -151,6 +153,11 @@ for _darijammlu_task in DARIJAMMLU_TASKS:
     globals()[_darijammlu_task] = getattr(_darijammlu_module, _darijammlu_task)
 
 del _darijammlu_task
+
+for _egymmlu_task in EGYMMLU_TASKS:
+    globals()[_egymmlu_task] = getattr(_egymmlu_module, _egymmlu_task)
+
+del _egymmlu_task
 
 for _afrimmlu_task in AFRIMMLU_TASKS:
     globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
@@ -238,7 +245,10 @@ __all__ = [
     "DARIJAMMLU_SUBSETS",
     "DARIJAMMLU_TASKS",
     "DarijaMMLU",
+    "EGYMMLU_SUBSETS",
+    "EGYMMLU_TASKS",
     "EgyHellaSwag",
+    "EgyMMLU",
     "COPALID",
     "CoQA",
     "COPA",
@@ -395,6 +405,7 @@ __all__ = [
     *CROWS_PAIRS_TASKS,
     "darijahellaswag",
     "darijammlu",
+    "egymmlu",
     "egyhellaswag",
     "copal_id",
     "copal_id_colloquial",
@@ -523,5 +534,6 @@ __all__.extend(BABILONG_TASKS)
 __all__.extend(AGIEVAL_TASKS)
 __all__.extend(AFRIMGSM_TASKS)
 __all__.extend(DARIJAMMLU_TASKS)
+__all__.extend(EGYMMLU_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)

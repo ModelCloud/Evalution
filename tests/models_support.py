@@ -94,6 +94,12 @@ DARIJAMMLU_TASKS = (
     "darijammlu_computer_science",
     "darijammlu_driving_test",
 )
+EGYMMLU_TASKS = (
+    "egymmlu_arabic_language",
+    "egymmlu_biology",
+    "egymmlu_computer_science",
+    "egymmlu_driving_test",
+)
 ARABICMMLU_TASKS = (
     "arabicmmlu_all",
     "arabicmmlu_islamic_studies",
@@ -2241,7 +2247,73 @@ def _darijammlu_suite_spec(
     )
 
 
+def _metadata_egymmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["subject"]
+        assert metadata["egy_subject"]
+        assert isinstance(metadata["raw_choices"], list)
+        assert 2 <= len(metadata["raw_choices"]) <= 4
+
+    return validate
+
+
+def _egymmlu_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.egymmlu(
+            subset=subset,
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "streaming": False,
+            "dataset_path": "UBC-NLP/EgyMMLU",
+            "dataset_name": subset,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="This is a EgyMMLU multiple-choice question about ",
+            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
+            metadata_validator=_metadata_egymmlu_subset(subset),
+        ),
+    )
+
+
 SUITE_SPECS = {
+    "egymmlu_arabic_language": _egymmlu_suite_spec(
+        "egymmlu_arabic_language",
+        subset="arabic_language",
+        baseline={"acc,ll": 0.3359375, "acc,ll_avg": 0.3359375},
+    ),
+    "egymmlu_biology": _egymmlu_suite_spec(
+        "egymmlu_biology",
+        subset="biology",
+        baseline={"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+    ),
+    "egymmlu_computer_science": _egymmlu_suite_spec(
+        "egymmlu_computer_science",
+        subset="computer_science",
+        baseline={"acc,ll": 0.40625, "acc,ll_avg": 0.40625},
+    ),
+    "egymmlu_driving_test": _egymmlu_suite_spec(
+        "egymmlu_driving_test",
+        subset="driving_test",
+        baseline={"acc,ll": 0.359375, "acc,ll_avg": 0.359375},
+    ),
     "darijammlu_arabic_language": _darijammlu_suite_spec(
         "darijammlu_arabic_language",
         subset="arabic_language",
