@@ -131,6 +131,7 @@ from .qa4mre import QA4MRE, qa4mre, qa4mre_2011, qa4mre_2012, qa4mre_2013
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
 from .race import RACE, race
+from .record import ReCoRD, record
 from .rolling_perplexity import BaseRollingPerplexitySuite, RollingPerplexitySample
 from .rte import RTE, rte
 from .sciq import SciQ, sciq
@@ -385,6 +386,7 @@ __all__ = [
     "QNLI",
     "QQP",
     "RACE",
+    "ReCoRD",
     "RollingPerplexitySample",
     "RTE",
     "SciQ",
@@ -592,6 +594,7 @@ __all__ = [
     "qnli",
     "qqp",
     "race",
+    "record",
     "rte",
     "sciq",
     "siqa",

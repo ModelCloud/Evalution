@@ -105,6 +105,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `qnli.QNLI` | `nyu-mll/glue` | `qnli` | `validation` | none |
 | `qqp.QQP` | `nyu-mll/glue` | `qqp` | `validation` | none |
 | `race.RACE` | `EleutherAI/race` | `high` | `test` | none |
+| `record.ReCoRD` | `super_glue` | `record` | `validation` | none |
 | `rte.RTE` | `super_glue` | `rte` | `validation` | none |
 | `sciq.SciQ` | `allenai/sciq` | `None` | `test` | none |
 | `siqa.SIQA` | `allenai/social_i_qa` | `None` | `validation` | none |

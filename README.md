@@ -383,6 +383,7 @@ logic, those implementation details can shift results.
 | `qnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
 | `race` | Multiple-choice log-likelihood, raw + length-normalized accuracy | RACE `lai-etal-2017-race` |
+| `record` | Entity-choice multiple-choice log-likelihood with benchmark-native exact match and token-overlap F1 over accepted answers | SuperGLUE ReCoRD `wang2019superglue` |
 | `rte` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `sciq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
 | `siqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | Social IQA `sap2019social` |
