@@ -17,6 +17,7 @@ from evalution.engines import (
     BaseEngine,
     BaseInferenceSession,
     GPTQModel,
+    SGLang,
     Transformers,
     TransformersCompat,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "GPTQModel",
     "Model",
     "RunResult",
+    "SGLang",
     "SampleResult",
     "TestResult",
     "Transformers",

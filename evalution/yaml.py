@@ -13,11 +13,12 @@ import yaml
 
 import evalution.benchmarks as benchmarks
 from evalution.config import Model
-from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat
+from evalution.engines import BaseEngine, GPTQModel, SGLang, Transformers, TransformersCompat
 from evalution.runtime import EvaluationRun
 
 _ENGINE_FACTORIES: dict[str, Any] = {
     "gptqmodel": GPTQModel,
+    "sglang": SGLang,
     "transformers": Transformers,
     "transformerscompat": TransformersCompat,
 }
