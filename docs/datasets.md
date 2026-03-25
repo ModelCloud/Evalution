@@ -56,6 +56,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `cabbq.CaBBQ` | `BSC-LT/CaBBQ` | `Age` | `test` | none |
 | `careqa.CareQA` | `HPAI-BSC/CareQA` | `CareQA_en` | `test` | none |
 | `cb.CB` | `super_glue` | `cb` | `validation` | none |
+| `click.Click` | `EunsuKim/CLIcK` | `None` | `train` | none |
 | `ceval.CEval` | `ceval/ceval-exam` | `None` | `val` | none |
 | `cnn_dailymail.CNNDailyMail` | `cnn_dailymail` | `3.0.0` | `validation` | none |
 | `code_x_glue.CodeXGLUECodeToText` | language-specific `CM/codexglue_code2text_*` | `None` | `test` | none |
@@ -67,10 +68,21 @@ This document records the dataset identifier and split semantics for each Evalut
 | `crows_pairs.CrowSPairs` | `jannalu/crows_pairs_multilingual` | `english` | `test` | none |
 | `darijammlu.DarijaMMLU` | `MBZUAI-Paris/DarijaMMLU` | `None` | `test` | none |
 | `drop.DROP` | `drop` | `None` | `validation` | none |
+| `fld.FLD` | `hitachi-nlp/FLD.v2` | `default` | `test` | none |
+| `fda.FDA` | `hazyresearch/based-fda` | `default` | `validation` | none |
+| `moral_stories.MoralStories` | `LabHC/moral_stories` | `None` | `train` | none |
+| `french_bench_arc_challenge.FrenchBenchARCChallenge` | `manu/french_bench_arc_challenge` | `None` | `test` | none |
 | `egymmlu.EgyMMLU` | `UBC-NLP/EgyMMLU` | `None` | `test` | none |
 | `esbbq.EsBBQ` | `BSC-LT/EsBBQ` | `Age` | `test` | none |
 | `eus_exams.EusExams` | `HiTZ/EusExams` | `None` | `test` | none |
+| `eus_reading.EusReading` | `HiTZ/EusReading` | `default` | `test` | none |
+| `eus_proficiency.EusProficiency` | `HiTZ/EusProficiency` | `default` | `test` | none |
+| `eus_trivia.EusTrivia` | `HiTZ/EusTrivia` | `default` | `test` | none |
 | `gpqa.GPQA` | `Idavidrein/gpqa` | `None` | `train` | none |
+| `gsm_plus.GSMPlus` | `qintongli/GSM-Plus` | `None` | `test` | none |
+| `gsm_plus.GSMPlusMini` | `qintongli/GSM-Plus` | `None` | `testmini` | none |
+| `haerae.Haerae` | `HAERAE-HUB/HAE_RAE_BENCH` | `general_knowledge` or `None` | `test` | `subset=...` |
+| `kormedmcqa.KorMedMCQA` | `sean0042/KorMedMCQA` | `doctor` or `None` | `test` | `subset=...`, `fewshot_split=fewshot` |
 | `graphwalks.graphwalks_128k` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_128k_and_shorter.parquet` |
 | `graphwalks.graphwalks_1M` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_256k_to_1mil.parquet` |
 | `gsm8k.GSM8K` | `openai/gsm8k` | `main` | `test` | none |
@@ -83,6 +95,8 @@ This document records the dataset identifier and split semantics for each Evalut
 | `inverse_scaling.InverseScaling` | `pminervini/inverse-scaling` | `hindsight-neglect` | `data` | none |
 | `kobest.KoBEST` | `skt/kobest_v1` | `None` | `test` | none |
 | `lambada.LAMBADA` | `EleutherAI/lambada_openai` | `default` | `test` | none |
+| `lambada.LAMBADA` | `EleutherAI/lambada_openai` | `de`, `en`, `es`, `fr`, or `it` | `test` | `variant_name="openai_mt_<lang>"` |
+| `lambada.LAMBADA` | `EleutherAI/lambada_multilingual_stablelm` | `de`, `en`, `es`, `fr`, `it`, `nl`, or `pt` | `test` | `variant_name="openai_mt_stablelm_<lang>"` |
 | `logiqa.LogiQA` | `EleutherAI/logiqa` | `logiqa` | `validation` | none |
 | `logiqa2.LogiQA2` | `datatune/LogiQA2.0` | `None` | `test` | none |
 | `mathqa.MathQA` | `math_qa` | `None` | `test` | none |
@@ -90,6 +104,9 @@ This document records the dataset identifier and split semantics for each Evalut
 | `medmcqa.MedMCQA` | `openlifescienceai/medmcqa` | `None` | `validation` | none |
 | `medqa.MedQA` | `GBaker/MedQA-USMLE-4-options-hf` | `None` | `test` | none |
 | `mmlu.MMLU` | `cais/mmlu` | `all` or leaf subset name | `test` | `fewshot_split=dev` |
+| `multirc.MultiRC` | `super_glue` | `multirc` | `validation` | none |
+| `mastermind.Mastermind` | variant-dependent: `flair/mastermind_24_mcq_random`, `flair/mastermind_24_mcq_close`, `flair/mastermind_35_mcq_random`, `flair/mastermind_35_mcq_close`, `flair/mastermind_46_mcq_random`, `flair/mastermind_46_mcq_close` | `None` | `test` | none |
+| `mbpp.MBPP` | `mbpp` | `sanitized` | `test` | none |
 | `mmlu_pro.MMLUPro` | `TIGER-Lab/MMLU-Pro` | `None` | `test` | `fewshot_split=validation` |
 | `mnli.MNLI` | `nyu-mll/glue` | `mnli` | `validation_matched` | none |
 | `mrpc.MRPC` | `nyu-mll/glue` | `mrpc` | `validation` | none |
@@ -98,6 +115,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `openbookqa.OpenBookQA` | `allenai/openbookqa` | `main` | `test` | none |
 | `paws_x.PAWSX` | `paws-x` | `en` | `test` | none |
 | `pile_10k.Pile10K` | `monology/pile-uncopyrighted` | `None` | `train` | none |
+| `polemo2.Polemo2` | variant-dependent: `allegro/klej-polemo2-in`, `allegro/klej-polemo2-out` | `None` | `test` | none |
 | `piqa.PIQA` | `baber/piqa` | `None` | `validation` | none |
 | `prost.Prost` | `corypaik/prost` | `None` | `test` | none |
 | `pubmedqa.PubMedQA` | `bigbio/pubmed_qa` | `pubmed_qa_labeled_fold0_source` | `test` | none |
@@ -112,6 +130,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `squadv2.SQuADV2` | `squad_v2` | `squad_v2` | `validation` | none |
 | `sst2.SST2` | `nyu-mll/glue` | `sst2` | `validation` | none |
 | `swag.SWAG` | `swag` | `regular` | `validation` | none |
+| `toxigen.ToxiGen` | `skg/toxigen-data` | `annotated` | `test` | none |
 | `triviaqa.TriviaQA` | `trivia_qa` | `rc.nocontext` | `validation` | none |
 | `truthfulqa.TruthfulQAMC` | `truthfulqa/truthful_qa` | `multiple_choice` | `validation` | none |
 | `webqs.WebQS` | `web_questions` | `None` | `test` | none |
@@ -124,6 +143,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `wsc273.WSC273` | `winograd_wsc` | `wsc273` | `test` | none |
 | `xcopa.XCOPA` | `xcopa` | `it` | `test` | none |
 | `xnli.XNLI` | `facebook/xnli` | `en` | `validation` | none |
+| `xnli_eu.XNLIEU` | `HiTZ/xnli-eu` | `eu` | `test` | none |
 | `xquad.XQuAD` | `google/xquad` | `xquad.en` | `validation` | none |
 | `xstorycloze.XStoryCloze` | `juletxara/xstory_cloze` | `en` | `eval` | none |
 | `xwinograd.XWinograd` | `Muennighoff/xwinograd` | `en` | `test` | none |

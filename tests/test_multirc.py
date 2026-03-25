@@ -1,75 +1,82 @@
 # SPDX-FileCopyrightText: 2026 ModelCloud.ai
-# SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
 # SPDX-License-Identifier: Apache-2.0
-# Contact: qubitium@modelcloud.ai, x.com/qubitium
 
-from __future__ import annotations
+import pcre
 
-import importlib
-
-from datasets import Dataset
-
-import evalution
-from evalution.engines.base import LoglikelihoodOutput
-
-multirc_module = importlib.import_module("evalution.benchmarks.multirc")
+from evalution.benchmarks.multirc import (
+    MultiRC,
+    _extract_indices,
+    _group_questions,
+    _precision_recall_f1,
+)
+from evalution.engines.base import GenerationOutput
 
 
-class FakeSession:
-    def loglikelihood(self, requests, *, batch_size=None):
-        assert batch_size == 5
-        assert len(requests) == 2
-        assert requests[0].context == (
-            "Tom planted tomatoes in April.\n"
-            "Question: What did Tom plant?\n"
-            "Answer:"
-        )
-        assert requests[0].continuation == " tomatoes\nIs the answer correct? yes"
-        assert requests[1].continuation == " tomatoes\nIs the answer correct? no"
-        return [
-            LoglikelihoodOutput(logprob=-0.2, is_greedy=True, token_count=6),
-            LoglikelihoodOutput(logprob=-1.3, is_greedy=False, token_count=6),
-        ]
+def test_grouping_builds_questions():
+    raw = [
+        {
+            "paragraph": "para",
+            "question": "q?",
+            "answer": "a0",
+            "idx": {"paragraph": 0, "question": 0, "answer": 0},
+            "label": 1,
+        },
+        {
+            "paragraph": "para",
+            "question": "q?",
+            "answer": "a1",
+            "idx": {"paragraph": 0, "question": 0, "answer": 1},
+            "label": 0,
+        },
+    ]
+    grouped = _group_questions(raw)
+    assert len(grouped) == 1
+    q = grouped[0]
+    assert q["paragraph_idx"] == 0
+    assert q["question_idx"] == 0
+    assert len(q["answers"]) == 2
 
 
-def test_multirc_scores_binary_answer_validation(monkeypatch) -> None:
-    dataset = Dataset.from_list(
-        [
-            {
-                "paragraph": "Tom planted tomatoes in April.",
-                "question": "What did Tom plant?",
-                "answer": "tomatoes",
-                "label": 0,
-                "idx": {"paragraph": 1, "question": 2, "answer": 3},
-            }
-        ]
-    )
-    monkeypatch.setattr(multirc_module, "load_dataset", lambda *args, **kwargs: dataset)
-
-    result = evalution.benchmarks.multirc(max_rows=1, batch_size=5).evaluate(FakeSession())
-
-    assert result.name == "multirc"
-    assert result.metrics == {
-        "acc,ll": 1.0,
-        "acc,ll_avg": 1.0,
-    }
-    assert result.metadata["dataset_path"] == "super_glue"
-    assert result.metadata["dataset_name"] == "multirc"
-    assert result.metadata["split"] == "validation"
-    assert len(result.samples) == 1
-
-    sample = result.samples[0]
-    assert sample.target == "tomatoes\nIs the answer correct? yes"
-    assert sample.prediction == "tomatoes\nIs the answer correct? yes"
-    assert sample.metadata["paragraph"] == "Tom planted tomatoes in April."
-    assert sample.metadata["question"] == "What did Tom plant?"
-    assert sample.metadata["answer"] == "tomatoes"
-    assert sample.metadata["idx"] == {"paragraph": 1, "question": 2, "answer": 3}
+def test_extract_indices_handles_none_and_bounds():
+    assert _extract_indices("none", 3) == set()
+    assert _extract_indices("0,2", 3) == {0, 2}
+    assert _extract_indices("5,1", 2) == {1}  # drops out-of-range
 
 
-def test_multirc_prompt_matches_upstream_shape() -> None:
-    doc = {
-        "paragraph": "A short passage.",
-        "question": "Is this short?",
-    }
-    assert multirc_module._multirc_prompt(doc) == "A short passage.\nQuestion: Is this short?\nAnswer:"
+def test_precision_recall_f1_basic():
+    p, r, f1 = _precision_recall_f1({0, 1}, {0, 2})
+    assert round(p, 3) == 0.5
+    assert round(r, 3) == 0.5
+    assert round(f1, 3) == 0.5
+
+
+def test_score_sample_exact_match_and_f1():
+    suite = MultiRC()
+    raw_rows = [
+        {
+            "paragraph": "p",
+            "question": "q",
+            "answer": "a0",
+            "idx": {"paragraph": 0, "question": 0, "answer": 0},
+            "label": 1,
+        },
+        {
+            "paragraph": "p",
+            "question": "q",
+            "answer": "a1",
+            "idx": {"paragraph": 0, "question": 0, "answer": 1},
+            "label": 0,
+        },
+        {
+            "paragraph": "p",
+            "question": "q",
+            "answer": "a2",
+            "idx": {"paragraph": 0, "question": 0, "answer": 2},
+            "label": 1,
+        },
+    ]
+    prepared = next(suite.iter_prepared_samples(raw_rows))
+    output = GenerationOutput(text="0,2", prompt="p", metadata={})
+    scored = suite.score_sample(prepared, output)
+    assert scored.scores["em"] == 1.0
+    assert scored.scores["f1a"] == 1.0

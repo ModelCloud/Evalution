@@ -123,9 +123,15 @@ _TEST_FACTORIES: dict[str, Any] = {
     "darijahellaswag": benchmarks.darijahellaswag,
     "egyhellaswag": benchmarks.egyhellaswag,
     "drop": benchmarks.drop,
+    "fld": benchmarks.fld,
+    "fda": benchmarks.fda,
+    "french_bench_arc_challenge": benchmarks.french_bench_arc_challenge,
     "darijammlu": benchmarks.darijammlu,
     "egymmlu": benchmarks.egymmlu,
     "eus_exams": benchmarks.eus_exams,
+    "eus_reading": benchmarks.eus_reading,
+    "eus_proficiency": benchmarks.eus_proficiency,
+    "eus_trivia": benchmarks.eus_trivia,
     "gpqa": benchmarks.gpqa,
     "gpqa_main": benchmarks.gpqa_main,
     "gpqa_diamond": benchmarks.gpqa_diamond,
@@ -136,12 +142,15 @@ _TEST_FACTORIES: dict[str, Any] = {
     "ethics_utilitarianism": benchmarks.ethics_utilitarianism,
     "ethics_virtue": benchmarks.ethics_virtue,
     "gsm8k": benchmarks.gsm8k,
+    "gsm_plus": benchmarks.gsm_plus,
+    "gsm_plus_mini": benchmarks.gsm_plus_mini,
     "gsm8k_platinum": benchmarks.gsm8k_platinum,
     "headqa_en": benchmarks.headqa_en,
     "headqa_es": benchmarks.headqa_es,
     "hendrycks_math": benchmarks.hendrycks_math,
     "hellaswag": benchmarks.hellaswag,
     "histoires_morales": benchmarks.histoires_morales,
+    "moral_stories": benchmarks.moral_stories,
     "icelandic_winogrande": benchmarks.icelandic_winogrande,
     "inverse_scaling": benchmarks.inverse_scaling,
     "kobest": benchmarks.kobest,
@@ -151,12 +160,31 @@ _TEST_FACTORIES: dict[str, Any] = {
     "kobest_sentineg": benchmarks.kobest_sentineg,
     "kobest_wic": benchmarks.kobest_wic,
     "lambada_openai": benchmarks.lambada_openai,
+    "lambada_openai_mt_de": benchmarks.lambada_openai_mt_de,
+    "lambada_openai_mt_en": benchmarks.lambada_openai_mt_en,
+    "lambada_openai_mt_es": benchmarks.lambada_openai_mt_es,
+    "lambada_openai_mt_fr": benchmarks.lambada_openai_mt_fr,
+    "lambada_openai_mt_it": benchmarks.lambada_openai_mt_it,
+    "lambada_openai_mt_stablelm_de": benchmarks.lambada_openai_mt_stablelm_de,
+    "lambada_openai_mt_stablelm_en": benchmarks.lambada_openai_mt_stablelm_en,
+    "lambada_openai_mt_stablelm_es": benchmarks.lambada_openai_mt_stablelm_es,
+    "lambada_openai_mt_stablelm_fr": benchmarks.lambada_openai_mt_stablelm_fr,
+    "lambada_openai_mt_stablelm_it": benchmarks.lambada_openai_mt_stablelm_it,
+    "lambada_openai_mt_stablelm_nl": benchmarks.lambada_openai_mt_stablelm_nl,
+    "lambada_openai_mt_stablelm_pt": benchmarks.lambada_openai_mt_stablelm_pt,
     "lambada_openai_cloze": benchmarks.lambada_openai_cloze,
     "lambada_standard": benchmarks.lambada_standard,
     "lambada_standard_cloze": benchmarks.lambada_standard_cloze,
     "logiqa": benchmarks.logiqa,
     "logiqa2": benchmarks.logiqa2,
+    "mbpp": benchmarks.mbpp,
     "mathqa": benchmarks.mathqa,
+    "mastermind_24_easy": benchmarks.mastermind_24_easy,
+    "mastermind_24_hard": benchmarks.mastermind_24_hard,
+    "mastermind_35_easy": benchmarks.mastermind_35_easy,
+    "mastermind_35_hard": benchmarks.mastermind_35_hard,
+    "mastermind_46_easy": benchmarks.mastermind_46_easy,
+    "mastermind_46_hard": benchmarks.mastermind_46_hard,
     "mc_taco": benchmarks.mc_taco,
     "medmcqa": benchmarks.medmcqa,
     "medqa_4options": benchmarks.medqa_4options,
@@ -178,6 +206,8 @@ _TEST_FACTORIES: dict[str, Any] = {
     "piqa": benchmarks.piqa,
     "piqa_ar": benchmarks.piqa_ar,
     "pile_10k": benchmarks.pile_10k,
+    "polemo2_in": benchmarks.polemo2_in,
+    "polemo2_out": benchmarks.polemo2_out,
     "prost": benchmarks.prost,
     "pubmedqa": benchmarks.pubmedqa,
     "qa4mre_2011": benchmarks.qa4mre_2011,
@@ -193,6 +223,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "swag": benchmarks.swag,
     "sst2": benchmarks.sst2,
     "squadv2": benchmarks.squadv2,
+    "toxigen": benchmarks.toxigen,
     "truthfulqa": benchmarks.truthfulqa,
     "truthfulqa_mc1": benchmarks.truthfulqa_mc1,
     "truthfulqa_mc2": benchmarks.truthfulqa_mc2,
@@ -236,6 +267,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xstorycloze_te": benchmarks.xstorycloze_te,
     "xstorycloze_zh": benchmarks.xstorycloze_zh,
     "xnli": benchmarks.xnli,
+    "xnli_eu": benchmarks.xnli_eu,
     "xwinograd_en": benchmarks.xwinograd_en,
     "xwinograd_fr": benchmarks.xwinograd_fr,
     "xwinograd_jp": benchmarks.xwinograd_jp,
@@ -243,6 +275,11 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xwinograd_ru": benchmarks.xwinograd_ru,
     "xwinograd_zh": benchmarks.xwinograd_zh,
 }
+
+for _click_task in benchmarks.CLICK_TASKS:
+    _TEST_FACTORIES[_click_task] = getattr(benchmarks, _click_task)
+
+del _click_task
 
 for _task_name in benchmarks.CABBQ_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
@@ -514,3 +551,13 @@ def _build_model_emit_kwargs(model: Model) -> dict[str, Any]:
     if model.tokenizer_kwargs:
         kwargs["tokenizer_kwargs"] = model.tokenizer_kwargs
     return kwargs
+
+for _haerae_task in benchmarks.HAERAE_TASKS:
+    _TEST_FACTORIES[_haerae_task] = getattr(benchmarks, _haerae_task)
+
+del _haerae_task
+
+for _kormedmcqa_task in benchmarks.KORMEDMCQA_TASKS:
+    _TEST_FACTORIES[_kormedmcqa_task] = getattr(benchmarks, _kormedmcqa_task)
+
+del _kormedmcqa_task
