@@ -1021,6 +1021,33 @@ def _assert_mbpp_sample(sample: Any, index: int) -> None:
     assert "test_import_count" in sample.metadata
 
 
+def _assert_ifeval_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.target
+    assert sample.prompt
+    assert sample.prediction
+    assert sample.target == sample.prompt
+    assert set(sample.extracted) == {
+        "instruction_id_list",
+        "prompt_level_strict",
+        "prompt_level_loose",
+        "inst_level_strict",
+        "inst_level_loose",
+    }
+    assert set(sample.scores) == {
+        "prompt_level_strict_acc",
+        "prompt_level_loose_acc",
+        "inst_level_strict_acc",
+        "inst_level_loose_acc",
+    }
+    assert isinstance(sample.scores["prompt_level_strict_acc"], float)
+    assert isinstance(sample.scores["prompt_level_loose_acc"], float)
+    assert isinstance(sample.scores["inst_level_strict_acc"], float)
+    assert isinstance(sample.scores["inst_level_loose_acc"], float)
+    assert sample.metadata["key"]
+    assert int(sample.metadata["instruction_count"]) >= 1
+
+
 def _assert_humaneval_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Complete the following Python function.")
@@ -4690,6 +4717,32 @@ SUITE_SPECS = {
         expected_sample_count=32,
         sample_validator=_assert_humaneval_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "ifeval": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ifeval(batch_size=8, max_rows=64),
+        expected_name="ifeval",
+        baseline={
+            "prompt_level_strict_acc": 0.0,
+            "prompt_level_loose_acc": 0.0,
+            "inst_level_strict_acc": 0.0,
+            "inst_level_loose_acc": 0.0,
+        },
+        expected_metrics=frozenset({
+            "prompt_level_strict_acc",
+            "prompt_level_loose_acc",
+            "inst_level_strict_acc",
+            "inst_level_loose_acc",
+        }),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "google/IFEval",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "instruction_following",
+            "primary_metric": "prompt_level_strict_acc",
+        },
+        expected_sample_count=64,
+        sample_validator=_assert_ifeval_sample,
     ),
     "multirc": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.multirc(batch_size=8, max_rows=16),

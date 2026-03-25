@@ -114,6 +114,7 @@ from .humaneval import HumanEval, humaneval
 from .histoires_morales import HistoiresMorales, histoires_morales
 from .moral_stories import MoralStories, moral_stories
 from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
+from .ifeval import IFEval, ifeval
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic

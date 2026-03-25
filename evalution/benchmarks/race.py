@@ -55,7 +55,7 @@ def _load_race_dataset(
         dataset_name,
         split=split,
         cache_dir=cache_dir,
-        streaming=stream,
+        stream=stream,
     )
     if stream:
         raise ValueError("RACE flattening requires non-stream dataset materialization")

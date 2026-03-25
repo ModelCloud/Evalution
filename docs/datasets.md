@@ -92,6 +92,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `hellaswag.HellaSwag` | `Rowan/hellaswag` | `None` | `validation` | none |
 | `hendrycks_ethics.HendrycksEthics` | `EleutherAI/hendrycks_ethics` | `commonsense` | `test` | none |
 | `histoires_morales.HistoiresMorales` | `LabHC/histoires_morales` | `None` | `train` | none |
+| `ifeval.IFEval` | `google/IFEval` | `None` | `train` | none |
 | `icelandic_winogrande.IcelandicWinoGrande` | `mideind/icelandic-winogrande` | `None` | `train` | none |
 | `inverse_scaling.InverseScaling` | `pminervini/inverse-scaling` | `hindsight-neglect` | `data` | none |
 | `kobest.KoBEST` | `skt/kobest_v1` | `None` | `test` | none |

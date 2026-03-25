@@ -356,6 +356,7 @@ logic, those implementation details can shift results.
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `ifeval` | Instruction-following generation scoring across up to 4 instruction checks per prompt | IFEval `li2025ifeval` |
 | `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
 | `moral_stories` | Multiple-choice log-likelihood over moral versus immoral actions, raw + length-normalized accuracy | Moral Stories `emelin-etal-2021-moral` |
