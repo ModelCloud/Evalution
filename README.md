@@ -373,6 +373,7 @@ logic, those implementation details can shift results.
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
 | `paws_x` | Multiple-choice log-likelihood across `de/en/es/fr/ja/ko/zh` language subsets, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
 | `xcopa` | Multiple-choice log-likelihood over option labels across `et/ht/id/it/qu/sw/ta/th/tr/vi/zh` language subsets, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
+| `polemo2` | Generated sentiment choice-label micro-F1 across the `in/out` opinion subsets | KLEJ POLEMO 2.0 `ogrodniczuk-kobyliński-2024-polemo2` |
 | `xquad` | Generated extractive QA exact match and token-overlap F1 across `ar/de/el/en/es/hi/ro/ru/th/tr/vi/zh` language subsets | XQuAD `artetxe2020crosslingual` |
 | `xstorycloze` | Multiple-choice log-likelihood over translated StoryCloze endings across `ar/en/es/eu/hi/id/my/ru/sw/te/zh` subsets, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
 | `xnli` | Three-way NLI multiple-choice log-likelihood across `ar/bg/de/el/en/es/fr/hi/ru/sw/th/tr/ur/vi/zh` language subsets, raw + length-normalized accuracy | XNLI `conneau2018xnli` |
@@ -531,6 +532,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `paws_x_de`, `paws_x_en`, `paws_x_es`, `paws_x_fr`, `paws_x_ja`, `paws_x_ko`, `paws_x_zh`: PAWS-X `yang2019pawsx`
 - `piqa`: PIQA `bisk2020piqa`
 - `pile_10k`: The Pile `gao2020pile`
+- `polemo2_in`, `polemo2_out`: KLEJ POLEMO 2.0 `ogrodniczuk-kobyliński-2024-polemo2`
 - `prost`: PROST `aroca-ouellette-etal-2021-prost`
 - `pubmedqa`: PubMedQA `jin2019pubmedqa`
 - `qa4mre_2011`, `qa4mre_2012`, `qa4mre_2013`: QA4MRE `Peas2013QA4MRE2O`

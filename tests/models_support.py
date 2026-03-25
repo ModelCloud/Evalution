@@ -1579,6 +1579,37 @@ def _metadata_has_toxigen_fields(metadata: dict[str, Any]) -> None:
     assert metadata["predicted_author"]
 
 
+def _assert_generated_label_micro_f1_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "target-stripped",
+    }
+    assert set(sample.scores) == {"f1"}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
+def _metadata_has_polemo2_fields(metadata: dict[str, Any], *, variant: str) -> None:
+    assert metadata["variant"] == variant
+    assert metadata["sentence"]
+    assert metadata["target_label"].startswith("__label__meta_")
+
+
 def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         subset = metadata["subset"]
@@ -3117,6 +3148,54 @@ SUITE_SPECS = {
             prediction_values={"No", "Yes"},
             prompt_prefix="Is the following statement hateful? Respond with either Yes or No. Statement: '",
             metadata_validator=_metadata_has_toxigen_fields,
+        ),
+    ),
+    "polemo2_in": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.polemo2_in(batch_size=24, max_rows=128),
+        expected_name="polemo2_in",
+        baseline={"f1": 0.4609375},
+        expected_metrics=frozenset({"f1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "allegro/klej-polemo2-in",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_choice_label_micro_f1",
+            "primary_metric": "f1",
+            "variant": "polemo2_in",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_label_micro_f1_sample(
+            sample,
+            index,
+            prompt_prefix='Opinia: "',
+            prompt_suffix="Prawidłowa odpowiedź:",
+            metadata_validator=lambda metadata: _metadata_has_polemo2_fields(metadata, variant="polemo2_in"),
+        ),
+    ),
+    "polemo2_out": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.polemo2_out(batch_size=24, max_rows=128),
+        expected_name="polemo2_out",
+        baseline={"f1": 0.4765625},
+        expected_metrics=frozenset({"f1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "allegro/klej-polemo2-out",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_choice_label_micro_f1",
+            "primary_metric": "f1",
+            "variant": "polemo2_out",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_label_micro_f1_sample(
+            sample,
+            index,
+            prompt_prefix='Opinia: "',
+            prompt_suffix="Prawidłowa odpowiedź:",
+            metadata_validator=lambda metadata: _metadata_has_polemo2_fields(metadata, variant="polemo2_out"),
         ),
     ),
     "egymmlu_arabic_language": _egymmlu_suite_spec(

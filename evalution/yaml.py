@@ -181,6 +181,8 @@ _TEST_FACTORIES: dict[str, Any] = {
     "piqa": benchmarks.piqa,
     "piqa_ar": benchmarks.piqa_ar,
     "pile_10k": benchmarks.pile_10k,
+    "polemo2_in": benchmarks.polemo2_in,
+    "polemo2_out": benchmarks.polemo2_out,
     "prost": benchmarks.prost,
     "pubmedqa": benchmarks.pubmedqa,
     "qa4mre_2011": benchmarks.qa4mre_2011,

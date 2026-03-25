@@ -128,6 +128,7 @@ from .openbookqa import OpenBookQA, openbookqa
 from .paws_x import PAWSX, paws_x, paws_x_de, paws_x_en, paws_x_es, paws_x_fr, paws_x_ja, paws_x_ko, paws_x_zh
 from .piqa import PIQA, piqa
 from .pile_10k import Pile10K, pile_10k
+from .polemo2 import POLEMO2_VARIANTS, Polemo2, polemo2, polemo2_in, polemo2_out
 from .prost import Prost, prost
 from .pubmedqa import PubMedQA, pubmedqa
 from .qa4mre import QA4MRE, qa4mre, qa4mre_2011, qa4mre_2012, qa4mre_2013
@@ -388,6 +389,8 @@ __all__ = [
     "PIQAArabic",
     "PIQA",
     "Pile10K",
+    "POLEMO2_VARIANTS",
+    "Polemo2",
     "Prost",
     "PubMedQA",
     "QA4MRE",
@@ -598,6 +601,9 @@ __all__ = [
     "piqa",
     "piqa_ar",
     "pile_10k",
+    "polemo2",
+    "polemo2_in",
+    "polemo2_out",
     "prost",
     "pubmedqa",
     "qa4mre",

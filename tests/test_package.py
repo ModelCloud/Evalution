@@ -326,6 +326,11 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.paws_x_ja)
     assert callable(evalution.benchmarks.paws_x_ko)
     assert callable(evalution.benchmarks.paws_x_zh)
+    assert evalution.benchmarks.Polemo2 is not None
+    assert evalution.benchmarks.POLEMO2_VARIANTS == ("polemo2_in", "polemo2_out")
+    assert callable(evalution.benchmarks.polemo2)
+    assert callable(evalution.benchmarks.polemo2_in)
+    assert callable(evalution.benchmarks.polemo2_out)
     assert evalution.benchmarks.PIQAArabic is not None
     assert evalution.benchmarks.PIQA is not None
     assert callable(evalution.benchmarks.piqa)

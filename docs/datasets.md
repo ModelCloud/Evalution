@@ -101,6 +101,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `openbookqa.OpenBookQA` | `allenai/openbookqa` | `main` | `test` | none |
 | `paws_x.PAWSX` | `paws-x` | `en` | `test` | none |
 | `pile_10k.Pile10K` | `monology/pile-uncopyrighted` | `None` | `train` | none |
+| `polemo2.Polemo2` | variant-dependent: `allegro/klej-polemo2-in`, `allegro/klej-polemo2-out` | `None` | `test` | none |
 | `piqa.PIQA` | `baber/piqa` | `None` | `validation` | none |
 | `prost.Prost` | `corypaik/prost` | `None` | `test` | none |
 | `pubmedqa.PubMedQA` | `bigbio/pubmed_qa` | `pubmed_qa_labeled_fold0_source` | `test` | none |
