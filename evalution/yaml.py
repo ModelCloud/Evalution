@@ -539,3 +539,8 @@ for _haerae_task in benchmarks.HAERAE_TASKS:
     _TEST_FACTORIES[_haerae_task] = getattr(benchmarks, _haerae_task)
 
 del _haerae_task
+
+for _kormedmcqa_task in benchmarks.KORMEDMCQA_TASKS:
+    _TEST_FACTORIES[_kormedmcqa_task] = getattr(benchmarks, _kormedmcqa_task)
+
+del _kormedmcqa_task

@@ -112,6 +112,8 @@ from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic
+from . import kormedmcqa as _kormedmcqa_module
+from .kormedmcqa import KORMEDMCQA_SUBSETS, KORMEDMCQA_TASKS, KorMedMCQA, kormedmcqa
 from .lambada import LAMBADA, lambada_openai, lambada_standard
 from .lambada_cloze import LAMBADACloze, lambada_openai_cloze, lambada_standard_cloze
 from .logiqa import LogiQA, logiqa
@@ -231,6 +233,11 @@ for _haerae_task in HAERAE_TASKS:
     globals()[_haerae_task] = getattr(_haerae_module, _haerae_task)
 
 del _haerae_task
+
+for _kormedmcqa_task in KORMEDMCQA_TASKS:
+    globals()[_kormedmcqa_task] = getattr(_kormedmcqa_module, _kormedmcqa_task)
+
+del _kormedmcqa_task
 
 for _afrimmlu_task in AFRIMMLU_TASKS:
     globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
@@ -404,6 +411,9 @@ __all__ = [
     "KOBEST_SUBSETS",
     "KOBEST_TASKS",
     "KoBEST",
+    "KORMEDMCQA_SUBSETS",
+    "KORMEDMCQA_TASKS",
+    "KorMedMCQA",
     "LAMBADA",
     "LAMBADACloze",
     "LogiQA",
@@ -606,6 +616,7 @@ __all__ = [
     "icelandic_winogrande",
     "inverse_scaling",
     "kobest",
+    "kormedmcqa",
     "kobest_boolq",
     "kobest_copa",
     "kobest_hellaswag",
@@ -746,3 +757,4 @@ __all__.extend(TRUTHFULQA_TASKS)
 __all__.extend(INVERSE_SCALING_TASKS)
 __all__.extend(CLICK_TASKS)
 __all__.extend(HAERAE_TASKS)
+__all__.extend(KORMEDMCQA_TASKS)

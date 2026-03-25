@@ -300,6 +300,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.kobest_hellaswag)
     assert callable(evalution.benchmarks.kobest_sentineg)
     assert callable(evalution.benchmarks.kobest_wic)
+    assert evalution.benchmarks.KORMEDMCQA_SUBSETS
+    assert evalution.benchmarks.KORMEDMCQA_TASKS
+    assert evalution.benchmarks.KorMedMCQA is not None
+    assert callable(evalution.benchmarks.kormedmcqa)
+    for factory_name in evalution.benchmarks.KORMEDMCQA_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.LAMBADA is not None
     assert evalution.benchmarks.LAMBADACloze is not None
     assert callable(evalution.benchmarks.lambada_openai)

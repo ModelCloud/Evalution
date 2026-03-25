@@ -906,6 +906,7 @@ def _assert_generated_exact_match_sample(
     prompt_suffix: str | None = None,
     prompt_substrings: tuple[str, ...] = (),
     metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+    allow_empty_prediction: bool = False,
 ) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -916,7 +917,10 @@ def _assert_generated_exact_match_sample(
     for expected in prompt_substrings:
         assert expected in sample.prompt
     assert sample.target
-    assert sample.prediction
+    if allow_empty_prediction:
+        assert sample.prediction is not None
+    else:
+        assert sample.prediction
     assert set(sample.extracted) == {
         "prediction-stripped",
         "target-stripped",
@@ -1700,6 +1704,22 @@ def _metadata_has_haerae_fields(*, subset: str) -> Callable[[dict[str, Any]], No
         assert metadata["dataset_name"]
         assert metadata["query"].endswith("### 정답:")
         assert metadata["answer"] in {"(A)", "(B)", "(C)", "(D)", "(E)"}
+        assert len(metadata["raw_choices"]) == 5
+
+    return validate
+
+
+def _metadata_has_kormedmcqa_fields(*, subset: str | None = None, allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        if subset is not None:
+            assert metadata["subset"] == subset
+            assert metadata["subject"] == subset
+        if allowed_subsets is not None:
+            assert metadata["subset"] in allowed_subsets
+            assert metadata["subject"] in allowed_subsets
+        assert metadata["year"] >= 0
+        assert metadata["period"] >= 0
+        assert metadata["q_number"] >= 0
         assert len(metadata["raw_choices"]) == 5
 
     return validate
@@ -5337,6 +5357,144 @@ SUITE_SPECS = {
             prompt_substrings=("### 질문:", "### 선택지:"),
             prompt_suffix="### 정답:",
             metadata_validator=_metadata_has_haerae_fields(subset="standard_nomenclature"),
+        ),
+    ),
+    "kormedmcqa": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa")(batch_size=24, max_rows=128),
+        expected_name="kormedmcqa",
+        baseline={"em": 0.3203125},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "sean0042/KorMedMCQA",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+            "subset": "kormedmcqa",
+            "fewshot_split": "fewshot",
+            "num_fewshot": 5,
+            "apply_chat_template": False,
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_suffix="정답：",
+            prompt_substrings=("\nA. ", "\nE. "),
+            metadata_validator=_metadata_has_kormedmcqa_fields(
+                allowed_subsets={"doctor", "nurse", "pharm", "dentist"}
+            ),
+            allow_empty_prediction=True,
+        ),
+    ),
+    "kormedmcqa_doctor": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa_doctor")(batch_size=24, max_rows=128),
+        expected_name="kormedmcqa_doctor",
+        baseline={"em": 0.2265625},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "sean0042/KorMedMCQA",
+            "dataset_name": "doctor",
+            "split": "test",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+            "subset": "doctor",
+            "fewshot_split": "fewshot",
+            "num_fewshot": 5,
+            "apply_chat_template": False,
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_suffix="정답：",
+            prompt_substrings=("\nA. ", "\nE. "),
+            metadata_validator=_metadata_has_kormedmcqa_fields(subset="doctor"),
+            allow_empty_prediction=True,
+        ),
+    ),
+    "kormedmcqa_nurse": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa_nurse")(batch_size=24, max_rows=128),
+        expected_name="kormedmcqa_nurse",
+        baseline={"em": 0.34375},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "sean0042/KorMedMCQA",
+            "dataset_name": "nurse",
+            "split": "test",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+            "subset": "nurse",
+            "fewshot_split": "fewshot",
+            "num_fewshot": 5,
+            "apply_chat_template": False,
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_suffix="정답：",
+            prompt_substrings=("\nA. ", "\nE. "),
+            metadata_validator=_metadata_has_kormedmcqa_fields(subset="nurse"),
+            allow_empty_prediction=True,
+        ),
+        abs_tolerance=3 / 128,
+    ),
+    "kormedmcqa_pharm": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa_pharm")(batch_size=24, max_rows=128),
+        expected_name="kormedmcqa_pharm",
+        baseline={"em": 0.296875},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "sean0042/KorMedMCQA",
+            "dataset_name": "pharm",
+            "split": "test",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+            "subset": "pharm",
+            "fewshot_split": "fewshot",
+            "num_fewshot": 5,
+            "apply_chat_template": False,
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_suffix="정답：",
+            prompt_substrings=("\nA. ", "\nE. "),
+            metadata_validator=_metadata_has_kormedmcqa_fields(subset="pharm"),
+            allow_empty_prediction=True,
+        ),
+    ),
+    "kormedmcqa_dentist": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa_dentist")(batch_size=24, max_rows=128),
+        expected_name="kormedmcqa_dentist",
+        baseline={"em": 0.2734375},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "sean0042/KorMedMCQA",
+            "dataset_name": "dentist",
+            "split": "test",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+            "subset": "dentist",
+            "fewshot_split": "fewshot",
+            "num_fewshot": 5,
+            "apply_chat_template": False,
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_suffix="정답：",
+            prompt_substrings=("\nA. ", "\nE. "),
+            metadata_validator=_metadata_has_kormedmcqa_fields(subset="dentist"),
+            allow_empty_prediction=True,
         ),
     ),
     "gsm_plus": SuiteSpec(

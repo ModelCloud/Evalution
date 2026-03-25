@@ -78,6 +78,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `gsm_plus.GSMPlus` | `qintongli/GSM-Plus` | `None` | `test` | none |
 | `gsm_plus.GSMPlusMini` | `qintongli/GSM-Plus` | `None` | `testmini` | none |
 | `haerae.Haerae` | `HAERAE-HUB/HAE_RAE_BENCH` | `general_knowledge` or `None` | `test` | `subset=...` |
+| `kormedmcqa.KorMedMCQA` | `sean0042/KorMedMCQA` | `doctor` or `None` | `test` | `subset=...`, `fewshot_split=fewshot` |
 | `graphwalks.graphwalks_128k` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_128k_and_shorter.parquet` |
 | `graphwalks.graphwalks_1M` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_256k_to_1mil.parquet` |
 | `gsm8k.GSM8K` | `openai/gsm8k` | `main` | `test` | none |

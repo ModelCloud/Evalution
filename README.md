@@ -355,6 +355,7 @@ logic, those implementation details can shift results.
 | `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
+| `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `sean0042kormedmcqa` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
@@ -527,6 +528,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `mastermind_24_easy`, `mastermind_24_hard`, `mastermind_35_easy`, `mastermind_35_hard`, `mastermind_46_easy`, `mastermind_46_hard`: Mastermind
 - `click`, `click_lang`, `click_lang_text`, `click_lang_grammar`, `click_lang_function`, `click_cul`, `click_cul_economy`, `click_cul_geography`, `click_cul_history`, `click_cul_kpop`, `click_cul_law`, `click_cul_politics`, `click_cul_society`, `click_cul_tradition`: CLIcK `kim2024click`
 - `haerae`, `haerae_general_knowledge`, `haerae_history`, `haerae_loan_word`, `haerae_rare_word`, `haerae_standard_nomenclature`: HAE-RAE `park2024haeraebenchmarkingkoreanknowledge`
+- `kormedmcqa`, `kormedmcqa_doctor`, `kormedmcqa_nurse`, `kormedmcqa_pharm`, `kormedmcqa_dentist`: KorMedMCQA `sean0042kormedmcqa`
 - `gsm_plus`, `gsm_plus_mini`: GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating`
 - `mathqa`: MathQA `amini2019mathqa`
 - `mc_taco`: MC-TACO `zhou2019mctaco`
