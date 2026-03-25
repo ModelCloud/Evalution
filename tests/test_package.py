@@ -247,6 +247,11 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.gpqa_main)
     assert callable(evalution.benchmarks.gpqa_diamond)
     assert callable(evalution.benchmarks.gpqa_extended)
+    assert evalution.benchmarks.GSM_PLUS_TASKS == ("gsm_plus", "gsm_plus_mini")
+    assert evalution.benchmarks.GSMPlus is not None
+    assert evalution.benchmarks.GSMPlusMini is not None
+    assert callable(evalution.benchmarks.gsm_plus)
+    assert callable(evalution.benchmarks.gsm_plus_mini)
     assert evalution.benchmarks.HendrycksEthics is not None
     assert evalution.benchmarks.HendrycksMath is not None
     assert evalution.benchmarks.HENDRYCKS_MATH_SUBSETS

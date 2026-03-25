@@ -926,6 +926,60 @@ def _assert_generated_exact_match_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_generated_numeric_exact_match_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert set(sample.scores) == {"acc,num"}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
+def _assert_generated_regex_extract_exact_match_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "strict-match",
+        "flexible-extract",
+        "target-stripped",
+    }
+    assert set(sample.scores) == {"em,strict", "em,flex"}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
 def _assert_babilong_sample(
     sample: Any,
     index: int,
@@ -1623,6 +1677,13 @@ def _metadata_has_mastermind_fields(
     assert metadata["difficulty"] == difficulty
     assert metadata["option_labels"] == ["A", "B", "C", "D"]
     assert len(metadata["choice_texts"]) == 4
+
+
+def _metadata_has_gsm_plus_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["perturbation_type"] is not None
+    assert metadata["seed_question"]
+    assert "seed_solution" in metadata
+    assert metadata["seed_answer"]
 
 
 def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
@@ -4770,6 +4831,66 @@ SUITE_SPECS = {
             prompt_prefix="Question: ",
             prompt_suffix="\nAnswer:",
             metadata_validator=_metadata_has_choice_labels(exact_count=5),
+        ),
+    ),
+    "gsm_plus": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.gsm_plus(batch_size=24, max_rows=128),
+        expected_name="gsm_plus",
+        baseline={
+            "em,strict": 0.171875,
+            "em,flex": 0.0,
+        },
+        expected_metrics=frozenset({"em,strict", "em,flex"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "qintongli/GSM-Plus",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_regex_extract_exact_match",
+            "primary_metric": "em,strict",
+            "variant": "base",
+            "num_fewshot": 5,
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_regex_extract_exact_match_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_gsm_plus_fields,
+        ),
+    ),
+    "gsm_plus_mini": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.gsm_plus_mini(batch_size=24, max_rows=128),
+        expected_name="gsm_plus_mini",
+        baseline={
+            "em,strict": 0.3125,
+            "em,flex": 0.0078125,
+        },
+        expected_metrics=frozenset({"em,strict", "em,flex"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "qintongli/GSM-Plus",
+            "dataset_name": None,
+            "split": "testmini",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_regex_extract_exact_match",
+            "primary_metric": "em,strict",
+            "variant": "base",
+            "num_fewshot": 5,
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_regex_extract_exact_match_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nAnswer:",
+            metadata_validator=_metadata_has_gsm_plus_fields,
         ),
     ),
     "mastermind_24_easy": SuiteSpec(

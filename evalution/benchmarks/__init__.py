@@ -89,6 +89,7 @@ from .eus_trivia import EusTrivia, eus_trivia
 from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
 from .graphwalks import GraphWalks, graphwalks_128k, graphwalks_1M
 from .gsm8k import GSM8K, gsm8k
+from .gsm_plus import GSM_PLUS_TASKS, GSMPlus, GSMPlusMini, gsm_plus, gsm_plus_mini
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hendrycks_ethics import (
     HendrycksEthics,
@@ -364,6 +365,9 @@ __all__ = [
     "GPQA_SUBSETS",
     "GPQA_TASKS",
     "GSM8K",
+    "GSM_PLUS_TASKS",
+    "GSMPlus",
+    "GSMPlusMini",
     "GSM8KPlatinum",
     "HendrycksEthics",
     "HENDRYCKS_MATH_SUBSETS",
@@ -569,6 +573,8 @@ __all__ = [
     "choice_index_from_labels",
     "f1_for_label",
     "gsm8k",
+    "gsm_plus",
+    "gsm_plus_mini",
     "gsm8k_platinum",
     "headqa_en",
     "headqa_es",

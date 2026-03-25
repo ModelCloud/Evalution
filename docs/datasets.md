@@ -74,6 +74,8 @@ This document records the dataset identifier and split semantics for each Evalut
 | `eus_proficiency.EusProficiency` | `HiTZ/EusProficiency` | `default` | `test` | none |
 | `eus_trivia.EusTrivia` | `HiTZ/EusTrivia` | `default` | `test` | none |
 | `gpqa.GPQA` | `Idavidrein/gpqa` | `None` | `train` | none |
+| `gsm_plus.GSMPlus` | `qintongli/GSM-Plus` | `None` | `test` | none |
+| `gsm_plus.GSMPlusMini` | `qintongli/GSM-Plus` | `None` | `testmini` | none |
 | `graphwalks.graphwalks_128k` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_128k_and_shorter.parquet` |
 | `graphwalks.graphwalks_1M` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_256k_to_1mil.parquet` |
 | `gsm8k.GSM8K` | `openai/gsm8k` | `main` | `test` | none |

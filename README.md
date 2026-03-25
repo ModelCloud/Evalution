@@ -338,6 +338,8 @@ logic, those implementation details can shift results.
 | `egyhellaswag` | Multiple-choice log-likelihood over Egyptian Arabic translated HellaSwag endings, raw + length-normalized accuracy | EgyHellaSwag `mekki2025nilechatlinguisticallydiverseculturally` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
 | `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
+| `gsm_plus` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` split | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
+| `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `testmini` split | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
 | `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `ethics_deontology` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `ethics_justice` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
@@ -521,6 +523,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `logiqa`: LogiQA `liu2020logiqa`
 - `logiqa2`: LogiQA 2.0 `liu2022logiqa2`
 - `mastermind_24_easy`, `mastermind_24_hard`, `mastermind_35_easy`, `mastermind_35_hard`, `mastermind_46_easy`, `mastermind_46_hard`: Mastermind
+- `gsm_plus`, `gsm_plus_mini`: GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating`
 - `mathqa`: MathQA `amini2019mathqa`
 - `mc_taco`: MC-TACO `zhou2019mctaco`
 - `medmcqa`: MedMCQA `pmlr-v174-pal22a`
@@ -735,6 +738,17 @@ The current built-in suite coverage maps to these benchmark citations:
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
   journal = {arXiv preprint arXiv:2110.14168},
   year = {2021},
+}
+
+# GSM-Plus
+@misc{li2024gsmpluscomprehensivebenchmarkevaluating,
+  title = {GSM-Plus: A Comprehensive Benchmark for Evaluating the Robustness of LLMs as Mathematical Problem Solvers},
+  author = {Qintong Li and Leyang Cui and Xueliang Zhao and Lingpeng Kong and Wei Bi},
+  year = {2024},
+  eprint = {2402.19255},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2402.19255},
 }
 
 # Histoires Morales
