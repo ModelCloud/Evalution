@@ -303,6 +303,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mnli)
     assert evalution.benchmarks.MRPC is not None
     assert callable(evalution.benchmarks.mrpc)
+    assert evalution.benchmarks.MultiRC is not None
+    assert callable(evalution.benchmarks.multirc)
     assert evalution.benchmarks.MuTual is not None
     assert callable(evalution.benchmarks.mutual)
     assert evalution.benchmarks.NQOpen is not None
@@ -380,6 +382,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.winogender_gotcha_male)
     assert callable(evalution.benchmarks.winogender_male)
     assert callable(evalution.benchmarks.winogender_neutral)
+    assert evalution.benchmarks.WSC is not None
+    assert callable(evalution.benchmarks.wsc)
     assert evalution.benchmarks.WSC273 is not None
     assert callable(evalution.benchmarks.wsc273)
     assert evalution.benchmarks.WNLI is not None

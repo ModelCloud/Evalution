@@ -32,6 +32,7 @@ SCORE_BASELINE_ABS_TOLERANCE_35 = 2 / 35
 SCORE_BASELINE_ABS_TOLERANCE_42 = 2 / 42
 SCORE_BASELINE_ABS_TOLERANCE_73 = 2 / 73
 SCORE_BASELINE_ABS_TOLERANCE_89 = 2 / 89
+SCORE_BASELINE_ABS_TOLERANCE_104 = 2 / 104
 SCORE_BASELINE_ABS_TOLERANCE_115 = 2 / 115
 SCORE_BASELINE_ABS_TOLERANCE_272 = 2 / 272
 MMLU_STEM_SUBSETS = {
@@ -1507,6 +1508,21 @@ def _metadata_sentence_has_blank(metadata: dict[str, Any]) -> None:
     assert " _ " in metadata["sentence"]
 
 
+def _metadata_has_wsc_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["noun"]
+    assert metadata["pronoun"]
+    assert isinstance(metadata["span2_index"], int)
+
+
+def _metadata_has_multirc_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["paragraph"]
+    assert metadata["question"]
+    assert metadata["answer"]
+    assert metadata["idx"]["paragraph"] >= 0
+    assert metadata["idx"]["question"] >= 0
+    assert metadata["idx"]["answer"] >= 0
+
+
 def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         subset = metadata["subset"]
@@ -2802,6 +2818,42 @@ def _esbbq_suite_spec(
     )
 
 
+def _graphwalks_sample_validator(sample: Any, index: int) -> None:
+    metadata = sample.metadata
+    assert sample.index == index
+    assert metadata.get("problem_type")
+    assert metadata.get("prompt_chars", 0) > 0
+    assert isinstance(sample.extracted.get("prediction_nodes_strict"), list)
+    assert isinstance(sample.extracted.get("prediction_nodes_flexible"), list)
+
+
+def _graphwalks_suite_spec(
+    task_name: str,
+    *,
+    data_file: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.graphwalks_128k(
+            max_rows=1,
+            batch_size=1,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"f1", "flexible_f1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "openai/graphwalks",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "graphwalks_set_f1",
+            "data_file": data_file,
+        },
+        expected_sample_count=1,
+        sample_validator=_graphwalks_sample_validator,
+    )
+
+
 SUITE_SPECS = {
     "cabbq_age": _cabbq_suite_spec(
         "cabbq_age",
@@ -2852,6 +2904,11 @@ SUITE_SPECS = {
         "esbbq_nationality",
         category="Nationality",
         baseline={"acc,ll": 0.4765625, "acc,ll_avg": 0.4765625},
+    ),
+    "graphwalks_128k": _graphwalks_suite_spec(
+        "graphwalks_128k",
+        data_file="graphwalks_128k_and_shorter.parquet",
+        baseline={"f1": 0.0, "flexible_f1": 0.0},
     ),
     "eus_exams_eu_opeosakiadmineu": _eus_exams_suite_spec(
         "eus_exams_eu_opeosakiadmineu",
@@ -4684,6 +4741,30 @@ SUITE_SPECS = {
             ),
         ),
     ),
+    "multirc": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.multirc(batch_size=24, stream=True, max_rows=128),
+        expected_name="multirc",
+        baseline={
+            "acc,ll": 0.421875,
+            "acc,ll_avg": 0.421875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "super_glue",
+            "dataset_name": "multirc",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "order": "native",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_substrings=("\nQuestion: ", "\nAnswer:"),
+            metadata_validator=_metadata_has_multirc_fields,
+        ),
+    ),
     "openbookqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.openbookqa(batch_size=24, stream=True, max_rows=128),
         expected_name="openbookqa",
@@ -5741,6 +5822,34 @@ SUITE_SPECS = {
             index,
             metadata_validator=_metadata_has_choice_labels(exact_count=2),
         ),
+    ),
+    "wsc": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.wsc(batch_size=24, stream=True, max_rows=128),
+        expected_name="wsc",
+        baseline={
+            "acc,ll": 0.36538461538461536,
+            "acc,ll_avg": 0.36538461538461536,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "super_glue",
+            "dataset_name": "wsc.fixed",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "order": "native",
+        },
+        expected_sample_count=104,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"yes", "no"},
+            prediction_values={"yes", "no"},
+            prompt_prefix="Passage: ",
+            prompt_substrings=("does the pronoun", "\nAnswer:"),
+            metadata_validator=_metadata_has_wsc_fields,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_104,
     ),
     "wnli": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wnli(batch_size=24, stream=True, max_rows=71),

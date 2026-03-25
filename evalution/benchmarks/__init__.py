@@ -84,6 +84,7 @@ from .drop import DROP, drop
 from . import eus_exams as _eus_exams_module
 from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
 from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
+from .graphwalks import GraphWalks, graphwalks_128k, graphwalks_1M
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hendrycks_ethics import (
@@ -115,6 +116,7 @@ from .mmlu import MMLU, mmlu
 from .mmlu_pro import MMLUPro, mmlu_pro
 from .mnli import MNLI, mnli
 from .mrpc import MRPC, mrpc
+from .multirc import MultiRC, multirc
 from .mutual import MuTual, mutual
 from .nq_open import NQOpen, nq_open
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
@@ -145,6 +147,7 @@ from .wikitext import WikiText, wikitext
 from . import wmdp as _wmdp_module
 from .wmdp import WMDP, WMDP_SUBSETS, WMDP_TASKS, wmdp
 from .winogender import WinoGender, winogender, winogender_all, winogender_female, winogender_gotcha, winogender_gotcha_female, winogender_gotcha_male, winogender_male, winogender_neutral
+from .wsc import WSC, wsc
 from .wsc273 import WSC273, wsc273
 from .wnli import WNLI, wnli
 from .winogrande import WinoGrande, winogrande
@@ -367,6 +370,7 @@ __all__ = [
     "MMLUPro",
     "MNLI",
     "MRPC",
+    "MultiRC",
     "MuTual",
     "NQOpen",
     "MultipleChoiceSample",
@@ -400,6 +404,7 @@ __all__ = [
     "WMDP_SUBSETS",
     "WMDP_TASKS",
     "WinoGender",
+    "WSC",
     "WSC273",
     "WNLI",
     "WinoGrande",
@@ -563,6 +568,7 @@ __all__ = [
     "mmlu_pro",
     "mnli",
     "mrpc",
+    "multirc",
     "mutual",
     "nq_open",
     "openbookqa",
@@ -609,6 +615,7 @@ __all__ = [
     "winogender_gotcha_male",
     "winogender_male",
     "winogender_neutral",
+    "wsc",
     "wsc273",
     "wnli",
     "winogrande",

@@ -71,6 +71,8 @@ This document records the dataset identifier and split semantics for each Evalut
 | `esbbq.EsBBQ` | `BSC-LT/EsBBQ` | `Age` | `test` | none |
 | `eus_exams.EusExams` | `HiTZ/EusExams` | `None` | `test` | none |
 | `gpqa.GPQA` | `Idavidrein/gpqa` | `None` | `train` | none |
+| `graphwalks.graphwalks_128k` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_128k_and_shorter.parquet` |
+| `graphwalks.graphwalks_1M` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_256k_to_1mil.parquet` |
 | `gsm8k.GSM8K` | `openai/gsm8k` | `main` | `test` | none |
 | `gsm8k_platinum.GSM8KPlatinum` | `madrylab/gsm8k-platinum` | `main` | `test` | none |
 | `headqa.HEADQA` | `EleutherAI/headqa` | `en` | `test` | none |
@@ -91,6 +93,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `mmlu_pro.MMLUPro` | `TIGER-Lab/MMLU-Pro` | `None` | `test` | `fewshot_split=validation` |
 | `mnli.MNLI` | `nyu-mll/glue` | `mnli` | `validation_matched` | none |
 | `mrpc.MRPC` | `nyu-mll/glue` | `mrpc` | `validation` | none |
+| `multirc.MultiRC` | `super_glue` | `multirc` | `validation` | none |
 | `nq_open.NQOpen` | `nq_open` | `nq_open` | `validation` | none |
 | `openbookqa.OpenBookQA` | `allenai/openbookqa` | `main` | `test` | none |
 | `paws_x.PAWSX` | `paws-x` | `en` | `test` | none |
@@ -115,6 +118,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `wikitext.WikiText` | `EleutherAI/wikitext_document_level` | `wikitext-2-raw-v1` | `test` | none |
 | `winogender.WinoGender` | `oskarvanderwal/winogender` | `all` | `test` | none |
 | `winogrande.WinoGrande` | `winogrande` | `winogrande_xl` | `validation` | none |
+| `wsc.WSC` | `super_glue` | `wsc.fixed` | `validation` | none |
 | `wnli.WNLI` | `nyu-mll/glue` | `wnli` | `validation` | none |
 | `wsc273.WSC273` | `winograd_wsc` | `wsc273` | `test` | none |
 | `xcopa.XCOPA` | `xcopa` | `it` | `test` | none |

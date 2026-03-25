@@ -364,6 +364,7 @@ logic, those implementation details can shift results.
 | `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
+| `multirc` | Multiple-choice log-likelihood over candidate answers with yes/no verification, raw + length-normalized accuracy | SuperGLUE MultiRC `wang2019superglue` |
 | `mutual` | Multiple-choice dialogue response selection log-likelihood, raw + length-normalized accuracy | MuTual `cui2020mutual` |
 | `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
@@ -394,6 +395,7 @@ logic, those implementation details can shift results.
 | `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
 | `wikitext` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | WikiText-2 `merity2016pointer` |
 | `winogender` | Multiple-choice log-likelihood over pronoun-reference prompts across `all/gotcha` variants and `female/male/neutral` gender filters, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
+| `wsc` | Multiple-choice log-likelihood over the SuperGLUE fixed-schema pronoun-resolution prompts, raw + length-normalized accuracy | SuperGLUE WSC `wang2019superglue` |
 | `wsc273` | Partial-evaluation multiple-choice log-likelihood, raw + length-normalized accuracy | WSC273 `levesque2012winograd` |
 | `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
