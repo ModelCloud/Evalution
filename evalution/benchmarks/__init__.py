@@ -145,6 +145,7 @@ from .lambada_multilingual_stablelm import (
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
 from .mbpp import MBPP, mbpp
+from .multirc import MultiRC, multirc
 from .mathqa import MathQA, mathqa
 from .mastermind import (
     MASTERMIND_VARIANTS,

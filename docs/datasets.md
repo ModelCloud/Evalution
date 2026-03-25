@@ -104,6 +104,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `medmcqa.MedMCQA` | `openlifescienceai/medmcqa` | `None` | `validation` | none |
 | `medqa.MedQA` | `GBaker/MedQA-USMLE-4-options-hf` | `None` | `test` | none |
 | `mmlu.MMLU` | `cais/mmlu` | `all` or leaf subset name | `test` | `fewshot_split=dev` |
+| `multirc.MultiRC` | `super_glue` | `multirc` | `validation` | none |
 | `mastermind.Mastermind` | variant-dependent: `flair/mastermind_24_mcq_random`, `flair/mastermind_24_mcq_close`, `flair/mastermind_35_mcq_random`, `flair/mastermind_35_mcq_close`, `flair/mastermind_46_mcq_random`, `flair/mastermind_46_mcq_close` | `None` | `test` | none |
 | `mbpp.MBPP` | `mbpp` | `sanitized` | `test` | none |
 | `mmlu_pro.MMLUPro` | `TIGER-Lab/MMLU-Pro` | `None` | `test` | `fewshot_split=validation` |

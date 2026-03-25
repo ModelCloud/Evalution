@@ -325,6 +325,7 @@ logic, those implementation details can shift results.
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
+| `multirc` | Multi-answer reading comprehension with per-question exact match and F1a over selected answer indices | SuperGLUE `wang2019superglue` |
 | `click` | Multiple-choice log-likelihood across Korean CLIcK language and culture subsets, raw + length-normalized accuracy | CLIcK `kim2024click` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
 | `cnn_dailymail` | Generated summarization with ROUGE-1, ROUGE-2, and ROUGE-Lsum F1 | CNN/DailyMail `nallapati2016abstractive` |

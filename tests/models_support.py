@@ -4660,6 +4660,32 @@ SUITE_SPECS = {
         sample_validator=_assert_mbpp_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
+    "multirc": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.multirc(batch_size=8, max_rows=16),
+        expected_name="multirc",
+        baseline={
+            "em": 0.0,
+            "f1a": 0.0,
+        },
+        expected_metrics=frozenset({"em", "f1a"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "super_glue",
+            "dataset_name": "multirc",
+            "split": "validation",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "multi_label_extraction",
+            "primary_metric": "em",
+        },
+        expected_sample_count=16,
+        sample_validator=lambda sample, index: (
+            _assert_dict_subset(
+                sample["metadata"],
+                {"paragraph_idx": int, "question_idx": int, "num_answers": int},
+            )
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "icelandic_winogrande": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.icelandic_winogrande(batch_size=24, max_rows=32),
         expected_name="icelandic_winogrande",
