@@ -12,6 +12,7 @@ import threading
 from collections.abc import Iterable, Iterator
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field, replace
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -79,6 +80,7 @@ class VLLMSession(BaseInferenceSession):
     sampling_params_cls: Any
     _generation_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _tokenizer_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _continuous_request_counter: int = field(default=0, init=False, repr=False)
 
     @classmethod
     def from_config(cls, config: VLLM, model_config: Model) -> VLLMSession:
@@ -187,34 +189,19 @@ class VLLMSession(BaseInferenceSession):
 
         prepared_requests = self.prepare_requests(requests)
         effective_batch_size = batch_size or self.resolve_batch_size(prepared_requests)
-        outputs: list[GenerationOutput] = []
         with self._generation_lock:
-            for start in range(0, len(prepared_requests), effective_batch_size):
-                batch = prepared_requests[start: start + effective_batch_size]
-                prompts = [self._prompt_from_generation_request(request) for request in batch]
-                params = [self._sampling_params_for_generation(request) for request in batch]
-                batch_outputs = self.llm.generate(prompts, sampling_params=params, use_tqdm=False)
-                for request, result in zip(batch, batch_outputs, strict=True):
-                    completion = result.outputs[0] if result.outputs else None
-                    text = "" if completion is None else _truncate_at_stop(completion.text, request.stop).strip()
-                    metadata = dict(request.metadata)
-                    if completion is not None:
-                        metadata.update(
-                            {
-                                "finish_reason": getattr(completion, "finish_reason", None),
-                                "stop_reason": getattr(completion, "stop_reason", None),
-                                "completion_token_count": len(getattr(completion, "token_ids", []) or []),
-                            }
-                        )
-                    metadata["prompt_token_count"] = len(getattr(result, "prompt_token_ids", []) or [])
-                    outputs.append(
-                        GenerationOutput(
-                            prompt=request.rendered_prompt or "",
-                            text=text,
-                            metadata=metadata,
-                        )
-                    )
-        return outputs
+            if not self._supports_request_level_continuous_batching():
+                return self._generate_blocking(prepared_requests, batch_size=effective_batch_size)
+
+            outputs_by_position: list[GenerationOutput | None] = [None] * len(prepared_requests)
+            for position, output in self._generate_engine_continuous(
+                enumerate(prepared_requests),
+                batch_size=effective_batch_size,
+            ):
+                outputs_by_position[int(position)] = output
+            if any(output is None for output in outputs_by_position):
+                raise RuntimeError("vLLM continuous generation returned incomplete results")
+            return [output for output in outputs_by_position if output is not None]
 
     def generate_continuous(
             self,
@@ -223,29 +210,174 @@ class VLLMSession(BaseInferenceSession):
             batch_size: int | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
-            effective_batch_size = batch_size
-            batch: list[tuple[Any, GenerationRequest]] = []
-            for item in requests:
-                batch.append(item)
-                if effective_batch_size is None:
-                    effective_batch_size = self.resolve_batch_size([item[1] for item in batch])
-                if len(batch) >= effective_batch_size:
-                    outputs = self.generate(
-                        [request for _, request in batch],
-                        batch_size=len(batch),
-                    )
-                    for (request_key, _request), output in zip(batch, outputs, strict=True):
-                        yield request_key, output
-                    batch = []
-            if batch:
-                outputs = self.generate(
-                    [request for _, request in batch],
-                    batch_size=len(batch),
-                )
-                for (request_key, _request), output in zip(batch, outputs, strict=True):
-                    yield request_key, output
+            request_iter = iter(requests)
+            preview_items: list[tuple[Any, GenerationRequest]] = []
+            for _ in range(64):
+                try:
+                    preview_items.append(next(request_iter))
+                except StopIteration:
+                    break
+            if not preview_items:
+                return
+
+            effective_batch_size = batch_size or self.resolve_batch_size(
+                [request for _, request in preview_items]
+            )
+            items = chain(preview_items, request_iter)
+
+            with self._generation_lock:
+                if self._supports_request_level_continuous_batching():
+                    yield from self._generate_engine_continuous(items, batch_size=effective_batch_size)
+                    return
+                yield from self._generate_blocking_continuous(items, batch_size=effective_batch_size)
 
         return iterator()
+
+    def _generate_blocking(
+            self,
+            prepared_requests: list[GenerationRequest],
+            *,
+            batch_size: int,
+    ) -> list[GenerationOutput]:
+        outputs: list[GenerationOutput] = []
+        for start in range(0, len(prepared_requests), batch_size):
+            batch = prepared_requests[start: start + batch_size]
+            prompts = [self._prompt_from_generation_request(request) for request in batch]
+            params = [self._sampling_params_for_generation(request) for request in batch]
+            batch_outputs = self.llm.generate(prompts, sampling_params=params, use_tqdm=False)
+            for request, result in zip(batch, batch_outputs, strict=True):
+                outputs.append(self._generation_output_from_result(request, result))
+        return outputs
+
+    def _generate_blocking_continuous(
+            self,
+            requests: Iterable[tuple[Any, GenerationRequest]],
+            *,
+            batch_size: int,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        batch: list[tuple[Any, GenerationRequest]] = []
+        for item in requests:
+            batch.append(item)
+            if len(batch) == batch_size:
+                prepared_batch = [
+                    prepared_request
+                    for prepared_request in self.prepare_requests([request for _, request in batch])
+                ]
+                outputs = self._generate_blocking(prepared_batch, batch_size=len(prepared_batch))
+                for (request_key, _request), output in zip(batch, outputs, strict=True):
+                    yield request_key, output
+                batch = []
+        if batch:
+            prepared_batch = [
+                prepared_request
+                for prepared_request in self.prepare_requests([request for _, request in batch])
+            ]
+            outputs = self._generate_blocking(prepared_batch, batch_size=len(prepared_batch))
+            for (request_key, _request), output in zip(batch, outputs, strict=True):
+                yield request_key, output
+
+    def _generate_engine_continuous(
+            self,
+            requests: Iterable[tuple[Any, GenerationRequest]],
+            *,
+            batch_size: int,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        request_iter = iter(requests)
+        inflight_requests: dict[str, tuple[Any, GenerationRequest]] = {}
+        llm_engine = self.llm.llm_engine
+        source_exhausted = False
+
+        def submit_one() -> bool:
+            nonlocal source_exhausted
+            if source_exhausted:
+                return False
+            try:
+                request_key, request = next(request_iter)
+            except StopIteration:
+                source_exhausted = True
+                return False
+
+            prepared_request = self.prepare_requests([request])[0]
+            request_id = self._next_continuous_request_id()
+            llm_engine.add_request(
+                request_id,
+                self._prompt_from_generation_request(prepared_request),
+                self._sampling_params_for_generation(prepared_request),
+                prompt_text=prepared_request.rendered_prompt,
+            )
+            inflight_requests[request_id] = (request_key, prepared_request)
+            return True
+
+        try:
+            while len(inflight_requests) < batch_size and submit_one():
+                continue
+
+            while inflight_requests:
+                step_outputs = llm_engine.step()
+                if not step_outputs:
+                    if not llm_engine.has_unfinished_requests():
+                        raise RuntimeError("vLLM engine stopped before all continuous requests completed")
+                    continue
+
+                for result in step_outputs:
+                    request_id = getattr(result, "request_id", None)
+                    if request_id is None:
+                        raise RuntimeError("vLLM continuous batching returned an output without request_id")
+                    request_state = inflight_requests.get(request_id)
+                    if request_state is None:
+                        raise RuntimeError(
+                            f"vLLM continuous batching returned unknown request_id={request_id!r}"
+                        )
+                    if not getattr(result, "finished", False):
+                        continue
+
+                    request_key, request = inflight_requests.pop(request_id)
+                    yield request_key, self._generation_output_from_result(request, result)
+
+                    while len(inflight_requests) < batch_size and submit_one():
+                        continue
+        finally:
+            abort_request = getattr(llm_engine, "abort_request", None)
+            if callable(abort_request) and inflight_requests:
+                with suppress(Exception):
+                    abort_request(list(inflight_requests.keys()), internal=True)
+
+    def _generation_output_from_result(
+            self,
+            request: GenerationRequest,
+            result: Any,
+    ) -> GenerationOutput:
+        completion = result.outputs[0] if getattr(result, "outputs", None) else None
+        text = "" if completion is None else _truncate_at_stop(completion.text, request.stop).strip()
+        metadata = dict(request.metadata)
+        if completion is not None:
+            metadata.update(
+                {
+                    "finish_reason": getattr(completion, "finish_reason", None),
+                    "stop_reason": getattr(completion, "stop_reason", None),
+                    "completion_token_count": len(getattr(completion, "token_ids", []) or []),
+                }
+            )
+        metadata["prompt_token_count"] = len(getattr(result, "prompt_token_ids", []) or [])
+        return GenerationOutput(
+            prompt=request.rendered_prompt or "",
+            text=text,
+            metadata=metadata,
+        )
+
+    def _supports_request_level_continuous_batching(self) -> bool:
+        llm_engine = getattr(self.llm, "llm_engine", None)
+        return (
+            llm_engine is not None
+            and callable(getattr(llm_engine, "add_request", None))
+            and callable(getattr(llm_engine, "step", None))
+            and callable(getattr(llm_engine, "has_unfinished_requests", None))
+        )
+
+    def _next_continuous_request_id(self) -> str:
+        request_id = f"req_{self._continuous_request_counter}"
+        self._continuous_request_counter += 1
+        return request_id
 
     def loglikelihood(
             self,

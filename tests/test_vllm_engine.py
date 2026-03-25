@@ -122,6 +122,75 @@ class FakeLLM:
         return True
 
 
+class FakeContinuousEngine:
+    def __init__(self, *, prompt_delays: dict[str, int]) -> None:
+        self.prompt_delays = dict(prompt_delays)
+        self.inflight: dict[str, dict[str, object]] = {}
+        self.max_inflight = 0
+        self.submission_snapshots: list[tuple[str, tuple[str, ...]]] = []
+        self.abort_calls: list[tuple[list[str], bool]] = []
+        self.vllm_config = SimpleNamespace(model_config=SimpleNamespace(max_model_len=32))
+
+    def add_request(self, request_id, prompt, params, prompt_text=None, **kwargs):
+        del params, kwargs
+        prompt_token_ids = list(prompt["prompt_token_ids"])
+        rendered_prompt = prompt_text or prompt.get("prompt") or ""
+        self.inflight[request_id] = {
+            "prompt": rendered_prompt,
+            "prompt_token_ids": prompt_token_ids,
+            "remaining_steps": self.prompt_delays.get(rendered_prompt, 1),
+        }
+        self.max_inflight = max(self.max_inflight, len(self.inflight))
+        active_prompts = tuple(
+            sorted(str(state["prompt"]) for state in self.inflight.values())
+        )
+        self.submission_snapshots.append((rendered_prompt, active_prompts))
+        return request_id
+
+    def step(self):
+        finished = []
+        for request_id, state in list(self.inflight.items()):
+            state["remaining_steps"] = int(state["remaining_steps"]) - 1
+            if int(state["remaining_steps"]) > 0:
+                continue
+            del self.inflight[request_id]
+            prompt_text = str(state["prompt"])
+            finished.append(
+                SimpleNamespace(
+                    request_id=request_id,
+                    finished=True,
+                    prompt_token_ids=list(state["prompt_token_ids"]),
+                    outputs=[
+                        SimpleNamespace(
+                            text=f"{prompt_text}-done",
+                            token_ids=[ord(char) for char in f"{prompt_text}!"],
+                            finish_reason="stop",
+                            stop_reason=None,
+                        )
+                    ],
+                )
+            )
+        return sorted(finished, key=lambda output: output.request_id, reverse=True)
+
+    def has_unfinished_requests(self):
+        return bool(self.inflight)
+
+    def abort_request(self, request_ids, internal=False):
+        request_ids = list(request_ids)
+        self.abort_calls.append((request_ids, internal))
+        for request_id in request_ids:
+            self.inflight.pop(request_id, None)
+
+    def shutdown(self):
+        self.inflight.clear()
+
+
+class FakeContinuousLLM(FakeLLM):
+    def __init__(self, *, prompt_delays: dict[str, int], tokenizer=None) -> None:
+        super().__init__(tokenizer=tokenizer)
+        self.llm_engine = FakeContinuousEngine(prompt_delays=prompt_delays)
+
+
 def test_vllm_engine_defaults_batch_size_to_auto() -> None:
     engine = VLLM()
 
@@ -189,6 +258,66 @@ def test_vllm_session_generates_and_scores() -> None:
     assert llm.generate_calls[1][1][0].prompt_logprobs == 1
 
 
+def test_vllm_session_generate_uses_request_ids_to_restore_original_order() -> None:
+    llm = FakeContinuousLLM(prompt_delays={"A": 1, "B": 1, "C": 1})
+    session = VLLMSession(
+        config=VLLM(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        llm=llm,
+        tokenizer=llm.get_tokenizer(),
+        prepare_tokenizer=llm.get_tokenizer(),
+        sampling_params_cls=FakeSamplingParams,
+    )
+
+    outputs = session.generate(
+        [
+            GenerationRequest(prompt="A", max_new_tokens=2),
+            GenerationRequest(prompt="B", max_new_tokens=2),
+            GenerationRequest(prompt="C", max_new_tokens=2),
+        ],
+        batch_size=2,
+    )
+
+    assert [output.prompt for output in outputs] == ["A", "B", "C"]
+    assert [output.text for output in outputs] == ["A-done", "B-done", "C-done"]
+    assert llm.llm_engine.max_inflight == 2
+
+
+def test_vllm_session_generate_continuous_refills_open_slots_immediately() -> None:
+    llm = FakeContinuousLLM(prompt_delays={"A": 4, "B": 1, "C": 1, "D": 1})
+    session = VLLMSession(
+        config=VLLM(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        llm=llm,
+        tokenizer=llm.get_tokenizer(),
+        prepare_tokenizer=llm.get_tokenizer(),
+        sampling_params_cls=FakeSamplingParams,
+    )
+
+    outputs = list(
+        session.generate_continuous(
+            [
+                ("a", GenerationRequest(prompt="A", max_new_tokens=2)),
+                ("b", GenerationRequest(prompt="B", max_new_tokens=2)),
+                ("c", GenerationRequest(prompt="C", max_new_tokens=2)),
+                ("d", GenerationRequest(prompt="D", max_new_tokens=2)),
+            ],
+            batch_size=2,
+        )
+    )
+
+    assert [request_id for request_id, _output in outputs] == ["b", "c", "d", "a"]
+    assert {request_id: output.text for request_id, output in outputs} == {
+        "a": "A-done",
+        "b": "B-done",
+        "c": "C-done",
+        "d": "D-done",
+    }
+    assert llm.llm_engine.max_inflight == 2
+    assert ("C", ("A", "C")) in llm.llm_engine.submission_snapshots
+    assert ("D", ("A", "D")) in llm.llm_engine.submission_snapshots
+
+
 def test_vllm_session_scores_rolling_requests() -> None:
     llm = FakeLLM()
     session = VLLMSession(
@@ -243,6 +372,7 @@ def test_vllm_session_gc_resets_prefix_cache() -> None:
 
 def test_vllm_build_loads_local_checkout(monkeypatch) -> None:
     fake_llm = FakeLLM()
+    fake_prepare_tokenizer = FakeTokenizer()
 
     class FakeVLLMModule:
         SamplingParams = FakeSamplingParams
@@ -255,11 +385,16 @@ def test_vllm_build_loads_local_checkout(monkeypatch) -> None:
             return fake_llm
 
     monkeypatch.setattr("evalution.engines.vllm_engine._import_vllm", lambda path: FakeVLLMModule)
+    monkeypatch.setattr(
+        "evalution.engines.vllm_engine._load_tokenizer_from_model",
+        lambda source, **kwargs: fake_prepare_tokenizer,
+    )
 
     session = VLLM(tensor_parallel_size=2).build(Model(path="/tmp/model"))
 
     assert isinstance(session, VLLMSession)
     assert session.describe_execution()["generation_backend"] == "vllm_generate"
+    assert session.prepare_tokenizer is fake_prepare_tokenizer
 
 
 def test_vllm_build_accepts_custom_tokenizer_object(monkeypatch) -> None:
