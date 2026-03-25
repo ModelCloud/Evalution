@@ -1009,6 +1009,18 @@ def _metadata_has_moral_stories_fields(metadata: dict[str, Any]) -> None:
     assert metadata["immoral_consequence"]
 
 
+def _assert_mbpp_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert "[BEGIN]" in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"passed", "code"}
+    assert set(sample.scores) == {"pass@1"}
+    assert sample.metadata["task_id"]
+    assert sample.metadata["source_file"]
+    assert "test_import_count" in sample.metadata
+
+
 def _assert_babilong_sample(
     sample: Any,
     index: int,
@@ -4626,6 +4638,26 @@ SUITE_SPECS = {
             index,
             metadata_validator=_metadata_has_moral_stories_fields,
         ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "mbpp": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mbpp(batch_size=4, max_rows=32, max_new_tokens=256),
+        expected_name="mbpp",
+        baseline={
+            "pass@1": 0.0,
+        },
+        expected_metrics=frozenset({"pass@1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "mbpp",
+            "dataset_name": "sanitized",
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_code_execution",
+            "primary_metric": "pass@1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_mbpp_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "icelandic_winogrande": SuiteSpec(

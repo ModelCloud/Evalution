@@ -177,6 +177,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "lambada_standard_cloze": benchmarks.lambada_standard_cloze,
     "logiqa": benchmarks.logiqa,
     "logiqa2": benchmarks.logiqa2,
+    "mbpp": benchmarks.mbpp,
     "mathqa": benchmarks.mathqa,
     "mastermind_24_easy": benchmarks.mastermind_24_easy,
     "mastermind_24_hard": benchmarks.mastermind_24_hard,

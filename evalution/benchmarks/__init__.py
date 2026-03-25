@@ -144,6 +144,7 @@ from .lambada_multilingual_stablelm import (
 )
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
+from .mbpp import MBPP, mbpp
 from .mathqa import MathQA, mathqa
 from .mastermind import (
     MASTERMIND_VARIANTS,
@@ -445,6 +446,7 @@ __all__ = [
     "LAMBADACloze",
     "LogiQA",
     "LogiQA2",
+    "MBPP",
     "MASTERMIND_VARIANTS",
     "MathQA",
     "Mastermind",
@@ -671,6 +673,7 @@ __all__ = [
     "lambada_standard_cloze",
     "logiqa",
     "logiqa2",
+    "mbpp",
     "mathqa",
     "mastermind",
     "mastermind_24_easy",
