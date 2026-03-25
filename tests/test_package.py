@@ -243,6 +243,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.FLD is not None
     assert evalution.benchmarks.FLD_LABELS == ("PROVED", "DISPROVED", "UNKNOWN")
     assert callable(evalution.benchmarks.fld)
+    assert evalution.benchmarks.FDA is not None
+    assert callable(evalution.benchmarks.fda)
     assert evalution.benchmarks.FrenchBenchARCChallenge is not None
     assert callable(evalution.benchmarks.french_bench_arc_challenge)
     assert evalution.benchmarks.EusReading is not None
@@ -288,6 +290,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.hellaswag)
     assert evalution.benchmarks.HistoiresMorales is not None
     assert callable(evalution.benchmarks.histoires_morales)
+    assert evalution.benchmarks.MoralStories is not None
+    assert callable(evalution.benchmarks.moral_stories)
     assert evalution.benchmarks.IcelandicWinoGrande is not None
     assert callable(evalution.benchmarks.icelandic_winogrande)
     assert evalution.benchmarks.InverseScaling is not None
@@ -322,12 +326,38 @@ def test_package_exports_benchmarks_namespace() -> None:
         "lambada_openai_mt_fr",
         "lambada_openai_mt_it",
     )
+    assert evalution.benchmarks.LAMBADA_OPENAI_MT_STABLELM_LANGUAGES == (
+        "de",
+        "en",
+        "es",
+        "fr",
+        "it",
+        "nl",
+        "pt",
+    )
+    assert evalution.benchmarks.LAMBADA_OPENAI_MT_STABLELM_TASKS == (
+        "lambada_openai_mt_stablelm_de",
+        "lambada_openai_mt_stablelm_en",
+        "lambada_openai_mt_stablelm_es",
+        "lambada_openai_mt_stablelm_fr",
+        "lambada_openai_mt_stablelm_it",
+        "lambada_openai_mt_stablelm_nl",
+        "lambada_openai_mt_stablelm_pt",
+    )
     assert callable(evalution.benchmarks.lambada_openai_mt)
     assert callable(evalution.benchmarks.lambada_openai_mt_de)
     assert callable(evalution.benchmarks.lambada_openai_mt_en)
     assert callable(evalution.benchmarks.lambada_openai_mt_es)
     assert callable(evalution.benchmarks.lambada_openai_mt_fr)
     assert callable(evalution.benchmarks.lambada_openai_mt_it)
+    assert callable(evalution.benchmarks.lambada_openai_mt_stablelm)
+    assert callable(evalution.benchmarks.lambada_openai_mt_stablelm_de)
+    assert callable(evalution.benchmarks.lambada_openai_mt_stablelm_en)
+    assert callable(evalution.benchmarks.lambada_openai_mt_stablelm_es)
+    assert callable(evalution.benchmarks.lambada_openai_mt_stablelm_fr)
+    assert callable(evalution.benchmarks.lambada_openai_mt_stablelm_it)
+    assert callable(evalution.benchmarks.lambada_openai_mt_stablelm_nl)
+    assert callable(evalution.benchmarks.lambada_openai_mt_stablelm_pt)
     assert callable(evalution.benchmarks.lambada_openai_cloze)
     assert callable(evalution.benchmarks.lambada_standard)
     assert callable(evalution.benchmarks.lambada_standard_cloze)

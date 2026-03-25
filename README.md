@@ -339,6 +339,7 @@ logic, those implementation details can shift results.
 | `egyhellaswag` | Multiple-choice log-likelihood over Egyptian Arabic translated HellaSwag endings, raw + length-normalized accuracy | EgyHellaSwag `mekki2025nilechatlinguisticallydiverseculturally` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
 | `fld` | Generated exact match over `PROVED/DISPROVED/UNKNOWN` world-assumption verdicts from serialized deduction prompts | FLD `han2024formal` |
+| `fda` | Generated contains-over-answer match over the `validation` split | FDA based on `hazyresearch/based-fda` |
 | `french_bench_arc_challenge` | Multiple-choice log-likelihood over the French ARC-Challenge split, with raw and length-normalized accuracy | FrenchBench ARC-Challenge |
 | `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
 | `gsm_plus` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` split | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
@@ -356,11 +357,13 @@ logic, those implementation details can shift results.
 | `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
+| `moral_stories` | Multiple-choice log-likelihood over moral versus immoral actions, raw + length-normalized accuracy | Moral Stories `emelin-etal-2021-moral` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
 | `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `sean0042kormedmcqa` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_openai_mt_{de,en,es,fr,it}` | Single-continuation log-likelihood, greedy accuracy + perplexity over multilingual LAMBADA translations | LAMBADA-MT |
+| `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}` | Single-continuation log-likelihood, greedy accuracy + perplexity over StableLM multilingual LAMBADA translations | LAMBADA-MT |
 | `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
@@ -514,6 +517,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `darijahellaswag`: DarijaHellaSwag `shang2024atlaschatadaptinglargelanguage`
 - `egyhellaswag`: EgyHellaSwag `mekki2025nilechatlinguisticallydiverseculturally`
 - `drop`: DROP `dua2019drop`
+- `fda`: BASED-FDA dataset
 - `gpqa_main`, `gpqa_diamond`, `gpqa_extended`: GPQA `rein2024gpqa`
 - `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
 - `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
@@ -522,10 +526,11 @@ The current built-in suite coverage maps to these benchmark citations:
 - `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
 - `hendrycks_math_<subset>` for the built-in subject subsets: MATH `hendrycks2021measuring`
 - `histoires_morales`: Histoires Morales `leteno2025histoiresmorales`
+- `moral_stories`: Moral Stories `emelin-etal-2021-moral`
 - `icelandic_winogrande`: Icelandic WinoGrande `snaebjarnarson-etal-2022-warm`
 - `inverse_scaling_<subset>` for the built-in inverse-scaling subsets: Inverse Scaling Prize `mckenzie2023inverse`
 - `kobest_boolq`, `kobest_copa`, `kobest_hellaswag`, `kobest_sentineg`, `kobest_wic`: KoBEST `kim2022kobest`
-- `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
+- `lambada_openai`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
 - `logiqa`: LogiQA `liu2020logiqa`
 - `logiqa2`: LogiQA 2.0 `liu2022logiqa2`
 - `mastermind_24_easy`, `mastermind_24_hard`, `mastermind_35_easy`, `mastermind_35_hard`, `mastermind_46_easy`, `mastermind_46_hard`: Mastermind
@@ -767,6 +772,15 @@ The current built-in suite coverage maps to these benchmark citations:
   journal = {arXiv preprint arXiv:2501.17117},
   year = {2025},
   url = {https://arxiv.org/abs/2501.17117},
+}
+
+# Moral Stories
+@inproceedings{emelin-etal-2021-moral,
+  title = {Moral Stories: Situated Reasoning about Norms, Intents, Actions, and their Consequences},
+  author = {Emelin, Denis and Le Bras, Ronan and Hwang, Jena D. and Forbes, Maxwell and Choi, Yejin},
+  booktitle = {Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing},
+  year = {2021},
+  url = {https://aclanthology.org/2021.emnlp-main.54},
 }
 
 # Icelandic WinoGrande

@@ -69,6 +69,8 @@ This document records the dataset identifier and split semantics for each Evalut
 | `darijammlu.DarijaMMLU` | `MBZUAI-Paris/DarijaMMLU` | `None` | `test` | none |
 | `drop.DROP` | `drop` | `None` | `validation` | none |
 | `fld.FLD` | `hitachi-nlp/FLD.v2` | `default` | `test` | none |
+| `fda.FDA` | `hazyresearch/based-fda` | `default` | `validation` | none |
+| `moral_stories.MoralStories` | `LabHC/moral_stories` | `None` | `train` | none |
 | `french_bench_arc_challenge.FrenchBenchARCChallenge` | `manu/french_bench_arc_challenge` | `None` | `test` | none |
 | `egymmlu.EgyMMLU` | `UBC-NLP/EgyMMLU` | `None` | `test` | none |
 | `esbbq.EsBBQ` | `BSC-LT/EsBBQ` | `Age` | `test` | none |
@@ -94,6 +96,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `kobest.KoBEST` | `skt/kobest_v1` | `None` | `test` | none |
 | `lambada.LAMBADA` | `EleutherAI/lambada_openai` | `default` | `test` | none |
 | `lambada.LAMBADA` | `EleutherAI/lambada_openai` | `de`, `en`, `es`, `fr`, or `it` | `test` | `variant_name="openai_mt_<lang>"` |
+| `lambada.LAMBADA` | `EleutherAI/lambada_multilingual_stablelm` | `de`, `en`, `es`, `fr`, `it`, `nl`, or `pt` | `test` | `variant_name="openai_mt_stablelm_<lang>"` |
 | `logiqa.LogiQA` | `EleutherAI/logiqa` | `logiqa` | `validation` | none |
 | `logiqa2.LogiQA2` | `datatune/LogiQA2.0` | `None` | `test` | none |
 | `mathqa.MathQA` | `math_qa` | `None` | `test` | none |

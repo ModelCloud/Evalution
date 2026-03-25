@@ -84,6 +84,7 @@ from .coqa import CoQA, coqa
 from .copa import COPA, copa
 from .drop import DROP, drop
 from .fld import FLD, FLD_LABELS, fld
+from .fda import FDA, fda
 from .french_bench_arc_challenge import FrenchBenchARCChallenge, french_bench_arc_challenge
 from . import eus_exams as _eus_exams_module
 from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
@@ -110,6 +111,7 @@ from .hendrycks_math import HENDRYCKS_MATH_SUBSETS, HENDRYCKS_MATH_TASKS, Hendry
 from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
 from .histoires_morales import HistoiresMorales, histoires_morales
+from .moral_stories import MoralStories, moral_stories
 from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
@@ -127,6 +129,18 @@ from .lambada_multilingual import (
     lambada_openai_mt_es,
     lambada_openai_mt_fr,
     lambada_openai_mt_it,
+)
+from .lambada_multilingual_stablelm import (
+    LAMBADA_OPENAI_MT_STABLELM_LANGUAGES,
+    LAMBADA_OPENAI_MT_STABLELM_TASKS,
+    lambada_openai_mt_stablelm,
+    lambada_openai_mt_stablelm_de,
+    lambada_openai_mt_stablelm_en,
+    lambada_openai_mt_stablelm_es,
+    lambada_openai_mt_stablelm_fr,
+    lambada_openai_mt_stablelm_it,
+    lambada_openai_mt_stablelm_nl,
+    lambada_openai_mt_stablelm_pt,
 )
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
@@ -416,6 +430,7 @@ __all__ = [
     "HEADQA",
     "HellaSwag",
     "HistoiresMorales",
+    "MoralStories",
     "IcelandicWinoGrande",
     "INVERSE_SCALING_SUBSETS",
     "INVERSE_SCALING_TASKS",
@@ -602,6 +617,8 @@ __all__ = [
     "drop",
     "FLD",
     "FLD_LABELS",
+    "FDA",
+    "fda",
     "fld",
     "FrenchBenchARCChallenge",
     "french_bench_arc_challenge",
@@ -630,6 +647,7 @@ __all__ = [
     "hendrycks_math",
     "hellaswag",
     "histoires_morales",
+    "moral_stories",
     "icelandic_winogrande",
     "inverse_scaling",
     "kobest",

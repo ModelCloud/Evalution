@@ -984,6 +984,31 @@ def _assert_generated_regex_extract_exact_match_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_generated_contains_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "contains-target",
+        "target",
+        "target-matched",
+    }
+    assert set(sample.scores) == {"contains"}
+    assert sample.extracted["target"] == sample.target
+
+
+def _metadata_has_moral_stories_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["guid"]
+    assert metadata["norm"]
+    assert metadata["situation"]
+    assert metadata["intention"]
+    assert metadata["moral_action"]
+    assert metadata["immoral_action"]
+    assert metadata["moral_consequence"]
+    assert metadata["immoral_consequence"]
+
+
 def _assert_babilong_sample(
     sample: Any,
     index: int,
@@ -4580,6 +4605,29 @@ SUITE_SPECS = {
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
+    "moral_stories": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.moral_stories(batch_size=24, max_rows=32),
+        expected_name="moral_stories",
+        baseline={
+            "acc,ll": 0.59375,
+            "acc,ll_avg": 0.59375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "LabHC/moral_stories",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_has_moral_stories_fields,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "icelandic_winogrande": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.icelandic_winogrande(batch_size=24, max_rows=32),
         expected_name="icelandic_winogrande",
@@ -4828,6 +4876,139 @@ SUITE_SPECS = {
             "stream": True,
             "dataset_path": "EleutherAI/lambada_openai",
             "dataset_name": "it",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_openai_mt_stablelm_de": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_de(batch_size=24, stream=True, max_rows=128),
+        expected_name="lambada_openai_mt_stablelm_de",
+        baseline={"acc,ll": 0.25, "ppl,ll": 159.80795113445453},
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "EleutherAI/lambada_multilingual_stablelm",
+            "dataset_name": "de",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_openai_mt_stablelm_en": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_en(batch_size=24, stream=True, max_rows=128),
+        expected_name="lambada_openai_mt_stablelm_en",
+        baseline={"acc,ll": 0.2421875, "ppl,ll": 6.8412},
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "EleutherAI/lambada_multilingual_stablelm",
+            "dataset_name": "en",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_openai_mt_stablelm_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_es(batch_size=24, stream=True, max_rows=128),
+        expected_name="lambada_openai_mt_stablelm_es",
+        baseline={"acc,ll": 0.2109375, "ppl,ll": 204.5293},
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "EleutherAI/lambada_multilingual_stablelm",
+            "dataset_name": "es",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_openai_mt_stablelm_fr": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_fr(batch_size=24, stream=True, max_rows=128),
+        expected_name="lambada_openai_mt_stablelm_fr",
+        baseline={"acc,ll": 0.3359375, "ppl,ll": 118.6412},
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "EleutherAI/lambada_multilingual_stablelm",
+            "dataset_name": "fr",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_openai_mt_stablelm_it": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_it(batch_size=24, stream=True, max_rows=128),
+        expected_name="lambada_openai_mt_stablelm_it",
+        baseline={"acc,ll": 0.34375, "ppl,ll": 87.9601},
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "EleutherAI/lambada_multilingual_stablelm",
+            "dataset_name": "it",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_openai_mt_stablelm_nl": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_nl(batch_size=24, stream=True, max_rows=128),
+        expected_name="lambada_openai_mt_stablelm_nl",
+        baseline={"acc,ll": 0.5, "ppl,ll": 30.0},
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "EleutherAI/lambada_multilingual_stablelm",
+            "dataset_name": "nl",
+            "split": "test",
+            "scoring_mode": "single_continuation_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
+            sample,
+            index,
+            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+        ),
+    ),
+    "lambada_openai_mt_stablelm_pt": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_pt(batch_size=24, stream=True, max_rows=128),
+        expected_name="lambada_openai_mt_stablelm_pt",
+        baseline={"acc,ll": 0.5, "ppl,ll": 30.0},
+        expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "EleutherAI/lambada_multilingual_stablelm",
+            "dataset_name": "pt",
             "split": "test",
             "scoring_mode": "single_continuation_loglikelihood",
         },
@@ -5605,6 +5786,23 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_kormedmcqa_fields(subset="dentist"),
             allow_empty_prediction=True,
         ),
+    ),
+    "fda": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.fda(batch_size=24, max_rows=128),
+        expected_name="fda",
+        baseline={"contains": 0.5703125},
+        expected_metrics=frozenset({"contains"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "hazyresearch/based-fda",
+            "dataset_name": "default",
+            "split": "validation",
+            "scoring_mode": "generated_contains_match",
+            "primary_metric": "contains",
+            "generation_submission_mode": "continuous_refill",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_generated_contains_sample,
     ),
     "gsm_plus": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.gsm_plus(batch_size=24, max_rows=128),
