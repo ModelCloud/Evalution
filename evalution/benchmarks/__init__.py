@@ -143,6 +143,7 @@ from .single_continuation import BaseSingleContinuationSuite, SingleContinuation
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .squadv2 import SQuADV2, squadv2
+from .toxigen import ToxiGen, toxigen
 from .truthfulqa import TRUTHFULQA_TASKS, TruthfulQAMC, truthfulqa, truthfulqa_mc1, truthfulqa_mc2
 from .triviaqa import TriviaQA, triviaqa
 from .wic import WiC, wic
@@ -403,6 +404,7 @@ __all__ = [
     "SQuADV2",
     "SST2",
     "TestSuite",
+    "ToxiGen",
     "TRUTHFULQA_TASKS",
     "TruthfulQAMC",
     "TriviaQA",
@@ -611,6 +613,7 @@ __all__ = [
     "siqa",
     "swag",
     "squadv2",
+    "toxigen",
     "question_answer_prompt",
     "sst2",
     "truthfulqa",

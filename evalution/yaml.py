@@ -196,6 +196,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "swag": benchmarks.swag,
     "sst2": benchmarks.sst2,
     "squadv2": benchmarks.squadv2,
+    "toxigen": benchmarks.toxigen,
     "truthfulqa": benchmarks.truthfulqa,
     "truthfulqa_mc1": benchmarks.truthfulqa_mc1,
     "truthfulqa_mc2": benchmarks.truthfulqa_mc2,

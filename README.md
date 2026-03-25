@@ -392,6 +392,7 @@ logic, those implementation details can shift results.
 | `sciq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
 | `siqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | Social IQA `sap2019social` |
 | `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
+| `toxigen` | Binary hateful-statement multiple-choice log-likelihood, raw + length-normalized accuracy | ToxiGen `hartvigsen2022toxigen` |
 | `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `squadv2` | Generated QA exact match and token-overlap F1 with explicit no-answer handling | SQuAD 2.0 `rajpurkar2018know` |
 | `truthfulqa` | Multiple-choice truthfulness scoring for `mc1/mc2`, using benchmark-native accuracy semantics | TruthfulQA `lin-etal-2022-truthfulqa` |
@@ -534,6 +535,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `pubmedqa`: PubMedQA `jin2019pubmedqa`
 - `qa4mre_2011`, `qa4mre_2012`, `qa4mre_2013`: QA4MRE `Peas2013QA4MRE2O`
 - `squadv2`: SQuAD 2.0 `rajpurkar2018know`
+- `toxigen`: ToxiGen `hartvigsen2022toxigen`
 - `truthfulqa_mc1`, `truthfulqa_mc2`: TruthfulQA `lin-etal-2022-truthfulqa`
 - `triviaqa`: TriviaQA `joshi2017triviaqa`
 - `race`: RACE `lai-etal-2017-race`

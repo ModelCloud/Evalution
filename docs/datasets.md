@@ -115,6 +115,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `squadv2.SQuADV2` | `squad_v2` | `squad_v2` | `validation` | none |
 | `sst2.SST2` | `nyu-mll/glue` | `sst2` | `validation` | none |
 | `swag.SWAG` | `swag` | `regular` | `validation` | none |
+| `toxigen.ToxiGen` | `skg/toxigen-data` | `annotated` | `test` | none |
 | `triviaqa.TriviaQA` | `trivia_qa` | `rc.nocontext` | `validation` | none |
 | `truthfulqa.TruthfulQAMC` | `truthfulqa/truthful_qa` | `multiple_choice` | `validation` | none |
 | `webqs.WebQS` | `web_questions` | `None` | `test` | none |
