@@ -4641,7 +4641,7 @@ SUITE_SPECS = {
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "mbpp": SuiteSpec(
-        suite_factory=lambda: evalution.benchmarks.mbpp(batch_size=4, max_rows=32, max_new_tokens=256),
+        suite_factory=lambda: evalution.benchmarks.mbpp(batch_size=4, max_rows=64, max_new_tokens=512),
         expected_name="mbpp",
         baseline={
             "pass@1": 0.0,
@@ -4656,7 +4656,7 @@ SUITE_SPECS = {
             "scoring_mode": "generated_code_execution",
             "primary_metric": "pass@1",
         },
-        expected_sample_count=32,
+        expected_sample_count=64,
         sample_validator=_assert_mbpp_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
