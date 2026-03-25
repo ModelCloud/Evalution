@@ -84,6 +84,7 @@ from .coqa import CoQA, coqa
 from .copa import COPA, copa
 from .drop import DROP, drop
 from .fld import FLD, FLD_LABELS, fld
+from .french_bench_arc_challenge import FrenchBenchARCChallenge, french_bench_arc_challenge
 from . import eus_exams as _eus_exams_module
 from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
 from .eus_reading import EusReading, eus_reading
@@ -592,6 +593,8 @@ __all__ = [
     "FLD",
     "FLD_LABELS",
     "fld",
+    "FrenchBenchARCChallenge",
+    "french_bench_arc_challenge",
     "eus_exams",
     "eus_reading",
     "eus_proficiency",

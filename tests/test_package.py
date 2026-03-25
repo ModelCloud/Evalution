@@ -243,6 +243,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.FLD is not None
     assert evalution.benchmarks.FLD_LABELS == ("PROVED", "DISPROVED", "UNKNOWN")
     assert callable(evalution.benchmarks.fld)
+    assert evalution.benchmarks.FrenchBenchARCChallenge is not None
+    assert callable(evalution.benchmarks.french_bench_arc_challenge)
     assert evalution.benchmarks.EusReading is not None
     assert callable(evalution.benchmarks.eus_reading)
     assert evalution.benchmarks.EusProficiency is not None

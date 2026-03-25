@@ -69,6 +69,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `darijammlu.DarijaMMLU` | `MBZUAI-Paris/DarijaMMLU` | `None` | `test` | none |
 | `drop.DROP` | `drop` | `None` | `validation` | none |
 | `fld.FLD` | `hitachi-nlp/FLD.v2` | `default` | `test` | none |
+| `french_bench_arc_challenge.FrenchBenchARCChallenge` | `manu/french_bench_arc_challenge` | `None` | `test` | none |
 | `egymmlu.EgyMMLU` | `UBC-NLP/EgyMMLU` | `None` | `test` | none |
 | `esbbq.EsBBQ` | `BSC-LT/EsBBQ` | `Age` | `test` | none |
 | `eus_exams.EusExams` | `HiTZ/EusExams` | `None` | `test` | none |

@@ -1718,6 +1718,11 @@ def _metadata_has_fld_fields(metadata: dict[str, Any]) -> None:
     assert metadata["num_all_distractors"] >= 0
 
 
+def _metadata_has_french_bench_arc_challenge_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["id"]
+    assert metadata["choice_labels"] == ["A", "B", "C", "D"]
+
+
 def _metadata_has_kormedmcqa_fields(*, subset: str | None = None, allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         if subset is not None:
@@ -6603,6 +6608,34 @@ SUITE_SPECS = {
             prompt_prefix="Based on the provided facts ($context$), either prove or disprove the hypothesis or state that it is unknown. ",
             metadata_validator=_metadata_has_fld_fields,
             allow_empty_prediction=True,
+        ),
+    ),
+    "french_bench_arc_challenge": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.french_bench_arc_challenge(
+            batch_size=24,
+            stream=True,
+            max_rows=128,
+        ),
+        expected_name="french_bench_arc_challenge",
+        baseline={
+            "acc,ll": 0.21875,
+            "acc,ll_avg": 0.34375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "manu/french_bench_arc_challenge",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="Question: ",
+            prompt_suffix="\nRéponse:",
+            metadata_validator=_metadata_has_french_bench_arc_challenge_fields,
         ),
     ),
     "wic": SuiteSpec(
