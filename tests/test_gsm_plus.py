@@ -90,3 +90,12 @@ def test_gsm_plus_mini_uses_testmini_split() -> None:
 
     assert suite.dataset_path == "qintongli/GSM-Plus"
     assert suite.split == "testmini"
+
+
+def test_gsm_plus_flexible_extract_uses_last_numeric_match() -> None:
+    extracted = gsm_plus_module._extract_flexible_match(
+        "20 - 11 = 9, then 9 * 3 = 27. The answer is 27."
+    )
+
+    assert extracted == "27."
+    assert gsm_plus_module._normalize_gsm_plus_exact_match(extracted) == "27"

@@ -6,9 +6,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import re
 from typing import Any
 
+import pcre
 from datasets import load_dataset
 
 from evalution.benchmarks.base import BaseTestSuite
@@ -29,7 +29,7 @@ _POLEMO2_LABELS = {
     "__label__meta_amb": "D",
 }
 _POLEMO2_STOP = (".", ",")
-_POLEMO2_LABEL_RE = re.compile(r"\b([ABCD])\b")
+_POLEMO2_LABEL_RE = pcre.compile(r"\b([ABCD])\b")
 
 
 def _polemo2_prompt(sentence: str) -> str:

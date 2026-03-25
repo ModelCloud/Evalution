@@ -4838,7 +4838,7 @@ SUITE_SPECS = {
         expected_name="gsm_plus",
         baseline={
             "em,strict": 0.171875,
-            "em,flex": 0.0,
+            "em,flex": 0.171875,
         },
         expected_metrics=frozenset({"em,strict", "em,flex"}),
         expected_metadata={
@@ -4868,7 +4868,7 @@ SUITE_SPECS = {
         expected_name="gsm_plus_mini",
         baseline={
             "em,strict": 0.3125,
-            "em,flex": 0.0078125,
+            "em,flex": 0.3125,
         },
         expected_metrics=frozenset({"em,strict", "em,flex"}),
         expected_metadata={

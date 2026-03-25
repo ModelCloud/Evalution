@@ -5,11 +5,11 @@
 
 from __future__ import annotations
 
-import re
 import random
 from dataclasses import dataclass
 from typing import Any
 
+import pcre
 from datasets import load_dataset
 
 from evalution.benchmarks.execution import PreparedSample
@@ -20,10 +20,10 @@ from evalution.scorers.choice_label import exact_match
 from evalution.scorers.gsm8k import INVALID_ANSWER
 
 GSM_PLUS_TASKS = ("gsm_plus", "gsm_plus_mini")
-_STRICT_MATCH_RE = re.compile(r"#### (\-?[0-9\.,]+)")
-_FLEXIBLE_EXTRACT_RE = re.compile(r"(-?[$0-9.,]{2,})|(-?[0-9]+)")
-_TARGET_PREFIX_RE = re.compile(r"(?s).*#### ")
-_TRAILING_PERIOD_RE = re.compile(r"\.$")
+_STRICT_MATCH_RE = pcre.compile(r"#### (\-?[0-9\.,]+)")
+_FLEXIBLE_EXTRACT_RE = pcre.compile(r"(-?[$0-9.,]{2,})|(-?[0-9]+)")
+_TARGET_PREFIX_RE = pcre.compile(r"(?s).*#### ")
+_TRAILING_PERIOD_RE = pcre.compile(r"\.$")
 
 
 def _gsm_plus_prompt(doc: dict[str, Any]) -> str:
@@ -152,10 +152,16 @@ def _extract_strict_match(text: str) -> str:
 
 
 def _extract_flexible_match(text: str) -> str:
-    match = _FLEXIBLE_EXTRACT_RE.search(text)
-    if match is None:
+    matches = _FLEXIBLE_EXTRACT_RE.findall(text)
+    if not matches:
         return INVALID_ANSWER
-    return match.group(2) or match.group(1)
+    match = matches[-1]
+    if isinstance(match, tuple):
+        for candidate in match:
+            if candidate:
+                return candidate
+        return INVALID_ANSWER
+    return match
 
 
 @dataclass(slots=True)
