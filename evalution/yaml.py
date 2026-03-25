@@ -534,3 +534,8 @@ def _build_model_emit_kwargs(model: Model) -> dict[str, Any]:
     if model.tokenizer_kwargs:
         kwargs["tokenizer_kwargs"] = model.tokenizer_kwargs
     return kwargs
+
+for _haerae_task in benchmarks.HAERAE_TASKS:
+    _TEST_FACTORIES[_haerae_task] = getattr(benchmarks, _haerae_task)
+
+del _haerae_task

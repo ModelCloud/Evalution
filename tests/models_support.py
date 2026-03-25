@@ -1694,6 +1694,17 @@ def _metadata_has_click_fields(*, subset: str) -> Callable[[dict[str, Any]], Non
     return validate
 
 
+def _metadata_has_haerae_fields(*, subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["dataset_name"]
+        assert metadata["query"].endswith("### 정답:")
+        assert metadata["answer"] in {"(A)", "(B)", "(C)", "(D)", "(E)"}
+        assert len(metadata["raw_choices"]) == 5
+
+    return validate
+
+
 def _metadata_has_gsm_plus_fields(metadata: dict[str, Any]) -> None:
     assert metadata["perturbation_type"] is not None
     assert metadata["seed_question"]
@@ -5182,6 +5193,150 @@ SUITE_SPECS = {
             prompt_substrings=("질문: ", '\n보기:\n'),
             prompt_suffix='\n정답:',
             metadata_validator=_metadata_has_click_fields(subset="click_cul_tradition"),
+        ),
+    ),
+    "haerae": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "haerae")(batch_size=24, max_rows=128),
+        expected_name="haerae",
+        baseline={"acc,ll": 0.3359375, "acc,ll_avg": 0.3359375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HAERAE-HUB/HAE_RAE_BENCH",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "subset": "haerae",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prediction_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prompt_substrings=("### 질문:", "### 선택지:"),
+            prompt_suffix="### 정답:",
+            metadata_validator=_metadata_has_haerae_fields(subset="haerae"),
+        ),
+    ),
+    "haerae_general_knowledge": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "haerae_general_knowledge")(batch_size=24, max_rows=128),
+        expected_name="haerae_general_knowledge",
+        baseline={"acc,ll": 0.296875, "acc,ll_avg": 0.296875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HAERAE-HUB/HAE_RAE_BENCH",
+            "dataset_name": "general_knowledge",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "subset": "general_knowledge",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prediction_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prompt_substrings=("### 질문:", "### 선택지:"),
+            prompt_suffix="### 정답:",
+            metadata_validator=_metadata_has_haerae_fields(subset="general_knowledge"),
+        ),
+    ),
+    "haerae_history": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "haerae_history")(batch_size=24, max_rows=128),
+        expected_name="haerae_history",
+        baseline={"acc,ll": 0.2265625, "acc,ll_avg": 0.2265625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HAERAE-HUB/HAE_RAE_BENCH",
+            "dataset_name": "history",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "subset": "history",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prediction_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prompt_substrings=("### 질문:", "### 선택지:"),
+            prompt_suffix="### 정답:",
+            metadata_validator=_metadata_has_haerae_fields(subset="history"),
+        ),
+    ),
+    "haerae_loan_word": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "haerae_loan_word")(batch_size=24, max_rows=128),
+        expected_name="haerae_loan_word",
+        baseline={"acc,ll": 0.3125, "acc,ll_avg": 0.3125},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HAERAE-HUB/HAE_RAE_BENCH",
+            "dataset_name": "loan_words",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "subset": "loan_word",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prediction_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prompt_substrings=("### 질문:", "### 선택지:"),
+            prompt_suffix="### 정답:",
+            metadata_validator=_metadata_has_haerae_fields(subset="loan_word"),
+        ),
+    ),
+    "haerae_rare_word": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "haerae_rare_word")(batch_size=24, max_rows=128),
+        expected_name="haerae_rare_word",
+        baseline={"acc,ll": 0.3671875, "acc,ll_avg": 0.3671875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HAERAE-HUB/HAE_RAE_BENCH",
+            "dataset_name": "rare_words",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "subset": "rare_word",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prediction_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prompt_substrings=("### 질문:", "### 선택지:"),
+            prompt_suffix="### 정답:",
+            metadata_validator=_metadata_has_haerae_fields(subset="rare_word"),
+        ),
+    ),
+    "haerae_standard_nomenclature": SuiteSpec(
+        suite_factory=lambda: getattr(evalution.benchmarks, "haerae_standard_nomenclature")(batch_size=24, max_rows=128),
+        expected_name="haerae_standard_nomenclature",
+        baseline={"acc,ll": 0.3046875, "acc,ll_avg": 0.3046875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HAERAE-HUB/HAE_RAE_BENCH",
+            "dataset_name": "standard_nomenclature",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "subset": "standard_nomenclature",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prediction_values={"(A)", "(B)", "(C)", "(D)", "(E)"},
+            prompt_substrings=("### 질문:", "### 선택지:"),
+            prompt_suffix="### 정답:",
+            metadata_validator=_metadata_has_haerae_fields(subset="standard_nomenclature"),
         ),
     ),
     "gsm_plus": SuiteSpec(

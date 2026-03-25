@@ -258,6 +258,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.GSMPlusMini is not None
     assert callable(evalution.benchmarks.gsm_plus)
     assert callable(evalution.benchmarks.gsm_plus_mini)
+    assert evalution.benchmarks.HAERAE_SUBSETS
+    assert evalution.benchmarks.HAERAE_TASKS
+    assert evalution.benchmarks.Haerae is not None
+    assert callable(evalution.benchmarks.haerae)
+    for factory_name in evalution.benchmarks.HAERAE_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.HendrycksEthics is not None
     assert evalution.benchmarks.HendrycksMath is not None
     assert evalution.benchmarks.HENDRYCKS_MATH_SUBSETS

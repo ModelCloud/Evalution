@@ -348,6 +348,7 @@ logic, those implementation details can shift results.
 | `ethics_virtue` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `park2024haeraebenchmarkingkoreanknowledge` |
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
@@ -525,6 +526,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `logiqa2`: LogiQA 2.0 `liu2022logiqa2`
 - `mastermind_24_easy`, `mastermind_24_hard`, `mastermind_35_easy`, `mastermind_35_hard`, `mastermind_46_easy`, `mastermind_46_hard`: Mastermind
 - `click`, `click_lang`, `click_lang_text`, `click_lang_grammar`, `click_lang_function`, `click_cul`, `click_cul_economy`, `click_cul_geography`, `click_cul_history`, `click_cul_kpop`, `click_cul_law`, `click_cul_politics`, `click_cul_society`, `click_cul_tradition`: CLIcK `kim2024click`
+- `haerae`, `haerae_general_knowledge`, `haerae_history`, `haerae_loan_word`, `haerae_rare_word`, `haerae_standard_nomenclature`: HAE-RAE `park2024haeraebenchmarkingkoreanknowledge`
 - `gsm_plus`, `gsm_plus_mini`: GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating`
 - `mathqa`: MathQA `amini2019mathqa`
 - `mc_taco`: MC-TACO `zhou2019mctaco`

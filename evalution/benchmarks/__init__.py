@@ -91,6 +91,8 @@ from .eus_trivia import EusTrivia, eus_trivia
 from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
 from .graphwalks import GraphWalks, graphwalks_128k, graphwalks_1M
 from .gsm8k import GSM8K, gsm8k
+from . import haerae as _haerae_module
+from .haerae import HAERAE_SUBSETS, HAERAE_TASKS, Haerae, haerae
 from .gsm_plus import GSM_PLUS_TASKS, GSMPlus, GSMPlusMini, gsm_plus, gsm_plus_mini
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hendrycks_ethics import (
@@ -224,6 +226,11 @@ for _click_task in CLICK_TASKS:
     globals()[_click_task] = getattr(_click_module, _click_task)
 
 del _click_task
+
+for _haerae_task in HAERAE_TASKS:
+    globals()[_haerae_task] = getattr(_haerae_module, _haerae_task)
+
+del _haerae_task
 
 for _afrimmlu_task in AFRIMMLU_TASKS:
     globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
@@ -376,6 +383,9 @@ __all__ = [
     "GPQA_SUBSETS",
     "GPQA_TASKS",
     "GSM8K",
+    "HAERAE_SUBSETS",
+    "HAERAE_TASKS",
+    "Haerae",
     "GSM_PLUS_TASKS",
     "GSMPlus",
     "GSMPlusMini",
@@ -584,6 +594,7 @@ __all__ = [
     "choice_index_from_labels",
     "f1_for_label",
     "gsm8k",
+    "haerae",
     "gsm_plus",
     "gsm_plus_mini",
     "gsm8k_platinum",
@@ -734,3 +745,4 @@ __all__.extend(XQUAD_TASKS)
 __all__.extend(TRUTHFULQA_TASKS)
 __all__.extend(INVERSE_SCALING_TASKS)
 __all__.extend(CLICK_TASKS)
+__all__.extend(HAERAE_TASKS)
