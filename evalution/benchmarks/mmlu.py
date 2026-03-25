@@ -171,7 +171,7 @@ class MMLU(TestSuite):
             dataset_name=self.dataset_name(),
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.stream,
+            stream=self.stream,
         )
         docs = self._select_docs(list(loaded_docs))
         docs = limit_docs(docs, self.max_rows)
@@ -193,7 +193,7 @@ class MMLU(TestSuite):
             dataset_name=self.dataset_name(),
             split=self.fewshot_split,
             cache_dir=self.cache_dir,
-            streaming=self.stream,
+            stream=self.stream,
         )
         fewshot_docs = self._select_docs(list(fewshot_loaded_docs))
         fewshot_by_subject: dict[str, list[dict[str, Any]]] = defaultdict(list)

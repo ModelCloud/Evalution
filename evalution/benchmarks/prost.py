@@ -25,7 +25,7 @@ def _load_prost_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Any:
     if dataset_path != "corypaik/prost":
         raise ValueError(f"unsupported PROST dataset path: {dataset_path!r}")
@@ -36,7 +36,7 @@ def _load_prost_dataset(
         data_files={split: _PROST_DATA_URL},
         split=split,
         cache_dir=cache_dir,
-        streaming=streaming,
+        streaming=stream,
     )
 
 

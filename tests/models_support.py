@@ -1523,6 +1523,14 @@ def _metadata_has_multirc_fields(metadata: dict[str, Any]) -> None:
     assert metadata["idx"]["answer"] >= 0
 
 
+def _metadata_has_record_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["query"]
+    assert metadata["answers"]
+    assert metadata["entities"]
+    assert metadata["idx"]["passage"] >= 0
+    assert metadata["idx"]["query"] >= 0
+
+
 def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         subset = metadata["subset"]
@@ -5093,6 +5101,34 @@ SUITE_SPECS = {
             index,
             prompt_prefix="Article: ",
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
+        ),
+    ),
+    "record": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.record(batch_size=24, stream=True, max_rows=128),
+        expected_name="record",
+        baseline={
+            "acc,ll": 0.171875,
+            "acc,ll_avg": 0.0859375,
+            "em": 0.234375,
+            "f1": 0.234375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg", "em", "f1"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "super_glue",
+            "dataset_name": "record",
+            "split": "validation",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "primary_metric": "f1",
+            "order": "native",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_prefix="record query: ",
+            prompt_substrings=(" entities: ", " passage: "),
+            metadata_validator=_metadata_has_record_fields,
         ),
     ),
     "rte": SuiteSpec(

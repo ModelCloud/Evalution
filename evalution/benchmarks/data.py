@@ -61,7 +61,7 @@ def load_suite_dataset(
     dataset_name: str | None,
     split: str,
     cache_dir: str | None,
-    streaming: bool,
+    stream: bool,
 ) -> tuple[Any, float]:
     logger = get_logger()
     dataset_ref = dataset_path if dataset_name is None else f"{dataset_path}/{dataset_name}"
@@ -70,7 +70,7 @@ def load_suite_dataset(
     kwargs = {
         "split": split,
         "cache_dir": cache_dir,
-        "streaming": streaming,
+        "stream": stream,
     }
     dataset_load_started = perf_counter()
     with spinner(f"{task_name}: loading dataset"):

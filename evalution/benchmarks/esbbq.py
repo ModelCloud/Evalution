@@ -24,14 +24,14 @@ def _load_esbbq_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Any:
     return load_dataset(
         dataset_path,
         dataset_name,
         split=split,
         cache_dir=cache_dir,
-        streaming=streaming,
+        streaming=stream,
         verification_mode="no_checks",
     )
 

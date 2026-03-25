@@ -346,7 +346,7 @@ class MMLUPro(TestSuite):
             dataset_name=None,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.stream,
+            stream=self.stream,
         )
         docs = self._select_docs([_preprocess_doc(doc) for doc in loaded_docs])
         docs = limit_docs(docs, self.max_rows)
@@ -362,7 +362,7 @@ class MMLUPro(TestSuite):
             dataset_name=None,
             split=self.fewshot_split,
             cache_dir=self.cache_dir,
-            streaming=self.stream,
+            stream=self.stream,
         )
         self._fewshot_by_subset_value = defaultdict(list)
         for doc in self._select_docs([_preprocess_doc(doc) for doc in fewshot_loaded_docs]):

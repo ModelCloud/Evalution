@@ -69,14 +69,14 @@ def _crows_pairs_dataset_loader(*, bias_prefix: str | None) -> Callable[..., Any
         *,
         split: str,
         cache_dir: str | None = None,
-        streaming: bool = False,
+        stream: bool = False,
     ) -> Any:
         dataset = load_dataset(
             dataset_path,
             dataset_name,
             split=split,
             cache_dir=cache_dir,
-            streaming=streaming,
+            streaming=stream,
         )
         if bias_prefix is None:
             return dataset
@@ -138,8 +138,8 @@ class CrowSPairs:
             dataset_path=self.dataset_path,
             dataset_name=self.dataset_name,
             split=self.split,
-            cache_dir=self.cache_dir,
-            streaming=self.stream,
+        cache_dir=self.cache_dir,
+        stream=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)

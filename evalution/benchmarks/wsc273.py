@@ -80,9 +80,9 @@ def _load_wsc273_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    streaming: bool = False,
+    stream: bool = False,
 ) -> Dataset:
-    del streaming
+    del stream
     if dataset_path != "winograd_wsc":
         raise ValueError(f"unsupported WSC dataset path: {dataset_path!r}")
     if dataset_name != "wsc273":
@@ -156,7 +156,7 @@ class WSC273:
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.stream,
+            stream=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)

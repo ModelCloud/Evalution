@@ -74,7 +74,7 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
             dataset_name=self.dataset_name,
             split=self.split,
             cache_dir=self.cache_dir,
-            streaming=self.stream,
+            stream=self.stream,
         )
 
         docs = limit_docs(loaded_docs, self.max_rows)
