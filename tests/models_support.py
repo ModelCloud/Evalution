@@ -1021,6 +1021,17 @@ def _assert_mbpp_sample(sample: Any, index: int) -> None:
     assert "test_import_count" in sample.metadata
 
 
+def _assert_humaneval_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Complete the following Python function.")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"passed", "code"}
+    assert set(sample.scores) == {"pass@1"}
+    assert sample.metadata["task_id"]
+    assert sample.metadata["entry_point"]
+
+
 def _assert_babilong_sample(
     sample: Any,
     index: int,
@@ -4658,6 +4669,26 @@ SUITE_SPECS = {
         },
         expected_sample_count=64,
         sample_validator=_assert_mbpp_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "humaneval": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.humaneval(batch_size=4, max_rows=32, max_new_tokens=512),
+        expected_name="humaneval",
+        baseline={
+            "pass@1": 0.0,
+        },
+        expected_metrics=frozenset({"pass@1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "openai/openai_humaneval",
+            "dataset_name": "openai_humaneval",
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_code_execution",
+            "primary_metric": "pass@1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_humaneval_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "multirc": SuiteSpec(

@@ -371,6 +371,7 @@ logic, those implementation details can shift results.
 | `inverse_scaling` | Multiple-choice log-likelihood across inverse-scaling subsets, raw + length-normalized accuracy | Inverse Scaling Prize `mckenzie2023inverse` |
 | `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
 | `logiqa2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA 2.0 `liu2022logiqa2` |
+| `humaneval` | Generated Python code execution, pass@1 over benchmark tests | HumanEval `chen2021evaluatinglargelanguagemodels` |
 | `mbpp` | Generated Python code execution, pass@1 over provided unit tests | MBPP `austin2021program` |
 | `mastermind` | Multiple-choice log-likelihood over candidate secret codes across the `24/35/46` easy and hard variants | Mastermind |
 | `mathqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MathQA `amini2019mathqa` |
@@ -535,6 +536,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `lambada_openai`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
 - `logiqa`: LogiQA `liu2020logiqa`
 - `logiqa2`: LogiQA 2.0 `liu2022logiqa2`
+- `humaneval`: HumanEval `chen2021evaluatinglargelanguagemodels`
 - `mbpp`: MBPP `austin2021program`
 - `mastermind_24_easy`, `mastermind_24_hard`, `mastermind_35_easy`, `mastermind_35_hard`, `mastermind_46_easy`, `mastermind_46_hard`: Mastermind
 - `click`, `click_lang`, `click_lang_text`, `click_lang_grammar`, `click_lang_function`, `click_cul`, `click_cul_economy`, `click_cul_geography`, `click_cul_history`, `click_cul_kpop`, `click_cul_law`, `click_cul_politics`, `click_cul_society`, `click_cul_tradition`: CLIcK `kim2024click`
@@ -1190,6 +1192,16 @@ The current built-in suite coverage maps to these benchmark citations:
   eprint = {2203.15796},
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
+}
+
+# HumanEval
+@misc{chen2021evaluatinglargelanguagemodels,
+  title = {Evaluating Large Language Models Trained on Code},
+  author = {Mark Chen and Jerry Tworek and Heewoo Jun and Qiming Yuan and Henrique Ponde de Oliveira Pinto and Jared Kaplan and Harri Edwards and Yuri Burda and Nicholas Joseph and Greg Brockman and Alex Ray and Raul Puri and Gretchen Krueger and Girish Sastry and Amanda Askell and Pamela Mishkin and Jack Clark and Krzysztof Misztal and John Schulman and Dario Amodei},
+  year = {2021},
+  eprint = {2107.03374},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.LG},
 }
 
 # MBPP

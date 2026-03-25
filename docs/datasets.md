@@ -87,6 +87,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `graphwalks.graphwalks_1M` | `openai/graphwalks` | `None` | `train` | `data_file=graphwalks_256k_to_1mil.parquet` |
 | `gsm8k.GSM8K` | `openai/gsm8k` | `main` | `test` | none |
 | `gsm8k_platinum.GSM8KPlatinum` | `madrylab/gsm8k-platinum` | `main` | `test` | none |
+| `humaneval.HumanEval` | `openai/openai_humaneval` | `openai_humaneval` | `test` | none |
 | `headqa.HEADQA` | `EleutherAI/headqa` | `en` | `test` | none |
 | `hellaswag.HellaSwag` | `Rowan/hellaswag` | `None` | `validation` | none |
 | `hendrycks_ethics.HendrycksEthics` | `EleutherAI/hendrycks_ethics` | `commonsense` | `test` | none |
