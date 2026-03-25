@@ -39,13 +39,13 @@ def _coqa_prompt(
 
 
 def _load_coqa_turns(
-    dataset_path: str,
+dataset_path: str,
     *,
     split: str,
     cache_dir: str | None,
-    streaming: bool,
+    stream: bool,
 ) -> Dataset:
-    if streaming:
+    if stream:
         raise ValueError("coqa turn flattening requires non-stream dataset loading")
 
     conversations = load_dataset(

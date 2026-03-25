@@ -80,13 +80,13 @@ class GraphWalks(BaseTestSuite):
     task_variant: str = "graphwalks_128k"
 
     def dataset_loader(self) -> Callable[..., Any]:
-        def loader(path: str, *, split: str, cache_dir: str | None, streaming: bool) -> Any:
+        def loader(path: str, *, split: str, cache_dir: str | None, stream: bool) -> Any:
             return load_dataset(
                 path,
                 data_files=self.data_file,
                 split=split,
                 cache_dir=cache_dir,
-                streaming=streaming,
+                streaming=stream,
             )
 
         return loader
