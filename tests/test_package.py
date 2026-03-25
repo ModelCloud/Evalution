@@ -234,6 +234,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.copa_ar)
     assert evalution.benchmarks.DROP is not None
     assert callable(evalution.benchmarks.drop)
+    assert evalution.benchmarks.EusTrivia is not None
+    assert callable(evalution.benchmarks.eus_trivia)
     assert evalution.benchmarks.GPQA is not None
     assert evalution.benchmarks.GPQA_SUBSETS
     assert evalution.benchmarks.GPQA_TASKS
