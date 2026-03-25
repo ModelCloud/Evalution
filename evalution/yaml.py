@@ -13,13 +13,14 @@ import yaml
 
 import evalution.benchmarks as benchmarks
 from evalution.config import Model
-from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat
+from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat, VLLM
 from evalution.runtime import EvaluationRun
 
 _ENGINE_FACTORIES: dict[str, Any] = {
     "gptqmodel": GPTQModel,
     "transformers": Transformers,
     "transformerscompat": TransformersCompat,
+    "vllm": VLLM,
 }
 _TEST_FACTORIES: dict[str, Any] = {
     "aexams_biology": benchmarks.aexams_biology,
@@ -362,6 +363,8 @@ def python_from_yaml(source: str | Path) -> str:
         engine_alias = "GPTQModel"
     elif engine_name == "transformerscompat":
         engine_alias = "TransformersCompat"
+    elif engine_name == "vllm":
+        engine_alias = "VLLM"
     else:
         engine_alias = engine_name
     model_config = _build_model(model_spec)
