@@ -33,6 +33,13 @@ def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
             return loader(*args, **fallback_kwargs)
         raise
 
+
+def _loader_uses_hf_streaming_kwarg(loader: Any) -> bool:
+    if getattr(loader, "__name__", None) == "load_dataset":
+        return True
+    module_name = getattr(loader, "__module__", "")
+    return module_name.startswith("datasets.")
+
 def normalize_order(order: str) -> str:
     normalized = order.strip().lower()
     if normalized in {"native", "length|asc", "length|desc"}:
@@ -84,10 +91,11 @@ def load_suite_dataset(
     logger = get_logger()
     dataset_ref = dataset_path if dataset_name is None else f"{dataset_path}/{dataset_name}"
     logger.info("loading dataset %s split=%s for %s", dataset_ref, split, task_name)
+    stream_key = "streaming" if _loader_uses_hf_streaming_kwarg(loader) else "stream"
     kwargs = {
         "split": split,
         "cache_dir": cache_dir,
-        "stream": stream,
+        stream_key: stream,
     }
     dataset_load_started = perf_counter()
     with spinner(f"{task_name}: loading dataset"):

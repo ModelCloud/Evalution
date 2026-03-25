@@ -62,7 +62,7 @@ def _load_arithmetic_dataset(
         data_files={split: file_path},
         split=split,
         cache_dir=cache_dir,
-        stream=stream,
+        streaming=stream,
     )
 
 

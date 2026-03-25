@@ -36,7 +36,7 @@ def _load_prost_dataset(
         data_files={split: _PROST_DATA_URL},
         split=split,
         cache_dir=cache_dir,
-        stream=stream,
+        streaming=stream,
     )
 
 

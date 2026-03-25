@@ -48,7 +48,7 @@ def _load_mc_taco_dataset(
         column_names=_MC_TACO_COLUMNS,
         split=split,
         cache_dir=cache_dir,
-        stream=stream,
+        streaming=stream,
     )
 
 

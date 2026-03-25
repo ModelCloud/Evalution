@@ -216,6 +216,9 @@ class Click(BaseMultipleChoiceSuite):
         subset = self.subset
 
         def loader(*args: Any, **kwargs: Any) -> Any:
+            stream = kwargs.pop("stream", None)
+            if stream is not None:
+                kwargs["streaming"] = bool(stream)
             dataset = load_dataset(*args, **kwargs)
             if subset == "click":
                 return dataset

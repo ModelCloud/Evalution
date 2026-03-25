@@ -86,7 +86,7 @@ class GraphWalks(BaseTestSuite):
                 data_files=self.data_file,
                 split=split,
                 cache_dir=cache_dir,
-                stream=stream,
+                streaming=stream,
             )
 
         return loader

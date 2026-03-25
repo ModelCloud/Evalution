@@ -76,7 +76,7 @@ def _crows_pairs_dataset_loader(*, bias_prefix: str | None) -> Callable[..., Any
             dataset_name,
             split=split,
             cache_dir=cache_dir,
-            stream=stream,
+            streaming=stream,
         )
         if bias_prefix is None:
             return dataset

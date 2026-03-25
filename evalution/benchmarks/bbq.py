@@ -57,7 +57,7 @@ def _load_bbq_dataset(
         data_files={split: data_file},
         split=split,
         cache_dir=cache_dir,
-        stream=stream,
+        streaming=stream,
     )
 
 

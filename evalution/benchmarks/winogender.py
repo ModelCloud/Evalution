@@ -41,7 +41,7 @@ def _load_winogender_dataset(
         dataset_name,
         split=split,
         cache_dir=cache_dir,
-        stream=stream,
+        streaming=stream,
     )
     if gender_filter is None:
         return dataset

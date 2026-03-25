@@ -31,7 +31,7 @@ def _load_esbbq_dataset(
         dataset_name,
         split=split,
         cache_dir=cache_dir,
-        stream=stream,
+        streaming=stream,
         verification_mode="no_checks",
     )
 
