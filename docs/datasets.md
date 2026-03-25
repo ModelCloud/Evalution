@@ -93,6 +93,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `inverse_scaling.InverseScaling` | `pminervini/inverse-scaling` | `hindsight-neglect` | `data` | none |
 | `kobest.KoBEST` | `skt/kobest_v1` | `None` | `test` | none |
 | `lambada.LAMBADA` | `EleutherAI/lambada_openai` | `default` | `test` | none |
+| `lambada.LAMBADA` | `EleutherAI/lambada_openai` | `de`, `en`, `es`, `fr`, or `it` | `test` | `variant_name="openai_mt_<lang>"` |
 | `logiqa.LogiQA` | `EleutherAI/logiqa` | `logiqa` | `validation` | none |
 | `logiqa2.LogiQA2` | `datatune/LogiQA2.0` | `None` | `test` | none |
 | `mathqa.MathQA` | `math_qa` | `None` | `test` | none |

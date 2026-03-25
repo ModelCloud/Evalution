@@ -360,6 +360,7 @@ logic, those implementation details can shift results.
 | `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `sean0042kormedmcqa` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_openai_mt_{de,en,es,fr,it}` | Single-continuation log-likelihood, greedy accuracy + perplexity over multilingual LAMBADA translations | LAMBADA-MT |
 | `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |

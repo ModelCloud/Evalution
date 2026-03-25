@@ -118,6 +118,16 @@ from . import kormedmcqa as _kormedmcqa_module
 from .kormedmcqa import KORMEDMCQA_SUBSETS, KORMEDMCQA_TASKS, KorMedMCQA, kormedmcqa
 from .lambada import LAMBADA, lambada_openai, lambada_standard
 from .lambada_cloze import LAMBADACloze, lambada_openai_cloze, lambada_standard_cloze
+from .lambada_multilingual import (
+    LAMBADA_OPENAI_MT_LANGUAGES,
+    LAMBADA_OPENAI_MT_TASKS,
+    lambada_openai_mt,
+    lambada_openai_mt_de,
+    lambada_openai_mt_en,
+    lambada_openai_mt_es,
+    lambada_openai_mt_fr,
+    lambada_openai_mt_it,
+)
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
 from .mathqa import MathQA, mathqa
@@ -630,6 +640,14 @@ __all__ = [
     "kobest_sentineg",
     "kobest_wic",
     "lambada_openai",
+    "lambada_openai_mt",
+    "lambada_openai_mt_de",
+    "lambada_openai_mt_en",
+    "lambada_openai_mt_es",
+    "lambada_openai_mt_fr",
+    "lambada_openai_mt_it",
+    "LAMBADA_OPENAI_MT_LANGUAGES",
+    "LAMBADA_OPENAI_MT_TASKS",
     "lambada_openai_cloze",
     "lambada_standard",
     "lambada_standard_cloze",

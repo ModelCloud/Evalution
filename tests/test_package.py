@@ -314,6 +314,20 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.LAMBADA is not None
     assert evalution.benchmarks.LAMBADACloze is not None
     assert callable(evalution.benchmarks.lambada_openai)
+    assert evalution.benchmarks.LAMBADA_OPENAI_MT_LANGUAGES == ("de", "en", "es", "fr", "it")
+    assert evalution.benchmarks.LAMBADA_OPENAI_MT_TASKS == (
+        "lambada_openai_mt_de",
+        "lambada_openai_mt_en",
+        "lambada_openai_mt_es",
+        "lambada_openai_mt_fr",
+        "lambada_openai_mt_it",
+    )
+    assert callable(evalution.benchmarks.lambada_openai_mt)
+    assert callable(evalution.benchmarks.lambada_openai_mt_de)
+    assert callable(evalution.benchmarks.lambada_openai_mt_en)
+    assert callable(evalution.benchmarks.lambada_openai_mt_es)
+    assert callable(evalution.benchmarks.lambada_openai_mt_fr)
+    assert callable(evalution.benchmarks.lambada_openai_mt_it)
     assert callable(evalution.benchmarks.lambada_openai_cloze)
     assert callable(evalution.benchmarks.lambada_standard)
     assert callable(evalution.benchmarks.lambada_standard_cloze)
