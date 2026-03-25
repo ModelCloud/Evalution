@@ -1709,6 +1709,15 @@ def _metadata_has_haerae_fields(*, subset: str) -> Callable[[dict[str, Any]], No
     return validate
 
 
+def _metadata_has_fld_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["proof_label"] in {"PROVED", "DISPROVED", "UNKNOWN"}
+    assert metadata["world_assump_label"] in {"PROVED", "DISPROVED", "UNKNOWN"}
+    assert metadata["negative_world_assump_label"] in {"PROVED", "DISPROVED", "UNKNOWN", "None", None}
+    assert metadata["num_formula_distractors"] >= 0
+    assert metadata["num_translation_distractors"] >= 0
+    assert metadata["num_all_distractors"] >= 0
+
+
 def _metadata_has_kormedmcqa_fields(*, subset: str | None = None, allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         if subset is not None:
@@ -6572,6 +6581,29 @@ SUITE_SPECS = {
         expected_sample_count=32,
         sample_validator=_assert_drop_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "fld": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.fld(batch_size=24, max_rows=128),
+        expected_name="fld",
+        baseline={"em": 0.0},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "hitachi-nlp/FLD.v2",
+            "dataset_name": "default",
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_generated_exact_match_sample(
+            sample,
+            index,
+            prompt_prefix="Based on the provided facts ($context$), either prove or disprove the hypothesis or state that it is unknown. ",
+            metadata_validator=_metadata_has_fld_fields,
+            allow_empty_prediction=True,
+        ),
     ),
     "wic": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.wic(batch_size=24, stream=True, max_rows=128),

@@ -83,6 +83,7 @@ from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
 from .drop import DROP, drop
+from .fld import FLD, FLD_LABELS, fld
 from . import eus_exams as _eus_exams_module
 from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
 from .eus_reading import EusReading, eus_reading
@@ -588,6 +589,9 @@ __all__ = [
     "coqa",
     "copa",
     "drop",
+    "FLD",
+    "FLD_LABELS",
+    "fld",
     "eus_exams",
     "eus_reading",
     "eus_proficiency",

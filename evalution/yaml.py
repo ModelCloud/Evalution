@@ -123,6 +123,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "darijahellaswag": benchmarks.darijahellaswag,
     "egyhellaswag": benchmarks.egyhellaswag,
     "drop": benchmarks.drop,
+    "fld": benchmarks.fld,
     "darijammlu": benchmarks.darijammlu,
     "egymmlu": benchmarks.egymmlu,
     "eus_exams": benchmarks.eus_exams,

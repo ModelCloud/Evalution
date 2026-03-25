@@ -338,6 +338,7 @@ logic, those implementation details can shift results.
 | `darijahellaswag` | Multiple-choice log-likelihood over Moroccan Darija translated HellaSwag endings, raw + length-normalized accuracy | DarijaHellaSwag `shang2024atlaschatadaptinglargelanguage` |
 | `egyhellaswag` | Multiple-choice log-likelihood over Egyptian Arabic translated HellaSwag endings, raw + length-normalized accuracy | EgyHellaSwag `mekki2025nilechatlinguisticallydiverseculturally` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
+| `fld` | Generated exact match over `PROVED/DISPROVED/UNKNOWN` world-assumption verdicts from serialized deduction prompts | FLD `han2024formal` |
 | `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
 | `gsm_plus` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` split | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
 | `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `testmini` split | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |

@@ -68,6 +68,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `crows_pairs.CrowSPairs` | `jannalu/crows_pairs_multilingual` | `english` | `test` | none |
 | `darijammlu.DarijaMMLU` | `MBZUAI-Paris/DarijaMMLU` | `None` | `test` | none |
 | `drop.DROP` | `drop` | `None` | `validation` | none |
+| `fld.FLD` | `hitachi-nlp/FLD.v2` | `default` | `test` | none |
 | `egymmlu.EgyMMLU` | `UBC-NLP/EgyMMLU` | `None` | `test` | none |
 | `esbbq.EsBBQ` | `BSC-LT/EsBBQ` | `Age` | `test` | none |
 | `eus_exams.EusExams` | `HiTZ/EusExams` | `None` | `test` | none |
