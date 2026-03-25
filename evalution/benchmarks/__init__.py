@@ -110,9 +110,11 @@ from . import hendrycks_math as _hendrycks_math_module
 from .hendrycks_math import HENDRYCKS_MATH_SUBSETS, HENDRYCKS_MATH_TASKS, HendrycksMath, hendrycks_math
 from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
+from .humaneval import HumanEval, humaneval
 from .histoires_morales import HistoiresMorales, histoires_morales
 from .moral_stories import MoralStories, moral_stories
 from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
+from .ifeval import IFEval, ifeval
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic
@@ -649,6 +651,7 @@ __all__ = [
     "headqa_es",
     "hendrycks_math",
     "hellaswag",
+    "humaneval",
     "histoires_morales",
     "moral_stories",
     "icelandic_winogrande",

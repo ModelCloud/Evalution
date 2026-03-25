@@ -1021,6 +1021,44 @@ def _assert_mbpp_sample(sample: Any, index: int) -> None:
     assert "test_import_count" in sample.metadata
 
 
+def _assert_ifeval_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.target
+    assert sample.prompt
+    assert sample.prediction
+    assert sample.target == sample.prompt
+    assert set(sample.extracted) == {
+        "instruction_id_list",
+        "prompt_level_strict",
+        "prompt_level_loose",
+        "inst_level_strict",
+        "inst_level_loose",
+    }
+    assert set(sample.scores) == {
+        "prompt_level_strict_acc",
+        "prompt_level_loose_acc",
+        "inst_level_strict_acc",
+        "inst_level_loose_acc",
+    }
+    assert isinstance(sample.scores["prompt_level_strict_acc"], float)
+    assert isinstance(sample.scores["prompt_level_loose_acc"], float)
+    assert isinstance(sample.scores["inst_level_strict_acc"], float)
+    assert isinstance(sample.scores["inst_level_loose_acc"], float)
+    assert sample.metadata["key"]
+    assert int(sample.metadata["instruction_count"]) >= 1
+
+
+def _assert_humaneval_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Complete the following Python function.")
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"passed", "code"}
+    assert set(sample.scores) == {"pass@1"}
+    assert sample.metadata["task_id"]
+    assert sample.metadata["entry_point"]
+
+
 def _assert_babilong_sample(
     sample: Any,
     index: int,
@@ -4659,6 +4697,52 @@ SUITE_SPECS = {
         expected_sample_count=64,
         sample_validator=_assert_mbpp_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "humaneval": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.humaneval(batch_size=4, max_rows=32, max_new_tokens=512),
+        expected_name="humaneval",
+        baseline={
+            "pass@1": 0.0,
+        },
+        expected_metrics=frozenset({"pass@1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "openai/openai_humaneval",
+            "dataset_name": "openai_humaneval",
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_code_execution",
+            "primary_metric": "pass@1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_humaneval_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "ifeval": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ifeval(batch_size=8, max_rows=64),
+        expected_name="ifeval",
+        baseline={
+            "prompt_level_strict_acc": 0.0,
+            "prompt_level_loose_acc": 0.0,
+            "inst_level_strict_acc": 0.0,
+            "inst_level_loose_acc": 0.0,
+        },
+        expected_metrics=frozenset({
+            "prompt_level_strict_acc",
+            "prompt_level_loose_acc",
+            "inst_level_strict_acc",
+            "inst_level_loose_acc",
+        }),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "google/IFEval",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "instruction_following",
+            "primary_metric": "prompt_level_strict_acc",
+        },
+        expected_sample_count=64,
+        sample_validator=_assert_ifeval_sample,
     ),
     "multirc": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.multirc(batch_size=8, max_rows=16),

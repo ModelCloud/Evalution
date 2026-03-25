@@ -41,7 +41,6 @@ haerae,6,haerae/haerae_gk.yaml,haerae/haerae_hi.yaml
 hrm8k,12,hrm8k/default/hrm8k.yaml,hrm8k/default/hrm8k_gsm8k.yaml
 humaneval,5,humaneval/humaneval.yaml,humaneval/humaneval_64.yaml
 humaneval_infilling,5,humaneval_infilling/humaneval_infilling.yaml,humaneval_infilling/multi_line_infilling.yaml
-ifeval,3,ifeval/ifeval.yaml,ifeval/multilingual/ifeval_ca.yaml
 include,666,include/default/Albanian/include_base_44_albanian_arts_humanities.yaml,include/default/Albanian/include_base_44_albanian_business_commerce.yaml
 japanese_leaderboard,9,japanese_leaderboard/ja_leaderboard_jaqket_v2.yaml,japanese_leaderboard/ja_leaderboard_jcommonsenseqa.yaml
 jfinqa,4,jfinqa/jfinqa_consistency.yaml,jfinqa/jfinqa_numerical.yaml
