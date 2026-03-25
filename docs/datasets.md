@@ -127,6 +127,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `wsc273.WSC273` | `winograd_wsc` | `wsc273` | `test` | none |
 | `xcopa.XCOPA` | `xcopa` | `it` | `test` | none |
 | `xnli.XNLI` | `facebook/xnli` | `en` | `validation` | none |
+| `xnli_eu.XNLIEU` | `HiTZ/xnli-eu` | `eu` | `test` | none |
 | `xquad.XQuAD` | `google/xquad` | `xquad.en` | `validation` | none |
 | `xstorycloze.XStoryCloze` | `juletxara/xstory_cloze` | `en` | `eval` | none |
 | `xwinograd.XWinograd` | `Muennighoff/xwinograd` | `en` | `test` | none |

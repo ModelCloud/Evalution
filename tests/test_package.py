@@ -432,7 +432,9 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.XNLI is not None
     assert evalution.benchmarks.XNLI_LANGUAGES
     assert evalution.benchmarks.XNLI_TASKS
+    assert evalution.benchmarks.XNLIEU is not None
     assert callable(evalution.benchmarks.xnli)
+    assert callable(evalution.benchmarks.xnli_eu)
     for factory_name in evalution.benchmarks.XNLI_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.XWinograd is not None

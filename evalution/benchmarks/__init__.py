@@ -161,6 +161,7 @@ from .xquad import XQUAD_LANGUAGES, XQUAD_TASKS, XQuAD, xquad
 from .xstorycloze import XSTORYCLOZE_LANGUAGES, XStoryCloze, xstorycloze, xstorycloze_ar, xstorycloze_en, xstorycloze_es, xstorycloze_eu, xstorycloze_hi, xstorycloze_id, xstorycloze_my, xstorycloze_ru, xstorycloze_sw, xstorycloze_te, xstorycloze_zh
 from . import xnli as _xnli_module
 from .xnli import XNLI, XNLI_LANGUAGES, XNLI_TASKS, xnli
+from .xnli_eu import XNLIEU, xnli_eu
 from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinograd_jp, xwinograd_pt, xwinograd_ru, xwinograd_zh
 
 for _crows_pairs_task in CROWS_PAIRS_TASKS:
@@ -423,6 +424,7 @@ __all__ = [
     "XNLI",
     "XNLI_LANGUAGES",
     "XNLI_TASKS",
+    "XNLIEU",
     "XSTORYCLOZE_LANGUAGES",
     "XStoryCloze",
     "XWinograd",
@@ -657,6 +659,7 @@ __all__ = [
     "xstorycloze_te",
     "xstorycloze_zh",
     "xnli",
+    "xnli_eu",
     "xwinograd",
     "xwinograd_en",
     "xwinograd_fr",

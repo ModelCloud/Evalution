@@ -376,6 +376,7 @@ logic, those implementation details can shift results.
 | `xquad` | Generated extractive QA exact match and token-overlap F1 across `ar/de/el/en/es/hi/ro/ru/th/tr/vi/zh` language subsets | XQuAD `artetxe2020crosslingual` |
 | `xstorycloze` | Multiple-choice log-likelihood over translated StoryCloze endings across `ar/en/es/eu/hi/id/my/ru/sw/te/zh` subsets, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
 | `xnli` | Three-way NLI multiple-choice log-likelihood across `ar/bg/de/el/en/es/fr/hi/ru/sw/th/tr/ur/vi/zh` language subsets, raw + length-normalized accuracy | XNLI `conneau2018xnli` |
+| `xnli_eu` | Three-way Basque NLI multiple-choice log-likelihood over `Bai/Gainera/Ez` hypothesis relations, raw + length-normalized accuracy | XNLI-EU `etxaniz2023xnlieu` |
 | `xwinograd` | Partial-evaluation multiple-choice log-likelihood over blank replacements across `en/fr/jp/pt/ru/zh` language subsets, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `piqa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic PIQA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
@@ -548,6 +549,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `xquad_<language>` for the built-in XQuAD language subsets: XQuAD `artetxe2020crosslingual`
 - `xstorycloze_ar`, `xstorycloze_en`, `xstorycloze_es`, `xstorycloze_eu`, `xstorycloze_hi`, `xstorycloze_id`, `xstorycloze_my`, `xstorycloze_ru`, `xstorycloze_sw`, `xstorycloze_te`, `xstorycloze_zh`: XStoryCloze `lin2021fewshotmultilingual`
 - `xnli_<language>` for the built-in XNLI language subsets: XNLI `conneau2018xnli`
+- `xnli_eu`: XNLI-EU `etxaniz2023xnlieu`
 - `xwinograd_en`, `xwinograd_fr`, `xwinograd_jp`, `xwinograd_pt`, `xwinograd_ru`, `xwinograd_zh`: XWinograd `tikhonov2021heads`
 
 ```bibtex
