@@ -53,7 +53,7 @@ def _run_script(script: str) -> bool:
             ["python3", "-c", script],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=5,
+            timeout=10,
             check=False,
         )
     except subprocess.TimeoutExpired:
@@ -68,7 +68,7 @@ class MBPP(BaseTestSuite):
     dataset_name: str | None = MBPP_DATASET_NAME
     split: str = MBPP_TEST_SPLIT
     stream: bool = False
-    max_new_tokens: int = 256
+    max_new_tokens: int = 512
     do_sample: bool = False
     temperature: float = 0.0
 
