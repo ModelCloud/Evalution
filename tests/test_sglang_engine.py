@@ -201,20 +201,26 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
         {
             "token_id": 3,
             "logprob": -0.2,
+            "logprob_source": "input_token_logprobs",
             "greedy_token_id": 3,
             "is_greedy": True,
+            "greedy_source": "input_top_logprobs",
             "requested_logprobs": {3: -0.2, 4: -1.2},
             "requested_logits": {},
             "selected_logit": None,
+            "selected_logit_source": None,
         },
         {
             "token_id": 4,
             "logprob": -0.1,
+            "logprob_source": "input_token_logprobs",
             "greedy_token_id": 4,
             "is_greedy": True,
+            "greedy_source": "input_top_logprobs",
             "requested_logprobs": {3: -0.9, 4: -0.1},
             "requested_logits": {},
             "selected_logit": None,
+            "selected_logit_source": None,
         },
     ]
 
@@ -266,11 +272,14 @@ def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
         {
             "token_id": 3,
             "logprob": -0.4,
+            "logprob_source": "input_token_logprobs",
             "greedy_token_id": 5,
             "is_greedy": False,
+            "greedy_source": "input_top_logprobs",
             "requested_logprobs": {3: -0.4, 5: -0.1},
             "requested_logits": {3: 2.4, 5: 3.1},
             "selected_logit": 2.4,
+            "selected_logit_source": "input_token_logits",
         }
     ]
 
@@ -323,13 +332,6 @@ def test_build_sglang_client_rejects_server_mode() -> None:
 def test_sglang_engine_can_generate_and_score_on_cuda() -> None:
     session = SGLang(
         batch_size=1,
-        engine_kwargs={
-            "trust_remote_code": True,
-            "mem_fraction_static": 0.60,
-            "cuda_graph_max_bs": 1,
-            "max_running_requests": 1,
-            "random_seed": 42,
-        },
     ).build(Model(path=str(_TINYLLAMA_GPTQ_MODEL)))
 
     try:

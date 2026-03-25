@@ -273,6 +273,14 @@ class SGLangSession(BaseTransformerSession):
                     meta_info.get("input_token_ids_logits")
                 )
                 token_logits = _coerce_position_entries(meta_info.get("input_token_logits"))
+                output_top_logprobs = _coerce_nested_position_entries(meta_info.get("output_top_logprobs"))
+                output_requested_logprobs = _coerce_nested_position_entries(
+                    meta_info.get("output_token_ids_logprobs")
+                )
+                output_requested_logits = _coerce_nested_position_entries(
+                    meta_info.get("output_token_ids_logits")
+                )
+                output_token_logits = _coerce_position_entries(meta_info.get("output_token_logits"))
 
                 trace: list[dict[str, Any]] = []
                 total_logprob = 0.0
@@ -285,33 +293,85 @@ class SGLangSession(BaseTransformerSession):
                             "sglang returned input_token_logprobs for a different token than the "
                             "requested continuation; tokenizer/runtime tokenization is inconsistent"
                         )
-                    total_logprob += float(selected["score"])
-                    top_choice = top_logprobs[position][0] if position < len(top_logprobs) and top_logprobs[position] else None
-                    greedy_token_id = top_choice["token_id"] if top_choice is not None else None
-                    if greedy_token_id is not None and greedy_token_id != int(target_id):
-                        is_greedy = False
                     requested_scores = _entries_to_score_map(
                         requested_logprobs[position] if position < len(requested_logprobs) else []
                     )
+                    if not requested_scores:
+                        requested_scores = _entries_to_score_map(
+                            output_requested_logprobs[position]
+                            if position < len(output_requested_logprobs)
+                            else []
+                        )
                     requested_raw_logits = _entries_to_score_map(
                         requested_logits[position] if position < len(requested_logits) else []
                     )
-                    selected_logit = (
-                        token_logits[position]["score"]
-                        if position < len(token_logits) and token_logits[position] is not None
-                        else None
+                    use_output_requested_logprobs = not requested_scores
+                    if use_output_requested_logprobs:
+                        requested_raw_logits = _entries_to_score_map(
+                            output_requested_logits[position]
+                            if position < len(output_requested_logits)
+                            else []
+                        )
+                    elif not requested_raw_logits:
+                        requested_raw_logits = _entries_to_score_map(
+                            output_requested_logits[position]
+                            if position < len(output_requested_logits)
+                            else []
+                        )
+                    selected_score = selected.get("score")
+                    selected_score_source = "input_token_logprobs"
+                    if selected_score is None:
+                        selected_score = requested_scores.get(int(target_id))
+                        if selected_score is not None:
+                            selected_score_source = (
+                                "output_token_ids_logprobs"
+                                if use_output_requested_logprobs
+                                else "input_token_ids_logprobs"
+                            )
+                    if selected_score is None:
+                        raise RuntimeError(
+                            "sglang did not provide a usable logprob for the requested continuation token"
+                        )
+                    total_logprob += float(selected_score)
+                    use_output_top_logprobs = not (
+                        position < len(top_logprobs) and top_logprobs[position]
                     )
+                    top_choice = (
+                        top_logprobs[position][0]
+                        if position < len(top_logprobs) and top_logprobs[position]
+                        else (
+                            output_top_logprobs[position][0]
+                            if position < len(output_top_logprobs) and output_top_logprobs[position]
+                            else None
+                        )
+                    )
+                    greedy_token_id = top_choice["token_id"] if top_choice is not None else None
+                    if greedy_token_id is not None and greedy_token_id != int(target_id):
+                        is_greedy = False
+                    selected_logit = None
+                    selected_logit_source = None
+                    if position < len(token_logits) and token_logits[position] is not None:
+                        selected_logit = token_logits[position]["score"]
+                        selected_logit_source = "input_token_logits"
+                    elif position < len(output_token_logits) and output_token_logits[position] is not None:
+                        selected_logit = output_token_logits[position]["score"]
+                        selected_logit_source = "output_token_logits"
                     trace.append(
                         {
                             "token_id": int(target_id),
-                            "logprob": float(selected["score"]),
+                            "logprob": float(selected_score),
+                            "logprob_source": selected_score_source,
                             "greedy_token_id": greedy_token_id,
                             "is_greedy": greedy_token_id == int(target_id)
                             if greedy_token_id is not None
                             else None,
+                            "greedy_source": (
+                                "output_top_logprobs" if use_output_top_logprobs else "input_top_logprobs"
+                            ),
                             "requested_logprobs": requested_scores,
                             "requested_logits": requested_raw_logits,
                             "selected_logit": selected_logit,
+                            "selected_logit_source": selected_logit_source,
                         }
                     )
 
@@ -454,13 +514,31 @@ def _normalize_sglang_response(payload: Any) -> list[dict[str, Any]]:
 def _coerce_position_entries(raw_positions: Any) -> list[dict[str, Any]]:
     if raw_positions is None:
         return []
-    return [_coerce_score_entry(entry) for entry in raw_positions]
+    output: list[dict[str, Any]] = []
+    for entry in raw_positions:
+        if entry is None:
+            output.append({"score": None, "token_id": None, "text": None})
+            continue
+        output.append(_coerce_score_entry(entry))
+    return output
 
 
 def _coerce_nested_position_entries(raw_positions: Any) -> list[list[dict[str, Any]]]:
     if raw_positions is None:
         return []
-    return [[_coerce_score_entry(entry) for entry in position] for position in raw_positions]
+    output: list[list[dict[str, Any]]] = []
+    for position in raw_positions:
+        if position is None:
+            output.append([])
+            continue
+        output.append(
+            [
+                _coerce_score_entry(entry)
+                for entry in position
+                if entry is not None
+            ]
+        )
+    return output
 
 
 def _coerce_score_entry(entry: Any) -> dict[str, Any]:
@@ -468,13 +546,13 @@ def _coerce_score_entry(entry: Any) -> dict[str, Any]:
         token_id = entry.get("token_id", entry.get("id"))
         score = entry.get("score", entry.get("logprob", entry.get("logit")))
         return {
-            "score": float(score),
+            "score": float(score) if score is not None else None,
             "token_id": int(token_id) if token_id is not None else None,
             "text": entry.get("text"),
         }
     if isinstance(entry, (list, tuple)) and len(entry) >= 2:
         return {
-            "score": float(entry[0]),
+            "score": float(entry[0]) if entry[0] is not None else None,
             "token_id": int(entry[1]) if entry[1] is not None else None,
             "text": entry[2] if len(entry) > 2 else None,
         }
@@ -485,9 +563,10 @@ def _entries_to_score_map(entries: list[dict[str, Any]]) -> dict[int, float]:
     output: dict[int, float] = {}
     for entry in entries:
         token_id = entry.get("token_id")
-        if token_id is None:
+        score = entry.get("score")
+        if token_id is None or score is None:
             continue
-        output[int(token_id)] = float(entry["score"])
+        output[int(token_id)] = float(score)
     return output
 
 
