@@ -70,7 +70,7 @@ def load_suite_dataset(
     kwargs = {
         "split": split,
         "cache_dir": cache_dir,
-        "stream": stream,
+        "streaming": stream,
     }
     dataset_load_started = perf_counter()
     with spinner(f"{task_name}: loading dataset"):
