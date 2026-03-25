@@ -83,6 +83,7 @@ from .copa import COPA, copa
 from .drop import DROP, drop
 from . import eus_exams as _eus_exams_module
 from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
+from .eus_reading import EusReading, eus_reading
 from .eus_proficiency import EusProficiency, eus_proficiency
 from .eus_trivia import EusTrivia, eus_trivia
 from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
@@ -338,6 +339,7 @@ __all__ = [
     "EUS_EXAMS_SUBSETS",
     "EUS_EXAMS_TASKS",
     "EusExams",
+    "EusReading",
     "EusProficiency",
     "EusTrivia",
     "COPALID",
@@ -532,6 +534,7 @@ __all__ = [
     "copa",
     "drop",
     "eus_exams",
+    "eus_reading",
     "eus_proficiency",
     "eus_trivia",
     "gpqa",

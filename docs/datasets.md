@@ -70,6 +70,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `egymmlu.EgyMMLU` | `UBC-NLP/EgyMMLU` | `None` | `test` | none |
 | `esbbq.EsBBQ` | `BSC-LT/EsBBQ` | `Age` | `test` | none |
 | `eus_exams.EusExams` | `HiTZ/EusExams` | `None` | `test` | none |
+| `eus_reading.EusReading` | `HiTZ/EusReading` | `default` | `test` | none |
 | `eus_proficiency.EusProficiency` | `HiTZ/EusProficiency` | `default` | `test` | none |
 | `eus_trivia.EusTrivia` | `HiTZ/EusTrivia` | `default` | `test` | none |
 | `gpqa.GPQA` | `Idavidrein/gpqa` | `None` | `train` | none |

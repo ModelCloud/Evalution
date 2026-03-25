@@ -1551,6 +1551,18 @@ def _metadata_has_eus_proficiency_fields(metadata: dict[str, Any]) -> None:
     assert metadata["choice_labels"] == ["A", "B", "C", "D"]
 
 
+def _metadata_has_eus_reading_fields(metadata: dict[str, Any]) -> None:
+    assert isinstance(metadata["id"], int)
+    assert metadata["context"]
+    assert metadata["question"]
+    assert metadata["raw_choices"]
+    assert metadata["choice_labels"] in (
+        ["A", "B"],
+        ["A", "B", "C"],
+        ["A", "B", "C", "D"],
+    )
+
+
 def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         subset = metadata["subset"]
@@ -2961,6 +2973,33 @@ SUITE_SPECS = {
         subset="es_ejauxiliar",
         baseline={"acc,ll": 0.36220472440944884, "acc,ll_avg": 0.36220472440944884},
         expected_sample_count=127,
+    ),
+    "eus_reading": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.eus_reading(batch_size=1, stream=True, max_rows=128),
+        expected_name="eus_reading",
+        baseline={
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.28125,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "HiTZ/EusReading",
+            "dataset_name": "default",
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "order": "native",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Pasartea: ",
+            prompt_suffix="\nErantzuna:",
+            metadata_validator=_metadata_has_eus_reading_fields,
+        ),
     ),
     "eus_proficiency": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.eus_proficiency(batch_size=24, stream=True, max_rows=128),

@@ -291,6 +291,7 @@ logic, those implementation details can shift results.
 | `darijammlu` | Multiple-choice log-likelihood across configurable DarijaMMLU subject subsets, raw + length-normalized accuracy | DarijaMMLU `shang2024atlaschatadaptinglargelanguage` |
 | `egymmlu` | Multiple-choice log-likelihood across configurable EgyMMLU subject subsets, raw + length-normalized accuracy | EgyMMLU `el-mekki-etal-2025-nilechat` |
 | `eus_exams` | Multiple-choice log-likelihood across configurable Basque and Spanish civil-service exam subsets, raw + length-normalized accuracy | EusExams `etxaniz2024latxa` |
+| `eus_reading` | Multiple-choice log-likelihood over Basque reading-comprehension answer labels, raw + length-normalized accuracy | EusReading `etxaniz2024latxa` |
 | `eus_proficiency` | Multiple-choice log-likelihood over Basque proficiency answer labels, raw + length-normalized accuracy | EusProficiency `etxaniz2024latxa` |
 | `eus_trivia` | Multiple-choice log-likelihood over Basque trivia answer labels, raw + length-normalized accuracy | EusTrivia `etxaniz2024latxa` |
 | `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
@@ -468,6 +469,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `darijammlu_<subset>` for the built-in DarijaMMLU subsets: DarijaMMLU `shang2024atlaschatadaptinglargelanguage`
 - `egymmlu_<subset>` for the built-in EgyMMLU subsets: EgyMMLU `el-mekki-etal-2025-nilechat`
 - `eus_exams_<subset>` for the built-in EusExams subsets: EusExams `etxaniz2024latxa`
+- `eus_reading`: EusReading `etxaniz2024latxa`
 - `eus_proficiency`: EusProficiency `etxaniz2024latxa`
 - `eus_trivia`: EusTrivia `etxaniz2024latxa`
 - `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
