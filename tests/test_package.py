@@ -295,6 +295,22 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.logiqa2)
     assert evalution.benchmarks.MathQA is not None
     assert callable(evalution.benchmarks.mathqa)
+    assert evalution.benchmarks.Mastermind is not None
+    assert evalution.benchmarks.MASTERMIND_VARIANTS == (
+        "mastermind_24_easy",
+        "mastermind_24_hard",
+        "mastermind_35_easy",
+        "mastermind_35_hard",
+        "mastermind_46_easy",
+        "mastermind_46_hard",
+    )
+    assert callable(evalution.benchmarks.mastermind)
+    assert callable(evalution.benchmarks.mastermind_24_easy)
+    assert callable(evalution.benchmarks.mastermind_24_hard)
+    assert callable(evalution.benchmarks.mastermind_35_easy)
+    assert callable(evalution.benchmarks.mastermind_35_hard)
+    assert callable(evalution.benchmarks.mastermind_46_easy)
+    assert callable(evalution.benchmarks.mastermind_46_hard)
     assert evalution.benchmarks.MCTACO is not None
     assert callable(evalution.benchmarks.mc_taco)
     assert evalution.benchmarks.MedMCQA is not None

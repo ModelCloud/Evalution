@@ -359,6 +359,7 @@ logic, those implementation details can shift results.
 | `inverse_scaling` | Multiple-choice log-likelihood across inverse-scaling subsets, raw + length-normalized accuracy | Inverse Scaling Prize `mckenzie2023inverse` |
 | `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
 | `logiqa2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA 2.0 `liu2022logiqa2` |
+| `mastermind` | Multiple-choice log-likelihood over candidate secret codes across the `24/35/46` easy and hard variants | Mastermind |
 | `mathqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MathQA `amini2019mathqa` |
 | `mc_taco` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | MC-TACO `zhou2019mctaco` |
 | `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
@@ -519,6 +520,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `lambada_openai`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
 - `logiqa`: LogiQA `liu2020logiqa`
 - `logiqa2`: LogiQA 2.0 `liu2022logiqa2`
+- `mastermind_24_easy`, `mastermind_24_hard`, `mastermind_35_easy`, `mastermind_35_hard`, `mastermind_46_easy`, `mastermind_46_hard`: Mastermind
 - `mathqa`: MathQA `amini2019mathqa`
 - `mc_taco`: MC-TACO `zhou2019mctaco`
 - `medmcqa`: MedMCQA `pmlr-v174-pal22a`

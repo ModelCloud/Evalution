@@ -1610,6 +1610,21 @@ def _metadata_has_polemo2_fields(metadata: dict[str, Any], *, variant: str) -> N
     assert metadata["target_label"].startswith("__label__meta_")
 
 
+def _metadata_has_mastermind_fields(
+    metadata: dict[str, Any],
+    *,
+    variant: str,
+    code_shape: str,
+    difficulty: str,
+) -> None:
+    assert metadata["id"] >= 0
+    assert metadata["variant"] == variant
+    assert metadata["code_shape"] == code_shape
+    assert metadata["difficulty"] == difficulty
+    assert metadata["option_labels"] == ["A", "B", "C", "D"]
+    assert len(metadata["choice_texts"]) == 4
+
+
 def _metadata_subset_in(allowed_subsets: set[str] | None = None) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         subset = metadata["subset"]
@@ -4755,6 +4770,174 @@ SUITE_SPECS = {
             prompt_prefix="Question: ",
             prompt_suffix="\nAnswer:",
             metadata_validator=_metadata_has_choice_labels(exact_count=5),
+        ),
+    ),
+    "mastermind_24_easy": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mastermind_24_easy(batch_size=24, max_rows=128),
+        expected_name="mastermind_24_easy",
+        baseline={"acc,ll": 0.375, "acc,ll_avg": 0.375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "flair/mastermind_24_mcq_random",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "variant": "mastermind_24_easy",
+            "code_shape": "24",
+            "difficulty": "easy",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\n\nThe secret code is:",
+            metadata_validator=lambda metadata: _metadata_has_mastermind_fields(
+                metadata,
+                variant="mastermind_24_easy",
+                code_shape="24",
+                difficulty="easy",
+            ),
+        ),
+    ),
+    "mastermind_24_hard": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mastermind_24_hard(batch_size=24, max_rows=128),
+        expected_name="mastermind_24_hard",
+        baseline={"acc,ll": 0.4140625, "acc,ll_avg": 0.4140625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "flair/mastermind_24_mcq_close",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "variant": "mastermind_24_hard",
+            "code_shape": "24",
+            "difficulty": "hard",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\n\nThe secret code is:",
+            metadata_validator=lambda metadata: _metadata_has_mastermind_fields(
+                metadata,
+                variant="mastermind_24_hard",
+                code_shape="24",
+                difficulty="hard",
+            ),
+        ),
+    ),
+    "mastermind_35_easy": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mastermind_35_easy(batch_size=24, max_rows=128),
+        expected_name="mastermind_35_easy",
+        baseline={"acc,ll": 0.4296875, "acc,ll_avg": 0.4296875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "flair/mastermind_35_mcq_random",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "variant": "mastermind_35_easy",
+            "code_shape": "35",
+            "difficulty": "easy",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\n\nThe secret code is:",
+            metadata_validator=lambda metadata: _metadata_has_mastermind_fields(
+                metadata,
+                variant="mastermind_35_easy",
+                code_shape="35",
+                difficulty="easy",
+            ),
+        ),
+    ),
+    "mastermind_35_hard": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mastermind_35_hard(batch_size=24, max_rows=128),
+        expected_name="mastermind_35_hard",
+        baseline={"acc,ll": 0.4609375, "acc,ll_avg": 0.4609375},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "flair/mastermind_35_mcq_close",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "variant": "mastermind_35_hard",
+            "code_shape": "35",
+            "difficulty": "hard",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\n\nThe secret code is:",
+            metadata_validator=lambda metadata: _metadata_has_mastermind_fields(
+                metadata,
+                variant="mastermind_35_hard",
+                code_shape="35",
+                difficulty="hard",
+            ),
+        ),
+    ),
+    "mastermind_46_easy": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mastermind_46_easy(batch_size=24, max_rows=128),
+        expected_name="mastermind_46_easy",
+        baseline={"acc,ll": 0.625, "acc,ll_avg": 0.625},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "flair/mastermind_46_mcq_random",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "variant": "mastermind_46_easy",
+            "code_shape": "46",
+            "difficulty": "easy",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\n\nThe secret code is:",
+            metadata_validator=lambda metadata: _metadata_has_mastermind_fields(
+                metadata,
+                variant="mastermind_46_easy",
+                code_shape="46",
+                difficulty="easy",
+            ),
+        ),
+    ),
+    "mastermind_46_hard": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mastermind_46_hard(batch_size=24, max_rows=128),
+        expected_name="mastermind_46_hard",
+        baseline={"acc,ll": 0.6171875, "acc,ll_avg": 0.6171875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "flair/mastermind_46_mcq_close",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "variant": "mastermind_46_hard",
+            "code_shape": "46",
+            "difficulty": "hard",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            prompt_suffix="\n\nThe secret code is:",
+            metadata_validator=lambda metadata: _metadata_has_mastermind_fields(
+                metadata,
+                variant="mastermind_46_hard",
+                code_shape="46",
+                difficulty="hard",
+            ),
         ),
     ),
     "mutual": SuiteSpec(

@@ -112,6 +112,17 @@ from .lambada_cloze import LAMBADACloze, lambada_openai_cloze, lambada_standard_
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
 from .mathqa import MathQA, mathqa
+from .mastermind import (
+    MASTERMIND_VARIANTS,
+    Mastermind,
+    mastermind,
+    mastermind_24_easy,
+    mastermind_24_hard,
+    mastermind_35_easy,
+    mastermind_35_hard,
+    mastermind_46_easy,
+    mastermind_46_hard,
+)
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mc_taco import MCTACO, mc_taco
@@ -372,7 +383,9 @@ __all__ = [
     "LAMBADACloze",
     "LogiQA",
     "LogiQA2",
+    "MASTERMIND_VARIANTS",
     "MathQA",
+    "Mastermind",
     "MedMCQA",
     "MedQA",
     "MCTACO",
@@ -577,6 +590,13 @@ __all__ = [
     "logiqa",
     "logiqa2",
     "mathqa",
+    "mastermind",
+    "mastermind_24_easy",
+    "mastermind_24_hard",
+    "mastermind_35_easy",
+    "mastermind_35_hard",
+    "mastermind_46_easy",
+    "mastermind_46_hard",
     "medmcqa",
     "medqa_4options",
     "mc_taco",
