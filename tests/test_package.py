@@ -196,6 +196,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.boolq)
     assert evalution.benchmarks.CB is not None
     assert callable(evalution.benchmarks.cb)
+    assert evalution.benchmarks.Click is not None
+    assert evalution.benchmarks.CLICK_LANG_SUBSETS == ("text", "grammar", "function")
+    assert evalution.benchmarks.CLICK_CUL_SUBSETS == ("economy", "geography", "history", "kpop", "law", "politics", "society", "tradition")
+    assert evalution.benchmarks.CLICK_TASKS
+    for factory_name in evalution.benchmarks.CLICK_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.CoLA is not None
     assert callable(evalution.benchmarks.cola)
     assert evalution.benchmarks.CNNDailyMail is not None

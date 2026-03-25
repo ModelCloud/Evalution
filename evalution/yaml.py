@@ -259,6 +259,11 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xwinograd_zh": benchmarks.xwinograd_zh,
 }
 
+for _click_task in benchmarks.CLICK_TASKS:
+    _TEST_FACTORIES[_click_task] = getattr(benchmarks, _click_task)
+
+del _click_task
+
 for _task_name in benchmarks.CABBQ_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 

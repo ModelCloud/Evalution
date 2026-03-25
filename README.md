@@ -325,6 +325,7 @@ logic, those implementation details can shift results.
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
+| `click` | Multiple-choice log-likelihood across Korean CLIcK language and culture subsets, raw + length-normalized accuracy | CLIcK `kim2024click` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
 | `cnn_dailymail` | Generated summarization with ROUGE-1, ROUGE-2, and ROUGE-Lsum F1 | CNN/DailyMail `nallapati2016abstractive` |
 | `code_x_glue` | Code-to-docstring generation with corpus smoothed BLEU-4 across `go/java/javascript/php/python/ruby` language subsets | CodeXGLUE `lu2021codexglue` |
@@ -523,6 +524,7 @@ The current built-in suite coverage maps to these benchmark citations:
 - `logiqa`: LogiQA `liu2020logiqa`
 - `logiqa2`: LogiQA 2.0 `liu2022logiqa2`
 - `mastermind_24_easy`, `mastermind_24_hard`, `mastermind_35_easy`, `mastermind_35_hard`, `mastermind_46_easy`, `mastermind_46_hard`: Mastermind
+- `click`, `click_lang`, `click_lang_text`, `click_lang_grammar`, `click_lang_function`, `click_cul`, `click_cul_economy`, `click_cul_geography`, `click_cul_history`, `click_cul_kpop`, `click_cul_law`, `click_cul_politics`, `click_cul_society`, `click_cul_tradition`: CLIcK `kim2024click`
 - `gsm_plus`, `gsm_plus_mini`: GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating`
 - `mathqa`: MathQA `amini2019mathqa`
 - `mc_taco`: MC-TACO `zhou2019mctaco`

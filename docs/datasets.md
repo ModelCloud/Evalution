@@ -56,6 +56,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `cabbq.CaBBQ` | `BSC-LT/CaBBQ` | `Age` | `test` | none |
 | `careqa.CareQA` | `HPAI-BSC/CareQA` | `CareQA_en` | `test` | none |
 | `cb.CB` | `super_glue` | `cb` | `validation` | none |
+| `click.Click` | `EunsuKim/CLIcK` | `None` | `train` | none |
 | `ceval.CEval` | `ceval/ceval-exam` | `None` | `val` | none |
 | `cnn_dailymail.CNNDailyMail` | `cnn_dailymail` | `3.0.0` | `validation` | none |
 | `code_x_glue.CodeXGLUECodeToText` | language-specific `CM/codexglue_code2text_*` | `None` | `test` | none |

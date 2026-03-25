@@ -55,6 +55,8 @@ from .ceval import CEVAL_SUBSETS, CEval, ceval
 from .careqa import CAREQA_CONFIGS, CAREQA_TASKS, CareQA, careqa, careqa_en, careqa_es
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
+from . import click as _click_module
+from .click import CLICK_CUL_SUBSETS, CLICK_LANG_SUBSETS, CLICK_TASKS, Click
 from .cola import CoLA, cola
 from .cnn_dailymail import CNNDailyMail, cnn_dailymail
 from .code_x_glue import (
@@ -218,6 +220,11 @@ for _esbbq_task in ESBBQ_TASKS:
 
 del _esbbq_task
 
+for _click_task in CLICK_TASKS:
+    globals()[_click_task] = getattr(_click_module, _click_task)
+
+del _click_task
+
 for _afrimmlu_task in AFRIMMLU_TASKS:
     globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
 
@@ -330,6 +337,10 @@ __all__ = [
     "CEval",
     "BoolQ",
     "CB",
+    "CLICK_CUL_SUBSETS",
+    "CLICK_LANG_SUBSETS",
+    "CLICK_TASKS",
+    "Click",
     "CoLA",
     "CNNDailyMail",
     "CODE_X_GLUE_LANGUAGES",
@@ -722,3 +733,4 @@ __all__.extend(XNLI_TASKS)
 __all__.extend(XQUAD_TASKS)
 __all__.extend(TRUTHFULQA_TASKS)
 __all__.extend(INVERSE_SCALING_TASKS)
+__all__.extend(CLICK_TASKS)
