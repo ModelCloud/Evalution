@@ -7,14 +7,17 @@ from __future__ import annotations
 
 import math
 import sys
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 import torch
+import transformers
+from transformers import PretrainedConfig
 
 from evalution.config import Model
-from evalution.engines.base import GenerationRequest, LoglikelihoodRequest
+from evalution.engines.base import GenerationOutput, GenerationRequest, LoglikelihoodRequest
 from evalution.engines.gptqmodel_engine import (
     GPTQModel,
     GPTQModelSession,
@@ -124,6 +127,130 @@ def test_gptqmodel_session_describes_quantized_backend() -> None:
         "quant_method": "gptq",
         "runtime_format": "gptq",
     }
+
+
+def test_gptqmodel_session_generate_continuous_refills_paged_manager_while_caller_is_paused(
+    monkeypatch,
+) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+
+        def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            assert add_special_tokens is False
+            del kwargs
+            if isinstance(prompts, str):
+                return {"input_ids": [11, 12, 13]}
+            return {"input_ids": [[11, 12, 13] for _ in prompts]}
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class FakeContinuousOutput:
+        def __init__(self, request_id, tokens):
+            self.request_id = request_id
+            self.generated_tokens = tokens
+            self.error = None
+
+        def is_finished(self) -> bool:
+            return True
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+            self.config._attn_implementation = "flash_attention_2"
+
+        def set_attn_implementation(self, value: str) -> None:
+            self.config._attn_implementation = value
+
+    class FakeContinuousBatchingManager:
+        last_instance: FakeContinuousBatchingManager | None = None
+
+        def __init__(self, model, generation_config, **kwargs):
+            del model, generation_config, kwargs
+            self.started = False
+            self.stopped = False
+            self.stop_calls = 0
+            self.result_queue: list[FakeContinuousOutput] = []
+            self.added_request_ids: list[str] = []
+            self.third_request_added = threading.Event()
+            FakeContinuousBatchingManager.last_instance = self
+
+        def start(self) -> None:
+            self.started = True
+
+        def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            del input_ids, max_new_tokens, streaming
+            assert request_id is not None
+            self.added_request_ids.append(request_id)
+            if len(self.added_request_ids) == 2:
+                self.result_queue.append(FakeContinuousOutput("req_0", [101, 102, 103]))
+            elif len(self.added_request_ids) == 3:
+                self.third_request_added.set()
+
+        def get_result(self, timeout=None):
+            if not self.result_queue:
+                if timeout:
+                    threading.Event().wait(min(timeout, 0.01))
+                return None
+            return self.result_queue.pop(0)
+
+        def is_running(self) -> bool:
+            return self.started and not self.stopped
+
+        def stop(self, block=True):
+            assert block is True
+            self.stopped = True
+            self.stop_calls += 1
+
+    monkeypatch.setattr(
+        transformers,
+        "ContinuousBatchingManager",
+        FakeContinuousBatchingManager,
+    )
+
+    session = GPTQModelSession(
+        config=GPTQModel(attn_implementation="paged|flash_attention_2"),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=SimpleNamespace(type="cuda"),
+        requested_attn_implementation="paged|flash_attention_2",
+        effective_attn_implementation="paged|flash_attention_2",
+        paged_attention_enabled=True,
+        generation_backend="continuous_batching",
+        resolved_backend="gptq_triton",
+        quant_method="gptq",
+        runtime_format="gptq",
+    )
+
+    iterator = session.generate_continuous(
+        [
+            (10, GenerationRequest(prompt="Q: 40 + 2\nA:", stop=["Q:"])),
+            (11, GenerationRequest(prompt="Q: 41 + 2\nA:", stop=["Q:"])),
+            (12, GenerationRequest(prompt="Q: 42 + 2\nA:", stop=["Q:"])),
+        ],
+        batch_size=2,
+    )
+
+    first_output = next(iterator)
+    manager = FakeContinuousBatchingManager.last_instance
+
+    assert first_output == (
+        10,
+        GenerationOutput(prompt="Q: 40 + 2\nA:", text="The answer is 42.", metadata={}),
+    )
+    assert manager is not None
+    assert manager.third_request_added.wait(timeout=1.0)
+    assert manager.added_request_ids == ["req_0", "req_1", "req_2"]
+    assert session.continuous_batching_manager is manager
+
+    iterator.close()
+
+    assert manager.stopped is True
+    assert manager.stop_calls == 1
+    assert session.continuous_batching_manager is None
 
 
 def test_gptqmodel_engine_rejects_external_backends() -> None:

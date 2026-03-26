@@ -76,6 +76,11 @@ class BaseInferenceSession(ABC):
     # Define the reusable model-session contract that every engine runtime must satisfy.
     # Runtime code and test suites talk to this interface instead of branching on engine type.
 
+    # RequestExecutor work must stay off the Python main thread by default.
+    @property
+    def request_executor_requires_non_main_thread(self) -> bool:
+        return True
+
     @abstractmethod
     def generate(
         self,
@@ -100,6 +105,10 @@ class BaseInferenceSession(ABC):
         batch_size: int | None = None,
     ) -> list[RollingLoglikelihoodOutput]: ...
 
+    # Implementations should keep backend progress decoupled from caller iteration. In
+    # particular, do not hold engine/session locks across user-visible yields; use a queued
+    # request/result handoff when the backend must stay active and refill independently of the
+    # caller.
     @abstractmethod
     def generate_continuous(
         self,

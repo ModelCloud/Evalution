@@ -374,6 +374,8 @@ def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> No
 
     def fake_load_dataset(*args, **kwargs):
         del args
+        if "stream" in kwargs:
+            raise TypeError("unexpected keyword argument 'stream'")
         calls.append(kwargs)
         return dataset
 
