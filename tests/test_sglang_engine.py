@@ -192,10 +192,9 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
         {
             "input_ids": [[1, 2, 3, 4]],
             "sampling_params": [{"max_new_tokens": 1, "temperature": 0.0}],
-            "return_logprob": [True],
-            "logprob_start_len": [0],
-            "top_logprobs_num": [1],
-            "return_text_in_logprobs": False,
+            "return_logprob": True,
+            "logprob_start_len": 0,
+            "top_logprobs_num": 2,
         }
     ]
     assert outputs[0].logprob == -0.30000000000000004

@@ -29,6 +29,8 @@ from evalution.engines.transformers_common import (
     _normalize_batch_size,
     _normalize_tokenizer_special_tokens,
     _resolve_tokenizer_source,
+    _seed_transformer_runtime,
+    _seed_with_internal_apis,
 )
 
 _DEFAULT_SGLANG_PATH = "/root/projects/GPTQModel/hub/sglang/python"
@@ -55,10 +57,7 @@ class _SGLangPythonClient(_SGLangClient):
     transport: str = "python"
 
     def generate(self, **payload: Any) -> list[dict[str, Any]]:
-        prompt = payload.pop("text", None)
-        if "return_text_in_logprobs" in payload:
-            payload.pop("return_text_in_logprobs")
-        response = self.engine.generate(prompt=prompt, **payload)
+        response = self.engine.generate(**payload)
         return _normalize_sglang_response(response)
 
     def gc(self) -> None:
@@ -89,6 +88,7 @@ class SGLang(_TransformersCommonConfig):
     sglang_path: str | None = _DEFAULT_SGLANG_PATH
     engine_kwargs: dict[str, Any] = field(default_factory=dict)
     server_kwargs: dict[str, Any] = field(default_factory=dict)
+    sampling_params: dict[str, Any] = field(default_factory=dict)
     default_auto_batch_size: int = 32
 
     def build(self, model: Model) -> BaseTransformerSession:
@@ -128,13 +128,6 @@ class SGLangSession(BaseTransformerSession):
             }
         )
         return execution
-
-    def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
-        del requests
-        configured = _normalize_batch_size(self.config.batch_size)
-        if configured != _AUTO_BATCH_SIZE:
-            return configured
-        return max(1, int(self.config.default_auto_batch_size))
 
     def loglikelihood(
         self,
@@ -242,9 +235,9 @@ class SGLangSession(BaseTransformerSession):
                     for _ in batch
                 ],
                 "return_logprob": [True for _ in batch],
-                "logprob_start_len": [0 for _ in batch],
-                "top_logprobs_num": [1 for _ in batch],
-                "return_text_in_logprobs": False,
+                "return_logprob": True,
+                "logprob_start_len": 0,
+                "top_logprobs_num": 2,
             }
             responses = self.client.generate(**payload)
             if len(responses) != len(batch):
@@ -351,12 +344,18 @@ class SGLangSession(BaseTransformerSession):
             else self.config.max_new_tokens,
             "temperature": request.temperature if request.do_sample else 0.0,
         }
+
+        if self.config.sampling_params:
+            params.update(self.config.sampling_params)
+        
         if request.stop:
             params["stop"] = list(request.stop)
         return params
 
 
 def load_sglang_runtime(config: SGLang, model_config: Model) -> _LoadedSGLangRuntime:
+    _seed_transformer_runtime(config.seed)
+
     trust_remote_code = (
         config.trust_remote_code
         if config.trust_remote_code is not None
@@ -378,10 +377,11 @@ def load_sglang_runtime(config: SGLang, model_config: Model) -> _LoadedSGLangRun
         model=None,
     )
 
-    model_length = getattr(tokenizer, "model_max_length", None)
+    client = _build_sglang_client(config, model_config)
+    _seed_with_internal_apis(getattr(client, "engine", None), config.seed)
+    model_length = _resolve_sglang_context_length(client, tokenizer=tokenizer)
     model = SimpleNamespace(config=SimpleNamespace(max_position_embeddings=model_length))
     input_device = SimpleNamespace(type="cpu")
-    client = _build_sglang_client(config, model_config)
 
     return _LoadedSGLangRuntime(
         client=client,
@@ -402,10 +402,23 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
     _import_sglang(config.sglang_path)
     engine_module = importlib.import_module("sglang.srt.entrypoints.engine")
     engine_kwargs = {
+        **model_config.model_kwargs,
         "model_path": model_config.path,
+        "trust_remote_code": (
+            config.trust_remote_code
+            if config.trust_remote_code is not None
+            else model_config.trust_remote_code
+        ),
         **config.server_kwargs,
         **config.engine_kwargs,
     }
+    tokenizer_source = _resolve_tokenizer_source(model_config)
+    if tokenizer_source != model_config.path:
+        engine_kwargs.setdefault("tokenizer_path", tokenizer_source)
+    if config.device is not None:
+        engine_kwargs.setdefault("device", config.device)
+    if config.dtype is not None:
+        engine_kwargs.setdefault("dtype", config.dtype)
     if model_config.revision is not None:
         engine_kwargs.setdefault("revision", model_config.revision)
     return _SGLangPythonClient(engine=engine_module.Engine(**engine_kwargs))
@@ -431,6 +444,24 @@ def _import_sglang(sglang_path: str | None) -> Any:
             sys.path.insert(0, checkout_root)
 
         return importlib.import_module("sglang")
+
+
+def _resolve_sglang_context_length(client: _SGLangClient, *, tokenizer: Any) -> int | None:
+    engine = getattr(client, "engine", None)
+    tokenizer_manager = getattr(engine, "tokenizer_manager", None)
+    for candidate in (
+        getattr(tokenizer_manager, "context_len", None),
+        getattr(getattr(engine, "server_args", None), "context_length", None),
+        getattr(getattr(engine, "server_args", None), "max_model_len", None),
+        getattr(tokenizer, "model_max_length", None),
+    ):
+        if candidate is None:
+            continue
+        try:
+            return int(candidate)
+        except (TypeError, ValueError):
+            continue
+    return None
 
 def _normalize_sglang_response(payload: Any) -> list[dict[str, Any]]:
     if isinstance(payload, list):
