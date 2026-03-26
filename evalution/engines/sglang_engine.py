@@ -175,10 +175,6 @@ class SGLangSession(BaseTransformerSession):
             for chunk, chunk_output in zip(chunks, chunk_scores, strict=True):
                 current = totals[chunk.request_index]
                 combined_metadata = dict(current.metadata)
-                trace = list(combined_metadata.get("scoring_trace", []))
-                trace.extend(chunk_output.metadata.get("scoring_trace", []))
-                if trace:
-                    combined_metadata["scoring_trace"] = trace
                 combined_metadata["sglang_transport"] = self.transport
                 if chunk_output.metadata.get("raw_logits_enabled"):
                     combined_metadata["raw_logits_enabled"] = True
@@ -285,12 +281,7 @@ class SGLangSession(BaseTransformerSession):
                 output_requested_logprobs = _coerce_nested_position_entries(
                     meta_info.get("output_token_ids_logprobs")
                 )
-                output_requested_logits = _coerce_nested_position_entries(
-                    meta_info.get("output_token_ids_logits")
-                )
-                output_token_logits = _coerce_position_entries(meta_info.get("output_token_logits"))
 
-                trace: list[dict[str, Any]] = []
                 total_logprob = 0.0
                 is_greedy = True
                 for position, target_id in enumerate(target_ids):
@@ -305,40 +296,14 @@ class SGLangSession(BaseTransformerSession):
                             if position < len(output_requested_logprobs)
                             else []
                         )
-                    requested_raw_logits = _entries_to_score_map(
-                        requested_logits[position] if position < len(requested_logits) else []
-                    )
-                    use_output_requested_logprobs = not requested_scores
-                    if use_output_requested_logprobs:
-                        requested_raw_logits = _entries_to_score_map(
-                            output_requested_logits[position]
-                            if position < len(output_requested_logits)
-                            else []
-                        )
-                    elif not requested_raw_logits:
-                        requested_raw_logits = _entries_to_score_map(
-                            output_requested_logits[position]
-                            if position < len(output_requested_logits)
-                            else []
-                        )
                     selected_score = selected.get("score")
-                    selected_score_source = "input_token_logprobs"
                     if selected_score is None and selected_token_id is not None and int(selected_token_id) == int(target_id):
                         selected_score = requested_scores.get(int(target_id))
-                        if selected_score is not None:
-                            selected_score_source = (
-                                "output_token_ids_logprobs"
-                                if use_output_requested_logprobs
-                                else "input_token_ids_logprobs"
-                            )
                     if selected_score is None:
                         raise RuntimeError(
                             "sglang did not provide a usable logprob for the requested continuation token"
                         )
                     total_logprob += float(selected_score)
-                    use_output_top_logprobs = not (
-                        position < len(top_logprobs) and top_logprobs[position]
-                    )
                     top_choice = (
                         top_logprobs[position][0]
                         if position < len(top_logprobs) and top_logprobs[position]
@@ -351,32 +316,6 @@ class SGLangSession(BaseTransformerSession):
                     greedy_token_id = top_choice["token_id"] if top_choice is not None else None
                     if greedy_token_id is not None and greedy_token_id != int(target_id):
                         is_greedy = False
-                    selected_logit = None
-                    selected_logit_source = None
-                    if position < len(token_logits) and token_logits[position] is not None:
-                        selected_logit = token_logits[position]["score"]
-                        selected_logit_source = "input_token_logits"
-                    elif position < len(output_token_logits) and output_token_logits[position] is not None:
-                        selected_logit = output_token_logits[position]["score"]
-                        selected_logit_source = "output_token_logits"
-                    trace.append(
-                        {
-                            "token_id": int(target_id),
-                            "logprob": float(selected_score),
-                            "logprob_source": selected_score_source,
-                            "greedy_token_id": greedy_token_id,
-                            "is_greedy": greedy_token_id == int(target_id)
-                            if greedy_token_id is not None
-                            else None,
-                            "greedy_source": (
-                                "output_top_logprobs" if use_output_top_logprobs else "input_top_logprobs"
-                            ),
-                            "requested_logprobs": requested_scores,
-                            "requested_logits": requested_raw_logits,
-                            "selected_logit": selected_logit,
-                            "selected_logit_source": selected_logit_source,
-                        }
-                    )
 
                 scored_chunks.append(
                     LoglikelihoodOutput(
@@ -385,7 +324,6 @@ class SGLangSession(BaseTransformerSession):
                         token_count=chunk.score_count,
                         metadata={
                             **dict(chunk.metadata),
-                            "scoring_trace": trace,
                             "raw_logits_enabled": bool(requested_logits or token_logits),
                         },
                     )

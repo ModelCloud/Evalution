@@ -147,14 +147,20 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
                     "text": "",
                     "meta_info": {
                         "input_token_logprobs": [
+                            (None, 1, None),
+                            (-0.7, 2, None),
                             (-0.2, 3, None),
                             (-0.1, 4, None),
                         ],
                         "input_top_logprobs": [
+                            [],
+                            [(-0.7, 2, None)],
                             [(-0.2, 3, None)],
                             [(-0.1, 4, None)],
                         ],
                         "input_token_ids_logprobs": [
+                            [],
+                            [],
                             [(-0.2, 3, None), (-1.2, 4, None)],
                             [(-0.9, 3, None), (-0.1, 4, None)],
                         ],
@@ -185,11 +191,10 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
     assert payloads == [
         {
             "input_ids": [[1, 2, 3, 4]],
-            "sampling_params": [{"max_new_tokens": 0, "temperature": 0.0}],
+            "sampling_params": [{"max_new_tokens": 1, "temperature": 0.0}],
             "return_logprob": [True],
-            "logprob_start_len": [2],
+            "logprob_start_len": [0],
             "top_logprobs_num": [1],
-            "token_ids_logprob": [[3, 4]],
             "return_text_in_logprobs": False,
         }
     ]
@@ -197,32 +202,7 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
     assert outputs[0].is_greedy is True
     assert outputs[0].token_count == 2
     assert outputs[0].metadata["sglang_transport"] == "python"
-    assert outputs[0].metadata["scoring_trace"] == [
-        {
-            "token_id": 3,
-            "logprob": -0.2,
-            "logprob_source": "input_token_logprobs",
-            "greedy_token_id": 3,
-            "is_greedy": True,
-            "greedy_source": "input_top_logprobs",
-            "requested_logprobs": {3: -0.2, 4: -1.2},
-            "requested_logits": {},
-            "selected_logit": None,
-            "selected_logit_source": None,
-        },
-        {
-            "token_id": 4,
-            "logprob": -0.1,
-            "logprob_source": "input_token_logprobs",
-            "greedy_token_id": 4,
-            "is_greedy": True,
-            "greedy_source": "input_top_logprobs",
-            "requested_logprobs": {3: -0.9, 4: -0.1},
-            "requested_logits": {},
-            "selected_logit": None,
-            "selected_logit_source": None,
-        },
-    ]
+    assert "scoring_trace" not in outputs[0].metadata
 
 
 def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
@@ -266,22 +246,11 @@ def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
 
     output = session.loglikelihood([LoglikelihoodRequest(context="ab", continuation="c")])[0]
 
+    assert output.logprob == -0.4
     assert output.is_greedy is False
     assert output.metadata["raw_logits_enabled"] is True
-    assert output.metadata["scoring_trace"] == [
-        {
-            "token_id": 3,
-            "logprob": -0.4,
-            "logprob_source": "input_token_logprobs",
-            "greedy_token_id": 5,
-            "is_greedy": False,
-            "greedy_source": "input_top_logprobs",
-            "requested_logprobs": {3: -0.4, 5: -0.1},
-            "requested_logits": {3: 2.4, 5: 3.1},
-            "selected_logit": 2.4,
-            "selected_logit_source": "input_token_logits",
-        }
-    ]
+    assert output.token_count == 1
+    assert "scoring_trace" not in output.metadata
 
 
 def test_build_sglang_client_uses_python_engine_when_base_url_is_missing(monkeypatch) -> None:
@@ -363,7 +332,7 @@ def test_sglang_engine_can_generate_and_score_on_cuda() -> None:
     assert scores[0].token_count > 0
     assert math.isfinite(scores[0].logprob)
     assert scores[0].metadata["sglang_transport"] == "python"
-    assert len(scores[0].metadata["scoring_trace"]) == scores[0].token_count
+    assert "scoring_trace" not in scores[0].metadata
     execution = session.describe_execution()
     assert execution["generation_backend"] == "sglang.generate"
     assert execution["transport"] == "python"
