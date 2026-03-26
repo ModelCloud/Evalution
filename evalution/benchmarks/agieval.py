@@ -9,10 +9,35 @@ from dataclasses import dataclass
 import pcre
 from typing import Any
 
-from datasets import get_dataset_config_names, load_dataset
+from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Frozen upstream config snapshot for import safety. Refresh deliberately if the dataset adds
+# or removes subsets, while keeping unsupported subsets filtered below.
+_UPSTREAM_SUBSETS = (
+    "aqua-rat",
+    "gaokao-biology",
+    "gaokao-chemistry",
+    "gaokao-chinese",
+    "gaokao-english",
+    "gaokao-geography",
+    "gaokao-history",
+    "gaokao-mathcloze",
+    "gaokao-mathqa",
+    "gaokao-physics",
+    "jec-qa-ca",
+    "jec-qa-kd",
+    "logiqa-en",
+    "logiqa-zh",
+    "lsat-ar",
+    "lsat-lr",
+    "lsat-rc",
+    "math",
+    "sat-en",
+    "sat-en-without-passage",
+    "sat-math",
+)
 _UNSUPPORTED_SUBSETS = frozenset(
     {
         "gaokao-mathcloze",
@@ -21,11 +46,7 @@ _UNSUPPORTED_SUBSETS = frozenset(
         "math",
     }
 )
-AGIEVAL_SUBSETS = tuple(
-    subset
-    for subset in get_dataset_config_names("RUCAIBox/AGIEval")
-    if subset not in _UNSUPPORTED_SUBSETS
-)
+AGIEVAL_SUBSETS = tuple(subset for subset in _UPSTREAM_SUBSETS if subset not in _UNSUPPORTED_SUBSETS)
 _OPTION_LABEL_RE = pcre.compile(r"^\(?([A-Z])\)?(?:[.:：、]|．)?\s*")
 
 
@@ -64,6 +85,8 @@ def _parse_choice(option: str, *, index: int) -> tuple[str, str]:
 
 @dataclass(slots=True)
 class AGIEval(BaseMultipleChoiceSuite):
+    """AGIEval suite backed by a frozen subset registry to keep imports offline-safe."""
+
     dataset_path: str = "RUCAIBox/AGIEval"
     dataset_name: str | None = None
     split: str = "test"

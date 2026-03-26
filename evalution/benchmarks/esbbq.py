@@ -8,12 +8,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from datasets import get_dataset_config_names, load_dataset
+from datasets import load_dataset
 
 from evalution.benchmarks.localized_bbq import CHOICE_LABELS, bbq_prompt, slugify_config_name
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
-ESBBQ_CATEGORIES = tuple(get_dataset_config_names("BSC-LT/EsBBQ"))
+# Frozen upstream config snapshot for import safety. Refresh deliberately if the dataset adds
+# or removes categories.
+ESBBQ_CATEGORIES = (
+    "Age",
+    "DisabilityStatus",
+    "Gender",
+    "LGBTQIA",
+    "Nationality",
+    "PhysicalAppearance",
+    "RaceEthnicity",
+    "Religion",
+    "SES",
+    "SpanishRegion",
+)
 ESBBQ_TASKS = tuple(f"esbbq_{slugify_config_name(category)}" for category in ESBBQ_CATEGORIES)
 _CATEGORY_TO_TASK = dict(zip(ESBBQ_CATEGORIES, ESBBQ_TASKS, strict=True))
 
@@ -38,6 +51,8 @@ def _load_esbbq_dataset(
 
 @dataclass(slots=True)
 class EsBBQ(BaseMultipleChoiceSuite):
+    """EsBBQ suite backed by a frozen category registry to keep imports offline-safe."""
+
     dataset_path: str = "BSC-LT/EsBBQ"
     dataset_name: str | None = "Age"
     split: str = "test"
