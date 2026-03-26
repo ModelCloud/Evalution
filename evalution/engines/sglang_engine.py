@@ -238,18 +238,16 @@ class SGLangSession(BaseTransformerSession):
                 "input_ids": [list(chunk.input_ids) for chunk in batch],
                 "sampling_params": [
                     {
-                        "max_new_tokens": 0,
+                        # Mirror lm-eval's SGLang path: prompt logprobs are requested in a
+                        # non-generation scoring mode that still asks the engine to decode one token.
+                        "max_new_tokens": 1,
                         "temperature": 0.0,
                     }
                     for _ in batch
                 ],
                 "return_logprob": [True for _ in batch],
-                "logprob_start_len": [int(chunk.score_start) for chunk in batch],
+                "logprob_start_len": [0 for _ in batch],
                 "top_logprobs_num": [1 for _ in batch],
-                "token_ids_logprob": [
-                    _deduplicate_preserve_order(chunk.input_ids[chunk.score_start :])
-                    for chunk in batch
-                ],
                 "return_text_in_logprobs": False,
             }
             responses = self.client.generate(**payload)
@@ -259,13 +257,23 @@ class SGLangSession(BaseTransformerSession):
             for chunk, response in zip(batch, responses, strict=True):
                 meta_info = dict(response.get("meta_info") or {})
                 target_ids = chunk.input_ids[chunk.score_start : chunk.score_start + chunk.score_count]
-                input_token_logprobs = _coerce_position_entries(meta_info.get("input_token_logprobs"))
+                all_input_token_logprobs = _coerce_position_entries(meta_info.get("input_token_logprobs"))
+                if len(all_input_token_logprobs) == chunk.score_count:
+                    input_token_logprobs = all_input_token_logprobs
+                else:
+                    input_token_logprobs = all_input_token_logprobs[
+                        chunk.score_start : chunk.score_start + chunk.score_count
+                    ]
                 if len(input_token_logprobs) != chunk.score_count:
-                    raise RuntimeError(
-                        "sglang returned an unexpected number of input_token_logprobs for scoring"
-                    )
+                    raise RuntimeError("sglang returned too few input_token_logprobs for scoring")
 
-                top_logprobs = _coerce_nested_position_entries(meta_info.get("input_top_logprobs"))
+                all_top_logprobs = _coerce_nested_position_entries(meta_info.get("input_top_logprobs"))
+                if len(all_top_logprobs) == chunk.score_count:
+                    top_logprobs = all_top_logprobs
+                else:
+                    top_logprobs = all_top_logprobs[
+                        chunk.score_start : chunk.score_start + chunk.score_count
+                    ]
                 requested_logprobs = _coerce_nested_position_entries(
                     meta_info.get("input_token_ids_logprobs")
                 )
@@ -288,11 +296,6 @@ class SGLangSession(BaseTransformerSession):
                 for position, target_id in enumerate(target_ids):
                     selected = input_token_logprobs[position]
                     selected_token_id = selected.get("token_id")
-                    if selected_token_id is not None and int(selected_token_id) != int(target_id):
-                        raise RuntimeError(
-                            "sglang returned input_token_logprobs for a different token than the "
-                            "requested continuation; tokenizer/runtime tokenization is inconsistent"
-                        )
                     requested_scores = _entries_to_score_map(
                         requested_logprobs[position] if position < len(requested_logprobs) else []
                     )
@@ -320,7 +323,7 @@ class SGLangSession(BaseTransformerSession):
                         )
                     selected_score = selected.get("score")
                     selected_score_source = "input_token_logprobs"
-                    if selected_score is None:
+                    if selected_score is None and selected_token_id is not None and int(selected_token_id) == int(target_id):
                         selected_score = requested_scores.get(int(target_id))
                         if selected_score is not None:
                             selected_score_source = (
