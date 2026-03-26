@@ -33,6 +33,7 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.batch_size == "auto"
     assert engine.seed is None
     assert engine.manual_eviction is False
+    assert engine.continuous_batching is True
     assert engine.allow_block_sharing is True
     assert engine.use_async_batching is None
     assert engine.q_padding_interval_size == 0
@@ -41,6 +42,7 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["batch_size"] == "auto"
     assert engine.to_dict()["seed"] is None
     assert engine.to_dict()["manual_eviction"] is False
+    assert engine.to_dict()["continuous_batching"] is True
     assert engine.to_dict()["allow_block_sharing"] is True
     assert engine.to_dict()["use_async_batching"] is None
     assert engine.to_dict()["q_padding_interval_size"] == 0
@@ -1089,6 +1091,16 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
 
 def test_transformer_session_generate_supports_config_object_continuous_batching_manager_api(monkeypatch) -> None:
     import transformers
+    import torch as torch_module
+
+    compile_calls: list[object] = []
+
+    def fake_compile(obj, *args, **kwargs):
+        del args, kwargs
+        compile_calls.append(obj)
+        return obj
+
+    monkeypatch.setattr(torch_module, "compile", fake_compile)
 
     class FakeTokenizer:
         pad_token_id = 0
@@ -1131,12 +1143,16 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             q_padding_interval_size=0,
             kv_padding_interval_size=0,
             max_cached_graphs=0,
+            torch_compile=False,
         ):
+            if torch_compile:
+                torch_module.compile(SimpleNamespace())
             self.allow_block_sharing = allow_block_sharing
             self.use_async_batching = use_async_batching
             self.q_padding_interval_size = q_padding_interval_size
             self.kv_padding_interval_size = kv_padding_interval_size
             self.max_cached_graphs = max_cached_graphs
+            self.torch_compile = torch_compile
 
     class FakeContinuousBatchingManager:
         last_instance: FakeContinuousBatchingManager | None = None
@@ -1212,6 +1228,63 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
     assert manager.continuous_batching_config.q_padding_interval_size == 128
     assert manager.continuous_batching_config.kv_padding_interval_size == 4096
     assert manager.continuous_batching_config.max_cached_graphs == 8
+    assert manager.continuous_batching_config.torch_compile is True
+    assert len(compile_calls) == 1
+
+
+def test_transformer_session_disables_continuous_batching_when_configured_off(monkeypatch) -> None:
+    import transformers
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "left"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+
+    compile_calls: list[object] = []
+
+    def fake_compile(obj, *args, **kwargs):
+        del args, kwargs
+        compile_calls.append(obj)
+        return obj
+
+    monkeypatch.setattr("torch.compile", fake_compile)
+    monkeypatch.setattr(
+        transformers,
+        "ContinuousBatchingConfig",
+        type(
+            "FakeContinuousBatchingConfig",
+            (),
+            {
+                "__init__": lambda self, **kwargs: setattr(self, "_kwargs", kwargs)
+                or None,
+            },
+        ),
+        raising=False,
+    )
+
+    monkeypatch.setattr(
+        "evalution.engines.transformers.load_transformer_runtime",
+        lambda config, model_config: SimpleNamespace(
+            model=FakeModel(),
+            tokenizer=FakeTokenizer(),
+            prepare_tokenizer=None,
+            input_device=SimpleNamespace(type="cuda"),
+            requested_attn_implementation="flash_attention_2",
+        ),
+    )
+
+    session = TransformersSession.from_config(
+        Transformers(continuous_batching=False, attn_implementation="paged|flash_attention_2"),
+        Model(path="/tmp/model"),
+    )
+
+    assert session.paged_attention_enabled is False
+    assert session.generation_backend == "generate"
+    assert compile_calls == []
 
 
 def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> None:
