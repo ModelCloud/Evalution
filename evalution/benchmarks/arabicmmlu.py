@@ -8,11 +8,55 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from datasets import get_dataset_config_names, load_dataset
+from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
-ARABICMMLU_SUBSETS = tuple(get_dataset_config_names("MBZUAI/ArabicMMLU"))
+# Frozen upstream config snapshot for import safety. Refresh deliberately if the dataset adds
+# or removes subsets.
+ARABICMMLU_SUBSETS = (
+    "All",
+    "Islamic Studies",
+    "Islamic Studies (Middle School)",
+    "Islamic Studies (Primary School)",
+    "Islamic Studies (High School)",
+    "Driving Test",
+    "Natural Science (Middle School)",
+    "Natural Science (Primary School)",
+    "History (Middle School)",
+    "History (Primary School)",
+    "History (High School)",
+    "General Knowledge",
+    "General Knowledge (Middle School)",
+    "General Knowledge (Primary School)",
+    "Law (Professional)",
+    "Physics (High School)",
+    "Social Science (Middle School)",
+    "Social Science (Primary School)",
+    "Management (University)",
+    "Arabic Language (Middle School)",
+    "Arabic Language (Primary School)",
+    "Arabic Language (High School)",
+    "Political Science (University)",
+    "Philosophy (High School)",
+    "Accounting (University)",
+    "Computer Science (Middle School)",
+    "Computer Science (Primary School)",
+    "Computer Science (High School)",
+    "Computer Science (University)",
+    "Geography (Middle School)",
+    "Geography (Primary School)",
+    "Geography (High School)",
+    "Math (Primary School)",
+    "Biology (High School)",
+    "Economics (Middle School)",
+    "Economics (High School)",
+    "Economics (University)",
+    "Arabic Language (General)",
+    "Arabic Language (Grammar)",
+    "Civics (Middle School)",
+    "Civics (High School)",
+)
 _OPTION_FIELDS = ("Option 1", "Option 2", "Option 3", "Option 4", "Option 5")
 _LEVEL_TEXT = {
     "Primary": "primary school",
@@ -71,6 +115,8 @@ def _arabicmmlu_prompt(doc: dict[str, Any]) -> str:
 
 @dataclass(slots=True)
 class ArabicMMLU(BaseMultipleChoiceSuite):
+    """ArabicMMLU suite backed by a frozen subset registry to keep imports offline-safe."""
+
     dataset_path: str = "MBZUAI/ArabicMMLU"
     dataset_name: str | None = None
     split: str = "test"

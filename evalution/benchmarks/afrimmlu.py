@@ -9,11 +9,32 @@ import ast
 from dataclasses import dataclass
 from typing import Any
 
-from datasets import get_dataset_config_names, load_dataset
+from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
-AFRIMMLU_LANGUAGES = tuple(get_dataset_config_names("masakhane/afrimmlu"))
+# Frozen upstream config snapshot for import safety. Refresh deliberately if the dataset adds
+# or removes languages.
+AFRIMMLU_LANGUAGES = (
+    "amh",
+    "eng",
+    "ewe",
+    "fra",
+    "hau",
+    "ibo",
+    "kin",
+    "lin",
+    "lug",
+    "orm",
+    "sna",
+    "sot",
+    "swa",
+    "twi",
+    "wol",
+    "xho",
+    "yor",
+    "zul",
+)
 AFRIMMLU_TASKS = tuple(f"afrimmlu_{language}" for language in AFRIMMLU_LANGUAGES)
 _CHOICE_LABELS = ["A", "B", "C", "D"]
 
@@ -36,6 +57,8 @@ def _parse_choices(raw_choices: Any) -> list[str]:
 
 @dataclass(slots=True)
 class AfriMMLU(BaseMultipleChoiceSuite):
+    """AfriMMLU suite backed by a frozen language registry to keep imports offline-safe."""
+
     dataset_path: str = "masakhane/afrimmlu"
     dataset_name: str | None = "eng"
     split: str = "test"

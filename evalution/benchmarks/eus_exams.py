@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from datasets import get_dataset_config_names, load_dataset
+from datasets import load_dataset
 
 from evalution.benchmarks.arabic_subject_mmlu import CHOICE_LABELS
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
@@ -23,7 +23,72 @@ from evalution.scorers.multiple_choice import (
 )
 from evalution.engines.base import LoglikelihoodRequest
 
-EUS_EXAMS_SUBSETS = tuple(get_dataset_config_names("HiTZ/EusExams"))
+# Frozen upstream config snapshot for import safety. Refresh deliberately if the dataset adds
+# or removes subsets.
+EUS_EXAMS_SUBSETS = (
+    "eu_opeosakiadmineu",
+    "eu_opeosakiauxenfeu",
+    "eu_opeosakiauxeu",
+    "eu_opeosakiceladoreu",
+    "eu_opeosakienfeu",
+    "eu_opeosakioperarioeu",
+    "eu_opeosakitecnicoeu",
+    "eu_opeosakivarioseu",
+    "eu_opegasteizkoudala",
+    "eu_opeehuadmineu",
+    "eu_opeehuauxeu",
+    "eu_opeehubiblioeu",
+    "eu_opeehuderechoeu",
+    "eu_opeehueconomicaseu",
+    "eu_opeehuempresarialeseu",
+    "eu_opeehusubalternoeu",
+    "eu_opeehutecnicoeu",
+    "eu_opeehuteknikarib",
+    "eu_ejadministrari",
+    "eu_ejlaguntza",
+    "eu_ejlaguntzaile",
+    "eu_ejteknikari",
+    "eu_osakidetza1e",
+    "eu_osakidetza2e",
+    "eu_osakidetza3e",
+    "eu_osakidetza5e",
+    "eu_osakidetza6e",
+    "eu_osakidetza7e",
+    "eu_opebilbaoeu",
+    "es_opeosakiadmin",
+    "es_opeosakiaux",
+    "es_opeosakiauxenf",
+    "es_opeosakicelador",
+    "es_opeosakienf",
+    "es_opeosakijuridico",
+    "es_opeosakioperario",
+    "es_opeosakitecnico",
+    "es_opeosakivarios",
+    "es_opeayuntamientovitoria",
+    "es_opeehuadmin",
+    "es_opeehuaux",
+    "es_opeehubiblio",
+    "es_opeehuderecho",
+    "es_opeehueconomicas",
+    "es_opeehuempresariales",
+    "es_opeehusubalterno",
+    "es_opeehutecnico",
+    "es_opeehutecnicob",
+    "es_ejadministrativo",
+    "es_ejauxiliar",
+    "es_ejsubalterno",
+    "es_ejtecnico",
+    "es_osakidetza1c",
+    "es_osakidetza2c",
+    "es_osakidetza3c",
+    "es_osakidetza4c",
+    "es_osakidetza5c",
+    "es_osakidetza6c",
+    "es_osakidetza7c",
+    "es_osakidetza8c",
+    "es_osakidetza9c",
+    "es_opebilbao",
+)
 EUS_EXAMS_TASKS = tuple(f"eus_exams_{subset}" for subset in EUS_EXAMS_SUBSETS)
 _SUBSET_TO_TASK = dict(zip(EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, strict=True))
 
@@ -40,6 +105,8 @@ def _eus_exams_prompt(question: str, choices: list[str]) -> str:
 
 @dataclass(slots=True)
 class EusExams(BaseMultipleChoiceSuite):
+    """EusExams suite backed by a frozen subset registry to keep imports offline-safe."""
+
     dataset_path: str = "HiTZ/EusExams"
     dataset_name: str | None = None
     split: str = "test"
