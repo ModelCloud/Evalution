@@ -152,6 +152,13 @@ class RequestQueue:
         return item.request_key, item.request
 
 
+def assert_non_main_thread() -> None:
+    # RequestExecutor work must not run on the Python main thread.
+    assert threading.current_thread() is not threading.main_thread(), (
+        "RequestExecutor must run on a non-main thread"
+    )
+
+
 # Type alias for the session-side request consumer callback. The callback may also perform the
 # concrete backend execution work directly when the engine has not yet split those roles apart.
 ProcessRequests = Callable[
@@ -167,6 +174,7 @@ def stream_request_results(
     consumer_name: str,
     process_requests: ProcessRequests,
     result_poll_timeout_s: float = 0.05,
+    require_non_main_thread: bool = True,
 ) -> Iterator[tuple[Any, GenerationOutput]]:
     # Bridge a RequestProducer iterable to a RequestConsumer callback by running each side on its
     # own thread and moving Request / Result / Error items across explicit queues.
@@ -198,6 +206,8 @@ def stream_request_results(
         def run_consumer() -> None:
             # Let the engine/session own refill policy and backend execution on a dedicated thread.
             try:
+                if require_non_main_thread:
+                    assert_non_main_thread()
                 process_requests(stop_event, request_queue, put_result)
             except Exception as exc:
                 result_queue.put(Error(exc=exc))

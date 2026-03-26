@@ -305,6 +305,7 @@ class TransformersSession(BaseTransformerSession):
                 producer_name=f"{type(self).__name__}.request_producer",
                 consumer_name=f"{type(self).__name__}.request_consumer",
                 process_requests=consume_requests,
+                require_non_main_thread=self.request_executor_requires_non_main_thread,
             )
 
         return iterator()

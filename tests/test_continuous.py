@@ -8,7 +8,7 @@ from __future__ import annotations
 import threading
 
 from evalution.engines.base import GenerationOutput, GenerationRequest
-from evalution.engines.continuous import stream_request_results
+from evalution.engines.continuous import assert_non_main_thread, stream_request_results
 
 
 def test_stream_request_results_keeps_request_consumer_active_while_caller_is_paused() -> None:
@@ -60,3 +60,12 @@ def test_stream_request_results_keeps_request_consumer_active_while_caller_is_pa
     iterator.close()
 
     assert stop_seen.wait(timeout=1.0)
+
+
+def test_assert_non_main_thread_rejects_main_thread() -> None:
+    try:
+        assert_non_main_thread()
+    except AssertionError as exc:
+        assert "non-main thread" in str(exc)
+    else:  # pragma: no cover - the assertion must fire on the main thread
+        raise AssertionError("expected RequestExecutor main-thread assertion")
