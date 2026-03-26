@@ -24,8 +24,9 @@ Relationship graph
            | put Request
            v
     +---------------+     drain / refill     +-------------------------------+
-    | RequestQueue  | ---------------------> | RequestConsumer               |
+    | RequestQueue  | ---------------------> | RequestConsumer thread        |
     +---------------+                        | + RequestExecutor             |
+                                             |   (must be non-main thread)   |
                                              +-------------------------------+
                                                            |
                                                            | put Result / Error
@@ -34,6 +35,7 @@ Relationship graph
                                                     | ResultQueue   |
                                                     +---------------+
                                                            |
+                                                           | fetch Result
                                                            v
                                                      ResultConsumer
 
@@ -204,7 +206,9 @@ def stream_request_results(
                 request_queue.close()
 
         def run_consumer() -> None:
-            # Let the engine/session own refill policy and backend execution on a dedicated thread.
+            # Let the engine/session own refill policy and backend execution on a dedicated
+            # non-main thread. Engines may do their RequestExecutor work directly inside
+            # process_requests() or split it further, but the public contract is the same.
             try:
                 if require_non_main_thread:
                     assert_non_main_thread()
