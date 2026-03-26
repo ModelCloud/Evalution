@@ -45,6 +45,10 @@ _DEFAULT_VLLM_CHECKOUT_CANDIDATES = (
 
 @dataclass(slots=True)
 class VLLM(BaseEngine):
+    # This engine intentionally models vLLM as a first-class Evalution backend
+    # instead of routing through GPTQModel or the legacy TransformersCompat path.
+    # That lets us preserve vLLM-specific behavior such as request-id based
+    # continuous batching, prompt_logprobs scoring, and local checkout loading.
     dtype: str | None = "auto"
     batch_size: int | str = _AUTO_BATCH_SIZE
     max_new_tokens: int = 256
@@ -91,6 +95,9 @@ class VLLMSession(BaseInferenceSession):
             else model_config.trust_remote_code
         )
         tokenizer_name = _resolve_vllm_tokenizer_name(model_config)
+        # We keep a separate "prepare tokenizer" alongside vLLM's runtime tokenizer.
+        # Evalution needs a stable tokenizer for prompt rendering and request
+        # pre-tokenization even when the runtime backend owns the actual model.
         prepare_tokenizer = _load_tokenizer_from_model(
             _resolve_tokenizer_source(model_config),
             revision=model_config.revision,
@@ -149,6 +156,10 @@ class VLLMSession(BaseInferenceSession):
         with self._tokenizer_lock:
             prepared: list[GenerationRequest] = []
             for request in requests:
+                # Generation requests are normalized once up front so downstream
+                # paths can assume both rendered_prompt and input_ids exist.
+                # This matches the newer engine contract where request shaping is
+                # separate from the runtime scheduling logic.
                 rendered_prompt = (
                     request.rendered_prompt
                     if request.rendered_prompt is not None
@@ -190,6 +201,10 @@ class VLLMSession(BaseInferenceSession):
         prepared_requests = self.prepare_requests(requests)
         effective_batch_size = batch_size or self.resolve_batch_size(prepared_requests)
         with self._generation_lock:
+            # New-style engines must support continuous batching semantics. When
+            # the installed vLLM exposes request-level scheduling primitives, we
+            # drive the engine directly and reconcile outputs by request id.
+            # Older or limited runtimes still get a compat fallback below.
             if not self._supports_request_level_continuous_batching():
                 return self._generate_blocking(prepared_requests, batch_size=effective_batch_size)
 
@@ -220,6 +235,9 @@ class VLLMSession(BaseInferenceSession):
             if not preview_items:
                 return
 
+            # We only peek enough requests to resolve an "auto" batch size.
+            # The rest of the stream stays lazy so continuous batching can refill
+            # slots from the original iterator as soon as requests complete.
             effective_batch_size = batch_size or self.resolve_batch_size(
                 [request for _, request in preview_items]
             )
@@ -255,6 +273,9 @@ class VLLMSession(BaseInferenceSession):
             *,
             batch_size: int,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
+        # Compat path for runtimes that cannot accept requests incrementally.
+        # It still exposes the same iterator interface to Evalution, but it
+        # advances in fixed microbatches instead of true slot-by-slot refill.
         batch: list[tuple[Any, GenerationRequest]] = []
         for item in requests:
             batch.append(item)
@@ -283,6 +304,9 @@ class VLLMSession(BaseInferenceSession):
             batch_size: int,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
         request_iter = iter(requests)
+        # request_id is the stable join key between Evalution and vLLM. Result
+        # order is not guaranteed to match submission order once the runtime can
+        # complete and refill slots independently.
         inflight_requests: dict[str, tuple[Any, GenerationRequest]] = {}
         llm_engine = self.llm.llm_engine
         source_exhausted = False
@@ -299,6 +323,8 @@ class VLLMSession(BaseInferenceSession):
 
             prepared_request = self.prepare_requests([request])[0]
             request_id = self._next_continuous_request_id()
+            # add_request reserves one inflight slot. The outer loop maintains
+            # the invariant that inflight count never exceeds batch_size.
             llm_engine.add_request(
                 request_id,
                 self._prompt_from_generation_request(prepared_request),
@@ -334,6 +360,9 @@ class VLLMSession(BaseInferenceSession):
                     request_key, request = inflight_requests.pop(request_id)
                     yield request_key, self._generation_output_from_result(request, result)
 
+                    # Continuous batching refill: every time a request finishes,
+                    # immediately backfill the newly opened slot before waiting
+                    # for the next engine step.
                     while len(inflight_requests) < batch_size and submit_one():
                         continue
         finally:
@@ -408,10 +437,17 @@ class VLLMSession(BaseInferenceSession):
                         prompt_token_ids = [*prefix_ids, *target_ids]
                         score_start = len(prefix_ids)
                     else:
+                        # For empty-context scoring we synthesize a one-token
+                        # prefix so the first continuation token still has a
+                        # valid predecessor, matching the semantics used by the
+                        # other scoring engines.
                         prompt_token_ids = [self._prefix_token_id(), *target_ids]
                         score_start = 1
                     prompts.append({"prompt_token_ids": prompt_token_ids})
                     params.append(
+                        # Newer vLLM rejects max_tokens=0, so we request the
+                        # smallest legal decode and ignore generated tokens.
+                        # The score comes from prompt_logprobs only.
                         self.sampling_params_cls(
                             max_tokens=1,
                             temperature=0.0,
@@ -468,6 +504,8 @@ class VLLMSession(BaseInferenceSession):
         if not requests:
             return []
 
+        # Rolling perplexity is reduced to ordinary loglikelihood over disjoint
+        # windows so we can reuse the exact same prompt_logprobs scoring path.
         scoring_requests: list[LoglikelihoodRequest] = []
         request_window_counts: list[int] = []
         for request in requests:
@@ -616,6 +654,9 @@ class VLLMSession(BaseInferenceSession):
         pred_len = max_seq_len
         predicted = 0
 
+        # The first window includes a synthetic prefix token for consistency
+        # with empty-context token scoring. Later windows overlap by one token
+        # and are made disjoint in _make_disjoint_window().
         first_seq_len = min(max_seq_len, len(token_list))
         first_window = (
             [prefix_token] + token_list[: first_seq_len - 1],
@@ -737,6 +778,9 @@ def _import_vllm(vllm_path: str | None) -> Any:
     try:
         return importlib.import_module("vllm")
     except ModuleNotFoundError as exc:
+        # Evalution is often developed alongside a local vLLM checkout. We try
+        # the configured path first, then a few common sibling-repo locations,
+        # before failing with a targeted import error.
         search_paths = []
         if vllm_path:
             search_paths.append(Path(vllm_path))
