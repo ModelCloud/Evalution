@@ -8,11 +8,33 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from datasets import get_dataset_config_names, load_dataset
+from datasets import load_dataset
 
 from evalution.benchmarks.gsm8k_common import BaseGSM8KSuite, GSM8KVariant, VariantSpec
 
-AFRIMGSM_LANGUAGES = tuple(get_dataset_config_names("masakhane/afrimgsm"))
+# Frozen upstream config snapshot for import safety. Refresh deliberately if the dataset adds
+# or removes languages.
+AFRIMGSM_LANGUAGES = (
+    "amh",
+    "eng",
+    "ewe",
+    "fra",
+    "hau",
+    "ibo",
+    "kin",
+    "lin",
+    "lug",
+    "orm",
+    "sna",
+    "sot",
+    "swa",
+    "twi",
+    "vai",
+    "wol",
+    "xho",
+    "yor",
+    "zul",
+)
 AFRIMGSM_TASKS = tuple(f"afrimgsm_{language}" for language in AFRIMGSM_LANGUAGES)
 
 
@@ -43,6 +65,8 @@ _DIRECT_VARIANTS = {
 
 @dataclass(slots=True)
 class AfriMGSM(BaseGSM8KSuite):
+    """AfriMGSM suite backed by a frozen language registry to keep imports offline-safe."""
+
     VARIANTS = _DIRECT_VARIANTS
     SCORING_MODE = "numeric_format_insensitive"
     dataset_path: str = "masakhane/afrimgsm"

@@ -8,18 +8,33 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from datasets import get_dataset_config_names, load_dataset
+from datasets import load_dataset
 
 from evalution.benchmarks.localized_bbq import CHOICE_LABELS, bbq_prompt, slugify_config_name
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
-CABBQ_CATEGORIES = tuple(get_dataset_config_names("BSC-LT/CaBBQ"))
+# Frozen upstream config snapshot for import safety. Refresh deliberately if the dataset adds
+# or removes categories.
+CABBQ_CATEGORIES = (
+    "Age",
+    "DisabilityStatus",
+    "Gender",
+    "LGBTQIA",
+    "Nationality",
+    "PhysicalAppearance",
+    "RaceEthnicity",
+    "Religion",
+    "SES",
+    "SpanishRegion",
+)
 CABBQ_TASKS = tuple(f"cabbq_{slugify_config_name(category)}" for category in CABBQ_CATEGORIES)
 _CATEGORY_TO_TASK = dict(zip(CABBQ_CATEGORIES, CABBQ_TASKS, strict=True))
 
 
 @dataclass(slots=True)
 class CaBBQ(BaseMultipleChoiceSuite):
+    """CaBBQ suite backed by a frozen category registry to keep imports offline-safe."""
+
     dataset_path: str = "BSC-LT/CaBBQ"
     dataset_name: str | None = "Age"
     split: str = "test"
