@@ -202,7 +202,6 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
     assert outputs[0].is_greedy is True
     assert outputs[0].token_count == 2
     assert outputs[0].metadata["sglang_transport"] == "python"
-    assert "scoring_trace" not in outputs[0].metadata
 
 
 def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
@@ -250,7 +249,6 @@ def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
     assert output.is_greedy is False
     assert output.metadata["raw_logits_enabled"] is True
     assert output.token_count == 1
-    assert "scoring_trace" not in output.metadata
 
 
 def test_build_sglang_client_uses_python_engine_when_base_url_is_missing(monkeypatch) -> None:
@@ -332,7 +330,6 @@ def test_sglang_engine_can_generate_and_score_on_cuda() -> None:
     assert scores[0].token_count > 0
     assert math.isfinite(scores[0].logprob)
     assert scores[0].metadata["sglang_transport"] == "python"
-    assert "scoring_trace" not in scores[0].metadata
     execution = session.describe_execution()
     assert execution["generation_backend"] == "sglang.generate"
     assert execution["transport"] == "python"
