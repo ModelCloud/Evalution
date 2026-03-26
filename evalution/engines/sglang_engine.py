@@ -5,10 +5,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib
+import queue
 import sys
+import threading
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
+from itertools import chain, islice
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -43,6 +48,9 @@ class _SGLangClient(ABC):
     @abstractmethod
     def generate(self, **payload: Any) -> list[dict[str, Any]]: ...
 
+    @abstractmethod
+    async def async_generate(self, **payload: Any) -> dict[str, Any]: ...
+
     def gc(self) -> None:
         return None
 
@@ -59,6 +67,13 @@ class _SGLangPythonClient(_SGLangClient):
     def generate(self, **payload: Any) -> list[dict[str, Any]]:
         response = self.engine.generate(**payload)
         return _normalize_sglang_response(response)
+
+    async def async_generate(self, **payload: Any) -> dict[str, Any]:
+        response = await self.engine.async_generate(**payload)
+        normalized = _normalize_sglang_response(response)
+        if len(normalized) != 1:
+            raise RuntimeError("sglang async_generate returned an unexpected batched response")
+        return normalized[0]
 
     def gc(self) -> None:
         flush_cache = getattr(self.engine, "flush_cache", None)
@@ -179,6 +194,36 @@ class SGLangSession(BaseTransformerSession):
                 )
             return totals
 
+    def generate_continuous(
+        self,
+        requests: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        batch_size: int | None = None,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
+            request_iter = iter(requests)
+            preview_items = list(islice(request_iter, 64))
+            if not preview_items:
+                return
+
+            effective_batch_size = batch_size or self.resolve_batch_size(
+                [request for _, request in preview_items]
+            )
+            items = chain(preview_items, request_iter)
+
+            with self._generation_lock:
+                with self._state_lock:
+                    standard_batch_size_cap = self.standard_batch_size_cap
+                if standard_batch_size_cap is not None:
+                    effective_batch_size = min(effective_batch_size, standard_batch_size_cap)
+                self._log_generation_execution()
+                yield from self._generate_sglang_continuous(
+                    items,
+                    batch_size=effective_batch_size,
+                )
+
+        return iterator()
+
     def _generate_standard(
         self,
         requests: list[GenerationRequest],
@@ -197,22 +242,113 @@ class SGLangSession(BaseTransformerSession):
             if len(responses) != len(batch):
                 raise RuntimeError("sglang returned an unexpected number of generation results")
             for request, response in zip(batch, responses, strict=True):
-                meta_info = dict(response.get("meta_info") or {})
-                text = str(response.get("text") or "")
-                prompt = request.rendered_prompt or self._render_request(request)
-                if text.startswith(prompt):
-                    text = text[len(prompt) :]
-                outputs.append(
-                    GenerationOutput(
-                        prompt=prompt,
-                        text=text,
-                        metadata={
-                            **dict(request.metadata),
-                            "sglang_meta": meta_info,
-                        },
-                    )
-                )
+                outputs.append(self._generation_output_from_response(request, response))
         return outputs
+
+    def _generate_sglang_continuous(
+        self,
+        requests: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        batch_size: int,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        result_queue: queue.Queue[Any] = queue.Queue()
+        stop_event = threading.Event()
+        sentinel = object()
+
+        def worker() -> None:
+            async def run() -> None:
+                request_iter = iter(requests)
+                pending: set[asyncio.Task[tuple[Any, GenerationRequest, dict[str, Any]]]] = set()
+
+                async def submit_one() -> bool:
+                    if stop_event.is_set():
+                        return False
+                    try:
+                        request_key, request = next(request_iter)
+                    except StopIteration:
+                        return False
+
+                    async def execute_one() -> tuple[Any, GenerationRequest, dict[str, Any]]:
+                        rendered_prompt, input_ids = self._prepare_request_for_generation(request)
+                        response = await self.client.async_generate(
+                            input_ids=list(input_ids),
+                            sampling_params=self._build_sampling_params(request),
+                        )
+                        response.setdefault("_evalution_rendered_prompt", rendered_prompt)
+                        return request_key, request, response
+
+                    pending.add(asyncio.create_task(execute_one()))
+                    return True
+
+                while len(pending) < batch_size and await submit_one():
+                    continue
+
+                while pending and not stop_event.is_set():
+                    done, pending = await asyncio.wait(
+                        pending,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for task in done:
+                        request_key, request, response = await task
+                        result_queue.put(
+                            (request_key, self._generation_output_from_response(request, response))
+                        )
+                    while len(pending) < batch_size and await submit_one():
+                        continue
+
+                if pending:
+                    for task in pending:
+                        task.cancel()
+                    await asyncio.gather(*pending, return_exceptions=True)
+
+            try:
+                asyncio.run(run())
+            except Exception as exc:
+                result_queue.put(exc)
+            finally:
+                result_queue.put(sentinel)
+
+        worker_thread = threading.Thread(
+            target=worker,
+            name="evalution-sglang-continuous",
+            daemon=True,
+        )
+        worker_thread.start()
+
+        try:
+            while True:
+                item = result_queue.get()
+                if item is sentinel:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+                yield item
+        finally:
+            stop_event.set()
+            worker_thread.join()
+
+    def _generation_output_from_response(
+        self,
+        request: GenerationRequest,
+        response: dict[str, Any],
+    ) -> GenerationOutput:
+        meta_info = dict(response.get("meta_info") or {})
+        text = str(response.get("text") or "")
+        prompt = (
+            response.get("_evalution_rendered_prompt")
+            or request.rendered_prompt
+            or self._render_request(request)
+        )
+        if text.startswith(prompt):
+            text = text[len(prompt) :]
+        return GenerationOutput(
+            prompt=prompt,
+            text=text,
+            metadata={
+                **dict(request.metadata),
+                "sglang_meta": meta_info,
+            },
+        )
 
     def _score_chunks(
         self,

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
 from pathlib import Path
 from types import SimpleNamespace
@@ -131,6 +132,77 @@ def test_sglang_session_generate_uses_in_process_engine_and_strips_prompt() -> N
     assert outputs[0].text == "x"
     assert outputs[0].metadata["suite"] == "demo"
     assert outputs[0].metadata["sglang_meta"]["id"] == "req-1"
+
+
+def test_sglang_session_generate_continuous_yields_completion_order() -> None:
+    payloads: list[dict[str, object]] = []
+
+    class FakeClient:
+        transport = "python"
+        supports_raw_logits = False
+
+        def generate(self, **payload):
+            del payload
+            raise AssertionError("generate() should not be used for continuous generation")
+
+        async def async_generate(self, **payload):
+            payloads.append(payload)
+            input_ids = list(payload["input_ids"])
+            await asyncio.sleep(0.02 if input_ids[-1] == 2 else 0.0)
+            return {
+                "text": "".join(chr(96 + token_id) for token_id in input_ids) + "z",
+                "meta_info": {
+                    "id": f"req-{input_ids[-1]}",
+                },
+            }
+
+        def gc(self) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    session = SGLangSession(
+        config=SGLang(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(config=SimpleNamespace(max_position_embeddings=2048)),
+        tokenizer=FakeTokenizer(),
+        prepare_tokenizer=None,
+        input_device=SimpleNamespace(type="cpu"),
+        generation_backend="sglang.generate",
+        client=FakeClient(),
+        transport="python",
+    )
+
+    outputs = list(
+        session.generate_continuous(
+            [
+                ("slow", GenerationRequest(prompt="ab", metadata={"slot": 1})),
+                ("fast", GenerationRequest(prompt="ac", metadata={"slot": 2})),
+            ],
+            batch_size=2,
+        )
+    )
+
+    assert payloads == [
+        {
+            "input_ids": [1, 2],
+            "sampling_params": {"max_new_tokens": 256, "temperature": 0.0},
+        },
+        {
+            "input_ids": [1, 3],
+            "sampling_params": {"max_new_tokens": 256, "temperature": 0.0},
+        },
+    ]
+    assert [item_id for item_id, _ in outputs] == ["fast", "slow"]
+    assert outputs[0][1].prompt == "ac"
+    assert outputs[0][1].text == "z"
+    assert outputs[0][1].metadata["slot"] == 2
+    assert outputs[0][1].metadata["sglang_meta"]["id"] == "req-3"
+    assert outputs[1][1].prompt == "ab"
+    assert outputs[1][1].text == "z"
+    assert outputs[1][1].metadata["slot"] == 1
+    assert outputs[1][1].metadata["sglang_meta"]["id"] == "req-2"
 
 
 def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
