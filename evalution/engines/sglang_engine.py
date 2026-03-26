@@ -42,9 +42,6 @@ _DEFAULT_SGLANG_PATH = "/root/projects/GPTQModel/hub/sglang/python"
 
 
 class _SGLangClient(ABC):
-    supports_raw_logits: bool = False
-    transport: str = "unknown"
-
     @abstractmethod
     def generate(self, **payload: Any) -> list[dict[str, Any]]: ...
 
@@ -61,8 +58,6 @@ class _SGLangClient(ABC):
 @dataclass(slots=True)
 class _SGLangPythonClient(_SGLangClient):
     engine: Any
-    supports_raw_logits: bool = False
-    transport: str = "python"
 
     def generate(self, **payload: Any) -> list[dict[str, Any]]:
         response = self.engine.generate(**payload)
@@ -99,12 +94,9 @@ class _LoadedSGLangRuntime:
 class SGLang(_TransformersCommonConfig):
     # SGLang integration stays in-process through `sglang.Engine`; no HTTP server is used.
     base_url: str | None = None
-    transport: str = "python"
     sglang_path: str | None = _DEFAULT_SGLANG_PATH
-    engine_kwargs: dict[str, Any] = field(default_factory=dict)
     server_kwargs: dict[str, Any] = field(default_factory=dict)
     sampling_params: dict[str, Any] = field(default_factory=dict)
-    default_auto_batch_size: int = 32
 
     def build(self, model: Model) -> BaseTransformerSession:
         self.resolved_engine = "SGLang"
@@ -114,8 +106,6 @@ class SGLang(_TransformersCommonConfig):
 @dataclass(slots=True)
 class SGLangSession(BaseTransformerSession):
     client: _SGLangClient | None = field(default=None, repr=False)
-    transport: str = "unknown"
-    raw_logits_enabled: bool = False
 
     @classmethod
     def from_config(cls, config: SGLang, model_config: Model) -> SGLangSession:
@@ -129,15 +119,12 @@ class SGLangSession(BaseTransformerSession):
             input_device=runtime.input_device,
             generation_backend="sglang.generate",
             client=runtime.client,
-            transport=runtime.client.transport,
-            raw_logits_enabled=runtime.client.supports_raw_logits,
         )
 
     def describe_execution(self) -> dict[str, Any]:
         execution = super(SGLangSession, self).describe_execution()
         execution.update(
             {
-                "transport": self.transport,
                 "logprob_backend": "sglang.generate",
                 "raw_logits_enabled": self.raw_logits_enabled,
             }
@@ -183,7 +170,6 @@ class SGLangSession(BaseTransformerSession):
             for chunk, chunk_output in zip(chunks, chunk_scores, strict=True):
                 current = totals[chunk.request_index]
                 combined_metadata = dict(current.metadata)
-                combined_metadata["sglang_transport"] = self.transport
                 if chunk_output.metadata.get("raw_logits_enabled"):
                     combined_metadata["raw_logits_enabled"] = True
                 totals[chunk.request_index] = LoglikelihoodOutput(
@@ -529,9 +515,6 @@ def load_sglang_runtime(config: SGLang, model_config: Model) -> _LoadedSGLangRun
 
 
 def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
-    transport = config.transport.lower()
-    if transport not in {"auto", "python"}:
-        raise ValueError("sglang transport must be one of: auto, python")
     if config.base_url is not None:
         raise ValueError("sglang engine no longer supports server/http mode; use in-process Engine")
 
@@ -546,7 +529,6 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
             else model_config.trust_remote_code
         ),
         **config.server_kwargs,
-        **config.engine_kwargs,
     }
     tokenizer_source = _resolve_tokenizer_source(model_config)
     if tokenizer_source != model_config.path:

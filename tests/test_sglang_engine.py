@@ -64,8 +64,6 @@ def test_sglang_engine_defaults_batch_size_to_auto() -> None:
 
     assert engine.batch_size == "auto"
     assert engine.base_url is None
-    assert engine.transport == "python"
-    assert engine.default_auto_batch_size == 32
     assert engine.to_dict()["base_url"] is None
 
 
@@ -87,9 +85,6 @@ def test_sglang_session_generate_uses_in_process_engine_and_strips_prompt() -> N
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
-        transport = "python"
-        supports_raw_logits = False
-
         def generate(self, **payload):
             payloads.append(payload)
             return [
@@ -117,7 +112,6 @@ def test_sglang_session_generate_uses_in_process_engine_and_strips_prompt() -> N
         input_device=SimpleNamespace(type="cpu"),
         generation_backend="sglang.generate",
         client=FakeClient(),
-        transport="python",
     )
 
     outputs = session.generate([GenerationRequest(prompt="ab", metadata={"suite": "demo"})])
@@ -138,9 +132,6 @@ def test_sglang_session_generate_continuous_yields_completion_order() -> None:
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
-        transport = "python"
-        supports_raw_logits = False
-
         def generate(self, **payload):
             del payload
             raise AssertionError("generate() should not be used for continuous generation")
@@ -171,7 +162,6 @@ def test_sglang_session_generate_continuous_yields_completion_order() -> None:
         input_device=SimpleNamespace(type="cpu"),
         generation_backend="sglang.generate",
         client=FakeClient(),
-        transport="python",
     )
 
     outputs = list(
@@ -209,9 +199,6 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
-        transport = "python"
-        supports_raw_logits = False
-
         def generate(self, **payload):
             payloads.append(payload)
             return [
@@ -255,7 +242,6 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
         input_device=SimpleNamespace(type="cpu"),
         generation_backend="sglang.generate",
         client=FakeClient(),
-        transport="python",
     )
 
     outputs = session.loglikelihood([LoglikelihoodRequest(context="ab", continuation="cd")])
@@ -272,14 +258,10 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
     assert outputs[0].logprob == -0.30000000000000004
     assert outputs[0].is_greedy is True
     assert outputs[0].token_count == 2
-    assert outputs[0].metadata["sglang_transport"] == "python"
 
 
 def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
     class FakeClient:
-        transport = "python"
-        supports_raw_logits = True
-
         def generate(self, **payload):
             del payload
             return [
@@ -310,7 +292,6 @@ def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
         input_device=SimpleNamespace(type="cpu"),
         generation_backend="sglang.generate",
         client=FakeClient(),
-        transport="python",
         raw_logits_enabled=True,
     )
 
@@ -337,7 +318,7 @@ def test_build_sglang_client_uses_python_engine_when_base_url_is_missing(monkeyp
     )
 
     client = _build_sglang_client(
-        SGLang(base_url=None, transport="python"),
+        SGLang(base_url=None),
         Model(path="/tmp/model"),
     )
 
@@ -400,8 +381,6 @@ def test_sglang_engine_can_generate_and_score_on_cuda() -> None:
     assert len(scores) == 1
     assert scores[0].token_count > 0
     assert math.isfinite(scores[0].logprob)
-    assert scores[0].metadata["sglang_transport"] == "python"
     execution = session.describe_execution()
     assert execution["generation_backend"] == "sglang.generate"
-    assert execution["transport"] == "python"
     assert execution["logprob_backend"] == "sglang.generate"
