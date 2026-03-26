@@ -85,7 +85,7 @@ class KorMedMCQA(BaseTestSuite):
     dataset_path: str = "sean0042/KorMedMCQA"
     dataset_name: str | None = "doctor"
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
     subset: str = "doctor"
     fewshot_split: str = "fewshot"
     num_fewshot: int = 5

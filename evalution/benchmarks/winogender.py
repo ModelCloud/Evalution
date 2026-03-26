@@ -27,7 +27,7 @@ def _load_winogender_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool = True,
     gender_filter: str | None = None,
 ) -> Any:
     if dataset_path != "oskarvanderwal/winogender":

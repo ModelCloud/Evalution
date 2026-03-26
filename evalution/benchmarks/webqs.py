@@ -42,7 +42,7 @@ class WebQS(TestSuite):
     dataset_path: str = "web_questions"
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

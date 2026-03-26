@@ -57,7 +57,7 @@ def _load_social_iqa_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool = True,
 ) -> Dataset:
     del stream
     if dataset_path != "allenai/social_i_qa":
@@ -85,7 +85,7 @@ def _load_social_iqa_dataset(
 class SIQA(BaseMultipleChoiceSuite):
     dataset_path: str = "allenai/social_i_qa"
     split: str = "validation"
-    stream: bool = False
+    stream: bool = True
 
     def dataset_loader(self) -> Any:
         return _load_social_iqa_dataset

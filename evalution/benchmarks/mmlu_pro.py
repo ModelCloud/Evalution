@@ -271,7 +271,7 @@ class MMLUPro(TestSuite):
     fewshot_split: str = "validation"
     subsets: str | list[str] = "all"
     num_fewshot: int = 5
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

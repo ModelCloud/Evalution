@@ -80,7 +80,7 @@ def _load_wsc273_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool = True,
 ) -> Dataset:
     del stream
     if dataset_path != "winograd_wsc":
@@ -126,7 +126,7 @@ class WSC273:
     dataset_path: str = "winograd_wsc"
     dataset_name: str | None = "wsc273"
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
