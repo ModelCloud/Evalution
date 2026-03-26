@@ -134,6 +134,8 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
 
     def fake_load_dataset(*args, **kwargs):
         del args
+        if "stream" in kwargs:
+            raise TypeError("unexpected keyword argument 'stream'")
         calls.append(kwargs)
         return _dataset()
 

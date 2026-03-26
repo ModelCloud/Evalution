@@ -16,10 +16,15 @@ from evalution.logbar import get_logger, spinner
 T = TypeVar("T")
 _DEFAULT_SHUFFLE_SEED = 7
 _UNEXPECTED_LOADER_KWARG_PATTERN = re.compile(r"unexpected keyword argument '([^']+)'")
+_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN = re.compile(r"doesn't have a '([^']+)' key")
 
 
 def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
     return set(_UNEXPECTED_LOADER_KWARG_PATTERN.findall(str(exc)))
+
+
+def _unexpected_loader_config_keys(exc: ValueError) -> set[str]:
+    return set(_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN.findall(str(exc)))
 
 
 def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
@@ -32,13 +37,14 @@ def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
             fallback_kwargs["streaming"] = fallback_kwargs.pop("stream")
             return loader(*args, **fallback_kwargs)
         raise
+    except ValueError as exc:
+        unexpected = _unexpected_loader_config_keys(exc)
+        if "stream" in unexpected and "stream" in kwargs:
+            fallback_kwargs = dict(kwargs)
+            fallback_kwargs["streaming"] = fallback_kwargs.pop("stream")
+            return loader(*args, **fallback_kwargs)
+        raise
 
-
-def _loader_uses_hf_streaming_kwarg(loader: Any) -> bool:
-    if getattr(loader, "__name__", None) == "load_dataset":
-        return True
-    module_name = getattr(loader, "__module__", "")
-    return module_name.startswith("datasets.")
 
 def normalize_order(order: str) -> str:
     normalized = order.strip().lower()
@@ -91,11 +97,13 @@ def load_suite_dataset(
     logger = get_logger()
     dataset_ref = dataset_path if dataset_name is None else f"{dataset_path}/{dataset_name}"
     logger.info("loading dataset %s split=%s for %s", dataset_ref, split, task_name)
-    stream_key = "streaming" if _loader_uses_hf_streaming_kwarg(loader) else "stream"
     kwargs = {
         "split": split,
         "cache_dir": cache_dir,
-        stream_key: stream,
+        # Keep `stream=` as the single internal suite contract. Dataset loaders that only
+        # understand Hugging Face's `streaming=` kwarg must reject `stream` so the fallback
+        # path in `_invoke_dataset_loader` can translate the call at the final boundary.
+        "stream": stream,
     }
     dataset_load_started = perf_counter()
     with spinner(f"{task_name}: loading dataset"):
