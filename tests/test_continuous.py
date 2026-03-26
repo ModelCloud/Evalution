@@ -69,3 +69,37 @@ def test_assert_non_main_thread_rejects_main_thread() -> None:
         assert "non-main thread" in str(exc)
     else:  # pragma: no cover - the assertion must fire on the main thread
         raise AssertionError("expected RequestExecutor main-thread assertion")
+
+
+def test_stream_request_results_runs_executor_on_non_main_thread() -> None:
+    executor_thread_name: list[str] = []
+
+    def consume_requests(stop_event, request_queue, put_result) -> None:
+        assert_non_main_thread()
+        executor_thread_name.append(threading.current_thread().name)
+        item = request_queue.get(timeout_s=1.0)
+        assert item is not None
+        request_key, request = item
+        put_result(
+            request_key,
+            GenerationOutput(
+                prompt=request.prompt or "",
+                text="ok",
+                metadata={},
+            ),
+        )
+
+    iterator = stream_request_results(
+        [(1, GenerationRequest(prompt="alpha"))],
+        producer_name="test.request_producer",
+        consumer_name="test.request_consumer",
+        process_requests=consume_requests,
+    )
+
+    assert next(iterator) == (
+        1,
+        GenerationOutput(prompt="alpha", text="ok", metadata={}),
+    )
+    iterator.close()
+
+    assert executor_thread_name == ["test.request_consumer"]
