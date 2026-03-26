@@ -56,6 +56,9 @@ _ACTIVE_LOGGING_CONTEXT: ContextVar[LoggingContext | None] = ContextVar(
     "evalution_active_logging_context",
     default=None,
 )
+# Reserve one request-metadata key for naming log-likelihood progress bars without exposing a new
+# engine API surface.
+_LOGLIKELIHOOD_PROGRESS_TITLE_METADATA_KEY = "_evalution_loglikelihood_progress_title"
 
 
 def get_logger() -> LogBar:
@@ -68,6 +71,28 @@ def get_logger() -> LogBar:
     logger = LogBar.shared()
     logger.setLevel("INFO")
     return logger
+
+
+def loglikelihood_progress_metadata(
+    *,
+    title: str,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    merged_metadata = dict(metadata or {})
+    normalized_title = title.strip()
+    if normalized_title:
+        merged_metadata[_LOGLIKELIHOOD_PROGRESS_TITLE_METADATA_KEY] = normalized_title
+    return merged_metadata
+
+
+def loglikelihood_progress_title(metadata: dict[str, Any] | None) -> str | None:
+    if metadata is None:
+        return None
+    raw_title = metadata.get(_LOGLIKELIHOOD_PROGRESS_TITLE_METADATA_KEY)
+    if not isinstance(raw_title, str):
+        return None
+    normalized_title = raw_title.strip()
+    return normalized_title or None
 
 
 def progress_output_interval(total: int) -> int | None:

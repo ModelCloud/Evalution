@@ -33,7 +33,7 @@ from evalution.engines.base import (
 )
 from evalution.engines.continuous import stream_request_results
 from evalution.engines.memory import build_memory_profile, gib_to_bytes, resolve_dtype
-from evalution.logbar import get_logger
+from evalution.logbar import get_logger, loglikelihood_progress_title, manual_progress
 
 _AUTO_BATCH_SIZE = "auto"
 # PyPI source distributions first ship `generation/continuous_batching` in transformers 4.56.0.
@@ -886,8 +886,22 @@ class BaseTransformerSession(BaseInferenceSession):
         import torch
 
         scored_chunks: list[LoglikelihoodOutput] = []
+        if not chunks:
+            return scored_chunks
+
+        progress_title = (
+            loglikelihood_progress_title(chunks[0].metadata) or "loglikelihood: scoring continuations"
+        )
+        total_batches = (len(chunks) + batch_size - 1) // batch_size
+        score_bar = manual_progress(
+            len(chunks),
+            title=progress_title,
+            subtitle=f"batch_size={batch_size}",
+        )
         for start in range(0, len(chunks), batch_size):
             batch = chunks[start : start + batch_size]
+            batch_index = (start // batch_size) + 1
+            score_bar.subtitle(f"batch={batch_index}/{total_batches} batch_size={batch_size}")
             encoded = None
             logits = None
             try:
@@ -930,6 +944,7 @@ class BaseTransformerSession(BaseInferenceSession):
                             metadata=dict(chunk.metadata),
                         )
                     )
+                    score_bar.next().draw()
             finally:
                 if logits is not None:
                     del logits

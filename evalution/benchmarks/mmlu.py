@@ -12,7 +12,7 @@ from typing import Any
 from datasets import load_dataset
 
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
-from evalution.logbar import get_logger
+from evalution.logbar import get_logger, loglikelihood_progress_metadata
 from evalution.results import SampleResult, TestResult
 from evalution.scorers.multiple_choice import (
     build_choice_scores,
@@ -194,6 +194,7 @@ class MMLU(TestSuite):
             split=self.fewshot_split,
             cache_dir=self.cache_dir,
             stream=self.stream,
+            purpose="few-shot",
         )
         fewshot_docs = self._select_docs(list(fewshot_loaded_docs))
         fewshot_by_subject: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -203,6 +204,9 @@ class MMLU(TestSuite):
         prompts: list[str] = []
         requests: list[LoglikelihoodRequest] = []
         sample_docs: list[dict[str, Any]] = []
+        request_progress_metadata = loglikelihood_progress_metadata(
+            title=f"{task_name}: scoring answer choices",
+        )
         for doc in docs:
             subject = str(doc["subject"])
             subject_key = normalize_subset_token(subject)
@@ -211,7 +215,13 @@ class MMLU(TestSuite):
             prompts.append(prompt)
             sample_docs.append(doc)
             for label in _MMLU_LABELS:
-                requests.append(LoglikelihoodRequest(context=prompt, continuation=f" {label}"))
+                requests.append(
+                    LoglikelihoodRequest(
+                        context=prompt,
+                        continuation=f" {label}",
+                        metadata=dict(request_progress_metadata),
+                    )
+                )
 
         outputs = session.loglikelihood(requests, batch_size=self.batch_size)
         logger.info("%s: executed %d/%d sample(s)", task_name, len(sample_docs), total)

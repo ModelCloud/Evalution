@@ -12,7 +12,7 @@ from typing import Any
 from datasets import load_dataset
 
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
-from evalution.logbar import get_logger
+from evalution.logbar import get_logger, loglikelihood_progress_metadata
 from evalution.results import SampleResult, TestResult
 from evalution.scorers.multiple_choice import (
     ChoiceScore,
@@ -99,12 +99,16 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
         )
         requests: list[LoglikelihoodRequest] = []
         request_to_choice: list[tuple[int, int]] = []
+        request_progress_metadata = loglikelihood_progress_metadata(
+            title=f"{task_name}: scoring answer choices",
+        )
         for sample in samples:
             for choice_index, choice in enumerate(sample.choices):
                 requests.append(
                     LoglikelihoodRequest(
                         context=sample.prompt,
                         continuation=self.continuation_for_choice(choice),
+                        metadata=dict(request_progress_metadata),
                     )
                 )
                 request_to_choice.append((sample.index, choice_index))
