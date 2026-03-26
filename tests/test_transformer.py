@@ -22,7 +22,6 @@ from evalution.engines.base import (
     LoglikelihoodRequest,
     RollingLoglikelihoodRequest,
 )
-from evalution.engines import transformers_common
 from evalution.engines.transformers_common import _seed_transformer_runtime
 from evalution.engines.transformers import Transformers, TransformersSession
 from evalution.engines.transformers_compat import TransformersCompat
@@ -1539,60 +1538,6 @@ def test_transformer_session_loglikelihood_context_uses_tokenizer_default_specia
     assert metadata == {"row": 1}
     assert explicit_prefix_ids == [99, 11, 12]
     assert explicit_target_ids == [13]
-
-
-def test_set_tokenizer_padding_side_handles_wrapped_tokenizers() -> None:
-    class InnerTokenizer:
-        padding_side = "right"
-
-    class FakeTokenizer:
-        def __init__(self) -> None:
-            self.__dict__["padding_side"] = "right"
-            self.tokenizer = InnerTokenizer()
-
-        @property
-        def padding_side(self) -> str:
-            return self.__dict__["padding_side"]
-
-        @padding_side.setter
-        def padding_side(self, value: str) -> None:
-            del value
-            self.__dict__["padding_side"] = "right"
-
-    tokenizer = FakeTokenizer()
-
-    transformers_common._set_tokenizer_padding_side(tokenizer, "left")
-
-    assert tokenizer.padding_side == "left"
-    assert tokenizer.tokenizer.padding_side == "left"
-
-
-def test_normalize_tokenizer_special_tokens_preserves_padding_side() -> None:
-    class FakeTokenizer:
-        def __init__(self) -> None:
-            self.__dict__["padding_side"] = "left"
-
-        def auto_fix_pad_token(self, model=None, *, strict=False):
-            del model, strict
-            self.__dict__["padding_side"] = "right"
-
-        @property
-        def padding_side(self) -> str:
-            return self.__dict__["padding_side"]
-
-        @padding_side.setter
-        def padding_side(self, value: str) -> None:
-            del value
-            self.__dict__["padding_side"] = "right"
-
-    tokenizer = FakeTokenizer()
-
-    transformers_common._normalize_tokenizer_special_tokens(
-        tokenizer=tokenizer,
-        model=SimpleNamespace(),
-    )
-
-    assert tokenizer.padding_side == "left"
 
 
 def test_transformer_session_loglikelihood_right_pads_batches_without_attention_mask() -> None:

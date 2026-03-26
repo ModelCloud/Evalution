@@ -1046,7 +1046,7 @@ def load_transformer_runtime(
         trust_remote_code=trust_remote_code,
         **model_config.tokenizer_kwargs,
     )
-    _set_tokenizer_padding_side(tokenizer, config.padding_side)
+    tokenizer.padding_side = config.padding_side
 
     load_kwargs = {
         **model_config.model_kwargs,
@@ -1204,43 +1204,15 @@ def _normalize_tokenizer_special_tokens(tokenizer: Any, *, model: Any | None = N
     if not callable(auto_fix_pad_token):
         return
 
-    # Tokenicer may mutate `padding_side` while it auto-selects a pad token. Preserve the engine's
-    # requested left/right padding policy because decoder-only batched generation depends on it.
-    requested_padding_side = getattr(tokenizer, "padding_side", None)
-
     if model is None:
         try:
             auto_fix_pad_token(strict=False)
         except Exception:
             return
-        if requested_padding_side is not None:
-            _set_tokenizer_padding_side(tokenizer, requested_padding_side)
         return
 
     with suppress(Exception):
         auto_fix_pad_token(model, strict=False)
-    if requested_padding_side is not None:
-        _set_tokenizer_padding_side(tokenizer, requested_padding_side)
-
-
-def _set_tokenizer_padding_side(tokenizer: Any, padding_side: str | None) -> None:
-    if tokenizer is None or padding_side is None:
-        return
-
-    with suppress(Exception):
-        tokenizer.padding_side = padding_side
-
-    if getattr(tokenizer, "padding_side", None) != padding_side:
-        with suppress(Exception):
-            tokenizer.__dict__["padding_side"] = padding_side
-
-    nested_tokenizer = getattr(tokenizer, "tokenizer", None)
-    if nested_tokenizer is not None and getattr(nested_tokenizer, "padding_side", None) != padding_side:
-        with suppress(Exception):
-            nested_tokenizer.padding_side = padding_side
-        if getattr(nested_tokenizer, "padding_side", None) != padding_side:
-            with suppress(Exception):
-                nested_tokenizer.__dict__["padding_side"] = padding_side
 
 
 def _seed_transformer_runtime(seed: int | None) -> None:
@@ -1391,10 +1363,7 @@ def _clone_prepare_tokenizer(
             trust_remote_code=resolved_trust_remote_code,
             **model_config.tokenizer_kwargs,
         )
-        _set_tokenizer_padding_side(
-            prepare_tokenizer,
-            getattr(tokenizer, "padding_side", None),
-        )
+        prepare_tokenizer.padding_side = tokenizer.padding_side
         _normalize_tokenizer_special_tokens(tokenizer=prepare_tokenizer, model=model)
         return prepare_tokenizer
     return None
