@@ -413,7 +413,7 @@ class VLLMSession(BaseInferenceSession):
                     prompts.append({"prompt_token_ids": prompt_token_ids})
                     params.append(
                         self.sampling_params_cls(
-                            max_tokens=0,
+                            max_tokens=1,
                             temperature=0.0,
                             prompt_logprobs=1,
                             detokenize=False,
