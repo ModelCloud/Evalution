@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from datasets import get_dataset_config_names, load_dataset
+from datasets import load_dataset
 
 from evalution.benchmarks.arabic_subject_mmlu import (
     CHOICE_LABELS,
@@ -17,7 +17,54 @@ from evalution.benchmarks.arabic_subject_mmlu import (
 )
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
-DARIJAMMLU_SUBSETS = tuple(get_dataset_config_names("MBZUAI-Paris/DarijaMMLU"))
+# Frozen upstream config snapshot for import safety. Refresh deliberately if the dataset adds
+# or removes subsets.
+DARIJAMMLU_SUBSETS = (
+    "accounting",
+    "arabic_language",
+    "arabic_language_(general)",
+    "arabic_language_(grammar)",
+    "biology",
+    "civics",
+    "computer_science",
+    "driving_test",
+    "economics",
+    "general_knowledge",
+    "geography",
+    "global_facts",
+    "high_school_european_history",
+    "high_school_geography",
+    "high_school_government_and_politics",
+    "high_school_psychology",
+    "high_school_statistics",
+    "high_school_world_history",
+    "history",
+    "human_aging",
+    "international_law",
+    "islamic_studies",
+    "jurisprudence",
+    "law",
+    "logical_fallacies",
+    "management",
+    "management_ar",
+    "marketing",
+    "math",
+    "moral_disputes",
+    "moral_scenarios",
+    "natural_science",
+    "nutrition",
+    "philosophy",
+    "philosophy_ar",
+    "physics",
+    "political_science",
+    "professional_law",
+    "professional_psychology",
+    "public_relations",
+    "security_studies",
+    "social_science",
+    "sociology",
+    "world_religions",
+)
 DARIJAMMLU_TASKS = tuple(
     f"darijammlu_{slugify_subset_name(subset)}" for subset in DARIJAMMLU_SUBSETS
 )
@@ -26,6 +73,8 @@ _SUBSET_TO_TASK = dict(zip(DARIJAMMLU_SUBSETS, DARIJAMMLU_TASKS, strict=True))
 
 @dataclass(slots=True)
 class DarijaMMLU(BaseMultipleChoiceSuite):
+    """DarijaMMLU suite backed by a frozen subset registry to keep imports offline-safe."""
+
     dataset_path: str = "MBZUAI-Paris/DarijaMMLU"
     dataset_name: str | None = None
     split: str = "test"

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 import random
 from itertools import islice
 from time import perf_counter
@@ -14,6 +15,30 @@ from evalution.logbar import get_logger, spinner
 
 T = TypeVar("T")
 _DEFAULT_SHUFFLE_SEED = 7
+_UNEXPECTED_LOADER_KWARG_PATTERN = re.compile(r"unexpected keyword argument '([^']+)'")
+
+
+def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
+    return set(_UNEXPECTED_LOADER_KWARG_PATTERN.findall(str(exc)))
+
+
+def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
+    try:
+        return loader(*args, **kwargs)
+    except TypeError as exc:
+        unexpected = _unexpected_loader_kwargs(exc)
+        if "stream" in unexpected and "stream" in kwargs:
+            fallback_kwargs = dict(kwargs)
+            fallback_kwargs["streaming"] = fallback_kwargs.pop("stream")
+            return loader(*args, **fallback_kwargs)
+        raise
+
+
+def _loader_uses_hf_streaming_kwarg(loader: Any) -> bool:
+    if getattr(loader, "__name__", None) == "load_dataset":
+        return True
+    module_name = getattr(loader, "__module__", "")
+    return module_name.startswith("datasets.")
 
 def normalize_order(order: str) -> str:
     normalized = order.strip().lower()
@@ -52,7 +77,7 @@ def apply_order(
     return sorted(ordered, key=length_key, reverse=reverse)
 
 
- # Load the suite dataset and return both the rows object and wall-clock load time.
+# Load the suite dataset and return both the rows object and wall-clock load time.
 def load_suite_dataset(
     loader: Any,
     *,
@@ -66,18 +91,18 @@ def load_suite_dataset(
     logger = get_logger()
     dataset_ref = dataset_path if dataset_name is None else f"{dataset_path}/{dataset_name}"
     logger.info("loading dataset %s split=%s for %s", dataset_ref, split, task_name)
-
+    stream_key = "streaming" if _loader_uses_hf_streaming_kwarg(loader) else "stream"
     kwargs = {
         "split": split,
         "cache_dir": cache_dir,
-        "streaming": stream,
+        stream_key: stream,
     }
     dataset_load_started = perf_counter()
     with spinner(f"{task_name}: loading dataset"):
         if dataset_name is None:
-            loaded_docs = loader(dataset_path, **kwargs)
+            loaded_docs = _invoke_dataset_loader(loader, dataset_path, **kwargs)
         else:
-            loaded_docs = loader(dataset_path, dataset_name, **kwargs)
+            loaded_docs = _invoke_dataset_loader(loader, dataset_path, dataset_name, **kwargs)
     return loaded_docs, perf_counter() - dataset_load_started
 
 

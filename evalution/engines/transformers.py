@@ -42,6 +42,7 @@ _FLASH_ATTN_VARLEN_FWD_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
 class Transformers(_TransformersCommonConfig):
     # Use the modern transformers engine path that can enable paged attention and continuous batching.
     manual_eviction: bool = False
+    continuous_batching: bool = True
     allow_block_sharing: bool = True
     use_async_batching: bool | None = None
     q_padding_interval_size: int = 0
@@ -183,7 +184,7 @@ class TransformersSession(BaseTransformerSession):
     def from_config(cls, config: Transformers, model_config: Model) -> TransformersSession:
         runtime = load_transformer_runtime(config, model_config)
         raw_attn_implementation = config.attn_implementation or runtime.requested_attn_implementation
-        paged_attention_enabled = _resolve_paged_attention(
+        paged_attention_enabled = config.continuous_batching and _resolve_paged_attention(
             attn_implementation=raw_attn_implementation,
             model=runtime.model,
             input_device=runtime.input_device,
@@ -472,13 +473,17 @@ class TransformersSession(BaseTransformerSession):
         if "continuous_batching_config" in manager_init.parameters:
             from transformers import ContinuousBatchingConfig
 
-            continuous_batching_config = ContinuousBatchingConfig(
-                allow_block_sharing=self.config.allow_block_sharing,
-                use_async_batching=self.config.use_async_batching,
-                q_padding_interval_size=self.config.q_padding_interval_size,
-                kv_padding_interval_size=self.config.kv_padding_interval_size,
-                max_cached_graphs=self.config.max_cached_graphs,
-            )
+            continuous_batching_config_kwargs: dict[str, Any] = {
+                "allow_block_sharing": self.config.allow_block_sharing,
+                "use_async_batching": self.config.use_async_batching,
+                "q_padding_interval_size": self.config.q_padding_interval_size,
+                "kv_padding_interval_size": self.config.kv_padding_interval_size,
+                "max_cached_graphs": self.config.max_cached_graphs,
+            }
+            continuous_batching_config_signature = inspect.signature(ContinuousBatchingConfig)
+            if "torch_compile" in continuous_batching_config_signature.parameters:
+                continuous_batching_config_kwargs["torch_compile"] = True
+            continuous_batching_config = ContinuousBatchingConfig(**continuous_batching_config_kwargs)
             return ContinuousBatchingManager(
                 self.model,
                 generation_config=generation_config,

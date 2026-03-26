@@ -55,6 +55,8 @@ from .ceval import CEVAL_SUBSETS, CEval, ceval
 from .careqa import CAREQA_CONFIGS, CAREQA_TASKS, CareQA, careqa, careqa_en, careqa_es
 from .boolq import BoolQ, boolq
 from .cb import CB, cb
+from . import click as _click_module
+from .click import CLICK_CUL_SUBSETS, CLICK_LANG_SUBSETS, CLICK_TASKS, Click
 from .cola import CoLA, cola
 from .cnn_dailymail import CNNDailyMail, cnn_dailymail
 from .code_x_glue import (
@@ -81,11 +83,20 @@ from .copal_id import COPALID, copal_id, copal_id_colloquial, copal_id_standard
 from .coqa import CoQA, coqa
 from .copa import COPA, copa
 from .drop import DROP, drop
+from .fld import FLD, FLD_LABELS, fld
+from .fda import FDA, fda
+from .french_bench_arc_challenge import FrenchBenchARCChallenge, french_bench_arc_challenge
 from . import eus_exams as _eus_exams_module
 from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
+from .eus_reading import EusReading, eus_reading
+from .eus_proficiency import EusProficiency, eus_proficiency
+from .eus_trivia import EusTrivia, eus_trivia
 from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
 from .graphwalks import GraphWalks, graphwalks_128k, graphwalks_1M
 from .gsm8k import GSM8K, gsm8k
+from . import haerae as _haerae_module
+from .haerae import HAERAE_SUBSETS, HAERAE_TASKS, Haerae, haerae
+from .gsm_plus import GSM_PLUS_TASKS, GSMPlus, GSMPlusMini, gsm_plus, gsm_plus_mini
 from .gsm8k_platinum import GSM8KPlatinum, gsm8k_platinum
 from .hendrycks_ethics import (
     HendrycksEthics,
@@ -99,16 +110,56 @@ from . import hendrycks_math as _hendrycks_math_module
 from .hendrycks_math import HENDRYCKS_MATH_SUBSETS, HENDRYCKS_MATH_TASKS, HendrycksMath, hendrycks_math
 from .headqa import HEADQA, headqa_en, headqa_es
 from .hellaswag import HellaSwag, hellaswag
+from .humaneval import HumanEval, humaneval
 from .histoires_morales import HistoiresMorales, histoires_morales
+from .moral_stories import MoralStories, moral_stories
 from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
+from .ifeval import IFEval, ifeval
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic
+from . import kormedmcqa as _kormedmcqa_module
+from .kormedmcqa import KORMEDMCQA_SUBSETS, KORMEDMCQA_TASKS, KorMedMCQA, kormedmcqa
 from .lambada import LAMBADA, lambada_openai, lambada_standard
 from .lambada_cloze import LAMBADACloze, lambada_openai_cloze, lambada_standard_cloze
+from .lambada_multilingual import (
+    LAMBADA_OPENAI_MT_LANGUAGES,
+    LAMBADA_OPENAI_MT_TASKS,
+    lambada_openai_mt,
+    lambada_openai_mt_de,
+    lambada_openai_mt_en,
+    lambada_openai_mt_es,
+    lambada_openai_mt_fr,
+    lambada_openai_mt_it,
+)
+from .lambada_multilingual_stablelm import (
+    LAMBADA_OPENAI_MT_STABLELM_LANGUAGES,
+    LAMBADA_OPENAI_MT_STABLELM_TASKS,
+    lambada_openai_mt_stablelm,
+    lambada_openai_mt_stablelm_de,
+    lambada_openai_mt_stablelm_en,
+    lambada_openai_mt_stablelm_es,
+    lambada_openai_mt_stablelm_fr,
+    lambada_openai_mt_stablelm_it,
+    lambada_openai_mt_stablelm_nl,
+    lambada_openai_mt_stablelm_pt,
+)
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
+from .mbpp import MBPP, mbpp
+from .multirc import MultiRC, multirc
 from .mathqa import MathQA, mathqa
+from .mastermind import (
+    MASTERMIND_VARIANTS,
+    Mastermind,
+    mastermind,
+    mastermind_24_easy,
+    mastermind_24_hard,
+    mastermind_35_easy,
+    mastermind_35_hard,
+    mastermind_46_easy,
+    mastermind_46_hard,
+)
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mc_taco import MCTACO, mc_taco
@@ -125,6 +176,7 @@ from .openbookqa import OpenBookQA, openbookqa
 from .paws_x import PAWSX, paws_x, paws_x_de, paws_x_en, paws_x_es, paws_x_fr, paws_x_ja, paws_x_ko, paws_x_zh
 from .piqa import PIQA, piqa
 from .pile_10k import Pile10K, pile_10k
+from .polemo2 import POLEMO2_VARIANTS, Polemo2, polemo2, polemo2_in, polemo2_out
 from .prost import Prost, prost
 from .pubmedqa import PubMedQA, pubmedqa
 from .qa4mre import QA4MRE, qa4mre, qa4mre_2011, qa4mre_2012, qa4mre_2013
@@ -140,6 +192,7 @@ from .single_continuation import BaseSingleContinuationSuite, SingleContinuation
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .squadv2 import SQuADV2, squadv2
+from .toxigen import ToxiGen, toxigen
 from .truthfulqa import TRUTHFULQA_TASKS, TruthfulQAMC, truthfulqa, truthfulqa_mc1, truthfulqa_mc2
 from .triviaqa import TriviaQA, triviaqa
 from .wic import WiC, wic
@@ -158,6 +211,7 @@ from .xquad import XQUAD_LANGUAGES, XQUAD_TASKS, XQuAD, xquad
 from .xstorycloze import XSTORYCLOZE_LANGUAGES, XStoryCloze, xstorycloze, xstorycloze_ar, xstorycloze_en, xstorycloze_es, xstorycloze_eu, xstorycloze_hi, xstorycloze_id, xstorycloze_my, xstorycloze_ru, xstorycloze_sw, xstorycloze_te, xstorycloze_zh
 from . import xnli as _xnli_module
 from .xnli import XNLI, XNLI_LANGUAGES, XNLI_TASKS, xnli
+from .xnli_eu import XNLIEU, xnli_eu
 from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinograd_jp, xwinograd_pt, xwinograd_ru, xwinograd_zh
 
 for _crows_pairs_task in CROWS_PAIRS_TASKS:
@@ -199,6 +253,21 @@ for _esbbq_task in ESBBQ_TASKS:
     globals()[_esbbq_task] = getattr(_esbbq_module, _esbbq_task)
 
 del _esbbq_task
+
+for _click_task in CLICK_TASKS:
+    globals()[_click_task] = getattr(_click_module, _click_task)
+
+del _click_task
+
+for _haerae_task in HAERAE_TASKS:
+    globals()[_haerae_task] = getattr(_haerae_module, _haerae_task)
+
+del _haerae_task
+
+for _kormedmcqa_task in KORMEDMCQA_TASKS:
+    globals()[_kormedmcqa_task] = getattr(_kormedmcqa_module, _kormedmcqa_task)
+
+del _kormedmcqa_task
 
 for _afrimmlu_task in AFRIMMLU_TASKS:
     globals()[_afrimmlu_task] = getattr(_afrimmlu_module, _afrimmlu_task)
@@ -312,6 +381,10 @@ __all__ = [
     "CEval",
     "BoolQ",
     "CB",
+    "CLICK_CUL_SUBSETS",
+    "CLICK_LANG_SUBSETS",
+    "CLICK_TASKS",
+    "Click",
     "CoLA",
     "CNNDailyMail",
     "CODE_X_GLUE_LANGUAGES",
@@ -336,6 +409,9 @@ __all__ = [
     "EUS_EXAMS_SUBSETS",
     "EUS_EXAMS_TASKS",
     "EusExams",
+    "EusReading",
+    "EusProficiency",
+    "EusTrivia",
     "COPALID",
     "CoQA",
     "COPA",
@@ -344,6 +420,12 @@ __all__ = [
     "GPQA_SUBSETS",
     "GPQA_TASKS",
     "GSM8K",
+    "HAERAE_SUBSETS",
+    "HAERAE_TASKS",
+    "Haerae",
+    "GSM_PLUS_TASKS",
+    "GSMPlus",
+    "GSMPlusMini",
     "GSM8KPlatinum",
     "HendrycksEthics",
     "HENDRYCKS_MATH_SUBSETS",
@@ -352,6 +434,7 @@ __all__ = [
     "HEADQA",
     "HellaSwag",
     "HistoiresMorales",
+    "MoralStories",
     "IcelandicWinoGrande",
     "INVERSE_SCALING_SUBSETS",
     "INVERSE_SCALING_TASKS",
@@ -359,11 +442,17 @@ __all__ = [
     "KOBEST_SUBSETS",
     "KOBEST_TASKS",
     "KoBEST",
+    "KORMEDMCQA_SUBSETS",
+    "KORMEDMCQA_TASKS",
+    "KorMedMCQA",
     "LAMBADA",
     "LAMBADACloze",
     "LogiQA",
     "LogiQA2",
+    "MBPP",
+    "MASTERMIND_VARIANTS",
     "MathQA",
+    "Mastermind",
     "MedMCQA",
     "MedQA",
     "MCTACO",
@@ -380,6 +469,8 @@ __all__ = [
     "PIQAArabic",
     "PIQA",
     "Pile10K",
+    "POLEMO2_VARIANTS",
+    "Polemo2",
     "Prost",
     "PubMedQA",
     "QA4MRE",
@@ -396,6 +487,7 @@ __all__ = [
     "SQuADV2",
     "SST2",
     "TestSuite",
+    "ToxiGen",
     "TRUTHFULQA_TASKS",
     "TruthfulQAMC",
     "TriviaQA",
@@ -417,6 +509,7 @@ __all__ = [
     "XNLI",
     "XNLI_LANGUAGES",
     "XNLI_TASKS",
+    "XNLIEU",
     "XSTORYCLOZE_LANGUAGES",
     "XStoryCloze",
     "XWinograd",
@@ -527,7 +620,17 @@ __all__ = [
     "coqa",
     "copa",
     "drop",
+    "FLD",
+    "FLD_LABELS",
+    "FDA",
+    "fda",
+    "fld",
+    "FrenchBenchARCChallenge",
+    "french_bench_arc_challenge",
     "eus_exams",
+    "eus_reading",
+    "eus_proficiency",
+    "eus_trivia",
     "gpqa",
     "gpqa_diamond",
     "gpqa_extended",
@@ -540,27 +643,49 @@ __all__ = [
     "choice_index_from_labels",
     "f1_for_label",
     "gsm8k",
+    "haerae",
+    "gsm_plus",
+    "gsm_plus_mini",
     "gsm8k_platinum",
     "headqa_en",
     "headqa_es",
     "hendrycks_math",
     "hellaswag",
+    "humaneval",
     "histoires_morales",
+    "moral_stories",
     "icelandic_winogrande",
     "inverse_scaling",
     "kobest",
+    "kormedmcqa",
     "kobest_boolq",
     "kobest_copa",
     "kobest_hellaswag",
     "kobest_sentineg",
     "kobest_wic",
     "lambada_openai",
+    "lambada_openai_mt",
+    "lambada_openai_mt_de",
+    "lambada_openai_mt_en",
+    "lambada_openai_mt_es",
+    "lambada_openai_mt_fr",
+    "lambada_openai_mt_it",
+    "LAMBADA_OPENAI_MT_LANGUAGES",
+    "LAMBADA_OPENAI_MT_TASKS",
     "lambada_openai_cloze",
     "lambada_standard",
     "lambada_standard_cloze",
     "logiqa",
     "logiqa2",
+    "mbpp",
     "mathqa",
+    "mastermind",
+    "mastermind_24_easy",
+    "mastermind_24_hard",
+    "mastermind_35_easy",
+    "mastermind_35_hard",
+    "mastermind_46_easy",
+    "mastermind_46_hard",
     "medmcqa",
     "medqa_4options",
     "mc_taco",
@@ -585,6 +710,9 @@ __all__ = [
     "piqa",
     "piqa_ar",
     "pile_10k",
+    "polemo2",
+    "polemo2_in",
+    "polemo2_out",
     "prost",
     "pubmedqa",
     "qa4mre",
@@ -600,6 +728,7 @@ __all__ = [
     "siqa",
     "swag",
     "squadv2",
+    "toxigen",
     "question_answer_prompt",
     "sst2",
     "truthfulqa",
@@ -648,6 +777,7 @@ __all__ = [
     "xstorycloze_te",
     "xstorycloze_zh",
     "xnli",
+    "xnli_eu",
     "xwinograd",
     "xwinograd_en",
     "xwinograd_fr",
@@ -675,3 +805,6 @@ __all__.extend(XNLI_TASKS)
 __all__.extend(XQUAD_TASKS)
 __all__.extend(TRUTHFULQA_TASKS)
 __all__.extend(INVERSE_SCALING_TASKS)
+__all__.extend(CLICK_TASKS)
+__all__.extend(HAERAE_TASKS)
+__all__.extend(KORMEDMCQA_TASKS)
