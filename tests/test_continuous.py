@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2026 ModelCloud.ai
+# SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
+# SPDX-License-Identifier: Apache-2.0
+# Contact: qubitium@modelcloud.ai, x.com/qubitium
+
+from __future__ import annotations
+
+import threading
+
+from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.engines.continuous import stream_request_results
+
+
+def test_stream_request_results_keeps_request_consumer_active_while_caller_is_paused() -> None:
+    third_request_seen = threading.Event()
+    stop_seen = threading.Event()
+
+    def consume_requests(stop_event, request_queue, put_result) -> None:
+        first = request_queue.get(timeout_s=1.0)
+        second = request_queue.get(timeout_s=1.0)
+
+        assert first is not None
+        assert second is not None
+
+        first_key, first_request = first
+        put_result(
+            first_key,
+            GenerationOutput(
+                prompt=first_request.prompt or "",
+                text=f"out::{first_request.prompt}",
+                metadata={},
+            ),
+        )
+
+        third = request_queue.get(timeout_s=1.0)
+        assert third is not None
+        third_request_seen.set()
+
+        while not stop_event.is_set():
+            threading.Event().wait(0.01)
+        stop_seen.set()
+
+    iterator = stream_request_results(
+        [
+            (10, GenerationRequest(prompt="alpha")),
+            (11, GenerationRequest(prompt="beta")),
+            (12, GenerationRequest(prompt="gamma")),
+        ],
+        producer_name="test.request_producer",
+        consumer_name="test.request_consumer",
+        process_requests=consume_requests,
+    )
+
+    assert next(iterator) == (
+        10,
+        GenerationOutput(prompt="alpha", text="out::alpha", metadata={}),
+    )
+    assert third_request_seen.wait(timeout=1.0)
+
+    iterator.close()
+
+    assert stop_seen.wait(timeout=1.0)

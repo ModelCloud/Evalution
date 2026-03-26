@@ -100,6 +100,10 @@ class BaseInferenceSession(ABC):
         batch_size: int | None = None,
     ) -> list[RollingLoglikelihoodOutput]: ...
 
+    # Implementations should keep backend progress decoupled from caller iteration. In
+    # particular, do not hold engine/session locks across user-visible yields; use a queued
+    # request/result handoff when the backend must stay active and refill independently of the
+    # caller.
     @abstractmethod
     def generate_continuous(
         self,
