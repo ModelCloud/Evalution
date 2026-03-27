@@ -114,6 +114,32 @@ _ENGINE_REGISTRY: dict[str, _EngineSpec] = {
         ),
         parents=("shared",),
     ),
+    "sglang": _EngineSpec(
+        factory=SGLang,
+        emit_alias="SGLang",
+        direct_option_keys=frozenset(
+            {
+                "device",
+                "base_url",
+                "tokenizer_mode",
+                "tokenizer_worker_num",
+                "skip_tokenizer_init",
+                "load_format",
+                "context_length",
+                "quantization",
+                "mem_fraction_static",
+                "tp_size",
+                "dp_size",
+                "pp_size",
+                "attention_backend",
+                "sampling_backend",
+                "max_running_requests",
+                "max_total_tokens",
+                "sampling_params",
+            }
+        ),
+        parents=("shared",),
+    ),
 }
 
 _TEST_FACTORIES: dict[str, Any] = {

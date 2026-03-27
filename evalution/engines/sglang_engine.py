@@ -107,6 +107,7 @@ class SGLang(BaseEngine):
     resolved_engine: str | None = field(default=None, init=False)
     base_url: str | None = None
     batch_size: int | str = "auto"
+    max_new_tokens: int = 256
     tokenizer_mode: str = "auto"
     tokenizer_worker_num: int = 1
     skip_tokenizer_init: bool = False
@@ -121,7 +122,6 @@ class SGLang(BaseEngine):
     sampling_backend: str | None = None
     max_running_requests: int | None = None
     max_total_tokens: int | None = None
-    random_seed: int | None = None
     sampling_params: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseInferenceSession:
@@ -986,9 +986,7 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
         engine_kwargs.setdefault("max_running_requests", config.max_running_requests)
     if config.max_total_tokens is not None:
         engine_kwargs.setdefault("max_total_tokens", config.max_total_tokens)
-    if config.random_seed is not None:
-        engine_kwargs.setdefault("random_seed", config.random_seed)
-    elif config.seed is not None:
+    if config.seed is not None:
         engine_kwargs.setdefault("random_seed", config.seed)
     return _SGLangPythonClient(engine=engine_module.Engine(**engine_kwargs))
 
