@@ -14,7 +14,7 @@ import threading
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from contextlib import suppress
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from itertools import chain, islice
 from pathlib import Path
 from types import SimpleNamespace
@@ -22,6 +22,7 @@ from typing import Any
 
 from evalution.config import Model
 from evalution.engines.base import (
+    BaseEngine,
     BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
@@ -33,7 +34,6 @@ from evalution.engines.base import (
 from evalution.engines.transformers_common import (
     _AUTO_BATCH_SIZE,
     _ScoringChunk,
-    _TransformersCommonConfig,
     _clone_prepare_tokenizer,
     _friendly_batch_size,
     _load_tokenizer_from_model,
@@ -96,10 +96,15 @@ class _LoadedSGLangRuntime:
 
 
 @dataclass(slots=True)
-class SGLang(_TransformersCommonConfig):
+class SGLang(BaseEngine):
     # SGLang integration stays in-process through `sglang.Engine`; no HTTP server is used.
-    # Keep the common SGLang Engine knobs as top-level fields so callers can configure
-    # them the same way they configure VLLM, instead of building a nested args dict.
+    # Expose SGLang runtime kwargs using the same names as ServerArgs / Engine kwargs.
+    dtype: str | None = "auto"
+    device: str | None = None
+    seed: int | None = None
+    trust_remote_code: bool | None = None
+    padding_side: str = "left"
+    resolved_engine: str | None = field(default=None, init=False)
     base_url: str | None = None
     batch_size: int | str = "auto"
     tokenizer_mode: str = "auto"
@@ -109,18 +114,22 @@ class SGLang(_TransformersCommonConfig):
     context_length: int | None = None
     quantization: str | None = None
     mem_fraction_static: float | None = None
-    tensor_parallel_size: int = 1
-    data_parallel_size: int = 1
-    pipeline_parallel_size: int = 1
+    tp_size: int = 1
+    dp_size: int = 1
+    pp_size: int = 1
     attention_backend: str | None = None
     sampling_backend: str | None = None
     max_running_requests: int | None = None
     max_total_tokens: int | None = None
+    random_seed: int | None = None
     sampling_params: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseInferenceSession:
         self.resolved_engine = "SGLang"
         return SGLangSession.from_config(self, model)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 @dataclass(slots=True)
@@ -936,8 +945,7 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
         raise ValueError("sglang engine no longer supports server/http mode; use in-process Engine")
 
     engine_module = importlib.import_module("sglang.srt.entrypoints.engine")
-    engine_kwargs = dict()
-    engine_kwargs.update(model_config.model_kwargs)
+    engine_kwargs = dict(model_config.model_kwargs)
     engine_kwargs.setdefault("model_path", model_config.path)
     engine_kwargs.setdefault(
         "trust_remote_code",
@@ -959,9 +967,9 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
     engine_kwargs.setdefault("tokenizer_worker_num", config.tokenizer_worker_num)
     engine_kwargs.setdefault("skip_tokenizer_init", config.skip_tokenizer_init)
     engine_kwargs.setdefault("load_format", config.load_format)
-    engine_kwargs.setdefault("tp_size", config.tensor_parallel_size)
-    engine_kwargs.setdefault("dp_size", config.data_parallel_size)
-    engine_kwargs.setdefault("pp_size", config.pipeline_parallel_size)
+    engine_kwargs.setdefault("tp_size", config.tp_size)
+    engine_kwargs.setdefault("dp_size", config.dp_size)
+    engine_kwargs.setdefault("pp_size", config.pp_size)
     if model_config.revision is not None:
         engine_kwargs.setdefault("revision", model_config.revision)
     if config.context_length is not None:
@@ -978,6 +986,10 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
         engine_kwargs.setdefault("max_running_requests", config.max_running_requests)
     if config.max_total_tokens is not None:
         engine_kwargs.setdefault("max_total_tokens", config.max_total_tokens)
+    if config.random_seed is not None:
+        engine_kwargs.setdefault("random_seed", config.random_seed)
+    elif config.seed is not None:
+        engine_kwargs.setdefault("random_seed", config.seed)
     return _SGLangPythonClient(engine=engine_module.Engine(**engine_kwargs))
 
 

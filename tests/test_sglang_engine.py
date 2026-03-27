@@ -70,6 +70,9 @@ def test_sglang_engine_defaults_batch_size_to_auto() -> None:
 
     assert engine.batch_size == "auto"
     assert engine.base_url is None
+    assert engine.tp_size == 1
+    assert engine.dp_size == 1
+    assert engine.pp_size == 1
     assert engine.to_dict()["base_url"] is None
 
 
