@@ -314,11 +314,9 @@ YAML:
 
 ```yaml
 engine:
-  type: VLLM
+  type: SGLang
   batch_size: 16
-  tensor_parallel_size: 1
-  gpu_memory_utilization: 0.8
-  enforce_eager: true
+  tp_size: 1
 
 model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
