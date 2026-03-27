@@ -118,6 +118,7 @@ Evalution ships three Hugging Face-compatible engines:
 - `engines.Transformers()`: the modern backend
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
+- `engines.VLLM()`: the vLLM runtime backend
 
 The preferred import shape is:
 
@@ -145,6 +146,17 @@ suites or on `close()`.
 the same shared generation, scoring, and paged continuous-batching path as the built-in
 transformer engines when the loaded quantized model exposes the required HF hooks. It also
 surfaces the resolved quantized runtime backend in execution metadata.
+
+`engines.VLLM()` loads the runtime through `vllm.LLM(...)`, keeps a tokenizer for prompt rendering
+and scoring prep, and implements generation plus both log-likelihood APIs through vLLM-native
+calls. When request-level engine methods are available, Evalution drives continuous batching by
+submitting request ids into `llm_engine.add_request(...)`, reading finished outputs from
+`llm_engine.step()`, and reconciling completions by request id instead of by positional order. If
+the installed vLLM runtime does not expose that lower-level request API, the engine falls back to
+fixed-batch emulation to preserve the `generate_continuous(...)` contract.
+
+The built-in vLLM engine currently expects `num_beams=1`. Benchmarks or custom requests that
+require beam search should use another engine until vLLM beam routing is added to this backend.
 
 
 ## Log-Likelihood Requirements

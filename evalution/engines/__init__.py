@@ -7,6 +7,7 @@ from .base import BaseEngine, BaseInferenceSession
 from .gptqmodel_engine import GPTQModel
 from .transformers import Transformers
 from .transformers_compat import TransformersCompat
+from .vllm_engine import VLLM
 
 __all__ = [
     "BaseEngine",
@@ -14,4 +15,5 @@ __all__ = [
     "GPTQModel",
     "Transformers",
     "TransformersCompat",
+    "VLLM",
 ]

@@ -16,9 +16,11 @@ def test_package_import() -> None:
     assert evalution.GPTQModel is not None
     assert evalution.Transformers is not None
     assert evalution.TransformersCompat is not None
+    assert evalution.VLLM is not None
     assert evalution.engines.GPTQModel is not None
     assert evalution.engines.Transformers is not None
     assert evalution.engines.TransformersCompat is not None
+    assert evalution.engines.VLLM is not None
 
 
 def test_package_exports_benchmarks_namespace() -> None:
