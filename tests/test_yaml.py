@@ -11,6 +11,7 @@ from datasets import Dataset
 
 import evalution
 from evalution import yaml as evalution_yaml
+from evalution.engines import SGLang
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
@@ -871,6 +872,7 @@ def test_engine_option_keys_are_inheritable_across_engine_families() -> None:
     gptqmodel_keys = evalution_yaml._engine_option_keys("gptqmodel")
     transformers_compat_keys = evalution_yaml._engine_option_keys("transformerscompat")
     vllm_keys = evalution_yaml._engine_option_keys("vllm")
+    sglang_keys = evalution_yaml._engine_option_keys("sglang")
 
     assert "dtype" in shared_keys
     assert "batch_size" in shared_keys
@@ -898,6 +900,28 @@ def test_engine_option_keys_are_inheritable_across_engine_families() -> None:
     assert "vllm_path" in vllm_keys
     assert "attn_implementation" not in vllm_keys
     assert "device" not in vllm_keys
+
+    assert "dtype" in sglang_keys
+    assert "batch_size" in sglang_keys
+    assert "tp_size" in sglang_keys
+    assert "sampling_params" in sglang_keys
+    assert "attn_implementation" not in sglang_keys
+
+
+def test_build_engine_constructs_sglang() -> None:
+    """Verify YAML engine construction resolves the registered SGLang engine."""
+
+    engine = evalution_yaml._build_engine(
+        {
+            "type": "SGLang",
+            "tp_size": 2,
+            "seed": 7,
+        }
+    )
+
+    assert isinstance(engine, SGLang)
+    assert engine.tp_size == 2
+    assert engine.seed == 7
 
 
 def test_python_from_yaml_rejects_engine_keys_from_the_wrong_engine_family() -> None:
@@ -928,6 +952,29 @@ tests:
         raise AssertionError("expected wrong-family engine options to raise KeyError")
 
 
+def test_python_from_yaml_emits_sglang_name() -> None:
+    """Verify python_from_yaml emits the explicit SGLang engine constructor name."""
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: SGLang
+  tp_size: 2
+  seed: 7
+model:
+  path: /tmp/model
+tests:
+  - type: gsm8k_platinum
+    max_rows: 8
+"""
+    )
+
+    assert "engines.SGLang(" in script
+    assert "tp_size=2" in script
+    assert "seed=7" in script
+    assert "eval(engines." not in script
+
+
 def test_python_from_yaml_rejects_unknown_engine_type() -> None:
     """Verify YAML emission rejects unknown engine names instead of emitting invalid code."""
 
@@ -938,7 +985,7 @@ def test_python_from_yaml_rejects_unknown_engine_type() -> None:
         evalution.python_from_yaml(
             """
 engine:
-  type: SGLang
+  type: HF
 model:
   path: /tmp/model
 tests:
@@ -947,6 +994,6 @@ tests:
 """
         )
     except KeyError as exc:
-        assert str(exc) == "\"unknown engine type: 'sglang'\""
+        assert str(exc) == "\"unknown engine type: 'hf'\""
     else:
         raise AssertionError("expected unknown engine type to raise KeyError")
