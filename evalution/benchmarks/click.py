@@ -205,7 +205,7 @@ class Click(BaseMultipleChoiceSuite):
     dataset_path: str = "EunsuKim/CLIcK"
     dataset_name: str | None = None
     split: str = "train"
-    stream: bool = False
+    stream: bool = True
     subset: str = "click"
 
     def __post_init__(self) -> None:

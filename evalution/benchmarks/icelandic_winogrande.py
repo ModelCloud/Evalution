@@ -41,7 +41,7 @@ def _blank_choice_contexts_and_suffix(
 class IcelandicWinoGrande:
     dataset_path: str = "mideind/icelandic-winogrande"
     split: str = "train"
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

@@ -59,7 +59,7 @@ class HumanEval(BaseTestSuite):
     dataset_path: str = HUMANEVAL_DATASET_PATH
     dataset_name: str | None = HUMANEVAL_DATASET_NAME
     split: str = HUMANEVAL_TEST_SPLIT
-    stream: bool = False
+    stream: bool = True
     max_new_tokens: int = 512
     do_sample: bool = False
     temperature: float = 0.0

@@ -37,7 +37,7 @@ def _load_esbbq_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool = True,
 ) -> Any:
     return load_dataset(
         dataset_path,

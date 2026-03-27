@@ -1711,6 +1711,195 @@ def test_transformer_session_loglikelihood_reports_non_greedy_predictions() -> N
     assert outputs[0].is_greedy is False
 
 
+def test_transformer_session_loglikelihood_uses_request_progress_title(monkeypatch) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            assert return_tensors == "pt"
+            assert padding is True
+            sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
+            max_length = max(len(ids) for ids in sequences)
+            padded_ids = []
+            attention_masks = []
+            for ids in sequences:
+                pad_count = max_length - len(ids)
+                padded_ids.append(ids + ([0] * pad_count))
+                attention_masks.append(([1] * len(ids)) + ([0] * pad_count))
+            return {
+                "input_ids": torch.tensor(padded_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
+            }
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+
+        def __call__(self, *, input_ids, attention_mask=None):
+            del attention_mask
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            for row in range(batch_size):
+                for position in range(sequence_length - 1):
+                    next_token = int(input_ids[row, position + 1].item())
+                    logits[row, position, next_token] = 3.0
+            return SimpleNamespace(logits=logits)
+
+    class FakeProgressBar:
+        def __init__(self) -> None:
+            self.titles: list[str] = []
+            self.subtitles: list[str] = []
+            self.next_calls = 0
+            self.draw_calls = 0
+
+        def title(self, value: str):
+            self.titles.append(value)
+            return self
+
+        def subtitle(self, value: str):
+            self.subtitles.append(value)
+            return self
+
+        def next(self):
+            self.next_calls += 1
+            return self
+
+        def draw(self):
+            self.draw_calls += 1
+            return self
+
+    progress_calls: list[tuple[int, str, str | None]] = []
+    progress_bar = FakeProgressBar()
+
+    def fake_manual_progress(total: int, *, title: str, subtitle: str | None = None):
+        progress_calls.append((total, title, subtitle))
+        progress_bar.title(title)
+        if subtitle is not None:
+            progress_bar.subtitle(subtitle)
+        return progress_bar
+
+    monkeypatch.setattr(
+        "evalution.engines.transformers_common.manual_progress",
+        fake_manual_progress,
+    )
+
+    session = TransformersSession(
+        config=Transformers(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(
+                context_input_ids=[5],
+                continuation_input_ids=[6],
+                metadata={"_evalution_loglikelihood_progress_title": "mmlu_stem: scoring answer choices"},
+            ),
+            LoglikelihoodRequest(
+                context_input_ids=[7],
+                continuation_input_ids=[8],
+                metadata={"_evalution_loglikelihood_progress_title": "mmlu_stem: scoring answer choices"},
+            ),
+        ],
+        batch_size=1,
+    )
+
+    assert len(outputs) == 2
+    assert progress_calls == [(2, "mmlu_stem: scoring answer choices", "batch_size=1")]
+    assert progress_bar.titles == ["mmlu_stem: scoring answer choices"]
+    assert progress_bar.subtitles == [
+        "batch_size=1",
+        "batch=1/2 batch_size=1",
+        "batch=2/2 batch_size=1",
+    ]
+    assert progress_bar.next_calls == 2
+    assert progress_bar.draw_calls == 2
+
+
+def test_transformer_session_loglikelihood_continuous_scores_streamed_requests() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            assert return_tensors == "pt"
+            assert padding is True
+            sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
+            max_length = max(len(ids) for ids in sequences)
+            padded_ids = []
+            attention_masks = []
+            for ids in sequences:
+                pad_count = max_length - len(ids)
+                padded_ids.append(ids + ([0] * pad_count))
+                attention_masks.append(([1] * len(ids)) + ([0] * pad_count))
+            return {
+                "input_ids": torch.tensor(padded_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
+            }
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+
+        def __call__(self, *, input_ids, attention_mask=None):
+            del attention_mask
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            for row in range(batch_size):
+                for position in range(sequence_length - 1):
+                    next_token = int(input_ids[row, position + 1].item())
+                    logits[row, position, next_token] = 3.0
+            return SimpleNamespace(logits=logits)
+
+    session = TransformersSession(
+        config=Transformers(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = list(
+        session.loglikelihood_continuous(
+            (
+                (
+                    request_index,
+                    LoglikelihoodRequest(
+                        context_input_ids=[5 + request_index],
+                        continuation_input_ids=[7 + request_index],
+                    ),
+                )
+                for request_index in range(2)
+            ),
+            batch_size=1,
+        )
+    )
+
+    expected_token_logprob = float(
+        torch.log_softmax(
+            torch.tensor([3.0] + ([-2.0] * 15), dtype=torch.float32),
+            dim=0,
+        )[0].item()
+    )
+
+    assert [request_key for request_key, _output in outputs] == [0, 1]
+    assert all(output.is_greedy is True for _request_key, output in outputs)
+    assert [output.token_count for _request_key, output in outputs] == [1, 1]
+    assert all(output.metadata == {} for _request_key, output in outputs)
+    assert [output.logprob for _request_key, output in outputs] == [
+        pytest.approx(expected_token_logprob, abs=1e-6),
+        pytest.approx(expected_token_logprob, abs=1e-6),
+    ]
+
+
 def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None:
     class FakeTokenizer:
         pad_token_id = 0

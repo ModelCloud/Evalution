@@ -69,7 +69,7 @@ def _crows_pairs_dataset_loader(*, bias_prefix: str | None) -> Callable[..., Any
         *,
         split: str,
         cache_dir: str | None = None,
-        stream: bool = False,
+        stream: bool = True,
     ) -> Any:
         dataset = load_dataset(
             dataset_path,
@@ -92,7 +92,7 @@ class CrowSPairs:
     dataset_path: str = _CROWS_PAIRS_DATASET_PATH
     dataset_name: str | None = "english"
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

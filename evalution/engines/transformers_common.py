@@ -33,7 +33,7 @@ from evalution.engines.base import (
 )
 from evalution.engines.continuous import stream_request_results
 from evalution.engines.memory import build_memory_profile, gib_to_bytes, resolve_dtype
-from evalution.logbar import get_logger
+from evalution.logbar import get_logger, loglikelihood_progress_title, manual_progress
 
 _AUTO_BATCH_SIZE = "auto"
 # PyPI source distributions first ship `generation/continuous_batching` in transformers 4.56.0.
@@ -72,6 +72,10 @@ _TRANSFORMERS_NO_TIE_WEIGHTS_PATCH_LOCK = threading.Lock()
 _TRANSFORMERS_NO_TIE_WEIGHTS_ACTIVE: ContextVar[bool] = ContextVar(
     "evalution_transformers_no_tie_weights_active",
     default=False,
+)
+# Let benchmarks that already own a public progress bar suppress the internal chunk-level scorer bar.
+_LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY = (
+    "_evalution_disable_loglikelihood_chunk_progress"
 )
 
 
@@ -172,38 +176,70 @@ class BaseTransformerSession(BaseInferenceSession):
         with self._generation_lock:
             prepared_requests = [self._prepare_loglikelihood_request(request) for request in requests]
             effective_batch_size = batch_size or self._resolve_scoring_batch_size(prepared_requests)
-            chunks: list[_ScoringChunk] = []
-            ordered_requests = list(enumerate(prepared_requests))
-            ordered_requests.sort(key=self._loglikelihood_request_sort_key)
-            for request_index, (prefix_ids, target_ids, metadata) in ordered_requests:
-                chunks.extend(
-                    self._build_loglikelihood_chunks(
-                        request_index=request_index,
-                        prefix_ids=prefix_ids,
-                        target_ids=target_ids,
-                        metadata=metadata,
-                    )
-                )
+            return self._score_prepared_loglikelihood_requests(
+                prepared_requests,
+                batch_size=effective_batch_size,
+            )
 
-            chunk_scores = self._score_chunks(chunks, batch_size=effective_batch_size)
-            totals = [
-                LoglikelihoodOutput(
-                    logprob=0.0,
-                    is_greedy=True,
-                    token_count=0,
-                    metadata=dict(request.metadata),
-                )
-                for request in requests
-            ]
-            for chunk, chunk_output in zip(chunks, chunk_scores, strict=True):
-                current = totals[chunk.request_index]
-                totals[chunk.request_index] = LoglikelihoodOutput(
-                    logprob=current.logprob + chunk_output.logprob,
-                    is_greedy=current.is_greedy and chunk_output.is_greedy,
-                    token_count=current.token_count + chunk_output.token_count,
-                    metadata=current.metadata,
-                )
-            return totals
+    # Keep log-likelihood request submission decoupled from caller iteration so suites can stream
+    # rows lazily while this session keeps fixed-size scoring batches full on a worker thread.
+    def loglikelihood_continuous(
+        self,
+        requests: Any,
+        *,
+        batch_size: int | None = None,
+    ) -> Any:
+        def iterator() -> Any:
+            request_iter = iter(requests)
+            preview_items = list(islice(request_iter, 64))
+            if not preview_items:
+                return
+
+            if batch_size is not None:
+                effective_batch_size = batch_size
+            else:
+                preview_prepared = [
+                    self._prepare_loglikelihood_request(request)
+                    for _request_key, request in preview_items
+                ]
+                effective_batch_size = self._resolve_scoring_batch_size(preview_prepared)
+            items = chain(preview_items, request_iter)
+
+            def consume_requests(
+                stop_event: threading.Event,
+                request_queue: Any,
+                put_result: Any,
+            ) -> None:
+                with self._generation_lock:
+                    prepared_batch: list[tuple[Any, tuple[list[int], list[int], dict[str, Any]]]] = []
+                    for request_key, request in request_queue.iter_requests(stop_event=stop_event):
+                        metadata = dict(request.metadata)
+                        metadata[_LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY] = True
+                        prepared_batch.append(
+                            (
+                                request_key,
+                                self._prepare_loglikelihood_request(
+                                    replace(request, metadata=metadata)
+                                ),
+                            )
+                        )
+                        if len(prepared_batch) < effective_batch_size:
+                            continue
+                        self._emit_scored_loglikelihood_batch(prepared_batch, put_result)
+                        prepared_batch = []
+
+                    if prepared_batch:
+                        self._emit_scored_loglikelihood_batch(prepared_batch, put_result)
+
+            yield from stream_request_results(
+                items,
+                producer_name=f"{type(self).__name__}.loglikelihood_request_producer",
+                consumer_name=f"{type(self).__name__}.loglikelihood_request_consumer",
+                process_requests=consume_requests,
+                require_non_main_thread=self.request_executor_requires_non_main_thread,
+            )
+
+        return iterator()
 
     # Score longer token sequences first and break ties deterministically.
     def _loglikelihood_request_sort_key(
@@ -886,8 +922,28 @@ class BaseTransformerSession(BaseInferenceSession):
         import torch
 
         scored_chunks: list[LoglikelihoodOutput] = []
+        if not chunks:
+            return scored_chunks
+
+        progress_disabled = bool(
+            chunks[0].metadata.get(_LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY)
+        )
+        score_bar = None
+        if not progress_disabled:
+            progress_title = (
+                loglikelihood_progress_title(chunks[0].metadata) or "loglikelihood: scoring continuations"
+            )
+            total_batches = (len(chunks) + batch_size - 1) // batch_size
+            score_bar = manual_progress(
+                len(chunks),
+                title=progress_title,
+                subtitle=f"batch_size={batch_size}",
+            )
         for start in range(0, len(chunks), batch_size):
             batch = chunks[start : start + batch_size]
+            if score_bar is not None:
+                batch_index = (start // batch_size) + 1
+                score_bar.subtitle(f"batch={batch_index}/{total_batches} batch_size={batch_size}")
             encoded = None
             logits = None
             try:
@@ -930,12 +986,71 @@ class BaseTransformerSession(BaseInferenceSession):
                             metadata=dict(chunk.metadata),
                         )
                     )
+                    if score_bar is not None:
+                        score_bar.next().draw()
             finally:
                 if logits is not None:
                     del logits
                 if encoded is not None:
                     del encoded
         return scored_chunks
+
+    # Reuse the shared chunk scorer for both eager and continuous log-likelihood submission paths.
+    def _score_prepared_loglikelihood_requests(
+        self,
+        prepared_requests: list[tuple[list[int], list[int], dict[str, Any]]],
+        *,
+        batch_size: int,
+    ) -> list[LoglikelihoodOutput]:
+        chunks: list[_ScoringChunk] = []
+        ordered_requests = list(enumerate(prepared_requests))
+        ordered_requests.sort(key=self._loglikelihood_request_sort_key)
+        for request_index, (prefix_ids, target_ids, metadata) in ordered_requests:
+            chunks.extend(
+                self._build_loglikelihood_chunks(
+                    request_index=request_index,
+                    prefix_ids=prefix_ids,
+                    target_ids=target_ids,
+                    metadata=metadata,
+                )
+            )
+
+        chunk_scores = self._score_chunks(chunks, batch_size=batch_size)
+        totals = [
+            LoglikelihoodOutput(
+                logprob=0.0,
+                is_greedy=True,
+                token_count=0,
+                metadata={
+                    key: value
+                    for key, value in metadata.items()
+                    if key != _LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY
+                },
+            )
+            for _prefix_ids, _target_ids, metadata in prepared_requests
+        ]
+        for chunk, chunk_output in zip(chunks, chunk_scores, strict=True):
+            current = totals[chunk.request_index]
+            totals[chunk.request_index] = LoglikelihoodOutput(
+                logprob=current.logprob + chunk_output.logprob,
+                is_greedy=current.is_greedy and chunk_output.is_greedy,
+                token_count=current.token_count + chunk_output.token_count,
+                metadata=current.metadata,
+            )
+        return totals
+
+    # Flush one submitted scoring batch and publish request-level outputs back to the caller.
+    def _emit_scored_loglikelihood_batch(
+        self,
+        prepared_batch: list[tuple[Any, tuple[list[int], list[int], dict[str, Any]]]],
+        put_result: Any,
+    ) -> None:
+        batch_outputs = self._score_prepared_loglikelihood_requests(
+            [prepared_request for _request_key, prepared_request in prepared_batch],
+            batch_size=len(prepared_batch),
+        )
+        for (request_key, _prepared_request), output in zip(prepared_batch, batch_outputs, strict=True):
+            put_result(request_key, output)
 
     # Pick the token used as synthetic left context when a scored request has no explicit prefix.
     def _prefix_token_id(self) -> int:

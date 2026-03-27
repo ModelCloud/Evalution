@@ -32,7 +32,7 @@ class LogiQA2(BaseMultipleChoiceSuite):
     dataset_path: str = "datatune/LogiQA2.0"
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
 
     def dataset_loader(self) -> Any:
         return load_dataset

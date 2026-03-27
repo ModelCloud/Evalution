@@ -502,8 +502,9 @@ class IFEval(BaseTestSuite):
     dataset_path: str = IFEVAL_DATASET_PATH
     dataset_name: str | None = None
     split: str = IFEVAL_SPLIT
-    # IFEval JSON dataset does not expose dataset-config key 'stream', so use non-streaming load.
-    stream: bool = False
+    # Keep streaming enabled by default; the loader translates Evalution's `stream=` kwarg to
+    # Hugging Face's `streaming=` argument at the dataset boundary.
+    stream: bool = True
     max_new_tokens: int = 1280
     do_sample: bool = False
     temperature: float = 0.0

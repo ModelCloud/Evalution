@@ -49,7 +49,7 @@ class Mastermind(BaseMultipleChoiceSuite):
     dataset_path: str = "flair/mastermind_24_mcq_random"
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
     variant: str = "mastermind_24_easy"
 
     def __post_init__(self) -> None:

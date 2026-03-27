@@ -72,7 +72,7 @@ class MultiRC(BaseTestSuite):
     dataset_path: str = MULTIRC_DATASET_PATH
     dataset_name: str | None = MULTIRC_DATASET_NAME
     split: str = MULTIRC_SPLIT
-    stream: bool = False
+    stream: bool = True
     max_new_tokens: int = 64
     do_sample: bool = False
     temperature: float = 0.0
