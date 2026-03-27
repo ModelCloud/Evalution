@@ -292,24 +292,18 @@ def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
         input_device=SimpleNamespace(type="cpu"),
         generation_backend="sglang.generate",
         client=FakeClient(),
-        raw_logits_enabled=True,
     )
 
     output = session.loglikelihood([LoglikelihoodRequest(context="ab", continuation="c")])[0]
 
     assert output.logprob == -0.4
     assert output.is_greedy is False
-    assert output.metadata["raw_logits_enabled"] is True
     assert output.token_count == 1
 
 
 def test_build_sglang_client_uses_python_engine_when_base_url_is_missing(monkeypatch) -> None:
     fake_engine = object()
 
-    monkeypatch.setattr(
-        "evalution.engines.sglang_engine._import_sglang",
-        lambda path: object(),
-    )
     monkeypatch.setattr(
         "evalution.engines.sglang_engine.importlib.import_module",
         lambda name: SimpleNamespace(Engine=lambda **kwargs: fake_engine)

@@ -38,8 +38,6 @@ from evalution.engines.transformers_common import (
     _seed_with_internal_apis,
 )
 
-_DEFAULT_SGLANG_PATH = "/root/projects/GPTQModel/hub/sglang/python"
-
 
 class _SGLangClient(ABC):
     @abstractmethod
@@ -94,7 +92,6 @@ class _LoadedSGLangRuntime:
 class SGLang(_TransformersCommonConfig):
     # SGLang integration stays in-process through `sglang.Engine`; no HTTP server is used.
     base_url: str | None = None
-    sglang_path: str | None = _DEFAULT_SGLANG_PATH
     server_kwargs: dict[str, Any] = field(default_factory=dict)
     sampling_params: dict[str, Any] = field(default_factory=dict)
 
@@ -126,7 +123,6 @@ class SGLangSession(BaseTransformerSession):
         execution.update(
             {
                 "logprob_backend": "sglang.generate",
-                "raw_logits_enabled": self.raw_logits_enabled,
             }
         )
         return execution
@@ -170,8 +166,6 @@ class SGLangSession(BaseTransformerSession):
             for chunk, chunk_output in zip(chunks, chunk_scores, strict=True):
                 current = totals[chunk.request_index]
                 combined_metadata = dict(current.metadata)
-                if chunk_output.metadata.get("raw_logits_enabled"):
-                    combined_metadata["raw_logits_enabled"] = True
                 totals[chunk.request_index] = LoglikelihoodOutput(
                     logprob=current.logprob + chunk_output.logprob,
                     is_greedy=current.is_greedy and chunk_output.is_greedy,
@@ -439,7 +433,6 @@ class SGLangSession(BaseTransformerSession):
                         token_count=chunk.score_count,
                         metadata={
                             **dict(chunk.metadata),
-                            "raw_logits_enabled": bool(requested_logits or token_logits),
                         },
                     )
                 )
@@ -518,7 +511,6 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
     if config.base_url is not None:
         raise ValueError("sglang engine no longer supports server/http mode; use in-process Engine")
 
-    _import_sglang(config.sglang_path)
     engine_module = importlib.import_module("sglang.srt.entrypoints.engine")
     engine_kwargs = {
         **model_config.model_kwargs,
@@ -540,28 +532,6 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
     if model_config.revision is not None:
         engine_kwargs.setdefault("revision", model_config.revision)
     return _SGLangPythonClient(engine=engine_module.Engine(**engine_kwargs))
-
-
-def _import_sglang(sglang_path: str | None) -> Any:
-    try:
-        return importlib.import_module("sglang")
-    except ModuleNotFoundError as exc:
-        if not sglang_path:
-            raise ModuleNotFoundError(
-                "sglang is not importable; install it or configure `sglang_path`"
-            ) from exc
-
-        checkout_path = Path(sglang_path)
-        if not checkout_path.exists():
-            raise ModuleNotFoundError(
-                f"sglang is not importable and the configured checkout path does not exist: {checkout_path}"
-            ) from exc
-
-        checkout_root = str(checkout_path)
-        if checkout_root not in sys.path:
-            sys.path.insert(0, checkout_root)
-
-        return importlib.import_module("sglang")
 
 
 def _resolve_sglang_context_length(client: _SGLangClient, *, tokenizer: Any) -> int | None:
