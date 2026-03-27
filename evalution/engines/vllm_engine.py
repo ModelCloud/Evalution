@@ -45,6 +45,8 @@ _DEFAULT_VLLM_CHECKOUT_CANDIDATES = (
 
 @dataclass(slots=True)
 class VLLM(BaseEngine):
+    """Configure Evalution to run generation and scoring through vLLM."""
+
     # This engine intentionally models vLLM as a first-class Evalution backend
     # instead of routing through GPTQModel or the legacy TransformersCompat path.
     # That lets us preserve vLLM-specific behavior such as request-id based
@@ -67,15 +69,21 @@ class VLLM(BaseEngine):
     resolved_engine: str | None = field(default=None, init=False)
 
     def build(self, model: Model) -> BaseInferenceSession:
+        """Construct a vLLM-backed inference session for the requested model."""
+
         self.resolved_engine = "VLLM"
         return VLLMSession.from_config(self, model)
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize the engine configuration for reporting and YAML output."""
+
         return asdict(self)
 
 
 @dataclass(slots=True)
 class VLLMSession(BaseInferenceSession):
+    """Own one live vLLM runtime plus Evalution-specific request preparation logic."""
+
     config: VLLM
     model_config: Model
     llm: Any
@@ -88,6 +96,8 @@ class VLLMSession(BaseInferenceSession):
 
     @classmethod
     def from_config(cls, config: VLLM, model_config: Model) -> VLLMSession:
+        """Load vLLM, construct the runtime, and attach tokenizers for request preparation."""
+
         vllm_module = _import_vllm(config.vllm_path)
         trust_remote_code = (
             config.trust_remote_code
@@ -140,9 +150,13 @@ class VLLMSession(BaseInferenceSession):
 
     @property
     def batch_size(self) -> int | str:
+        """Expose the configured batch size policy for compatibility with other engines."""
+
         return self.config.batch_size
 
     def describe_execution(self) -> dict[str, Any]:
+        """Report the runtime settings that influence vLLM execution behavior."""
+
         return {
             "generation_backend": "vllm_generate",
             "tensor_parallel_size": self.config.tensor_parallel_size,
@@ -152,6 +166,8 @@ class VLLMSession(BaseInferenceSession):
         }
 
     def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+        """Normalize prompts and input ids before generation reaches the runtime."""
+
         tokenizer = self.prepare_tokenizer or self.tokenizer
         with self._tokenizer_lock:
             prepared: list[GenerationRequest] = []
@@ -180,6 +196,8 @@ class VLLMSession(BaseInferenceSession):
             return prepared
 
     def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
+        """Resolve an explicit or heuristic batch size for the given request set."""
+
         configured_batch_size = _normalize_batch_size(self.config.batch_size)
         if configured_batch_size != _AUTO_BATCH_SIZE:
             return int(configured_batch_size)
@@ -195,6 +213,8 @@ class VLLMSession(BaseInferenceSession):
             *,
             batch_size: int | None = None,
     ) -> list[GenerationOutput]:
+        """Generate completions for a finite request list."""
+
         if not requests:
             return []
 
@@ -224,7 +244,11 @@ class VLLMSession(BaseInferenceSession):
             *,
             batch_size: int | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Yield completions as soon as the runtime finishes each streamed request."""
+
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
+            """Wrap the streaming path so locks are acquired only during iteration."""
+
             request_iter = iter(requests)
             preview_items: list[tuple[Any, GenerationRequest]] = []
             for _ in range(64):
@@ -257,6 +281,8 @@ class VLLMSession(BaseInferenceSession):
             *,
             batch_size: int,
     ) -> list[GenerationOutput]:
+        """Run generation in fixed batches against runtimes without request-level scheduling."""
+
         outputs: list[GenerationOutput] = []
         for start in range(0, len(prepared_requests), batch_size):
             batch = prepared_requests[start: start + batch_size]
@@ -273,6 +299,8 @@ class VLLMSession(BaseInferenceSession):
             *,
             batch_size: int,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Expose blocking generation through the continuous iterator contract."""
+
         # Compat path for runtimes that cannot accept requests incrementally.
         # It still exposes the same iterator interface to Evalution, but it
         # advances in fixed microbatches instead of true slot-by-slot refill.
@@ -303,6 +331,8 @@ class VLLMSession(BaseInferenceSession):
             *,
             batch_size: int,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Drive vLLM's request-level scheduler and refill slots as requests complete."""
+
         request_iter = iter(requests)
         # request_id is the stable join key between Evalution and vLLM. Result
         # order is not guaranteed to match submission order once the runtime can
@@ -312,6 +342,8 @@ class VLLMSession(BaseInferenceSession):
         source_exhausted = False
 
         def submit_one() -> bool:
+            """Prepare and submit one more request when capacity is available."""
+
             nonlocal source_exhausted
             if source_exhausted:
                 return False
@@ -376,6 +408,8 @@ class VLLMSession(BaseInferenceSession):
             request: GenerationRequest,
             result: Any,
     ) -> GenerationOutput:
+        """Convert one vLLM result object into Evalution's generation output shape."""
+
         completion = result.outputs[0] if getattr(result, "outputs", None) else None
         text = "" if completion is None else _truncate_at_stop(completion.text, request.stop).strip()
         metadata = dict(request.metadata)
@@ -395,6 +429,8 @@ class VLLMSession(BaseInferenceSession):
         )
 
     def _supports_request_level_continuous_batching(self) -> bool:
+        """Detect whether the runtime exposes the primitives needed for slot refill."""
+
         llm_engine = getattr(self.llm, "llm_engine", None)
         return (
             llm_engine is not None
@@ -404,6 +440,8 @@ class VLLMSession(BaseInferenceSession):
         )
 
     def _next_continuous_request_id(self) -> str:
+        """Allocate a stable request id used to reconcile out-of-order vLLM results."""
+
         request_id = f"req_{self._continuous_request_counter}"
         self._continuous_request_counter += 1
         return request_id
@@ -414,6 +452,8 @@ class VLLMSession(BaseInferenceSession):
             *,
             batch_size: int | None = None,
     ) -> list[LoglikelihoodOutput]:
+        """Score explicit continuation tokens using vLLM prompt log probabilities."""
+
         if not requests:
             return []
 
@@ -501,6 +541,8 @@ class VLLMSession(BaseInferenceSession):
             *,
             batch_size: int | None = None,
     ) -> list[RollingLoglikelihoodOutput]:
+        """Score long texts by reducing rolling perplexity to ordinary loglikelihood windows."""
+
         if not requests:
             return []
 
@@ -551,6 +593,8 @@ class VLLMSession(BaseInferenceSession):
         return outputs
 
     def gc(self) -> None:
+        """Release reusable vLLM prefix-cache state when the runtime supports it."""
+
         with self._generation_lock:
             reset_prefix_cache = getattr(self.llm, "reset_prefix_cache", None)
             if callable(reset_prefix_cache):
@@ -558,6 +602,8 @@ class VLLMSession(BaseInferenceSession):
                     reset_prefix_cache()
 
     def close(self) -> None:
+        """Shut down vLLM resources and drop tokenizer/runtime references."""
+
         with self._generation_lock:
             llm_engine = getattr(self.llm, "llm_engine", None)
             shutdown = getattr(llm_engine, "shutdown", None)
@@ -577,6 +623,8 @@ class VLLMSession(BaseInferenceSession):
                 del self.prepare_tokenizer
 
     def _render_request_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> str:
+        """Render either a plain prompt or a chat-formatted prompt string."""
+
         if request.messages is not None:
             apply_chat_template = getattr(tokenizer, "apply_chat_template", None)
             if not callable(apply_chat_template):
@@ -591,6 +639,8 @@ class VLLMSession(BaseInferenceSession):
         return request.prompt
 
     def _prompt_from_generation_request(self, request: GenerationRequest) -> dict[str, Any]:
+        """Translate a prepared request into the prompt payload expected by vLLM."""
+
         if request.num_beams != 1:
             raise ValueError("VLLM currently requires num_beams=1")
         if request.input_ids is None:
@@ -601,6 +651,8 @@ class VLLMSession(BaseInferenceSession):
         return prompt
 
     def _sampling_params_for_generation(self, request: GenerationRequest) -> Any:
+        """Build the vLLM sampling-parameter object for one generation request."""
+
         if request.num_beams != 1:
             raise ValueError("VLLM currently requires num_beams=1")
         return self.sampling_params_cls(
@@ -615,6 +667,8 @@ class VLLMSession(BaseInferenceSession):
             self,
             request: LoglikelihoodRequest,
     ) -> tuple[list[int], list[int], dict[str, Any]]:
+        """Convert one loglikelihood request into token ids plus copied metadata."""
+
         tokenizer = self.prepare_tokenizer or self.tokenizer
         if request.context_input_ids is not None:
             prefix_ids = list(request.context_input_ids)
@@ -635,6 +689,8 @@ class VLLMSession(BaseInferenceSession):
         return prefix_ids, target_ids, dict(request.metadata)
 
     def _tokenize_loglikelihood_context(self, text: str) -> list[int]:
+        """Tokenize scoring context while preserving synthetic-prefix behavior when needed."""
+
         tokenizer = self.prepare_tokenizer or self.tokenizer
         tokenizer_kwargs: dict[str, Any] = {}
         prefix_text = self._decoded_prefix_token_text()
@@ -646,6 +702,8 @@ class VLLMSession(BaseInferenceSession):
             self,
             token_list: list[int],
     ) -> Iterator[tuple[list[int], list[int]]]:
+        """Split tokens into the overlapping windows needed for rolling scoring."""
+
         if not token_list:
             return
 
@@ -679,10 +737,14 @@ class VLLMSession(BaseInferenceSession):
             self,
             pair: tuple[list[int], list[int]],
     ) -> tuple[list[int], list[int]]:
+        """Trim an overlapping rolling window into a disjoint scoring pair."""
+
         context_ids, continuation_ids = pair
         return context_ids[: len(context_ids) - (len(continuation_ids) - 1)], continuation_ids
 
     def _prefix_token_id(self) -> int:
+        """Choose a tokenizer token id that can act as a synthetic scoring prefix."""
+
         tokenizer = self.prepare_tokenizer or self.tokenizer
         for token_id in (
                 getattr(tokenizer, "bos_token_id", None),
@@ -696,6 +758,8 @@ class VLLMSession(BaseInferenceSession):
         )
 
     def _decoded_prefix_token_text(self) -> str | None:
+        """Decode the synthetic prefix token when the tokenizer exposes a decode API."""
+
         tokenizer = self.prepare_tokenizer or self.tokenizer
         decode = getattr(tokenizer, "decode", None)
         if not callable(decode):
@@ -711,6 +775,8 @@ class VLLMSession(BaseInferenceSession):
         return None
 
     def _max_scoring_input_length(self) -> int:
+        """Resolve the safest maximum sequence length to use for scoring windows."""
+
         candidate_lengths = [
             self.config.max_model_len,
             getattr(self.prepare_tokenizer or self.tokenizer, "model_max_length", None),
@@ -735,6 +801,8 @@ class VLLMSession(BaseInferenceSession):
         return 2048
 
     def _best_rank_from_prompt_logprob(self, token_logprob: dict[int, Any], token_id: int) -> int | None:
+        """Infer a token rank from raw prompt-logprob scores when vLLM omits rank metadata."""
+
         token_info = token_logprob.get(token_id)
         if token_info is None:
             return None
@@ -749,6 +817,8 @@ class VLLMSession(BaseInferenceSession):
         return None
 
     def _tokenize_text(self, tokenizer: Any, text: str, **kwargs: Any) -> list[int]:
+        """Tokenize text through either encode() or the tokenizer call interface."""
+
         with self._tokenizer_lock:
             encode = getattr(tokenizer, "encode", None)
             if callable(encode):
@@ -764,6 +834,8 @@ class VLLMSession(BaseInferenceSession):
 
 
 def _resolve_vllm_tokenizer_name(model_config: Model) -> str:
+    """Resolve the tokenizer identifier that should be passed into vLLM."""
+
     tokenizer = model_config.tokenizer
     if isinstance(tokenizer, os.PathLike):
         return os.fspath(tokenizer)
@@ -775,6 +847,8 @@ def _resolve_vllm_tokenizer_name(model_config: Model) -> str:
 
 
 def _import_vllm(vllm_path: str | None) -> Any:
+    """Import vLLM, optionally falling back to a nearby local checkout."""
+
     try:
         return importlib.import_module("vllm")
     except ModuleNotFoundError as exc:

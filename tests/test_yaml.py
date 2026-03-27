@@ -834,6 +834,11 @@ tests:
 
 
 def test_python_from_yaml_emits_vllm_name() -> None:
+    """Verify python_from_yaml emits the explicit VLLM engine constructor name."""
+
+    # What this test is actually verifying:
+    # YAML conversion should reference engines.VLLM directly rather than using
+    # eval-based engine lookup when the engine type is VLLM.
     script = evalution.python_from_yaml(
         """
 engine:

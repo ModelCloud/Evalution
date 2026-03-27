@@ -57,6 +57,8 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 
 @dataclass(slots=True)
 class Request:
+    """Represent one queued generation request moving to the consumer thread."""
+
     # Carry one caller-submitted request across the producer-to-consumer queue boundary.
     request_key: Any
     request: GenerationRequest
@@ -64,6 +66,8 @@ class Request:
 
 @dataclass(slots=True)
 class Result:
+    """Represent one completed generation output moving back to the caller thread."""
+
     # Carry one engine-produced output from the consumer thread back to the caller thread.
     request_key: Any
     output: GenerationOutput
@@ -71,6 +75,8 @@ class Result:
 
 @dataclass(slots=True)
 class Error:
+    """Wrap an asynchronous exception so it can cross queue boundaries safely."""
+
     # Preserve asynchronous producer or consumer failures so the public iterator can raise them.
     exc: Exception
 
@@ -82,9 +88,13 @@ _RESULTS_DONE = object()
 
 
 class RequestQueue:
+    """Queue request items and producer-side failures for the consumer thread."""
+
     # Expose queued request pulls to session-side consumers without coupling them to the caller
     # iterable. The queue transports Request items plus one terminal done sentinel or Error.
     def __init__(self) -> None:
+        """Initialize the unbounded queue used by the producer thread."""
+
         # Keep the transport unbounded so the producer thread never blocks the caller on a small
         # queue size; the session-side consumer owns refill and backpressure policy instead.
         self._queue: queue.Queue[object] = queue.Queue()
@@ -92,22 +102,32 @@ class RequestQueue:
 
     @property
     def closed(self) -> bool:
+        """Report whether the producer has already terminated the request stream."""
+
         # Report whether the producer already emitted the terminal done marker or a fatal error.
         return self._closed
 
     def put_request(self, request_key: Any, request: GenerationRequest) -> None:
+        """Enqueue one caller-submitted request for consumer-side processing."""
+
         # Enqueue one caller-submitted generation request for the consumer thread.
         self._queue.put(Request(request_key=request_key, request=request))
 
     def put_error(self, exc: Exception) -> None:
+        """Enqueue a producer-side failure so the public iterator can raise it."""
+
         # Forward a producer-side failure through the same queue so the caller raises it in order.
         self._queue.put(Error(exc=exc))
 
     def close(self) -> None:
+        """Mark that the producer has finished yielding requests."""
+
         # Mark that the producer exhausted its source iterable and no more requests will arrive.
         self._queue.put(_REQUESTS_DONE)
 
     def get(self, *, timeout_s: float | None = None) -> tuple[Any, GenerationRequest] | None:
+        """Fetch the next queued request item, respecting the optional timeout."""
+
         # Poll for the next request item, returning None only when the timeout expires or the
         # queue delivers the terminal done marker.
         try:
@@ -117,6 +137,8 @@ class RequestQueue:
         return self._decode_item(item)
 
     def get_nowait(self) -> tuple[Any, GenerationRequest] | None:
+        """Fetch the next queued request item without blocking."""
+
         # Fast-path non-blocking poll used by consumers that already know work should be ready.
         try:
             item = self._queue.get_nowait()
@@ -130,6 +152,8 @@ class RequestQueue:
         stop_event: threading.Event | None = None,
         poll_timeout_s: float = 0.05,
     ) -> Iterator[tuple[Any, GenerationRequest]]:
+        """Yield requests until the producer closes or the caller requests shutdown."""
+
         # Yield requests until the producer closes the queue or the caller asks the consumer to
         # stop. Timeout polling keeps the stop_event responsive even when the queue is idle.
         while stop_event is None or not stop_event.is_set():
@@ -141,6 +165,8 @@ class RequestQueue:
                 return
 
     def _decode_item(self, item: object) -> tuple[Any, GenerationRequest] | None:
+        """Translate raw queue entries into requests, end-of-stream, or raised errors."""
+
         # Normalize sentinels and failures into either a usable request tuple, None for end of
         # stream, or a raised exception for fatal producer-side errors.
         if item is _REQUESTS_DONE:
@@ -155,6 +181,8 @@ class RequestQueue:
 
 
 def assert_non_main_thread() -> None:
+    """Assert that the current execution context is not the Python main thread."""
+
     # RequestExecutor work must not run on the Python main thread.
     assert threading.current_thread() is not threading.main_thread(), (
         "RequestExecutor must run on a non-main thread"
@@ -178,9 +206,13 @@ def stream_request_results(
     result_poll_timeout_s: float = 0.05,
     require_non_main_thread: bool = True,
 ) -> Iterator[tuple[Any, GenerationOutput]]:
+    """Run producer and consumer work on background threads and yield completed outputs."""
+
     # Bridge a RequestProducer iterable to a RequestConsumer callback by running each side on its
     # own thread and moving Request / Result / Error items across explicit queues.
     def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
+        """Drive the background producer/consumer threads for one iterator instance."""
+
         # Carry caller-submitted requests into the session-side consumer thread.
         request_queue = RequestQueue()
         # Carry finished outputs or fatal consumer failures back to the caller thread.
@@ -189,10 +221,14 @@ def stream_request_results(
         stop_event = threading.Event()
 
         def put_result(request_key: Any, output: GenerationOutput) -> None:
+            """Push one finished output back onto the result queue."""
+
             # Send one completed backend output back to the caller thread in result order.
             result_queue.put(Result(request_key=request_key, output=output))
 
         def run_producer() -> None:
+            """Drain the caller iterable into the request queue."""
+
             # Drain the caller iterable into RequestQueue without blocking backend progress on the
             # caller thread's pacing between next() calls.
             try:
@@ -206,6 +242,8 @@ def stream_request_results(
                 request_queue.close()
 
         def run_consumer() -> None:
+            """Run session-owned request processing on the dedicated consumer thread."""
+
             # Let the engine/session own refill policy and backend execution on a dedicated
             # non-main thread. Engines may do their RequestExecutor work directly inside
             # process_requests() or split it further, but the public contract is the same.
