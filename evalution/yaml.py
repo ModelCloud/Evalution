@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from pprint import pformat
 from typing import Any
@@ -16,12 +18,104 @@ from evalution.config import Model
 from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat, VLLM
 from evalution.runtime import EvaluationRun
 
-_ENGINE_FACTORIES: dict[str, Any] = {
-    "gptqmodel": GPTQModel,
-    "transformers": Transformers,
-    "transformerscompat": TransformersCompat,
-    "vllm": VLLM,
+@dataclass(frozen=True, slots=True)
+class _EngineSpec:
+    """Describe one engine node used by YAML execution, emission, and key inheritance."""
+
+    factory: Any | None = None
+    emit_alias: str | None = None
+    direct_option_keys: frozenset[str] = frozenset()
+    parents: tuple[str, ...] = ()
+
+
+# Keep all engine metadata in one registry so factory lookup, Python emission,
+# and option-key inheritance cannot drift apart across several parallel maps.
+# Order this registry from the most-reused parent nodes down to concrete engines
+# so the dependency graph reads top-down.
+_ENGINE_REGISTRY: dict[str, _EngineSpec] = {
+    "shared": _EngineSpec(
+        direct_option_keys=frozenset(
+            {
+                "dtype",
+                "batch_size",
+                "max_new_tokens",
+                "trust_remote_code",
+                "seed",
+                "padding_side",
+            }
+        )
+    ),
+    "transformers": _EngineSpec(
+        factory=Transformers,
+        emit_alias="Transformers",
+        direct_option_keys=frozenset(
+            {
+                "attn_implementation",
+                "device",
+                "device_map",
+                "manual_eviction",
+                "continuous_batching",
+                "allow_block_sharing",
+                "use_async_batching",
+                "q_padding_interval_size",
+                "kv_padding_interval_size",
+                "max_cached_graphs",
+            }
+        ),
+        parents=("shared",),
+    ),
+    "transformerscompat": _EngineSpec(
+        factory=TransformersCompat,
+        emit_alias="TransformersCompat",
+        direct_option_keys=frozenset(
+            {
+                "attn_implementation",
+                "device",
+                "device_map",
+            }
+        ),
+        parents=("shared",),
+    ),
+    "gptqmodel": _EngineSpec(
+        factory=GPTQModel,
+        emit_alias="GPTQModel",
+        direct_option_keys=frozenset(
+            {
+                "attn_implementation",
+                "device",
+                "device_map",
+                "manual_eviction",
+                "allow_block_sharing",
+                "use_async_batching",
+                "q_padding_interval_size",
+                "kv_padding_interval_size",
+                "max_cached_graphs",
+                "backend",
+                "gptqmodel_path",
+            }
+        ),
+        parents=("shared",),
+    ),
+    "vllm": _EngineSpec(
+        factory=VLLM,
+        emit_alias="VLLM",
+        direct_option_keys=frozenset(
+            {
+                "tokenizer_mode",
+                "tensor_parallel_size",
+                "gpu_memory_utilization",
+                "quantization",
+                "max_model_len",
+                "enforce_eager",
+                "tokenizer_revision",
+                "vllm_path",
+                "llm_kwargs",
+            }
+        ),
+        parents=("shared",),
+    ),
 }
+
 _TEST_FACTORIES: dict[str, Any] = {
     "aexams_biology": benchmarks.aexams_biology,
     "aexams_islamic_studies": benchmarks.aexams_islamic_studies,
@@ -391,21 +485,14 @@ def python_from_yaml(source: str | Path) -> str:
     spec = _load_yaml_spec(source)
     engine_spec = _coerce_named_mapping(spec.get("engine"), label="engine")
     engine_name = _normalize_engine_name(_extract_name(engine_spec, label="engine"))
+    engine_kwargs = _mapping_without_name(engine_spec)
+    _validate_engine_option_keys(engine_name, engine_kwargs)
     model_spec = _coerce_named_mapping(spec.get("model"), label="model")
     test_specs = spec.get("tests")
     if not isinstance(test_specs, list) or not test_specs:
         raise TypeError("tests must be a non-empty list of test suite mappings")
 
-    if engine_name == "transformers":
-        engine_alias = "Transformers"
-    elif engine_name == "gptqmodel":
-        engine_alias = "GPTQModel"
-    elif engine_name == "transformerscompat":
-        engine_alias = "TransformersCompat"
-    elif engine_name == "vllm":
-        engine_alias = "VLLM"
-    else:
-        engine_alias = engine_name
+    engine_alias = _resolve_engine_emit_alias(engine_name)
     model_config = _build_model(model_spec)
     model_kwargs = _build_model_emit_kwargs(model_config)
     lines = [
@@ -414,7 +501,7 @@ def python_from_yaml(source: str | Path) -> str:
         "import evalution.engines as engines",
         "",
         "result = (",
-        f"    {_emit_call(f'engines.{engine_alias}', _mapping_without_name(engine_spec), indent='    ')}",
+        f"    {_emit_call(f'engines.{engine_alias}', engine_kwargs, indent='    ')}",
     ]
     lines.extend(_emit_keyword_call("model", model_kwargs, indent="    "))
     for test_spec in test_specs:
@@ -457,10 +544,10 @@ def _load_yaml_spec(source: str | Path) -> dict[str, Any]:
 def _build_engine(spec: Any) -> BaseEngine:
     mapping = _coerce_named_mapping(spec, label="engine")
     engine_name = _normalize_engine_name(_extract_name(mapping, label="engine"))
-    factory = _ENGINE_FACTORIES.get(engine_name)
-    if factory is None:
-        raise KeyError(f"unknown engine type: {engine_name!r}")
-    return factory(**_mapping_without_name(mapping))
+    engine_kwargs = _mapping_without_name(mapping)
+    _validate_engine_option_keys(engine_name, engine_kwargs)
+    factory = _engine_factory(engine_name)
+    return factory(**engine_kwargs)
 
 
 def _build_model(spec: Any) -> Model:
@@ -499,6 +586,64 @@ def _extract_name(mapping: dict[str, Any], *, label: str) -> str:
 
 def _normalize_engine_name(name: str) -> str:
     return name.strip().lower()
+
+
+def _resolve_engine_emit_alias(engine_name: str) -> str:
+    """Resolve the public Python constructor name used by python_from_yaml."""
+
+    spec = _engine_spec(engine_name)
+    alias = spec.emit_alias
+    if alias is None:
+        raise KeyError(f"missing Python emit alias for engine type: {engine_name!r}")
+    return alias
+
+
+def _engine_spec(engine_name: str) -> _EngineSpec:
+    """Resolve the registered engine spec or raise the standard unknown-engine error."""
+
+    spec = _ENGINE_REGISTRY.get(engine_name)
+    if spec is None:
+        raise KeyError(f"unknown engine type: {engine_name!r}")
+    return spec
+
+
+def _engine_factory(engine_name: str) -> Any:
+    """Resolve the registered engine factory or raise the standard unknown-engine error."""
+
+    factory = _engine_spec(engine_name).factory
+    if factory is None:
+        raise KeyError(f"unknown engine type: {engine_name!r}")
+    return factory
+
+
+@lru_cache(maxsize=None)
+def _engine_option_keys(engine_name: str) -> frozenset[str]:
+    """Resolve the full inherited option-key set for one engine family."""
+
+    spec = _engine_spec(engine_name)
+    resolved = set(spec.direct_option_keys)
+    for parent_name in spec.parents:
+        resolved.update(_engine_option_keys(parent_name))
+    return frozenset(resolved)
+
+
+def _validate_engine_option_keys(engine_name: str, kwargs: dict[str, Any]) -> None:
+    """Reject engine kwargs that do not belong to the selected engine family."""
+
+    allowed_keys = _engine_option_keys(engine_name)
+    if not allowed_keys:
+        return
+
+    unexpected_keys = sorted(key for key in kwargs if key not in allowed_keys)
+    if not unexpected_keys:
+        return
+
+    allowed_list = ", ".join(sorted(allowed_keys))
+    unexpected_list = ", ".join(unexpected_keys)
+    raise KeyError(
+        f"engine {engine_name!r} does not accept option(s): {unexpected_list}; "
+        f"allowed options: {allowed_list}"
+    )
 
 
 def _mapping_without_name(mapping: dict[str, Any]) -> dict[str, Any]:
