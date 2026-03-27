@@ -92,7 +92,21 @@ class _LoadedSGLangRuntime:
 class SGLang(_TransformersCommonConfig):
     # SGLang integration stays in-process through `sglang.Engine`; no HTTP server is used.
     base_url: str | None = None
-    server_kwargs: dict[str, Any] = field(default_factory=dict)
+    batch_size: int | str = "auto"
+    tokenizer_mode: str = "auto"
+    tokenizer_worker_num: int = 1
+    skip_tokenizer_init: bool = False
+    load_format: str = "auto"
+    context_length: int | None = None
+    quantization: str | None = None
+    mem_fraction_static: float | None = None
+    tensor_parallel_size: int = 1
+    data_parallel_size: int = 1
+    pipeline_parallel_size: int = 1
+    attention_backend: str | None = None
+    sampling_backend: str | None = None
+    max_running_requests: int | None = None
+    max_total_tokens: int | None = None
     sampling_params: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseTransformerSession:
@@ -138,7 +152,7 @@ class SGLangSession(BaseTransformerSession):
 
         with self._generation_lock:
             prepared_requests = [self._prepare_loglikelihood_request(request) for request in requests]
-            effective_batch_size = batch_size or self._resolve_scoring_batch_size(prepared_requests)
+            effective_batch_size = batch_size or _normalize_batch_size(self.config.batch_size)
             chunk_groups: list[list[Any]] = [[] for _ in requests]
             ordered_requests = list(enumerate(prepared_requests))
             ordered_requests.sort(key=self._loglikelihood_request_sort_key)
@@ -186,9 +200,7 @@ class SGLangSession(BaseTransformerSession):
             if not preview_items:
                 return
 
-            effective_batch_size = batch_size or self.resolve_batch_size(
-                [request for _, request in preview_items]
-            )
+            effective_batch_size = batch_size or _normalize_batch_size(self.config.batch_size)
             items = chain(preview_items, request_iter)
 
             with self._generation_lock:
@@ -512,16 +524,17 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
         raise ValueError("sglang engine no longer supports server/http mode; use in-process Engine")
 
     engine_module = importlib.import_module("sglang.srt.entrypoints.engine")
-    engine_kwargs = {
-        **model_config.model_kwargs,
-        "model_path": model_config.path,
-        "trust_remote_code": (
+    engine_kwargs = dict()
+    engine_kwargs.update(model_config.model_kwargs)
+    engine_kwargs.setdefault("model_path", model_config.path)
+    engine_kwargs.setdefault(
+        "trust_remote_code",
+        (
             config.trust_remote_code
             if config.trust_remote_code is not None
             else model_config.trust_remote_code
         ),
-        **config.server_kwargs,
-    }
+    )
     tokenizer_source = _resolve_tokenizer_source(model_config)
     if tokenizer_source != model_config.path:
         engine_kwargs.setdefault("tokenizer_path", tokenizer_source)
@@ -529,8 +542,29 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
         engine_kwargs.setdefault("device", config.device)
     if config.dtype is not None:
         engine_kwargs.setdefault("dtype", config.dtype)
+    engine_kwargs.setdefault("tokenizer_mode", config.tokenizer_mode)
+    engine_kwargs.setdefault("tokenizer_worker_num", config.tokenizer_worker_num)
+    engine_kwargs.setdefault("skip_tokenizer_init", config.skip_tokenizer_init)
+    engine_kwargs.setdefault("load_format", config.load_format)
+    engine_kwargs.setdefault("tp_size", config.tensor_parallel_size)
+    engine_kwargs.setdefault("dp_size", config.data_parallel_size)
+    engine_kwargs.setdefault("pp_size", config.pipeline_parallel_size)
     if model_config.revision is not None:
         engine_kwargs.setdefault("revision", model_config.revision)
+    if config.context_length is not None:
+        engine_kwargs.setdefault("context_length", config.context_length)
+    if config.quantization is not None:
+        engine_kwargs.setdefault("quantization", config.quantization)
+    if config.mem_fraction_static is not None:
+        engine_kwargs.setdefault("mem_fraction_static", config.mem_fraction_static)
+    if config.attention_backend is not None:
+        engine_kwargs.setdefault("attention_backend", config.attention_backend)
+    if config.sampling_backend is not None:
+        engine_kwargs.setdefault("sampling_backend", config.sampling_backend)
+    if config.max_running_requests is not None:
+        engine_kwargs.setdefault("max_running_requests", config.max_running_requests)
+    if config.max_total_tokens is not None:
+        engine_kwargs.setdefault("max_total_tokens", config.max_total_tokens)
     return _SGLangPythonClient(engine=engine_module.Engine(**engine_kwargs))
 
 
