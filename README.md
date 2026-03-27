@@ -18,7 +18,7 @@ pip install .
 
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 The package also depends on `tokenicer` for tokenizer loading and normalization.
-Optional backends include `vllm` for paged runtime execution and `gptqmodel` for GPTQ-native
+Optional backends include `vllm` and `sglang` for paged runtime execution and `gptqmodel` for GPTQ-native
 loading.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
@@ -155,6 +155,10 @@ evalution emit-python evalution.yaml
 `gpu_memory_utilization`, `max_model_len`, `quantization`, `tokenizer_mode`, and
 `enforce_eager`.
 
+`engines.SGLang(...)` accepts SGLang runtime options such as `tp_size`,
+`mem_fraction_static`, `context_length`, `quantization`, `attention_backend`, `sampling_backend`, `tokenizer_mode`,
+and `max_running_requests`.
+
 Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`,
 `order`, and scorer-specific options like `label_permutations` can be set directly on each benchmark
 call or in each YAML `tests` entry.
@@ -263,6 +267,47 @@ result = (
     .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
     .run(benchmarks.arc_challenge(max_rows=128))
 )
+```
+
+YAML:
+
+```yaml
+engine:
+  type: VLLM
+  batch_size: 16
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.8
+  enforce_eager: true
+
+model:
+  path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
+
+tests:
+  - type: arc_challenge
+    max_rows: 128
+```
+
+Use `engines.SGLang()` in Python or `engine.type: SGLang` in YAML when you want the SGLang runtime.
+Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
+`loglikelihood_rolling(...)` through the same shared engine contract. The current sglang backend
+expects `num_beams=1`.
+
+Python:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+if __name__ == '__main__':
+    result = (
+        engines.SGLang(
+            batch_size=16,
+            mem_fraction_static=0.8,
+        )
+        .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
+        .run(benchmarks.arc_challenge(max_rows=128))
+    )
 ```
 
 YAML:

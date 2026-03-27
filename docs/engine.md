@@ -118,6 +118,7 @@ Evalution ships three Hugging Face-compatible engines:
 - `engines.Transformers()`: the modern backend
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
+- `engines.SGLang()`: the in-process SGLang runtime backend
 - `engines.VLLM()`: the vLLM runtime backend
 
 The preferred import shape is:
@@ -146,6 +147,10 @@ suites or on `close()`.
 the same shared generation, scoring, and paged continuous-batching path as the built-in
 transformer engines when the loaded quantized model exposes the required HF hooks. It also
 surfaces the resolved quantized runtime backend in execution metadata.
+
+`engines.SGLang()` loads the runtime through `sglang.Engine(...)`, keeps generation and
+log-likelihood execution fully in process, and normalizes SGLang's generation and prompt-logprob
+responses into Evalution's shared output objects. 
 
 `engines.VLLM()` loads the runtime through `vllm.LLM(...)`, keeps a tokenizer for prompt rendering
 and scoring prep, and implements generation plus both log-likelihood APIs through vLLM-native
