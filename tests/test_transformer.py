@@ -2037,8 +2037,6 @@ def test_transformer_session_loglikelihood_continuous_with_explicit_batch_size_l
     assert next(iterator)[0] == 0
     assert produced_count["value"] <= 4
     iterator.close()
-
-
 def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None:
     class FakeTokenizer:
         pad_token_id = 0

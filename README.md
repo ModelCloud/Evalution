@@ -18,6 +18,8 @@ pip install .
 
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 The package also depends on `tokenicer` for tokenizer loading and normalization.
+Optional backends include `vllm` for paged runtime execution and `gptqmodel` for GPTQ-native
+loading.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
 Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
@@ -149,6 +151,10 @@ evalution emit-python evalution.yaml
 `engines.Transformers(...)` accepts runtime options such as `dtype`, `device`, `batch_size`,
 `attn_implementation`, and `max_new_tokens`.
 
+`engines.VLLM(...)` accepts vLLM runtime options such as `tensor_parallel_size`,
+`gpu_memory_utilization`, `max_model_len`, `quantization`, `tokenizer_mode`, and
+`enforce_eager`.
+
 Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`,
 `order`, and scorer-specific options like `label_permutations` can be set directly on each benchmark
 call or in each YAML `tests` entry.
@@ -235,7 +241,49 @@ tests:
 Use `engines.TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you
 want the compatibility engine explicitly.
 
-`Tokenicer` is used to load tokenizers for the transformer and transformer-compat engines. When
+Use `engines.VLLM()` in Python or `engine.type: VLLM` in YAML when you want the vLLM runtime.
+Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
+`loglikelihood_rolling(...)` through the same shared engine contract. The current vLLM backend
+expects `num_beams=1`.
+
+Python:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.VLLM(
+        batch_size=16,
+        tensor_parallel_size=1,
+        gpu_memory_utilization=0.8,
+        enforce_eager=True,
+    )
+    .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
+    .run(benchmarks.arc_challenge(max_rows=128))
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: VLLM
+  batch_size: 16
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.8
+  enforce_eager: true
+
+model:
+  path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
+
+tests:
+  - type: arc_challenge
+    max_rows: 128
+```
+
+`Tokenicer` is used to load tokenizers for the transformer, transformer-compat, and vLLM engines. When
 `engine.model(...)` is called with a model config, Evalution resolves tokenizer loading in this order:
 `tokenizer` (preinitialized object), `tokenizer_path`, then `path`.
 `Tokenicer` also applies its normalization stage so pad/eos/bos token IDs are corrected before evaluation.

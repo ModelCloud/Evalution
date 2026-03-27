@@ -67,7 +67,11 @@ def test_cli_run_executes_yaml_and_prints_json(monkeypatch, tmp_path, capsys) ->
     )
     gsm8k_module = __import__("evalution.benchmarks.gsm8k_platinum", fromlist=["load_dataset"])
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
-    monkeypatch.setitem(evalution_yaml._ENGINE_FACTORIES, "fake", FakeEngine)
+    monkeypatch.setitem(
+        evalution_yaml._ENGINE_REGISTRY,
+        "fake",
+        evalution_yaml._EngineSpec(factory=FakeEngine, emit_alias="FakeEngine"),
+    )
 
     spec = tmp_path / "evalution.yaml"
     spec.write_text(
@@ -134,7 +138,11 @@ def test_cli_run_can_write_json_to_output_file(monkeypatch, tmp_path) -> None:
     )
     gsm8k_module = __import__("evalution.benchmarks.gsm8k_platinum", fromlist=["load_dataset"])
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
-    monkeypatch.setitem(evalution_yaml._ENGINE_FACTORIES, "fake", FakeEngine)
+    monkeypatch.setitem(
+        evalution_yaml._ENGINE_REGISTRY,
+        "fake",
+        evalution_yaml._EngineSpec(factory=FakeEngine, emit_alias="FakeEngine"),
+    )
 
     spec = tmp_path / "evalution.yaml"
     spec.write_text(
