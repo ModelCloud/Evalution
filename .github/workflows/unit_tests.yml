@@ -48,7 +48,9 @@ jobs:
       - name: Activate uv env
         run: |
           env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
-          /opt/uv/setup_uv_venv.sh $env_name
+          echo "env_name=$env_name"
+          source /opt/uv/setup_uv_venv.sh $env_name
+          python -VV
 
       - name: Setup uv env
         run: |
