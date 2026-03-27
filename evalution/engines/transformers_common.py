@@ -12,6 +12,7 @@ import threading
 from contextlib import contextmanager, suppress
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field, replace
+from itertools import chain, islice
 from statistics import mean
 from typing import Any
 
@@ -30,6 +31,7 @@ from evalution.engines.base import (
     RollingLoglikelihoodOutput,
     RollingLoglikelihoodRequest,
 )
+from evalution.engines.continuous import stream_request_results
 from evalution.engines.memory import build_memory_profile, gib_to_bytes, resolve_dtype
 from evalution.logbar import get_logger
 
@@ -267,7 +269,9 @@ class BaseTransformerSession(BaseInferenceSession):
             )
         return outputs
 
-    # Emulate continuous refill on top of fixed batches so suite execution code can stay unchanged.
+    # Feed fixed-batch engines through shared request/result queues so the caller acts as the
+    # RequestProducer, this session owns the RequestConsumer loop, and user-visible yields stay
+    # decoupled from backend work while suites keep one continuous API.
     def generate_continuous(
         self,
         requests: Any,
@@ -275,23 +279,46 @@ class BaseTransformerSession(BaseInferenceSession):
         batch_size: int | None = None,
     ) -> Any:
         def iterator() -> Any:
-            request_items = list(requests)
-            if not request_items:
+            request_iter = iter(requests)
+            preview_items = list(islice(request_iter, 64))
+            if not preview_items:
                 return
 
             effective_batch_size = batch_size or self.resolve_batch_size(
-                [request for _, request in request_items]
+                [request for _, request in preview_items]
             )
-            with self._generation_lock:
-                with self._state_lock:
-                    standard_batch_size_cap = self.standard_batch_size_cap
-                if standard_batch_size_cap is not None:
-                    effective_batch_size = min(effective_batch_size, standard_batch_size_cap)
-                self._log_generation_execution()
-                yield from self._generate_standard_continuous(
-                    request_items,
-                    batch_size=effective_batch_size,
-                )
+            items = chain(preview_items, request_iter)
+
+            # This session is the RequestConsumer here: it drains RequestQueue, batches items, and
+            # executes them through the standard fixed-batch backend before sending Result items
+            # back to the caller thread.
+            def consume_requests(
+                stop_event: threading.Event,
+                request_queue: Any,
+                put_result: Any,
+            ) -> None:
+                with self._generation_lock:
+                    with self._state_lock:
+                        standard_batch_size_cap = self.standard_batch_size_cap
+                    if standard_batch_size_cap is not None:
+                        capped_batch_size = min(effective_batch_size, standard_batch_size_cap)
+                    else:
+                        capped_batch_size = effective_batch_size
+                    self._log_generation_execution()
+                    for request_key, output in self._generate_standard_continuous(
+                        request_queue.iter_requests(stop_event=stop_event),
+                        batch_size=capped_batch_size,
+                        stop_event=stop_event,
+                    ):
+                        put_result(request_key, output)
+
+            yield from stream_request_results(
+                items,
+                producer_name=f"{type(self).__name__}.request_producer",
+                consumer_name=f"{type(self).__name__}.request_consumer",
+                process_requests=consume_requests,
+                require_non_main_thread=self.request_executor_requires_non_main_thread,
+            )
 
         return iterator()
 
@@ -622,24 +649,35 @@ class BaseTransformerSession(BaseInferenceSession):
         requests: Any,
         *,
         batch_size: int,
+        stop_event: threading.Event | None = None,
     ) -> Any:
         batch: list[tuple[Any, GenerationRequest]] = []
         for item in requests:
+            if stop_event is not None and stop_event.is_set():
+                return
             batch.append(item)
             if len(batch) == batch_size:
+                if stop_event is not None and stop_event.is_set():
+                    return
                 outputs = self._generate_standard(
                     [request for _, request in batch],
                     batch_size=len(batch),
                 )
                 for (request_key, _request), output in zip(batch, outputs, strict=True):
+                    if stop_event is not None and stop_event.is_set():
+                        return
                     yield request_key, output
                 batch = []
         if batch:
+            if stop_event is not None and stop_event.is_set():
+                return
             outputs = self._generate_standard(
                 [request for _, request in batch],
                 batch_size=len(batch),
             )
             for (request_key, _request), output in zip(batch, outputs, strict=True):
+                if stop_event is not None and stop_event.is_set():
+                    return
                 yield request_key, output
 
     # Build the per-batch generation kwargs shared by both transformer engines.

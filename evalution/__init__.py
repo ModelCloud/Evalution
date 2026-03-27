@@ -5,11 +5,9 @@
 
 """Evalution package."""
 
-from contextlib import redirect_stdout
 import sys
+from contextlib import redirect_stdout
 
-from . import benchmarks
-from . import engines
 from evalution._banner import ASCII_LOGO, get_startup_banner
 from evalution.compare import CompareRun, compare, run_compare
 from evalution.config import Model
@@ -20,6 +18,7 @@ from evalution.engines import (
     SGLang,
     Transformers,
     TransformersCompat,
+    VLLM,
 )
 from evalution.logbar import get_logger
 from evalution.results import (
@@ -33,6 +32,8 @@ from evalution.results import (
 from evalution.runtime import EvaluationRun, run
 from evalution.version import __version__
 from evalution.yaml import python_from_yaml, run_yaml
+from . import benchmarks
+from . import engines
 
 __all__ = [
     "BaseEngine",
@@ -50,6 +51,7 @@ __all__ = [
     "TestResult",
     "Transformers",
     "TransformersCompat",
+    "VLLM",
     "benchmarks",
     "compare",
     "engines",

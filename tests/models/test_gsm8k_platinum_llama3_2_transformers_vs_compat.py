@@ -63,7 +63,7 @@ def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
 
         result = (
             engine
-            .model(evalution.Model(path=model_path))
+            .model(path=model_path)
             .run(evalution.benchmarks.gsm8k_platinum(**suite_kwargs))
             .result()
         )

@@ -8,6 +8,7 @@ from .gptqmodel_engine import GPTQModel
 from .sglang_engine import SGLang
 from .transformers import Transformers
 from .transformers_compat import TransformersCompat
+from .vllm_engine import VLLM
 
 __all__ = [
     "BaseEngine",
@@ -16,4 +17,5 @@ __all__ = [
     "SGLang",
     "Transformers",
     "TransformersCompat",
+    "VLLM",
 ]

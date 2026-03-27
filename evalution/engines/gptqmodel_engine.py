@@ -86,7 +86,8 @@ class GPTQModel(_TransformersCommonConfig):
 
 @dataclass(slots=True)
 class GPTQModelSession(TransformersSession):
-    # Keep the GPTQModel wrapper alive so quantized kernels and metadata outlive the inner HF model.
+    # Keep the GPTQModel wrapper alive so quantized kernels and metadata outlive the inner HF
+    # model, while inheriting the shared queued request/result path from TransformersSession.
     model_wrapper: Any | None = field(default=None, repr=False)
     resolved_backend: str | None = None
     quant_method: str | None = None

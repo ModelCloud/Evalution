@@ -831,3 +831,26 @@ tests:
 
     assert "engines.GPTQModel(" in script
     assert "eval(engines." not in script
+
+
+def test_python_from_yaml_emits_vllm_name() -> None:
+    """Verify python_from_yaml emits the explicit VLLM engine constructor name."""
+
+    # What this test is actually verifying:
+    # YAML conversion should reference engines.VLLM directly rather than using
+    # eval-based engine lookup when the engine type is VLLM.
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: VLLM
+  tensor_parallel_size: 2
+model:
+  path: /tmp/model
+tests:
+  - type: gsm8k_platinum
+    max_rows: 8
+"""
+    )
+
+    assert "engines.VLLM(" in script
+    assert "eval(engines." not in script

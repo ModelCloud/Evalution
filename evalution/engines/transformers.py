@@ -17,6 +17,7 @@ from typing import Any
 
 from evalution.config import Model
 from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.engines.continuous import stream_request_results
 from evalution.engines.transformers_common import (
     BaseTransformerSession,
     _TransformersCommonConfig,
@@ -242,7 +243,9 @@ class TransformersSession(BaseTransformerSession):
                     return self._generate_standard(requests, batch_size=fallback_batch_size)
             return self._generate_standard(requests, batch_size=effective_batch_size)
 
-    # Keep the suite-level continuous request stream on the paged manager while the backend remains healthy.
+    # Drive the paged manager through shared request/result queues so the caller acts as the
+    # RequestProducer, this session owns the RequestConsumer loop, and caller iteration never
+    # stalls paged-manager refill.
     def generate_continuous(
         self,
         requests: Iterable[tuple[Any, GenerationRequest]],
@@ -260,22 +263,50 @@ class TransformersSession(BaseTransformerSession):
             )
             items = chain(preview_items, request_iter)
 
-            with self._generation_lock:
-                with self._state_lock:
-                    paged_attention_enabled = self.paged_attention_enabled
-                    standard_batch_size_cap = self.standard_batch_size_cap
-                if not paged_attention_enabled and standard_batch_size_cap is not None:
-                    effective_batch_size = min(effective_batch_size, standard_batch_size_cap)
-                self._log_generation_execution()
-                if paged_attention_enabled:
-                    try:
-                        yield from self._generate_paged_continuous(items, batch_size=effective_batch_size)
-                        return
-                    except Exception as exc:
-                        fallback_batch_size = _fallback_batch_size(effective_batch_size)
-                        self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
-                        effective_batch_size = fallback_batch_size
-                yield from self._generate_standard_continuous(items, batch_size=effective_batch_size)
+            # This session is the RequestConsumer here: it keeps the paged backend full when
+            # possible, falls back to the standard executor on paged failure, and sends Result
+            # items back to the caller thread.
+            def consume_requests(
+                stop_event: threading.Event,
+                request_queue: Any,
+                put_result: Any,
+            ) -> None:
+                with self._generation_lock:
+                    with self._state_lock:
+                        paged_attention_enabled = self.paged_attention_enabled
+                        standard_batch_size_cap = self.standard_batch_size_cap
+                    if not paged_attention_enabled and standard_batch_size_cap is not None:
+                        worker_batch_size = min(effective_batch_size, standard_batch_size_cap)
+                    else:
+                        worker_batch_size = effective_batch_size
+                    self._log_generation_execution()
+                    if paged_attention_enabled:
+                        try:
+                            for request_key, output in self._generate_paged_continuous(
+                                request_queue.iter_requests(stop_event=stop_event),
+                                batch_size=worker_batch_size,
+                                stop_event=stop_event,
+                            ):
+                                put_result(request_key, output)
+                            return
+                        except Exception as exc:
+                            fallback_batch_size = _fallback_batch_size(worker_batch_size)
+                            self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
+                            worker_batch_size = fallback_batch_size
+                    for request_key, output in self._generate_standard_continuous(
+                        request_queue.iter_requests(stop_event=stop_event),
+                        batch_size=worker_batch_size,
+                        stop_event=stop_event,
+                    ):
+                        put_result(request_key, output)
+
+            yield from stream_request_results(
+                items,
+                producer_name=f"{type(self).__name__}.request_producer",
+                consumer_name=f"{type(self).__name__}.request_consumer",
+                process_requests=consume_requests,
+                require_non_main_thread=self.request_executor_requires_non_main_thread,
+            )
 
         return iterator()
 
@@ -325,6 +356,7 @@ class TransformersSession(BaseTransformerSession):
         requests: Iterable[tuple[Any, GenerationRequest]],
         *,
         batch_size: int,
+        stop_event: threading.Event | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
         request_iter = iter(requests)
         inflight_requests: dict[str, tuple[Any, str, list[str], dict[str, Any]]] = {}
@@ -335,6 +367,9 @@ class TransformersSession(BaseTransformerSession):
         def submit_one() -> bool:
             nonlocal source_exhausted
             nonlocal expected_signature
+            if stop_event is not None and stop_event.is_set():
+                source_exhausted = True
+                return False
             if source_exhausted:
                 return False
             try:
@@ -387,6 +422,9 @@ class TransformersSession(BaseTransformerSession):
             continue
 
         while inflight_requests:
+            if stop_event is not None and stop_event.is_set():
+                self._stop_continuous_batching_manager()
+                return
             request_output = manager.get_result(timeout=0.1)
             if request_output is None:
                 if not manager.is_running():
