@@ -6,13 +6,15 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 import importlib
 import queue
 import sys
 import threading
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, field
+from contextlib import suppress
+from dataclasses import dataclass, field, replace
 from itertools import chain, islice
 from pathlib import Path
 from types import SimpleNamespace
@@ -20,16 +22,20 @@ from typing import Any
 
 from evalution.config import Model
 from evalution.engines.base import (
+    BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
     LoglikelihoodOutput,
     LoglikelihoodRequest,
+    RollingLoglikelihoodOutput,
+    RollingLoglikelihoodRequest,
 )
 from evalution.engines.transformers_common import (
-    BaseTransformerSession,
     _AUTO_BATCH_SIZE,
+    _ScoringChunk,
     _TransformersCommonConfig,
     _clone_prepare_tokenizer,
+    _friendly_batch_size,
     _load_tokenizer_from_model,
     _normalize_batch_size,
     _normalize_tokenizer_special_tokens,
@@ -37,6 +43,7 @@ from evalution.engines.transformers_common import (
     _seed_transformer_runtime,
     _seed_with_internal_apis,
 )
+from evalution.logbar import get_logger
 
 
 class _SGLangClient(ABC):
@@ -91,6 +98,8 @@ class _LoadedSGLangRuntime:
 @dataclass(slots=True)
 class SGLang(_TransformersCommonConfig):
     # SGLang integration stays in-process through `sglang.Engine`; no HTTP server is used.
+    # Keep the common SGLang Engine knobs as top-level fields so callers can configure
+    # them the same way they configure VLLM, instead of building a nested args dict.
     base_url: str | None = None
     batch_size: int | str = "auto"
     tokenizer_mode: str = "auto"
@@ -109,14 +118,36 @@ class SGLang(_TransformersCommonConfig):
     max_total_tokens: int | None = None
     sampling_params: dict[str, Any] = field(default_factory=dict)
 
-    def build(self, model: Model) -> BaseTransformerSession:
+    def build(self, model: Model) -> BaseInferenceSession:
         self.resolved_engine = "SGLang"
         return SGLangSession.from_config(self, model)
 
 
 @dataclass(slots=True)
-class SGLangSession(BaseTransformerSession):
+class SGLangSession(BaseInferenceSession):
+    config: SGLang
+    model_config: Model
+    model: Any
+    tokenizer: Any
+    input_device: Any
+    prepare_tokenizer: Any | None = None
+    requested_attn_implementation: str | None = None
+    effective_attn_implementation: str | None = None
+    paged_attention_enabled: bool = False
+    generation_backend: str = "sglang.generate"
+    standard_batch_size_cap: int | None = None
+    stop_criteria_cache: dict[tuple[str, ...], Any] = field(default_factory=dict, repr=False)
+    auto_batch_size_cache: dict[tuple[Any, ...], int] = field(default_factory=dict, repr=False)
+    execution_logged: bool = field(default=False, repr=False)
     client: _SGLangClient | None = field(default=None, repr=False)
+    _generation_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _state_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _tokenizer_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _prepare_tokenizer_lock: threading.RLock = field(
+        default_factory=threading.RLock,
+        init=False,
+        repr=False,
+    )
 
     @classmethod
     def from_config(cls, config: SGLang, model_config: Model) -> SGLangSession:
@@ -132,14 +163,40 @@ class SGLangSession(BaseTransformerSession):
             client=runtime.client,
         )
 
+    @property
+    def batch_size(self) -> int | str:
+        return self.config.batch_size
+
     def describe_execution(self) -> dict[str, Any]:
-        execution = super(SGLangSession, self).describe_execution()
-        execution.update(
-            {
+        with self._state_lock:
+            return {
+                "requested_attn_implementation": self.requested_attn_implementation,
+                "effective_attn_implementation": self.effective_attn_implementation,
+                "paged_attention": self.paged_attention_enabled,
+                "generation_backend": self.generation_backend,
                 "logprob_backend": "sglang.generate",
+                "standard_batch_size_cap": self.standard_batch_size_cap,
             }
-        )
-        return execution
+
+    def generate(
+        self,
+        requests: list[GenerationRequest],
+        *,
+        batch_size: int | None = None,
+    ) -> list[GenerationOutput]:
+        """Generate completions for a fixed request list through the in-process SGLang runtime."""
+
+        if not requests:
+            return []
+
+        with self._generation_lock:
+            effective_batch_size = batch_size or self.resolve_batch_size(requests)
+            with self._state_lock:
+                standard_batch_size_cap = self.standard_batch_size_cap
+            if standard_batch_size_cap is not None:
+                effective_batch_size = min(effective_batch_size, standard_batch_size_cap)
+            self._log_generation_execution()
+            return self._generate_standard(requests, batch_size=effective_batch_size)
 
     def loglikelihood(
         self,
@@ -147,6 +204,8 @@ class SGLangSession(BaseTransformerSession):
         *,
         batch_size: int | None = None,
     ) -> list[LoglikelihoodOutput]:
+        """Score continuation logprobs using SGLang's prompt-logprob metadata."""
+
         if not requests:
             return []
 
@@ -194,6 +253,8 @@ class SGLangSession(BaseTransformerSession):
         *,
         batch_size: int | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Yield completions in finish order while keeping SGLang work in process."""
+
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
             request_iter = iter(requests)
             preview_items = list(islice(request_iter, 64))
@@ -215,6 +276,365 @@ class SGLangSession(BaseTransformerSession):
                 )
 
         return iterator()
+
+    def loglikelihood_rolling(
+        self,
+        requests: list[RollingLoglikelihoodRequest],
+        *,
+        batch_size: int | None = None,
+    ) -> list[RollingLoglikelihoodOutput]:
+        """Score full text spans token by token via the shared rolling-loglikelihood path."""
+
+        if not requests:
+            return []
+
+        scoring_requests: list[LoglikelihoodRequest] = []
+        request_window_counts: list[int] = []
+        with self._tokenizer_lock:
+            for request in requests:
+                token_list = (
+                    list(request.input_ids)
+                    if request.input_ids is not None
+                    else self._tokenize_loglikelihood_context(request.text)
+                )
+                windows = list(self._rolling_loglikelihood_windows(token_list))
+                request_window_counts.append(len(windows))
+                for context_ids, continuation_ids in windows:
+                    scoring_requests.append(
+                        LoglikelihoodRequest(
+                            context_input_ids=context_ids,
+                            continuation_input_ids=continuation_ids,
+                            metadata=dict(request.metadata),
+                        )
+                    )
+
+        scored = self.loglikelihood(scoring_requests, batch_size=batch_size)
+        outputs: list[RollingLoglikelihoodOutput] = []
+        cursor = 0
+        for request, window_count in zip(requests, request_window_counts, strict=True):
+            if window_count == 0:
+                outputs.append(
+                    RollingLoglikelihoodOutput(
+                        logprob=0.0,
+                        token_count=0,
+                        metadata=dict(request.metadata),
+                    )
+                )
+                continue
+
+            request_outputs = scored[cursor : cursor + window_count]
+            cursor += window_count
+            outputs.append(
+                RollingLoglikelihoodOutput(
+                    logprob=sum(output.logprob for output in request_outputs),
+                    token_count=sum(output.token_count for output in request_outputs),
+                    metadata=dict(request.metadata),
+                )
+            )
+        return outputs
+
+    def close(self) -> None:
+        try:
+            with self._generation_lock:
+                with self._prepare_tokenizer_lock:
+                    with self._tokenizer_lock:
+                        with self._state_lock:
+                            self.stop_criteria_cache.clear()
+                            self.auto_batch_size_cache.clear()
+                            with suppress(Exception):
+                                del self.model
+                            with suppress(Exception):
+                                del self.tokenizer
+                            with suppress(Exception):
+                                del self.prepare_tokenizer
+            self.gc()
+        finally:
+            if self.client is not None:
+                self.client.close()
+
+    def gc(self) -> None:
+        with self._generation_lock:
+            with self._state_lock:
+                self.stop_criteria_cache.clear()
+                self.auto_batch_size_cache.clear()
+                self.execution_logged = False
+        gc.collect()
+        with suppress(Exception):
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                ipc_collect = getattr(torch.cuda, "ipc_collect", None)
+                if callable(ipc_collect):
+                    ipc_collect()
+        if self.client is not None:
+            self.client.gc()
+
+    def _render_request(self, request: GenerationRequest) -> str:
+        if request.rendered_prompt is not None:
+            return request.rendered_prompt
+        return self._render_request_with_tokenizer(self.tokenizer, request)
+
+    def _render_request_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> str:
+        if request.messages is not None:
+            return tokenizer.apply_chat_template(
+                request.messages,
+                tokenize=False,
+                add_generation_prompt=request.add_generation_prompt,
+            )
+        if request.prompt is None:
+            raise ValueError("generation requests must define either `prompt` or `messages`")
+        return request.prompt
+
+    def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+        tokenizer = self.prepare_tokenizer or self.tokenizer
+        tokenizer_lock = self._lock_for_tokenizer(tokenizer)
+        with tokenizer_lock:
+            prepared: list[GenerationRequest] = list(requests)
+            missing_indexes: list[int] = []
+            missing_prompts: list[str] = []
+
+            for index, request in enumerate(prepared):
+                if request.rendered_prompt is not None and request.input_ids is not None:
+                    continue
+                missing_indexes.append(index)
+                missing_prompts.append(
+                    request.rendered_prompt
+                    if request.rendered_prompt is not None
+                    else self._render_request_with_tokenizer(tokenizer, request)
+                )
+
+            if not missing_indexes:
+                return prepared
+
+            encoded = tokenizer(
+                missing_prompts,
+                add_special_tokens=False,
+                padding=False,
+            )["input_ids"]
+            for index, rendered_prompt, input_ids in zip(
+                missing_indexes,
+                missing_prompts,
+                encoded,
+                strict=True,
+            ):
+                prepared[index] = replace(
+                    prepared[index],
+                    rendered_prompt=rendered_prompt,
+                    input_ids=list(input_ids),
+                )
+            del encoded
+            return prepared
+
+    def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
+        configured_batch_size = _normalize_batch_size(self.config.batch_size)
+        if configured_batch_size != _AUTO_BATCH_SIZE:
+            return int(configured_batch_size)
+        return min(len(requests) or 1, _friendly_batch_size(len(requests) or 1))
+
+    def _prepare_loglikelihood_request(
+        self,
+        request: LoglikelihoodRequest,
+    ) -> tuple[list[int], list[int], dict[str, Any]]:
+        with self._tokenizer_lock:
+            if request.context_input_ids is not None:
+                prefix_ids = list(request.context_input_ids)
+            elif request.context:
+                prefix_ids = self._tokenize_loglikelihood_context(request.context)
+            else:
+                prefix_ids = []
+
+            if request.continuation_input_ids is not None:
+                target_ids = list(request.continuation_input_ids)
+            elif request.continuation:
+                target_ids = self.tokenizer(
+                    request.continuation,
+                    add_special_tokens=False,
+                )["input_ids"]
+            else:
+                target_ids = []
+
+        if not target_ids:
+            raise ValueError("loglikelihood requests must provide a non-empty continuation")
+        return list(prefix_ids), list(target_ids), dict(request.metadata)
+
+    def _loglikelihood_request_sort_key(
+        self,
+        item: tuple[int, tuple[list[int], list[int], dict[str, Any]]],
+    ) -> tuple[int, tuple[int, ...]]:
+        _request_index, (prefix_ids, target_ids, _metadata) = item
+        combined = tuple(prefix_ids + target_ids)
+        return (-len(combined), combined)
+
+    def _tokenize_loglikelihood_context(self, text: str) -> list[int]:
+        tokenizer_kwargs: dict[str, Any] = {}
+        prefix_text = self._decoded_prefix_token_text()
+        if prefix_text and text.startswith(prefix_text):
+            tokenizer_kwargs["add_special_tokens"] = False
+        return list(self.tokenizer(text, **tokenizer_kwargs)["input_ids"])
+
+    def _resolve_scoring_batch_size(
+        self,
+        requests: list[tuple[list[int], list[int], dict[str, Any]]],
+    ) -> int:
+        batch_requests = [
+            GenerationRequest(
+                rendered_prompt="",
+                input_ids=prefix_ids + target_ids,
+                max_new_tokens=0,
+            )
+            for prefix_ids, target_ids, _metadata in requests
+        ]
+        return self.resolve_batch_size(batch_requests)
+
+    def _build_loglikelihood_chunks(
+        self,
+        *,
+        request_index: int,
+        prefix_ids: list[int],
+        target_ids: list[int],
+        metadata: dict[str, Any],
+    ) -> list[_ScoringChunk]:
+        max_input_length = self._max_scoring_input_length()
+        max_scored_window = max_input_length + 1
+        history_ids = list(prefix_ids)
+        if not history_ids:
+            history_ids = [self._prefix_token_id()]
+
+        chunks: list[_ScoringChunk] = []
+        cursor = 0
+        while cursor < len(target_ids):
+            remaining = len(target_ids) - cursor
+            target_count = min(remaining, max_input_length)
+            context_count = min(len(history_ids), max_scored_window - target_count)
+            if context_count <= 0:
+                raise ValueError("model context window is too small to score continuation tokens")
+
+            context_ids = history_ids[-context_count:]
+            continuation_slice = target_ids[cursor : cursor + target_count]
+            chunks.append(
+                _ScoringChunk(
+                    request_index=request_index,
+                    input_ids=context_ids + continuation_slice,
+                    score_start=len(context_ids),
+                    score_count=len(continuation_slice),
+                    metadata=dict(metadata),
+                )
+            )
+            history_ids.extend(continuation_slice)
+            cursor += target_count
+        return chunks
+
+    def _rolling_loglikelihood_windows(
+        self,
+        token_list: list[int],
+    ) -> Any:
+        if not token_list:
+            return
+
+        max_seq_len = self._max_scoring_input_length()
+        prefix_token = self._prefix_token_id()
+        pred_len = max_seq_len
+        predicted = 0
+
+        first_seq_len = min(max_seq_len, len(token_list))
+        first_window = (
+            [prefix_token] + token_list[: first_seq_len - 1],
+            token_list[:first_seq_len],
+        )
+        yield self._make_disjoint_window(first_window)
+        predicted += first_seq_len
+
+        while predicted < len(token_list):
+            window_pred_len = min(len(token_list) - predicted, pred_len)
+            window_end = predicted + window_pred_len
+            window = (
+                token_list[window_end - max_seq_len - 1 : window_end - 1],
+                token_list[window_end - window_pred_len : window_end],
+            )
+            yield self._make_disjoint_window(window)
+            predicted += window_pred_len
+
+    def _make_disjoint_window(
+        self,
+        pair: tuple[list[int], list[int]],
+    ) -> tuple[list[int], list[int]]:
+        context_ids, continuation_ids = pair
+        return context_ids[: len(context_ids) - (len(continuation_ids) - 1)], continuation_ids
+
+    def _prefix_token_id(self) -> int:
+        for token_id in (
+            getattr(self.tokenizer, "bos_token_id", None),
+            getattr(self.tokenizer, "eos_token_id", None),
+            getattr(self.tokenizer, "pad_token_id", None),
+        ):
+            if token_id is not None:
+                return int(token_id)
+        raise ValueError(
+            "token-level scoring requires tokenizer.bos_token_id, eos_token_id, or pad_token_id"
+        )
+
+    def _decoded_prefix_token_text(self) -> str | None:
+        with suppress(Exception):
+            decoded = self.tokenizer.decode(
+                [self._prefix_token_id()],
+                skip_special_tokens=False,
+            )
+            if decoded:
+                return str(decoded)
+        with suppress(Exception):
+            decoded = self.tokenizer.decode(
+                self._prefix_token_id(),
+                skip_special_tokens=False,
+            )
+            if decoded:
+                return str(decoded)
+        return None
+
+    def _max_scoring_input_length(self) -> int:
+        model_length = getattr(getattr(self.model, "config", None), "max_position_embeddings", None)
+        tokenizer_length = getattr(self.tokenizer, "model_max_length", None)
+        candidate_lengths = [
+            int(length)
+            for length in (model_length, tokenizer_length)
+            if isinstance(length, int) and 1 < length < 1_000_000
+        ]
+        if candidate_lengths:
+            return min(candidate_lengths)
+        return 2048
+
+    def _log_generation_execution(self) -> None:
+        with self._state_lock:
+            if self.execution_logged:
+                return
+            backend = self.generation_backend
+            attention = self.effective_attn_implementation or self.requested_attn_implementation
+            batch_size_cap = self.standard_batch_size_cap
+            self.execution_logged = True
+        get_logger().info(
+            "transformer generation using backend=%s attention=%s batch_size_cap=%s",
+            backend,
+            attention,
+            batch_size_cap,
+        )
+
+    def _lock_for_tokenizer(self, tokenizer: Any) -> threading.RLock:
+        if tokenizer is not None and tokenizer is self.prepare_tokenizer and tokenizer is not self.tokenizer:
+            return self._prepare_tokenizer_lock
+        return self._tokenizer_lock
+
+    def _prepare_request_for_generation(self, request: GenerationRequest) -> tuple[str, list[int]]:
+        with self._tokenizer_lock:
+            rendered_prompt = self._render_request(request)
+            input_ids = (
+                list(request.input_ids)
+                if request.input_ids is not None
+                else self.tokenizer(
+                    rendered_prompt,
+                    add_special_tokens=False,
+                )["input_ids"]
+            )
+        return rendered_prompt, input_ids
 
     def _generate_standard(
         self,
@@ -331,6 +751,8 @@ class SGLangSession(BaseTransformerSession):
             or request.rendered_prompt
             or self._render_request(request)
         )
+        # In-process SGLang can return prompt + completion in the same text field.
+        # Evalution exposes only the completion to match the other engines.
         if text.startswith(prompt):
             text = text[len(prompt) :]
         return GenerationOutput(
@@ -408,6 +830,8 @@ class SGLangSession(BaseTransformerSession):
                 for position, target_id in enumerate(target_ids):
                     selected = input_token_logprobs[position]
                     selected_token_id = selected.get("token_id")
+                    # Different SGLang builds expose the requested-token score in slightly
+                    # different fields, so we fall back through the public shapes here.
                     requested_scores = _entries_to_score_map(
                         requested_logprobs[position] if position < len(requested_logprobs) else []
                     )
@@ -449,18 +873,6 @@ class SGLangSession(BaseTransformerSession):
                     )
                 )
         return scored_chunks
-
-    def gc(self) -> None:
-        super(SGLangSession, self).gc()
-        if self.client is not None:
-            self.client.gc()
-
-    def close(self) -> None:
-        try:
-            super(SGLangSession, self).close()
-        finally:
-            if self.client is not None:
-                self.client.close()
 
     def _build_sampling_params(self, request: GenerationRequest) -> dict[str, Any]:
         if request.num_beams != 1:
@@ -542,6 +954,7 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
         engine_kwargs.setdefault("device", config.device)
     if config.dtype is not None:
         engine_kwargs.setdefault("dtype", config.dtype)
+    # Map Evalution's explicit SGLang fields onto the native Engine kwargs.
     engine_kwargs.setdefault("tokenizer_mode", config.tokenizer_mode)
     engine_kwargs.setdefault("tokenizer_worker_num", config.tokenizer_worker_num)
     engine_kwargs.setdefault("skip_tokenizer_init", config.skip_tokenizer_init)

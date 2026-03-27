@@ -14,7 +14,11 @@ import pytest
 import torch
 
 from evalution.config import Model
-from evalution.engines.base import GenerationRequest, LoglikelihoodRequest
+from evalution.engines.base import (
+    GenerationRequest,
+    LoglikelihoodRequest,
+    RollingLoglikelihoodRequest,
+)
 from evalution.engines.sglang_engine import (
     SGLang,
     SGLangSession,
@@ -60,6 +64,8 @@ class FakeTokenizer:
 
 
 def test_sglang_engine_defaults_batch_size_to_auto() -> None:
+    """Verify the SGLang engine exposes stable defaults for config serialization."""
+
     engine = SGLang()
 
     assert engine.batch_size == "auto"
@@ -68,6 +74,8 @@ def test_sglang_engine_defaults_batch_size_to_auto() -> None:
 
 
 def test_normalize_sglang_response_accepts_batched_dict_shape() -> None:
+    """SGLang sometimes batches `text` and `meta_info` into one dict payload."""
+
     normalized = _normalize_sglang_response(
         {
             "text": ["abx", "aby"],
@@ -82,6 +90,8 @@ def test_normalize_sglang_response_accepts_batched_dict_shape() -> None:
 
 
 def test_sglang_session_generate_uses_in_process_engine_and_strips_prompt() -> None:
+    """In-process generation should return only the completion text to Evalution."""
+
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
@@ -129,6 +139,8 @@ def test_sglang_session_generate_uses_in_process_engine_and_strips_prompt() -> N
 
 
 def test_sglang_session_generate_continuous_yields_completion_order() -> None:
+    """Continuous mode should yield by completion order, not submission order."""
+
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
@@ -195,7 +207,66 @@ def test_sglang_session_generate_continuous_yields_completion_order() -> None:
     assert outputs[1][1].metadata["sglang_meta"]["id"] == "req-2"
 
 
+def test_sglang_session_generate_continuous_refills_open_slots_immediately() -> None:
+    """Continuous mode should submit queued work as soon as one in-flight request finishes."""
+
+    event_log: list[str] = []
+
+    class FakeClient:
+        def generate(self, **payload):
+            del payload
+            raise AssertionError("generate() should not be used for continuous generation")
+
+        async def async_generate(self, **payload):
+            input_ids = list(payload["input_ids"])
+            prompt_text = "".join(chr(96 + token_id) for token_id in input_ids)
+            event_log.append(f"start:{prompt_text}")
+            await asyncio.sleep(0.05 if prompt_text == "ab" else 0.0)
+            event_log.append(f"end:{prompt_text}")
+            return {
+                "text": prompt_text + "z",
+                "meta_info": {
+                    "id": f"req-{prompt_text}",
+                },
+            }
+
+        def gc(self) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    session = SGLangSession(
+        config=SGLang(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(config=SimpleNamespace(max_position_embeddings=2048)),
+        tokenizer=FakeTokenizer(),
+        prepare_tokenizer=None,
+        input_device=SimpleNamespace(type="cpu"),
+        generation_backend="sglang.generate",
+        client=FakeClient(),
+    )
+
+    outputs = list(
+        session.generate_continuous(
+            [
+                ("slow", GenerationRequest(prompt="ab")),
+                ("fast-1", GenerationRequest(prompt="ac")),
+                ("fast-2", GenerationRequest(prompt="ad")),
+                ("fast-3", GenerationRequest(prompt="ae")),
+            ],
+            batch_size=2,
+        )
+    )
+
+    assert [request_id for request_id, _output in outputs] == ["fast-1", "fast-2", "fast-3", "slow"]
+    assert event_log.index("start:ad") < event_log.index("end:ab")
+    assert event_log.index("start:ae") < event_log.index("end:ab")
+
+
 def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
+    """Score continuations from SGLang prompt-logprob metadata."""
+
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
@@ -261,6 +332,8 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
 
 
 def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
+    """Greedy checks should still work when only patched logit views are present."""
+
     class FakeClient:
         def generate(self, **payload):
             del payload
@@ -301,7 +374,82 @@ def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
     assert output.token_count == 1
 
 
+def test_sglang_session_loglikelihood_rolling_aggregates_window_scores() -> None:
+    """Rolling scoring should reuse ordinary scoring and sum scores across windows."""
+
+    payloads: list[dict[str, object]] = []
+
+    class FakeClient:
+        def generate(self, **payload):
+            payloads.append(payload)
+            rows = list(payload["input_ids"])
+            responses = []
+            for row in rows:
+                meta_entries = [(None, row[0], None)]
+                top_entries = [[]]
+                requested_entries = [[]]
+                for token_id in row[1:]:
+                    meta_entries.append((-0.25, token_id, None))
+                    top_entries.append([(-0.25, token_id, None)])
+                    requested_entries.append([(-0.25, token_id, None)])
+                responses.append(
+                    {
+                        "text": "",
+                        "meta_info": {
+                            "input_token_logprobs": meta_entries,
+                            "input_top_logprobs": top_entries,
+                            "input_token_ids_logprobs": requested_entries,
+                        },
+                    }
+                )
+            return responses
+
+        def gc(self) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    session = SGLangSession(
+        config=SGLang(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(config=SimpleNamespace(max_position_embeddings=4)),
+        tokenizer=FakeTokenizer(),
+        prepare_tokenizer=None,
+        input_device=SimpleNamespace(type="cpu"),
+        generation_backend="sglang.generate",
+        client=FakeClient(),
+    )
+
+    outputs = session.loglikelihood_rolling(
+        [
+            RollingLoglikelihoodRequest(
+                text="unused",
+                input_ids=[2, 3, 4, 5],
+                metadata={"suite": "rolling"},
+            )
+        ],
+        batch_size=2,
+    )
+
+    assert len(outputs) == 1
+    assert outputs[0].token_count == 4
+    assert outputs[0].logprob == pytest.approx(-1.0)
+    assert outputs[0].metadata["suite"] == "rolling"
+    assert payloads == [
+        {
+            "input_ids": [[1, 2, 3, 4, 5]],
+            "sampling_params": [{"max_new_tokens": 1, "temperature": 0.0}],
+            "return_logprob": True,
+            "logprob_start_len": 0,
+            "top_logprobs_num": 2,
+        }
+    ]
+
+
 def test_build_sglang_client_uses_python_engine_when_base_url_is_missing(monkeypatch) -> None:
+    """SGLang should always build the local Engine client in Evalution."""
+
     fake_engine = object()
 
     monkeypatch.setattr(
@@ -321,6 +469,8 @@ def test_build_sglang_client_uses_python_engine_when_base_url_is_missing(monkeyp
 
 
 def test_build_sglang_client_rejects_server_mode() -> None:
+    """The legacy HTTP path is intentionally disabled for this backend."""
+
     try:
         _build_sglang_client(
             SGLang(base_url="http://127.0.0.1:30000"),
@@ -343,6 +493,8 @@ def test_build_sglang_client_rejects_server_mode() -> None:
     reason="CUDA is required for the SGLang engine integration test",
 )
 def test_sglang_engine_can_generate_and_score_on_cuda() -> None:
+    """Smoke-test real generation and scoring against a local CUDA runtime."""
+
     session = SGLang(
         batch_size=1,
     ).build(Model(path=str(_TINYLLAMA_GPTQ_MODEL)))
