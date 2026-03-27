@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
-from evalution.logbar import get_logger
+from evalution.logbar import get_logger, loglikelihood_progress_metadata
 from evalution.results import SampleResult, TestResult
 from evalution.scorers.multiple_choice import (
     ChoiceScore,
@@ -158,6 +158,9 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         requests: list[LoglikelihoodRequest] = []
         request_map: list[tuple[int, int, int]] = []
         sample_permutations: dict[int, list[tuple[int, ...]]] = {}
+        request_progress_metadata = loglikelihood_progress_metadata(
+            title=f"{self.task_name()}: scoring label permutations",
+        )
         for sample in samples:
             sample_labels = choice_labels(len(sample.choices))
             permutations = label_permutations_for_mode(len(sample.choices), resolved_mode)
@@ -173,6 +176,7 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
                         LoglikelihoodRequest(
                             context=prompt,
                             continuation=self.continuation_for_choice_label(label),
+                            metadata=dict(request_progress_metadata),
                         )
                     )
                     request_map.append((sample.index, permutation_index, label_index))
@@ -239,12 +243,16 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         )
         requests: list[LoglikelihoodRequest] = []
         request_to_choice: list[tuple[int, int]] = []
+        request_progress_metadata = loglikelihood_progress_metadata(
+            title=f"{task_name}: scoring answer choices",
+        )
         for sample in samples:
             for choice_index, choice in enumerate(sample.choices):
                 requests.append(
                     LoglikelihoodRequest(
                         context=sample.prompt,
                         continuation=self.continuation_for_choice(choice),
+                        metadata=dict(request_progress_metadata),
                     )
                 )
                 request_to_choice.append((sample.index, choice_index))

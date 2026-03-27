@@ -59,7 +59,7 @@ class Polemo2(BaseTestSuite):
     dataset_name: str | None = None
     split: str = "test"
     variant: str = "polemo2_in"
-    stream: bool = False
+    stream: bool = True
     max_new_tokens: int = 50
     do_sample: bool = False
     temperature: float = 0.0

@@ -92,12 +92,13 @@ class RequestQueue:
 
     # Expose queued request pulls to session-side consumers without coupling them to the caller
     # iterable. The queue transports Request items plus one terminal done sentinel or Error.
-    def __init__(self) -> None:
-        """Initialize the unbounded queue used by the producer thread."""
+    def __init__(self, *, max_size: int | None = None) -> None:
+        """Initialize the queue used by the producer thread."""
 
-        # Keep the transport unbounded so the producer thread never blocks the caller on a small
-        # queue size; the session-side consumer owns refill and backpressure policy instead.
-        self._queue: queue.Queue[object] = queue.Queue()
+        # Keep the queue bounded when the caller asks for backpressure so producer threads cannot
+        # materialize an entire dataset-backed request stream ahead of the session-side consumer.
+        queue_size = 0 if max_size is None else max(int(max_size), 1)
+        self._queue: queue.Queue[object] = queue.Queue(maxsize=queue_size)
         self._closed = False
 
     @property
@@ -107,23 +108,53 @@ class RequestQueue:
         # Report whether the producer already emitted the terminal done marker or a fatal error.
         return self._closed
 
-    def put_request(self, request_key: Any, request: GenerationRequest) -> None:
+    def put_request(
+        self,
+        request_key: Any,
+        request: GenerationRequest,
+        *,
+        stop_event: threading.Event | None = None,
+        poll_timeout_s: float = 0.05,
+    ) -> None:
         """Enqueue one caller-submitted request for consumer-side processing."""
 
         # Enqueue one caller-submitted generation request for the consumer thread.
-        self._queue.put(Request(request_key=request_key, request=request))
+        self._put_item(
+            Request(request_key=request_key, request=request),
+            stop_event=stop_event,
+            poll_timeout_s=poll_timeout_s,
+        )
 
-    def put_error(self, exc: Exception) -> None:
+    def put_error(
+        self,
+        exc: Exception,
+        *,
+        stop_event: threading.Event | None = None,
+        poll_timeout_s: float = 0.05,
+    ) -> None:
         """Enqueue a producer-side failure so the public iterator can raise it."""
 
         # Forward a producer-side failure through the same queue so the caller raises it in order.
-        self._queue.put(Error(exc=exc))
+        self._put_item(
+            Error(exc=exc),
+            stop_event=stop_event,
+            poll_timeout_s=poll_timeout_s,
+        )
 
-    def close(self) -> None:
+    def close(
+        self,
+        *,
+        stop_event: threading.Event | None = None,
+        poll_timeout_s: float = 0.05,
+    ) -> None:
         """Mark that the producer has finished yielding requests."""
 
         # Mark that the producer exhausted its source iterable and no more requests will arrive.
-        self._queue.put(_REQUESTS_DONE)
+        self._put_item(
+            _REQUESTS_DONE,
+            stop_event=stop_event,
+            poll_timeout_s=poll_timeout_s,
+        )
 
     def get(self, *, timeout_s: float | None = None) -> tuple[Any, GenerationRequest] | None:
         """Fetch the next queued request item, respecting the optional timeout."""
@@ -179,6 +210,20 @@ class RequestQueue:
             raise RuntimeError("request queue received an unknown item")
         return item.request_key, item.request
 
+    def _put_item(
+        self,
+        item: object,
+        *,
+        stop_event: threading.Event | None,
+        poll_timeout_s: float,
+    ) -> None:
+        while stop_event is None or not stop_event.is_set():
+            try:
+                self._queue.put(item, timeout=poll_timeout_s)
+                return
+            except queue.Full:
+                continue
+
 
 def assert_non_main_thread() -> None:
     """Assert that the current execution context is not the Python main thread."""
@@ -205,6 +250,7 @@ def stream_request_results(
     process_requests: ProcessRequests,
     result_poll_timeout_s: float = 0.05,
     require_non_main_thread: bool = True,
+    request_queue_max_size: int | None = None,
 ) -> Iterator[tuple[Any, GenerationOutput]]:
     """Run producer and consumer work on background threads and yield completed outputs."""
 
@@ -214,7 +260,7 @@ def stream_request_results(
         """Drive the background producer/consumer threads for one iterator instance."""
 
         # Carry caller-submitted requests into the session-side consumer thread.
-        request_queue = RequestQueue()
+        request_queue = RequestQueue(max_size=request_queue_max_size)
         # Carry finished outputs or fatal consumer failures back to the caller thread.
         result_queue: queue.Queue[object] = queue.Queue()
         # Let iterator close() or caller teardown stop both background threads promptly.
@@ -235,11 +281,15 @@ def stream_request_results(
                 for request_key, request in requests:
                     if stop_event.is_set():
                         break
-                    request_queue.put_request(request_key, request)
+                    request_queue.put_request(
+                        request_key,
+                        request,
+                        stop_event=stop_event,
+                    )
             except Exception as exc:
-                request_queue.put_error(exc)
+                request_queue.put_error(exc, stop_event=stop_event)
             finally:
-                request_queue.close()
+                request_queue.close(stop_event=stop_event)
 
         def run_consumer() -> None:
             """Run session-owned request processing on the dedicated consumer thread."""

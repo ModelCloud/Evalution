@@ -21,7 +21,7 @@ env:
   UV_TORCH_BACKEND: cu130
   TORCH_VERSION: 2.10.0
   PYTHON_VERSION: 3.14t
-  UV_PYTHON: python3.14t
+  UV_PYTHON: 3.14t
   UV_INDEX_URL: http://10.0.14.249/simple
 
 concurrency:
@@ -48,7 +48,9 @@ jobs:
       - name: Activate uv env
         run: |
           env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
-          /opt/uv/setup_uv_venv.sh $env_name
+          echo "env_name=$env_name"
+          source /opt/uv/setup_uv_venv.sh $env_name
+          python -VV
 
       - name: Setup uv env
         run: |

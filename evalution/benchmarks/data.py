@@ -93,10 +93,12 @@ def load_suite_dataset(
     split: str,
     cache_dir: str | None,
     stream: bool,
+    purpose: str | None = None,
 ) -> tuple[Any, float]:
     logger = get_logger()
     dataset_ref = dataset_path if dataset_name is None else f"{dataset_path}/{dataset_name}"
-    logger.info("loading dataset %s split=%s for %s", dataset_ref, split, task_name)
+    purpose_prefix = f"{purpose.strip()} " if isinstance(purpose, str) and purpose.strip() else ""
+    logger.info("loading %sdataset %s split=%s for %s", purpose_prefix, dataset_ref, split, task_name)
     kwargs = {
         "split": split,
         "cache_dir": cache_dir,

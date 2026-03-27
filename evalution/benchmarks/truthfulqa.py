@@ -14,7 +14,7 @@ from datasets import load_dataset
 from evalution.benchmarks.base import TestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
-from evalution.logbar import get_logger
+from evalution.logbar import get_logger, loglikelihood_progress_metadata
 from evalution.results import SampleResult, TestResult
 
 TRUTHFULQA_TASKS = ("truthfulqa_mc1", "truthfulqa_mc2")
@@ -55,7 +55,7 @@ class TruthfulQAMC(TestSuite):
     dataset_name: str | None = "multiple_choice"
     split: str = "validation"
     variant: str = "mc1"
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
@@ -105,6 +105,9 @@ class TruthfulQAMC(TestSuite):
         sample_payloads: list[dict[str, Any]] = []
         requests: list[LoglikelihoodRequest] = []
         request_to_choice: list[tuple[int, int]] = []
+        request_progress_metadata = loglikelihood_progress_metadata(
+            title=f"{task_name}: scoring answer choices",
+        )
         for index, doc in enumerate(docs):
             targets = doc[f"{self.variant}_targets"]
             choices = [str(choice).strip() for choice in targets["choices"]]
@@ -124,6 +127,7 @@ class TruthfulQAMC(TestSuite):
                     LoglikelihoodRequest(
                         context=prompt,
                         continuation=_choice_continuation(choice),
+                        metadata=dict(request_progress_metadata),
                     )
                 )
                 request_to_choice.append((index, choice_index))

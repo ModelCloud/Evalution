@@ -70,7 +70,7 @@ class Haerae(BaseMultipleChoiceSuite):
     dataset_path: str = "HAERAE-HUB/HAE_RAE_BENCH"
     dataset_name: str | None = "general_knowledge"
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
     subset: str = "general_knowledge"
 
     def __post_init__(self) -> None:

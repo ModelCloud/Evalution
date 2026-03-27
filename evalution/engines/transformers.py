@@ -254,14 +254,21 @@ class TransformersSession(BaseTransformerSession):
     ) -> Iterator[tuple[Any, GenerationOutput]]:
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
             request_iter = iter(requests)
-            preview_items = list(islice(request_iter, 64))
-            if not preview_items:
-                return
+            if batch_size is not None:
+                effective_batch_size = batch_size
+                first_item = next(request_iter, None)
+                if first_item is None:
+                    return
+                items = chain((first_item,), request_iter)
+            else:
+                preview_items = list(islice(request_iter, 64))
+                if not preview_items:
+                    return
 
-            effective_batch_size = batch_size or self.resolve_batch_size(
-                [request for _, request in preview_items]
-            )
-            items = chain(preview_items, request_iter)
+                effective_batch_size = self.resolve_batch_size(
+                    [request for _, request in preview_items]
+                )
+                items = chain(preview_items, request_iter)
 
             # This session is the RequestConsumer here: it keeps the paged backend full when
             # possible, falls back to the standard executor on paged failure, and sends Result
@@ -306,6 +313,7 @@ class TransformersSession(BaseTransformerSession):
                 consumer_name=f"{type(self).__name__}.request_consumer",
                 process_requests=consume_requests,
                 require_non_main_thread=self.request_executor_requires_non_main_thread,
+                request_queue_max_size=max(effective_batch_size * 2, 1),
             )
 
         return iterator()

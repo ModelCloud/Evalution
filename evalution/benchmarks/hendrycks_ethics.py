@@ -198,7 +198,7 @@ def _load_hendrycks_ethics_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool = True,
 ) -> list[dict[str, Any]]:
     del dataset_path, stream
     split_files = _ETHICS_SPLIT_FILES.get(dataset_name)

@@ -13,7 +13,7 @@ from typing import Any
 from evalution.benchmarks.base import TestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
-from evalution.logbar import get_logger
+from evalution.logbar import get_logger, loglikelihood_progress_metadata
 from evalution.results import SampleResult, TestResult
 
 
@@ -32,7 +32,7 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = False
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
@@ -90,10 +90,14 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
         logger.info("%s: evaluating %d sample(s)", task_name, total)
 
         samples = [self.build_sample(doc, index=index) for index, doc in enumerate(docs)]
+        request_progress_metadata = loglikelihood_progress_metadata(
+            title=f"{task_name}: scoring continuations",
+        )
         requests = [
             LoglikelihoodRequest(
                 context=sample.prompt,
                 continuation=self.continuation_for_target(sample.target),
+                metadata=dict(request_progress_metadata),
             )
             for sample in samples
         ]
