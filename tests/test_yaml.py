@@ -11,6 +11,7 @@ from datasets import Dataset
 
 import evalution
 from evalution import yaml as evalution_yaml
+from evalution.engines import SGLang
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
@@ -854,3 +855,48 @@ tests:
 
     assert "engines.VLLM(" in script
     assert "eval(engines." not in script
+
+
+def test_python_from_yaml_emits_sglang_name() -> None:
+    """Verify python_from_yaml emits the explicit SGLang engine constructor name."""
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: SGLang
+  tp_size: 2
+  random_seed: 7
+model:
+  path: /tmp/model
+tests:
+  - type: gsm8k_platinum
+    max_rows: 8
+"""
+    )
+
+    assert "engines.SGLang(" in script
+    assert "tp_size=2" in script
+    assert "random_seed=7" in script
+    assert "eval(engines." not in script
+
+
+def test_build_engine_constructs_sglang_with_server_arg_names() -> None:
+    """Verify YAML engine parsing keeps SGLang's native ServerArgs field names intact."""
+
+    engine = evalution_yaml._build_engine(
+        {
+            "type": "SGLang",
+            "tp_size": 2,
+            "dp_size": 3,
+            "pp_size": 4,
+            "random_seed": 9,
+            "context_length": 4096,
+        }
+    )
+
+    assert isinstance(engine, SGLang)
+    assert engine.tp_size == 2
+    assert engine.dp_size == 3
+    assert engine.pp_size == 4
+    assert engine.random_seed == 9
+    assert engine.context_length == 4096
