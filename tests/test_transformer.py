@@ -1212,6 +1212,77 @@ def test_transformer_session_generate_continuous_refills_paged_manager_while_cal
     assert session.continuous_batching_manager is None
 
 
+def test_transformer_session_generate_continuous_bounds_paged_request_queue_and_skips_large_preview_when_batch_size_is_fixed(
+    monkeypatch,
+) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = PretrainedConfig()
+            self.config._attn_implementation = "flash_attention_2"
+
+        def set_attn_implementation(self, value: str) -> None:
+            self.config._attn_implementation = value
+
+    consumed_count = 0
+    captured_queue_max_size: int | None = None
+
+    def request_source():
+        nonlocal consumed_count
+        for index in range(100):
+            consumed_count += 1
+            yield (
+                index,
+                GenerationRequest(
+                    prompt=f"Q: {index}\nA:",
+                    stop=["Q:"],
+                ),
+            )
+
+    def fake_stream_request_results(
+        requests,
+        *,
+        producer_name,
+        consumer_name,
+        process_requests,
+        require_non_main_thread,
+        request_queue_max_size=None,
+    ):
+        nonlocal captured_queue_max_size
+        del requests, producer_name, consumer_name, process_requests, require_non_main_thread
+        captured_queue_max_size = request_queue_max_size
+        return iter(())
+
+    monkeypatch.setattr(
+        "evalution.engines.transformers.stream_request_results",
+        fake_stream_request_results,
+    )
+
+    session = TransformersSession(
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=SimpleNamespace(type="cuda"),
+        requested_attn_implementation="paged|flash_attention_2",
+        effective_attn_implementation="paged|flash_attention_2",
+        paged_attention_enabled=True,
+        generation_backend="continuous_batching",
+    )
+
+    list(session.generate_continuous(request_source(), batch_size=32))
+
+    assert captured_queue_max_size == 64
+    assert consumed_count == 1
+
+
 def test_transformer_session_generate_supports_config_object_continuous_batching_manager_api(monkeypatch) -> None:
     import transformers
     import torch as torch_module
@@ -1900,6 +1971,72 @@ def test_transformer_session_loglikelihood_continuous_scores_streamed_requests()
     ]
 
 
+def test_transformer_session_loglikelihood_continuous_with_explicit_batch_size_limits_preview() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+        def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            assert return_tensors == "pt"
+            assert padding is True
+            sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
+            max_length = max(len(ids) for ids in sequences)
+            padded_ids = []
+            attention_masks = []
+            for ids in sequences:
+                pad_count = max_length - len(ids)
+                padded_ids.append(ids + ([0] * pad_count))
+                attention_masks.append(([1] * len(ids)) + ([0] * pad_count))
+            return {
+                "input_ids": torch.tensor(padded_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
+            }
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+
+        def __call__(self, *, input_ids, attention_mask=None):
+            del attention_mask
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            for row in range(batch_size):
+                for position in range(sequence_length - 1):
+                    next_token = int(input_ids[row, position + 1].item())
+                    logits[row, position, next_token] = 3.0
+            return SimpleNamespace(logits=logits)
+
+    session = TransformersSession(
+        config=Transformers(batch_size=2),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    produced_count = {"value": 0}
+
+    def iter_requests():
+        for request_index in range(100):
+            produced_count["value"] += 1
+            yield (
+                request_index,
+                LoglikelihoodRequest(
+                    context_input_ids=[5 + request_index],
+                    continuation_input_ids=[7 + request_index],
+                ),
+            )
+
+    iterator = session.loglikelihood_continuous(
+        iter_requests(),
+        batch_size=1,
+    )
+
+    assert next(iterator)[0] == 0
+    assert produced_count["value"] <= 4
+    iterator.close()
 def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None:
     class FakeTokenizer:
         pad_token_id = 0
