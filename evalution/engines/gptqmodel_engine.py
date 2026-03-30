@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from evalution.config import Model
+from evalution.engines.base import BaseEnginePagedBatchingConfig
 from evalution.engines.memory import resolve_dtype
 from evalution.engines.transformers import (
     TransformersSession,
@@ -54,16 +55,10 @@ class _LoadedGPTQModelRuntime:
 
 
 @dataclass(slots=True)
-class GPTQModel(_TransformersCommonConfig):
+class GPTQModel(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
     # Load quantized Hugging Face-compatible checkpoints through GPTQModel.
     backend: str = "auto"
     gptqmodel_path: str | None = _DEFAULT_GPTQMODEL_PATH
-    manual_eviction: bool = False
-    allow_block_sharing: bool = True
-    use_async_batching: bool | None = None
-    q_padding_interval_size: int = 0
-    kv_padding_interval_size: int = 0
-    max_cached_graphs: int = 0
 
     # Reuse the same paged-attention feature gating as the native transformer engine.
     def build(self, model: Model) -> TransformersSession:

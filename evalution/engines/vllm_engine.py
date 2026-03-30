@@ -18,6 +18,8 @@ from typing import Any
 
 from evalution.config import Model
 from evalution.engines.base import (
+    BaseEngineQuantizationConfig,
+    BaseEngineTokenizerModeConfig,
     BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
@@ -44,17 +46,15 @@ _DEFAULT_VLLM_CHECKOUT_CANDIDATES = (
 
 
 @dataclass(slots=True)
-class VLLM(SharedEngineConfig):
+class VLLM(BaseEngineTokenizerModeConfig, BaseEngineQuantizationConfig, SharedEngineConfig):
     """Configure Evalution to run generation and scoring through vLLM."""
 
     # This engine intentionally models vLLM as a first-class Evalution backend
     # instead of routing through GPTQModel or the legacy TransformersCompat path.
     # That lets us preserve vLLM-specific behavior such as request-id based
     # continuous batching, prompt_logprobs scoring, and local checkout loading.
-    tokenizer_mode: str = "auto"
     tensor_parallel_size: int = 1
     gpu_memory_utilization: float = 0.9
-    quantization: str | None = None
     max_model_len: int | None = None
     enforce_eager: bool = False
     tokenizer_revision: str | None = None

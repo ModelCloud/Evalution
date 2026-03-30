@@ -16,14 +16,17 @@ from itertools import chain, islice
 from typing import Any
 
 from evalution.config import Model
-from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.engines.base import (
+    BaseEnginePagedBatchingConfig,
+    GenerationOutput,
+    GenerationRequest,
+)
 from evalution.engines.continuous import stream_request_results
 from evalution.engines.transformers_common import (
     BaseTransformerSession,
     _TransformersCommonConfig,
     _base_attn_implementation,
     _fallback_batch_size,
-    _friendly_batch_size,
     _requests_paged_attention,
     _truncate_at_stop,
     load_transformer_runtime,
@@ -50,15 +53,9 @@ class _PagedContinuousBatchingFailure(RuntimeError):
 
 
 @dataclass(slots=True)
-class Transformers(_TransformersCommonConfig):
+class Transformers(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
     # Use the modern transformers engine path that can enable paged attention and continuous batching.
-    manual_eviction: bool = False
     continuous_batching: bool = True
-    allow_block_sharing: bool = True
-    use_async_batching: bool | None = None
-    q_padding_interval_size: int = 0
-    kv_padding_interval_size: int = 0
-    max_cached_graphs: int = 0
 
     # Build the modern session, or fall back to the compat engine when the installed package is too old.
     def build(self, model: Model) -> BaseTransformerSession:

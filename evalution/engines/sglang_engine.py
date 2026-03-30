@@ -20,6 +20,9 @@ from typing import Any
 
 from evalution.config import Model
 from evalution.engines.base import (
+    BaseEngineDeviceConfig,
+    BaseEngineQuantizationConfig,
+    BaseEngineTokenizerModeConfig,
     BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
@@ -96,17 +99,19 @@ class _LoadedSGLangRuntime:
 
 
 @dataclass(slots=True)
-class SGLang(SharedEngineConfig):
+class SGLang(
+    BaseEngineTokenizerModeConfig,
+    BaseEngineQuantizationConfig,
+    BaseEngineDeviceConfig,
+    SharedEngineConfig,
+):
     # SGLang integration stays in-process through `sglang.Engine`; no HTTP server is used.
     # Expose SGLang runtime kwargs using the same names as ServerArgs / Engine kwargs.
-    device: str | None = None
     base_url: str | None = None
-    tokenizer_mode: str = "auto"
     tokenizer_worker_num: int = 1
     skip_tokenizer_init: bool = False
     load_format: str = "auto"
     context_length: int | None = None
-    quantization: str | None = None
     mem_fraction_static: float | None = None
     tp_size: int = 1
     dp_size: int = 1

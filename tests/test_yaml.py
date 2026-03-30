@@ -6,12 +6,25 @@
 from __future__ import annotations
 
 import importlib
+from dataclasses import fields
 
 from datasets import Dataset
 
 import evalution
 from evalution import yaml as evalution_yaml
-from evalution.engines import SGLang, SharedEngineConfig, Transformers, TransformersCompat, GPTQModel, VLLM
+from evalution.engines import (
+    BaseEngineDeviceConfig,
+    BaseEnginePagedBatchingConfig,
+    BaseEngineQuantizationConfig,
+    BaseEngineTokenizerModeConfig,
+    BaseEngineTransformersRuntimeConfig,
+    GPTQModel,
+    SGLang,
+    SharedEngineConfig,
+    Transformers,
+    TransformersCompat,
+    VLLM,
+)
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
@@ -869,6 +882,37 @@ def test_non_yaml_engine_api_uses_shared_engine_config_inheritance() -> None:
     assert issubclass(GPTQModel, SharedEngineConfig)
     assert issubclass(VLLM, SharedEngineConfig)
     assert issubclass(SGLang, SharedEngineConfig)
+    assert issubclass(TransformersCompat, BaseEngineTransformersRuntimeConfig)
+    assert issubclass(Transformers, BaseEngineTransformersRuntimeConfig)
+    assert issubclass(GPTQModel, BaseEngineTransformersRuntimeConfig)
+    assert issubclass(Transformers, BaseEnginePagedBatchingConfig)
+    assert issubclass(GPTQModel, BaseEnginePagedBatchingConfig)
+    assert issubclass(VLLM, BaseEngineTokenizerModeConfig)
+    assert issubclass(SGLang, BaseEngineTokenizerModeConfig)
+    assert issubclass(VLLM, BaseEngineQuantizationConfig)
+    assert issubclass(SGLang, BaseEngineQuantizationConfig)
+    assert issubclass(SGLang, BaseEngineDeviceConfig)
+
+
+def test_repeated_engine_keys_live_on_dedicated_base_configs() -> None:
+    """Verify repeated engine keys are defined once on dedicated base config classes."""
+
+    assert {field.name for field in fields(BaseEngineDeviceConfig)} == {"device"}
+    assert {field.name for field in fields(BaseEngineTokenizerModeConfig)} == {"tokenizer_mode"}
+    assert {field.name for field in fields(BaseEngineQuantizationConfig)} == {"quantization"}
+    assert {field.name for field in fields(BaseEngineTransformersRuntimeConfig)} == {
+        "device",
+        "attn_implementation",
+        "device_map",
+    }
+    assert {field.name for field in fields(BaseEnginePagedBatchingConfig)} == {
+        "manual_eviction",
+        "allow_block_sharing",
+        "use_async_batching",
+        "q_padding_interval_size",
+        "kv_padding_interval_size",
+        "max_cached_graphs",
+    }
 
 
 def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> None:

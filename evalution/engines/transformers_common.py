@@ -21,6 +21,7 @@ from tokenicer import Tokenicer
 
 from evalution.config import Model
 from evalution.engines.base import (
+    BaseEngineTransformersRuntimeConfig,
     BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
@@ -99,11 +100,8 @@ class _LoadedTransformerRuntime:
 
 
 @dataclass(slots=True)
-class _TransformersCommonConfig(SharedEngineConfig):
+class _TransformersCommonConfig(BaseEngineTransformersRuntimeConfig, SharedEngineConfig):
     # Hold the load and generation controls shared by both transformer engine variants.
-    attn_implementation: str | None = None
-    device: str | None = None
-    device_map: str | dict[str, Any] | None = None
 
     # Keep engine serialization stable across runtime APIs and test assertions.
     def to_dict(self) -> dict[str, Any]:

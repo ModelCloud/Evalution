@@ -13,6 +13,11 @@ from evalution.compare import CompareRun, compare, run_compare
 from evalution.config import Model
 from evalution.engines import (
     BaseEngine,
+    BaseEngineDeviceConfig,
+    BaseEnginePagedBatchingConfig,
+    BaseEngineQuantizationConfig,
+    BaseEngineTokenizerModeConfig,
+    BaseEngineTransformersRuntimeConfig,
     BaseInferenceSession,
     GPTQModel,
     SGLang,
@@ -38,6 +43,11 @@ from . import engines
 
 __all__ = [
     "BaseEngine",
+    "BaseEngineDeviceConfig",
+    "BaseEnginePagedBatchingConfig",
+    "BaseEngineQuantizationConfig",
+    "BaseEngineTokenizerModeConfig",
+    "BaseEngineTransformersRuntimeConfig",
     "BaseInferenceSession",
     "CompareMetricResult",
     "CompareRun",
