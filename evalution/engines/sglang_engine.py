@@ -33,6 +33,7 @@ from evalution.engines.base import (
 )
 from evalution.engines.continuous import stream_request_results
 from evalution.engines.transformers_common import (
+    _LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY,
     _AUTO_BATCH_SIZE,
     _ScoringChunk,
     _clone_prepare_tokenizer,
@@ -44,7 +45,7 @@ from evalution.engines.transformers_common import (
     _seed_transformer_runtime,
     _seed_with_internal_apis,
 )
-from evalution.logbar import get_logger
+from evalution.logbar import get_logger, loglikelihood_progress_title, manual_progress
 
 
 class _SGLangClient(ABC):
@@ -262,10 +263,14 @@ class SGLangSession(BaseInferenceSession):
                 with self._generation_lock:
                     prepared_batch: list[tuple[Any, tuple[list[int], list[int], dict[str, Any]]]] = []
                     for request_key, request in request_queue.iter_requests(stop_event=stop_event):
+                        metadata = dict(request.metadata)
+                        metadata[_LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY] = True
                         prepared_batch.append(
                             (
                                 request_key,
-                                self._prepare_loglikelihood_request(request),
+                                self._prepare_loglikelihood_request(
+                                    replace(request, metadata=metadata)
+                                ),
                             )
                         )
                         if len(prepared_batch) < effective_batch_size:
@@ -819,8 +824,29 @@ class SGLangSession(BaseInferenceSession):
         batch_size: int,
     ) -> list[LoglikelihoodOutput]:
         scored_chunks: list[LoglikelihoodOutput] = []
+        if not chunks:
+            return scored_chunks
+
+        progress_disabled = bool(
+            chunks[0].metadata.get(_LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY)
+        )
+        score_bar = None
+        if not progress_disabled:
+            progress_title = (
+                loglikelihood_progress_title(chunks[0].metadata) or "loglikelihood: scoring continuations"
+            )
+            total_batches = (len(chunks) + batch_size - 1) // batch_size
+            score_bar = manual_progress(
+                len(chunks),
+                title=progress_title,
+                subtitle=f"batch_size={batch_size}",
+            )
+
         for start in range(0, len(chunks), batch_size):
             batch = chunks[start : start + batch_size]
+            if score_bar is not None:
+                batch_index = (start // batch_size) + 1
+                score_bar.subtitle(f"batch={batch_index}/{total_batches} batch_size={batch_size}")
             payload = {
                 "input_ids": [list(chunk.input_ids) for chunk in batch],
                 "sampling_params": [
@@ -925,6 +951,8 @@ class SGLangSession(BaseInferenceSession):
                         },
                     )
                 )
+                if score_bar is not None:
+                    score_bar.next().draw()
         return scored_chunks
 
     def _score_prepared_loglikelihood_requests(
@@ -952,7 +980,11 @@ class SGLangSession(BaseInferenceSession):
                 logprob=0.0,
                 is_greedy=True,
                 token_count=0,
-                metadata=dict(metadata),
+                metadata={
+                    key: value
+                    for key, value in metadata.items()
+                    if key != _LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY
+                },
             )
             for _prefix_ids, _target_ids, metadata in prepared_requests
         ]
