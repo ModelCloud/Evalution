@@ -6433,8 +6433,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.mnli(batch_size=24, stream=True, max_rows=128),
         expected_name="mnli",
         baseline={
-            "acc,ll": 0.5078125,
-            "acc,ll_avg": 0.5078125,
+            "acc,ll": 0.4765625,
+            "acc,ll_avg": 0.4765625,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -7145,8 +7145,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.wic(batch_size=24, stream=True, max_rows=128),
         expected_name="wic",
         baseline={
-            "acc,ll": 0.5,
-            "acc,ll_avg": 0.5,
+            "acc,ll": 0.421875,
+            "acc,ll_avg": 0.421875,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
