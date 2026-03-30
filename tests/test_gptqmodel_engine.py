@@ -167,7 +167,6 @@ def test_gptqmodel_session_generate_continuous_refills_paged_manager_while_calle
         def _get_logits_processor(self, generation_config):
             del generation_config
             return transformers.LogitsProcessorList()
-
         def set_attn_implementation(self, value: str) -> None:
             self.config._attn_implementation = value
 

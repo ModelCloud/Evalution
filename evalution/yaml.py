@@ -15,7 +15,7 @@ import yaml
 
 import evalution.benchmarks as benchmarks
 from evalution.config import Model
-from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat, VLLM
+from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat, VLLM, SGLang
 from evalution.runtime import EvaluationRun
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +110,32 @@ _ENGINE_REGISTRY: dict[str, _EngineSpec] = {
                 "tokenizer_revision",
                 "vllm_path",
                 "llm_kwargs",
+            }
+        ),
+        parents=("shared",),
+    ),
+    "sglang": _EngineSpec(
+        factory=SGLang,
+        emit_alias="SGLang",
+        direct_option_keys=frozenset(
+            {
+                "device",
+                "base_url",
+                "tokenizer_mode",
+                "tokenizer_worker_num",
+                "skip_tokenizer_init",
+                "load_format",
+                "context_length",
+                "quantization",
+                "mem_fraction_static",
+                "tp_size",
+                "dp_size",
+                "pp_size",
+                "attention_backend",
+                "sampling_backend",
+                "max_running_requests",
+                "max_total_tokens",
+                "sampling_params",
             }
         ),
         parents=("shared",),
