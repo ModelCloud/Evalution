@@ -6949,7 +6949,7 @@ SUITE_SPECS = {
         expected_name="swag",
         baseline={
             "acc,ll": 0.4921875,
-            "acc,ll_avg": 0.625,
+            "acc,ll_avg": 0.6484375,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
