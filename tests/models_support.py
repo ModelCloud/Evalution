@@ -7780,8 +7780,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.winogrande(batch_size=24, stream=True, max_rows=128),
         expected_name="winogrande",
         baseline={
-            "acc,ll": 0.5625,
-            "acc,ll_avg": 0.5703125,
+            "acc,ll": 0.5859375,
+            "acc,ll_avg": 0.5859375,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
