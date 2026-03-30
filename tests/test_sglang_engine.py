@@ -171,7 +171,7 @@ def test_sglang_session_generate_continuous_yields_completion_order() -> None:
             return None
 
     session = SGLangSession(
-        config=SGLang(batch_size=2),
+        config=SGLang(batch_size="auto"),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(config=SimpleNamespace(max_position_embeddings=2048)),
         tokenizer=FakeTokenizer(),
@@ -186,8 +186,7 @@ def test_sglang_session_generate_continuous_yields_completion_order() -> None:
             [
                 ("slow", GenerationRequest(prompt="ab", metadata={"slot": 1})),
                 ("fast", GenerationRequest(prompt="ac", metadata={"slot": 2})),
-            ],
-            batch_size=2,
+            ]
         )
     )
 
@@ -310,7 +309,7 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
             return None
 
     session = SGLangSession(
-        config=SGLang(batch_size=8),
+        config=SGLang(batch_size="auto"),
         model_config=Model(path="/tmp/model"),
         model=SimpleNamespace(config=SimpleNamespace(max_position_embeddings=2048)),
         tokenizer=FakeTokenizer(),
@@ -329,11 +328,94 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
             "return_logprob": True,
             "logprob_start_len": 0,
             "top_logprobs_num": 2,
+            "token_ids_logprob": [[3, 4]],
         }
     ]
     assert outputs[0].logprob == -0.30000000000000004
     assert outputs[0].is_greedy is True
     assert outputs[0].token_count == 2
+
+
+def test_sglang_session_loglikelihood_continuous_uses_auto_batch_size() -> None:
+    """Continuous scoring should batch lazily submitted requests without requiring an explicit size."""
+
+    payloads: list[dict[str, object]] = []
+
+    class FakeClient:
+        def generate(self, **payload):
+            payloads.append(payload)
+            responses = []
+            for row in payload["input_ids"]:
+                responses.append(
+                    {
+                        "text": "",
+                        "meta_info": {
+                            "input_token_logprobs": [
+                                (None, row[0], None),
+                                (-0.5, row[1], None),
+                                (-0.25, row[2], None),
+                            ],
+                            "input_top_logprobs": [
+                                [],
+                                [(-0.5, row[1], None)],
+                                [(-0.25, row[2], None)],
+                            ],
+                            "input_token_ids_logprobs": [
+                                [],
+                                [(-0.5, row[1], None)],
+                                [(-0.25, row[2], None)],
+                            ],
+                        },
+                    }
+                )
+            return responses
+
+        def gc(self) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    session = SGLangSession(
+        config=SGLang(batch_size="auto"),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(config=SimpleNamespace(max_position_embeddings=2048)),
+        tokenizer=FakeTokenizer(),
+        prepare_tokenizer=None,
+        input_device=SimpleNamespace(type="cpu"),
+        generation_backend="sglang.generate",
+        client=FakeClient(),
+    )
+
+    outputs = list(
+        session.loglikelihood_continuous(
+            [
+                ("first", LoglikelihoodRequest(context="ab", continuation="c", metadata={"slot": 1})),
+                ("second", LoglikelihoodRequest(context="ab", continuation="d", metadata={"slot": 2})),
+            ]
+        )
+    )
+
+    assert payloads == [
+        {
+            "input_ids": [[1, 2, 3], [1, 2, 4]],
+            "sampling_params": [
+                {"max_new_tokens": 1, "temperature": 0.0},
+                {"max_new_tokens": 1, "temperature": 0.0},
+            ],
+            "return_logprob": True,
+            "logprob_start_len": 0,
+            "top_logprobs_num": 2,
+            "token_ids_logprob": [[3], [4]],
+        }
+    ]
+    assert [request_id for request_id, _output in outputs] == ["first", "second"]
+    assert outputs[0][1].logprob == -0.25
+    assert outputs[0][1].token_count == 1
+    assert outputs[0][1].metadata["slot"] == 1
+    assert outputs[1][1].logprob == -0.25
+    assert outputs[1][1].token_count == 1
+    assert outputs[1][1].metadata["slot"] == 2
 
 
 def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
@@ -448,6 +530,7 @@ def test_sglang_session_loglikelihood_rolling_aggregates_window_scores() -> None
             "return_logprob": True,
             "logprob_start_len": 0,
             "top_logprobs_num": 2,
+            "token_ids_logprob": [[2, 3, 4, 5]],
         }
     ]
 
