@@ -5,18 +5,19 @@
 
 from __future__ import annotations
 
-import re
 import random
 from itertools import islice
 from time import perf_counter
 from typing import Any, Callable, TypeVar
 
+import pcre
+
 from evalution.logbar import get_logger, spinner
 
 T = TypeVar("T")
 _DEFAULT_SHUFFLE_SEED = 7
-_UNEXPECTED_LOADER_KWARG_PATTERN = re.compile(r"unexpected keyword argument '([^']+)'")
-_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN = re.compile(r"doesn't have a '([^']+)' key")
+_UNEXPECTED_LOADER_KWARG_PATTERN = pcre.compile(r"unexpected keyword argument '([^']+)'")
+_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN = pcre.compile(r"doesn't have a '([^']+)' key")
 
 
 def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
