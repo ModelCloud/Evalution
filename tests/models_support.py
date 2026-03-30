@@ -557,6 +557,45 @@ def _assert_multiple_choice_loglikelihood_label_perm_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_inverse_scaling_sample(sample: Any, index: int, *, subset: str) -> None:
+    if subset == "resisting-correction":
+        assert sample.index == index
+        assert sample.prompt
+        assert "\nOutput:" in sample.prompt
+        assert set(sample.extracted) == {
+            "gold_index",
+            "predicted_index",
+            "predicted_index_norm",
+        }
+        assert set(sample.scores) == {
+            "acc,ll",
+            "acc,ll_avg",
+        }
+        assert "choice_logprobs" in sample.metadata
+        assert "choice_logprobs_norm" in sample.metadata
+        _metadata_fields_truthy(
+            "subset",
+            "round",
+            "part",
+            "choice_labels",
+            "choice_texts",
+        )(sample.metadata)
+        return
+
+    _assert_multiple_choice_loglikelihood_sample(
+        sample,
+        index,
+        prompt_suffix="Answer:",
+        metadata_validator=_metadata_fields_truthy(
+            "subset",
+            "round",
+            "part",
+            "choice_labels",
+            "choice_texts",
+        ),
+    )
+
+
 def _assert_blimp_sample(sample: Any, index: int, *, subset: str) -> None:
     assert sample.index == index
     assert sample.prompt == ""
@@ -1457,6 +1496,14 @@ def _metadata_fields_truthy(*fields: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_fields_present(*fields: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        for field in fields:
+            assert field in metadata
+
+    return validate
+
+
 def _metadata_question_and_variant(variant: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["question"] in {"cause", "effect"}
@@ -2082,7 +2129,7 @@ def _xnli_suite_spec(
             "stream": False,
             "dataset_path": "facebook/xnli",
             "dataset_name": language,
-            "split": "test",
+            "split": "validation",
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=32,
@@ -2120,7 +2167,7 @@ def _xquad_suite_spec(
             "stream": False,
             "dataset_path": "google/xquad",
             "dataset_name": f"xquad.{language}",
-            "split": "test",
+            "split": "validation",
             "generation_submission_mode": "continuous_refill",
             "scoring_mode": "generated_qa_exact_match_f1",
             "primary_metric": "f1",
@@ -2153,7 +2200,7 @@ def _truthfulqa_suite_spec(
             "stream": False,
             "dataset_path": "truthfulqa/truthful_qa",
             "dataset_name": "multiple_choice",
-            "split": "test",
+            "split": "validation",
             "scoring_mode": f"truthfulqa_{variant}_multiple_choice",
             "primary_metric": "acc",
             "variant": variant,
@@ -2191,11 +2238,10 @@ def _inverse_scaling_suite_spec(
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
-        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+        sample_validator=lambda sample, index, subset=subset: _assert_inverse_scaling_sample(
             sample,
             index,
-            prompt_suffix="Answer:",
-            metadata_validator=_metadata_fields_truthy("subset", "round", "part", "choice_labels", "choice_texts"),
+            subset=subset,
         ),
     )
 
@@ -2800,6 +2846,20 @@ def _metadata_darijammlu_subset(subset: str) -> Callable[[dict[str, Any]], None]
     return validate
 
 
+def _assert_darijammlu_sample(sample: Any, index: int, *, subset: str) -> None:
+    _metadata_darijammlu_subset(subset)(sample.metadata)
+    choice_count = len(sample.metadata["raw_choices"])
+    choice_labels = tuple(chr(ord("A") + offset) for offset in range(choice_count))
+    _assert_multiple_choice_loglikelihood_sample(
+        sample,
+        index,
+        target_values=set(choice_labels),
+        prediction_values=set(choice_labels),
+        prompt_prefix="This is a DarijaMMLU multiple-choice question about ",
+        prompt_substrings=("\nQuestion: ", *(f"\n{label}. " for label in choice_labels), "\nAnswer:"),
+    )
+
+
 def _darijammlu_suite_spec(
     task_name: str,
     *,
@@ -2823,14 +2883,10 @@ def _darijammlu_suite_spec(
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
-        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+        sample_validator=lambda sample, index, subset=subset: _assert_darijammlu_sample(
             sample,
             index,
-            target_values={"A", "B", "C", "D"},
-            prediction_values={"A", "B", "C", "D"},
-            prompt_prefix="This is a DarijaMMLU multiple-choice question about ",
-            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
-            metadata_validator=_metadata_darijammlu_subset(subset),
+            subset=subset,
         ),
     )
 
@@ -2844,6 +2900,20 @@ def _metadata_egymmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
         assert 2 <= len(metadata["raw_choices"]) <= 4
 
     return validate
+
+
+def _assert_egymmlu_sample(sample: Any, index: int, *, subset: str) -> None:
+    _metadata_egymmlu_subset(subset)(sample.metadata)
+    choice_count = len(sample.metadata["raw_choices"])
+    choice_labels = tuple(chr(ord("A") + offset) for offset in range(choice_count))
+    _assert_multiple_choice_loglikelihood_sample(
+        sample,
+        index,
+        target_values=set(choice_labels),
+        prediction_values=set(choice_labels),
+        prompt_prefix="This is a EgyMMLU multiple-choice question about ",
+        prompt_substrings=("\nQuestion: ", *(f"\n{label}. " for label in choice_labels), "\nAnswer:"),
+    )
 
 
 def _egymmlu_suite_spec(
@@ -2869,14 +2939,10 @@ def _egymmlu_suite_spec(
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=128,
-        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+        sample_validator=lambda sample, index, subset=subset: _assert_egymmlu_sample(
             sample,
             index,
-            target_values={"A", "B", "C", "D"},
-            prediction_values={"A", "B", "C", "D"},
-            prompt_prefix="This is a EgyMMLU multiple-choice question about ",
-            prompt_substrings=("\nQuestion: ", "\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
-            metadata_validator=_metadata_egymmlu_subset(subset),
+            subset=subset,
         ),
     )
 
@@ -3223,13 +3289,13 @@ SUITE_SPECS = {
     "eus_exams_es_ejadministrativo": _eus_exams_suite_spec(
         "eus_exams_es_ejadministrativo",
         subset="es_ejadministrativo",
-        baseline={"acc,ll": 0.3937007874015748, "acc,ll_avg": 0.3937007874015748},
+        baseline={"acc,ll": 0.36220472440944884, "acc,ll_avg": 0.36220472440944884},
         expected_sample_count=127,
     ),
     "eus_exams_es_ejauxiliar": _eus_exams_suite_spec(
         "eus_exams_es_ejauxiliar",
         subset="es_ejauxiliar",
-        baseline={"acc,ll": 0.36220472440944884, "acc,ll_avg": 0.36220472440944884},
+        baseline={"acc,ll": 0.3700787401574803, "acc,ll_avg": 0.3700787401574803},
         expected_sample_count=127,
     ),
     "eus_reading": SuiteSpec(
@@ -3422,7 +3488,7 @@ SUITE_SPECS = {
     "egymmlu_computer_science": _egymmlu_suite_spec(
         "egymmlu_computer_science",
         subset="computer_science",
-        baseline={"acc,ll": 0.40625, "acc,ll_avg": 0.40625},
+        baseline={"acc,ll": 0.4296875, "acc,ll_avg": 0.4296875},
     ),
     "egymmlu_driving_test": _egymmlu_suite_spec(
         "egymmlu_driving_test",
@@ -3484,7 +3550,7 @@ SUITE_SPECS = {
     "afrimgsm_eng": _afrimgsm_suite_spec(
         "afrimgsm_eng",
         language="eng",
-        baseline=0.1640625,
+        baseline=0.1484375,
     ),
     "afrimgsm_fra": _afrimgsm_suite_spec(
         "afrimgsm_fra",
@@ -3554,7 +3620,7 @@ SUITE_SPECS = {
     "hendrycks_math_algebra": _hendrycks_math_suite_spec(
         "hendrycks_math_algebra",
         subset="algebra",
-        baseline=0.3125,
+        baseline=0.21875,
     ),
     "asdiv": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, stream=True, max_rows=128),
@@ -3829,7 +3895,7 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_cot",
         baseline={
-            "acc,num": 0.38671875,
+            "acc,num": 0.3671875,
         },
         expected_metrics=frozenset({"acc,num"}),
         expected_metadata={
@@ -3858,7 +3924,7 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_platinum_cot",
         baseline={
-            "acc,num": 0.390625,
+            "acc,num": 0.4140625,
         },
         expected_metrics=frozenset({"acc,num"}),
         expected_metadata={
@@ -3954,8 +4020,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.boolq(batch_size=24, stream=True, max_rows=128),
         expected_name="boolq",
         baseline={
-            "acc,ll": 0.6796875,
-            "acc,ll_avg": 0.6796875,
+            "acc,ll": 0.734375,
+            "acc,ll_avg": 0.734375,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -3978,10 +4044,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.cb(batch_size=24, stream=True, max_rows=56),
         expected_name="cb",
         baseline={
-            "acc,ll": 0.5714285714285714,
-            "acc,ll_avg": 0.5714285714285714,
-            "f1,ll_macro": 0.39345839345839345,
-            "f1,ll_avg_macro": 0.39345839345839345,
+            "acc,ll": 0.6428571428571429,
+            "acc,ll_avg": 0.6428571428571429,
+            "f1,ll_macro": 0.44734299516908216,
+            "f1,ll_avg_macro": 0.44734299516908216,
         },
         expected_metrics=frozenset(
             {
@@ -4011,10 +4077,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.cola(batch_size=24, stream=True, max_rows=128),
         expected_name="cola",
         baseline={
-            "acc,ll": 0.6484375,
-            "acc,ll_avg": 0.6484375,
-            "mcc,ll": 0.0,
-            "mcc,ll_avg": 0.0,
+            "acc,ll": 0.65625,
+            "acc,ll_avg": 0.65625,
+            "mcc,ll": 0.11075904894206384,
+            "mcc,ll_avg": 0.11075904894206384,
         },
         expected_metrics=frozenset(
             {
@@ -4212,8 +4278,8 @@ SUITE_SPECS = {
         ),
         expected_name="commonsense_qa",
         baseline={
-            "acc,ll": 0.546875,
-            "acc,ll_avg": 0.546875,
+            "acc,ll": 0.6328125,
+            "acc,ll_avg": 0.6328125,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -4295,8 +4361,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.copa(batch_size=24, stream=True, max_rows=100),
         expected_name="copa",
         baseline={
-            "acc,ll": 0.74,
-            "acc,ll_avg": 0.68,
+            "acc,ll": 0.79,
+            "acc,ll_avg": 0.7,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -4394,8 +4460,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.ethics_cm(batch_size=24, stream=True, max_rows=128),
         expected_name="ethics_cm",
         baseline={
-            "acc,ll": 0.5,
-            "acc,ll_avg": 0.5,
+            "acc,ll": 0.53125,
+            "acc,ll_avg": 0.53125,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -4472,8 +4538,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.ethics_utilitarianism(batch_size=24, stream=True, max_rows=128),
         expected_name="ethics_utilitarianism",
         baseline={
-            "acc,ll": 0.4765625,
-            "acc,ll_avg": 0.4765625,
+            "acc,ll": 0.4453125,
+            "acc,ll_avg": 0.4453125,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -4499,8 +4565,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.ethics_virtue(batch_size=24, stream=True, max_rows=128),
         expected_name="ethics_virtue",
         baseline={
-            "acc,ll": 0.2890625,
-            "acc,ll_avg": 0.2890625,
+            "acc,ll": 0.3359375,
+            "acc,ll_avg": 0.3359375,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -4526,7 +4592,7 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.arc_easy(batch_size=24, stream=True, max_rows=128),
         expected_name="arc_easy",
         baseline={
-            "acc,exam": 0.6640625,
+            "acc,exam": 0.64453125,
         },
         expected_metrics=frozenset({"acc,exam"}),
         expected_metadata={
@@ -4549,7 +4615,7 @@ SUITE_SPECS = {
         ),
         expected_name="arc_challenge",
         baseline={
-            "acc,exam": 0.40625,
+            "acc,exam": 0.3671875,
         },
         expected_metrics=frozenset({"acc,exam"}),
         expected_metadata={
@@ -4573,8 +4639,8 @@ SUITE_SPECS = {
         ),
         expected_name="arc_challenge",
         baseline={
-            "acc,exam": 0.40625,
-            "acc,label_perm:0.25": 0.515625,
+            "acc,exam": 0.3671875,
+            "acc,label_perm:0.25": 0.5234375,
         },
         expected_metrics=frozenset(
             {
@@ -4722,10 +4788,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.ifeval(batch_size=8, max_rows=64),
         expected_name="ifeval",
         baseline={
-            "prompt_level_strict_acc": 0.0,
-            "prompt_level_loose_acc": 0.0,
-            "inst_level_strict_acc": 0.0,
-            "inst_level_loose_acc": 0.0,
+            "prompt_level_strict_acc": 0.25,
+            "prompt_level_loose_acc": 0.328125,
+            "inst_level_strict_acc": 0.42424242424242425,
+            "inst_level_loose_acc": 0.48484848484848486,
         },
         expected_metrics=frozenset({
             "prompt_level_strict_acc",
@@ -4743,6 +4809,7 @@ SUITE_SPECS = {
         },
         expected_sample_count=64,
         sample_validator=_assert_ifeval_sample,
+        abs_tolerance=2 / 64,
     ),
     "multirc": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.multirc(batch_size=8, max_rows=16),
@@ -4799,9 +4866,9 @@ SUITE_SPECS = {
         ),
         expected_name="hellaswag",
         baseline={
-            "acc,ll": 0.4375,
+            "acc,ll": 0.453125,
             "acc,ll_avg": 0.5390625,
-            "acc,label_perm:0.25": 0.46875,
+            "acc,label_perm:0.25": 0.421875,
         },
         expected_metrics=frozenset(
             {
@@ -4860,15 +4927,15 @@ SUITE_SPECS = {
         subset="wic",
         baseline={
             "acc,ll": 0.4375,
-            "acc,ll_avg": 0.4765625,
+            "acc,ll_avg": 0.5,
         },
     ),
     "headqa_en": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.headqa_en(batch_size=24, stream=True, max_rows=128),
         expected_name="headqa_en",
         baseline={
-            "acc,ll": 0.3671875,
-            "acc,ll_avg": 0.421875,
+            "acc,ll": 0.40625,
+            "acc,ll_avg": 0.4140625,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -4891,8 +4958,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.headqa_es(batch_size=24, stream=True, max_rows=128),
         expected_name="headqa_es",
         baseline={
-            "acc,ll": 0.25,
-            "acc,ll_avg": 0.296875,
+            "acc,ll": 0.2578125,
+            "acc,ll_avg": 0.328125,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -4915,8 +4982,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.lambada_openai(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai",
         baseline={
-            "acc,ll": 0.5703125,
-            "ppl,ll": 6.5496755370042115,
+            "acc,ll": 0.5859375,
+            "ppl,ll": 6.8886713904972465,
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
@@ -4955,7 +5022,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_en": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_en(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_en",
-        baseline={"acc,ll": 0.5859375, "ppl,ll": 6.8886713904972465},
+        baseline={"acc,ll": 0.59375, "ppl,ll": 6.862626502040115},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -4974,7 +5041,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_es": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_es(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_es",
-        baseline={"acc,ll": 0.2109375, "ppl,ll": 207.82742937009354},
+        baseline={"acc,ll": 0.2109375, "ppl,ll": 206.32852515616028},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5031,7 +5098,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_de": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_de(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_de",
-        baseline={"acc,ll": 0.25, "ppl,ll": 159.80795113445453},
+        baseline={"acc,ll": 0.4140625, "ppl,ll": 27.918869538919996},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5050,7 +5117,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_en": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_en(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_en",
-        baseline={"acc,ll": 0.2421875, "ppl,ll": 6.8412},
+        baseline={"acc,ll": 0.59375, "ppl,ll": 6.862626502040115},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5069,7 +5136,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_es": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_es(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_es",
-        baseline={"acc,ll": 0.2109375, "ppl,ll": 204.5293},
+        baseline={"acc,ll": 0.375, "ppl,ll": 242.8284211788997},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5088,7 +5155,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_fr": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_fr(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_fr",
-        baseline={"acc,ll": 0.3359375, "ppl,ll": 118.6412},
+        baseline={"acc,ll": 0.3671875, "ppl,ll": 49.282717957825355},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5101,13 +5168,13 @@ SUITE_SPECS = {
         sample_validator=lambda sample, index: _assert_single_continuation_loglikelihood_sample(
             sample,
             index,
-            metadata_validator=_metadata_fields_truthy("text", "target_token"),
+            metadata_validator=_metadata_fields_present("text", "target_token"),
         ),
     ),
     "lambada_openai_mt_stablelm_it": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_it(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_it",
-        baseline={"acc,ll": 0.34375, "ppl,ll": 87.9601},
+        baseline={"acc,ll": 0.3203125, "ppl,ll": 74.89661557691544},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5126,7 +5193,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_nl": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_nl(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_nl",
-        baseline={"acc,ll": 0.5, "ppl,ll": 30.0},
+        baseline={"acc,ll": 0.328125, "ppl,ll": 348.19882971839223},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5145,7 +5212,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_pt": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_pt(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_pt",
-        baseline={"acc,ll": 0.5, "ppl,ll": 30.0},
+        baseline={"acc,ll": 0.4140625, "ppl,ll": 22.15699203823154},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5169,8 +5236,8 @@ SUITE_SPECS = {
         ),
         expected_name="lambada_openai_cloze",
         baseline={
-            "acc,ll": 0.0234375,
-            "ppl,ll": 2083.3316223968745,
+            "acc,ll": 0.015625,
+            "ppl,ll": 3349.9450401193135,
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
@@ -5193,8 +5260,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.lambada_standard(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_standard",
         baseline={
-            "acc,ll": 0.484375,
-            "ppl,ll": 11.26453696980533,
+            "acc,ll": 0.5078125,
+            "ppl,ll": 9.846866118664849,
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
@@ -5219,8 +5286,8 @@ SUITE_SPECS = {
         ),
         expected_name="lambada_standard_cloze",
         baseline={
-            "acc,ll": 0.015625,
-            "ppl,ll": 4921.9734842680955,
+            "acc,ll": 0.0078125,
+            "ppl,ll": 6059.306211375059,
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
@@ -5336,7 +5403,7 @@ SUITE_SPECS = {
         ),
     ),
     "click_lang": SuiteSpec(
-        suite_factory=lambda: getattr(evalution.benchmarks, "click_lang")(batch_size=24, max_rows=128),
+        suite_factory=lambda: getattr(evalution.benchmarks, "click_lang")(batch_size=4, max_rows=128),
         expected_name="click_lang",
         baseline={"acc,ll": 0.2265625, "acc,ll_avg": 0.2265625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
@@ -5506,7 +5573,7 @@ SUITE_SPECS = {
     "click_cul_history": SuiteSpec(
         suite_factory=lambda: getattr(evalution.benchmarks, "click_cul_history")(batch_size=24, max_rows=128),
         expected_name="click_cul_history",
-        baseline={"acc,ll": 0.2421875, "acc,ll_avg": 0.2421875},
+        baseline={"acc,ll": 0.265625, "acc,ll_avg": 0.265625},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "stream": False,
@@ -5823,7 +5890,7 @@ SUITE_SPECS = {
     "kormedmcqa_doctor": SuiteSpec(
         suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa_doctor")(batch_size=24, max_rows=128),
         expected_name="kormedmcqa_doctor",
-        baseline={"em": 0.2265625},
+        baseline={"em": 0.25},
         expected_metrics=frozenset({"em"}),
         expected_metadata={
             "stream": False,
@@ -5928,6 +5995,7 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_kormedmcqa_fields(subset="dentist"),
             allow_empty_prediction=True,
         ),
+        abs_tolerance=3 / 128,
     ),
     "fda": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.fda(batch_size=24, max_rows=128),
@@ -6202,10 +6270,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.mc_taco(batch_size=24, max_rows=128),
         expected_name="mc_taco",
         baseline={
-            "acc,ll": 0.609375,
-            "acc,ll_avg": 0.609375,
-            "f1,ll_yes": 0.596774193548387,
-            "f1,ll_avg_yes": 0.596774193548387,
+            "acc,ll": 0.4609375,
+            "acc,ll_avg": 0.4609375,
+            "f1,ll_yes": 0.488888888888889,
+            "f1,ll_avg_yes": 0.488888888888889,
         },
         expected_metrics=frozenset(
             {
@@ -6296,8 +6364,8 @@ SUITE_SPECS = {
         ),
         expected_name="mmlu",
         baseline={
-            "acc,ll": 0.3671875,
-            "acc,ll_avg": 0.3671875,
+            "acc,ll": 0.3125,
+            "acc,ll_avg": 0.3125,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -6333,8 +6401,8 @@ SUITE_SPECS = {
         ),
         expected_name="mmlu_stem",
         baseline={
-            "acc,ll": 0.34375,
-            "acc,ll_avg": 0.34375,
+            "acc,ll": 0.1875,
+            "acc,ll_avg": 0.1875,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -6389,10 +6457,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.mrpc(batch_size=24, stream=True, max_rows=128),
         expected_name="mrpc",
         baseline={
-            "acc,ll": 0.6953125,
-            "acc,ll_avg": 0.6953125,
-            "f1,ll_yes": 0.8186046511627907,
-            "f1,ll_avg_yes": 0.8186046511627907,
+            "acc,ll": 0.578125,
+            "acc,ll_avg": 0.578125,
+            "f1,ll_yes": 0.7127659574468085,
+            "f1,ll_avg_yes": 0.7127659574468085,
         },
         expected_metrics=frozenset(
             {
@@ -6450,8 +6518,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.openbookqa(batch_size=24, stream=True, max_rows=128),
         expected_name="openbookqa",
         baseline={
-            "acc,ll": 0.25,
-            "acc,ll_avg": 0.328125,
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.4453125,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -6479,9 +6547,9 @@ SUITE_SPECS = {
         ),
         expected_name="openbookqa",
         baseline={
-            "acc,ll": 0.25,
-            "acc,ll_avg": 0.328125,
-            "acc,label_perm:0.25": 0.59375,
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.4453125,
+            "acc,label_perm:0.25": 0.625,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg", "acc,label_perm:0.25"}),
         expected_metadata={
@@ -7615,8 +7683,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.wnli(batch_size=24, stream=True, max_rows=71),
         expected_name="wnli",
         baseline={
-            "acc,ll": 0.4225352112676056,
-            "acc,ll_avg": 0.4225352112676056,
+            "acc,ll": 0.5070422535211268,
+            "acc,ll_avg": 0.5070422535211268,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -7836,22 +7904,22 @@ for _task_name, _language in (
                 "f1,ll_avg_yes": 0.6010928961748634,
             },
             "paws_x_en": {
-                "acc,ll": 0.4765625,
-                "acc,ll_avg": 0.4765625,
-                "f1,ll_yes": 0.588957055214724,
-                "f1,ll_avg_yes": 0.588957055214724,
+                "acc,ll": 0.3671875,
+                "acc,ll_avg": 0.3671875,
+                "f1,ll_yes": 0.4671052631578947,
+                "f1,ll_avg_yes": 0.4671052631578947,
             },
             "paws_x_es": {
-                "acc,ll": 0.4921875,
-                "acc,ll_avg": 0.4921875,
-                "f1,ll_yes": 0.5806451612903226,
-                "f1,ll_avg_yes": 0.5806451612903226,
+                "acc,ll": 0.4375,
+                "acc,ll_avg": 0.4375,
+                "f1,ll_yes": 0.5135135135135135,
+                "f1,ll_avg_yes": 0.5135135135135135,
             },
             "paws_x_fr": {
-                "acc,ll": 0.46875,
-                "acc,ll_avg": 0.46875,
-                "f1,ll_yes": 0.24444444444444444,
-                "f1,ll_avg_yes": 0.24444444444444444,
+                "acc,ll": 0.5703125,
+                "acc,ll_avg": 0.5703125,
+                "f1,ll_yes": 0.3373493975903614,
+                "f1,ll_avg_yes": 0.3373493975903614,
             },
             "paws_x_ja": {
                 "acc,ll": 0.4375,
@@ -7860,10 +7928,10 @@ for _task_name, _language in (
                 "f1,ll_avg_yes": 0.6086956521739131,
             },
             "paws_x_ko": {
-                "acc,ll": 0.421875,
-                "acc,ll_avg": 0.421875,
-                "f1,ll_yes": 0.5934065934065934,
-                "f1,ll_avg_yes": 0.5934065934065934,
+                "acc,ll": 0.43359375,
+                "acc,ll_avg": 0.43359375,
+                "f1,ll_yes": 0.6048114048114048,
+                "f1,ll_avg_yes": 0.6048114048114048,
             },
             "paws_x_zh": {
                 "acc,ll": 0.453125,
@@ -7892,48 +7960,48 @@ for _task_name, _language in (
         language=_language,
         baseline={
             "xcopa_et": {
-                "acc,ll": 0.52,
-                "acc,ll_avg": 0.52,
+                "acc,ll": 0.515,
+                "acc,ll_avg": 0.515,
             },
             "xcopa_ht": {
-                "acc,ll": 0.56,
-                "acc,ll_avg": 0.56,
+                "acc,ll": 0.48,
+                "acc,ll_avg": 0.48,
             },
             "xcopa_id": {
-                "acc,ll": 0.62,
-                "acc,ll_avg": 0.62,
+                "acc,ll": 0.65,
+                "acc,ll_avg": 0.65,
             },
             "xcopa_it": {
-                "acc,ll": 0.57,
-                "acc,ll_avg": 0.57,
+                "acc,ll": 0.675,
+                "acc,ll_avg": 0.675,
             },
             "xcopa_qu": {
-                "acc,ll": 0.61,
-                "acc,ll_avg": 0.61,
-            },
-            "xcopa_sw": {
-                "acc,ll": 0.51,
-                "acc,ll_avg": 0.51,
-            },
-            "xcopa_ta": {
-                "acc,ll": 0.52,
-                "acc,ll_avg": 0.52,
-            },
-            "xcopa_th": {
                 "acc,ll": 0.54,
                 "acc,ll_avg": 0.54,
             },
-            "xcopa_tr": {
+            "xcopa_sw": {
                 "acc,ll": 0.6,
                 "acc,ll_avg": 0.6,
             },
+            "xcopa_ta": {
+                "acc,ll": 0.5,
+                "acc,ll_avg": 0.5,
+            },
+            "xcopa_th": {
+                "acc,ll": 0.685,
+                "acc,ll_avg": 0.685,
+            },
+            "xcopa_tr": {
+                "acc,ll": 0.645,
+                "acc,ll_avg": 0.645,
+            },
             "xcopa_vi": {
-                "acc,ll": 0.61,
-                "acc,ll_avg": 0.61,
+                "acc,ll": 0.65,
+                "acc,ll_avg": 0.65,
             },
             "xcopa_zh": {
-                "acc,ll": 0.67,
-                "acc,ll_avg": 0.67,
+                "acc,ll": 0.595,
+                "acc,ll_avg": 0.595,
             },
         }[_task_name],
     )
@@ -8124,10 +8192,10 @@ for _language, _baseline in {
 
 for _subset, _baseline in {
     "boolqa": {"acc,ll": 0.71875, "acc,ll_avg": 0.71875},
-    "commonsenseqa": {"acc,ll": 0.375, "acc,ll_avg": 0.375},
-    "mmlu": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "commonsenseqa": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
+    "mmlu": {"acc,ll": 0.25, "acc,ll_avg": 0.25},
     "openbookqa": {"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
-    "piqa": {"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+    "piqa": {"acc,ll": 0.546875, "acc,ll_avg": 0.546875},
 }.items():
     SUITE_SPECS[f"bangla_{_subset}"] = _bangla_suite_spec(
         subset=_subset,

@@ -137,7 +137,8 @@ def doc_count(
         count = len(docs)
         return min(max_rows, count) if max_rows is not None else count
 
-    split_info = getattr(getattr(loaded_docs, "info", None), "splits", {}).get(split)
+    split_metadata = getattr(getattr(loaded_docs, "info", None), "splits", None)
+    split_info = split_metadata.get(split) if hasattr(split_metadata, "get") else None
     if split_info is not None and getattr(split_info, "num_examples", None) is not None:
         count = int(split_info.num_examples)
         return min(max_rows, count) if max_rows is not None else count

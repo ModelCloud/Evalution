@@ -40,6 +40,16 @@ _FLASH_ATTN_VARLEN_FWD_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
 
 
 @dataclass(slots=True)
+class _PagedContinuousBatchingFailure(RuntimeError):
+    # Preserve requests already submitted to paged batching so fallback can replay them safely.
+    cause: Exception
+    pending_requests: list[tuple[Any, GenerationRequest]]
+
+    def __str__(self) -> str:
+        return str(self.cause)
+
+
+@dataclass(slots=True)
 class Transformers(_TransformersCommonConfig):
     # Use the modern transformers engine path that can enable paged attention and continuous batching.
     manual_eviction: bool = False
@@ -278,6 +288,7 @@ class TransformersSession(BaseTransformerSession):
                 request_queue: Any,
                 put_result: Any,
             ) -> None:
+                request_source = request_queue.iter_requests(stop_event=stop_event)
                 with self._generation_lock:
                     with self._state_lock:
                         paged_attention_enabled = self.paged_attention_enabled
@@ -290,18 +301,19 @@ class TransformersSession(BaseTransformerSession):
                     if paged_attention_enabled:
                         try:
                             for request_key, output in self._generate_paged_continuous(
-                                request_queue.iter_requests(stop_event=stop_event),
+                                request_source,
                                 batch_size=worker_batch_size,
                                 stop_event=stop_event,
                             ):
                                 put_result(request_key, output)
                             return
-                        except Exception as exc:
+                        except _PagedContinuousBatchingFailure as exc:
                             fallback_batch_size = _fallback_batch_size(worker_batch_size)
-                            self._disable_paged_attention(exc, fallback_batch_size=fallback_batch_size)
+                            self._disable_paged_attention(exc.cause, fallback_batch_size=fallback_batch_size)
                             worker_batch_size = fallback_batch_size
+                            request_source = chain(exc.pending_requests, request_source)
                     for request_key, output in self._generate_standard_continuous(
-                        request_queue.iter_requests(stop_event=stop_event),
+                        request_source,
                         batch_size=worker_batch_size,
                         stop_event=stop_event,
                     ):
@@ -367,10 +379,16 @@ class TransformersSession(BaseTransformerSession):
         stop_event: threading.Event | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
         request_iter = iter(requests)
-        inflight_requests: dict[str, tuple[Any, str, list[str], dict[str, Any]]] = {}
+        inflight_requests: dict[str, tuple[Any, GenerationRequest, str, list[str], dict[str, Any]]] = {}
         source_exhausted = False
         expected_signature: tuple[Any, ...] | None = None
         manager: Any | None = None
+
+        def pending_requests() -> list[tuple[Any, GenerationRequest]]:
+            return [
+                (request_key, request)
+                for request_key, request, _rendered_prompt, _stop_strings, _metadata in inflight_requests.values()
+            ]
 
         def submit_one() -> bool:
             nonlocal source_exhausted
@@ -398,18 +416,25 @@ class TransformersSession(BaseTransformerSession):
             if manager is None:
                 raise RuntimeError("continuous batching manager was not initialized")
 
-            rendered_prompt, input_ids = self._prepare_request_for_generation(request)
-            request_id = self._next_continuous_batching_request_id()
-            manager.add_request(
-                input_ids,
-                request_id=request_id,
-                max_new_tokens=request.max_new_tokens,
-                streaming=False,
-            )
+            try:
+                rendered_prompt, input_ids = self._prepare_request_for_generation(request)
+                request_id = self._next_continuous_batching_request_id()
+                manager.add_request(
+                    input_ids,
+                    request_id=request_id,
+                    max_new_tokens=request.max_new_tokens,
+                    streaming=False,
+                )
+            except Exception as exc:
+                raise _PagedContinuousBatchingFailure(
+                    cause=exc,
+                    pending_requests=[*pending_requests(), (request_key, request)],
+                ) from exc
             inflight_requests[request_id] = (
                 request_key,
+                request,
                 rendered_prompt,
-                list(request.stop),
+                list(request.stop or ()),
                 dict(request.metadata),
             )
             return True
@@ -433,28 +458,43 @@ class TransformersSession(BaseTransformerSession):
             if stop_event is not None and stop_event.is_set():
                 self._stop_continuous_batching_manager()
                 return
-            request_output = manager.get_result(timeout=0.1)
+            try:
+                request_output = manager.get_result(timeout=0.1)
+            except Exception as exc:
+                raise _PagedContinuousBatchingFailure(
+                    cause=exc,
+                    pending_requests=pending_requests(),
+                ) from exc
             if request_output is None:
                 if not manager.is_running():
-                    raise RuntimeError(
-                        "continuous batching manager stopped before all requests completed"
+                    raise _PagedContinuousBatchingFailure(
+                        cause=RuntimeError(
+                            "continuous batching manager stopped before all requests completed"
+                        ),
+                        pending_requests=pending_requests(),
                     )
                 continue
 
             request_id = request_output.request_id
             request_state = inflight_requests.get(request_id)
             if request_state is None:
-                raise RuntimeError(
-                    f"continuous batching returned unknown request_id={request_id!r}"
+                raise _PagedContinuousBatchingFailure(
+                    cause=RuntimeError(
+                        f"continuous batching returned unknown request_id={request_id!r}"
+                    ),
+                    pending_requests=pending_requests(),
                 )
             if request_output.error is not None:
-                raise RuntimeError(
-                    f"continuous batching request {request_id!r} failed: {request_output.error}"
+                raise _PagedContinuousBatchingFailure(
+                    cause=RuntimeError(
+                        f"continuous batching request {request_id!r} failed: {request_output.error}"
+                    ),
+                    pending_requests=pending_requests(),
                 )
             if not request_output.is_finished():
                 continue
 
-            request_key, rendered_prompt, stop_strings, metadata = inflight_requests.pop(request_id)
+            request_key, _request, rendered_prompt, stop_strings, metadata = inflight_requests.pop(request_id)
             if self.config.manual_eviction:
                 with self._state_lock:
                     self.continuous_batching_completed_request_ids.add(request_id)
@@ -627,7 +667,7 @@ class TransformersSession(BaseTransformerSession):
 
 def _continuous_request_signature(request: GenerationRequest) -> tuple[Any, ...]:
     return (
-        tuple(request.stop),
+        tuple(request.stop or ()),
         request.num_beams,
         request.do_sample,
         request.temperature if request.do_sample else None,

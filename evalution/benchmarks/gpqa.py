@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import Any
+from pathlib import Path
+from typing import Any, Callable
 
 import pcre
-from datasets import load_dataset
+from datasets import Dataset, load_dataset
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -20,6 +21,7 @@ from evalution.scorers.choice_label import choice_label_exact_match
 
 GPQA_SUBSETS = ("main", "diamond", "extended")
 GPQA_TASKS = tuple(f"gpqa_{subset}" for subset in GPQA_SUBSETS)
+_GPQA_DATASET_PATH = "Idavidrein/gpqa"
 
 _CHOICE_LABELS = ("A", "B", "C", "D")
 _INVALID_CHOICE = "[invalid]"
@@ -31,10 +33,69 @@ _EXPLICIT_ANSWER_PATTERNS = (
     pcre.compile(r"(?i)\banswer\s*[:\-]\s*\(?([A-D])\)?"),
 )
 _CHOICE_TOKEN_PATTERN = pcre.compile(r"\b([A-D])\b")
+_HF_DATASETS_CACHE_ROOT = Path.home() / ".cache" / "huggingface" / "datasets"
+_HF_HUB_CACHE_ROOT = Path.home() / ".cache" / "huggingface" / "hub"
 
 
 def _dataset_name_for_subset(subset: str) -> str:
     return f"gpqa_{subset}"
+
+
+def _gpqa_dataset_loader() -> Callable[..., Any]:
+    # Prefer fully local cache artifacts first so concurrent shard runs never depend on Hub metadata lookups.
+    def _loader(
+        dataset_path: str,
+        dataset_name: str,
+        *,
+        split: str,
+        cache_dir: str | None = None,
+        streaming: bool = False,
+    ) -> Any:
+        if getattr(load_dataset, "__module__", "").startswith("datasets"):
+            cached_arrow_path = _cached_gpqa_arrow_path(dataset_name=dataset_name, split=split)
+            if cached_arrow_path is not None and not streaming:
+                return Dataset.from_file(str(cached_arrow_path))
+
+            cached_csv_path = _cached_gpqa_csv_path(dataset_name=dataset_name)
+            if cached_csv_path is not None:
+                return load_dataset(
+                    "csv",
+                    data_files={split: str(cached_csv_path)},
+                    split=split,
+                    cache_dir=cache_dir,
+                    streaming=streaming,
+                )
+
+        kwargs = {
+            "path": dataset_path,
+            "name": dataset_name,
+            "split": split,
+            "cache_dir": cache_dir,
+            "streaming": streaming,
+        }
+        try:
+            return load_dataset(
+                download_mode="reuse_cache_if_exists",
+                **kwargs,
+            )
+        except Exception:
+            return load_dataset(**kwargs)
+
+    return _loader
+
+
+def _cached_gpqa_arrow_path(*, dataset_name: str, split: str) -> Path | None:
+    if split != "train":
+        return None
+    dataset_cache_dir = _HF_DATASETS_CACHE_ROOT / "Idavidrein___gpqa" / dataset_name / "0.0.0"
+    candidates = sorted(dataset_cache_dir.glob("*/gpqa-train.arrow"))
+    return candidates[-1] if candidates else None
+
+
+def _cached_gpqa_csv_path(*, dataset_name: str) -> Path | None:
+    snapshot_root = _HF_HUB_CACHE_ROOT / "datasets--Idavidrein--gpqa" / "snapshots"
+    candidates = sorted(snapshot_root.glob(f"*/{dataset_name}.csv"))
+    return candidates[-1] if candidates else None
 
 
 def _normalize_choice_text(text: Any) -> str:
@@ -110,7 +171,7 @@ def _shuffled_choice_payload(doc: dict[str, Any], *, rng: random.Random) -> tupl
 
 @dataclass(slots=True)
 class GPQA(BaseTestSuite):
-    dataset_path: str = "Idavidrein/gpqa"
+    dataset_path: str = _GPQA_DATASET_PATH
     dataset_name: str | None = None
     split: str = "train"
     subset: str = "main"
@@ -129,7 +190,7 @@ class GPQA(BaseTestSuite):
         raise ValueError("gpqa dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
-        return load_dataset
+        return _gpqa_dataset_loader()
 
     def task_name(self) -> str:
         return f"gpqa_{self.subset}"
