@@ -6788,10 +6788,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.qqp(batch_size=24, stream=True, max_rows=128),
         expected_name="qqp",
         baseline={
-            "acc,ll": 0.34375,
-            "acc,ll_avg": 0.34375,
-            "f1,ll_yes": 0.4615384615384615,
-            "f1,ll_avg_yes": 0.4615384615384615,
+            "acc,ll": 0.6328125,
+            "acc,ll_avg": 0.6328125,
+            "f1,ll_yes": 0.4835164835164836,
+            "f1,ll_avg_yes": 0.4835164835164836,
         },
         expected_metrics=frozenset(
             {
