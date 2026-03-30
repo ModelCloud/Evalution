@@ -6,9 +6,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-from datasets import load_dataset
+from datasets import Dataset, load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
@@ -20,6 +21,7 @@ MASTERMIND_VARIANTS = (
     "mastermind_46_easy",
     "mastermind_46_hard",
 )
+_HF_DATASETS_CACHE_ROOT = Path.home() / ".cache" / "huggingface" / "datasets"
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,13 +45,53 @@ def _mastermind_prompt(instruction: str) -> str:
     return f"{instruction.strip()}\n\nThe secret code is:"
 
 
+def _cached_mastermind_arrow_path(*, dataset_path: str, split: str) -> Path | None:
+    namespace, name = dataset_path.split("/", 1)
+    cache_root = _HF_DATASETS_CACHE_ROOT / f"{namespace}___{name}" / "default" / "0.0.0"
+    candidates = sorted(cache_root.glob(f"*/{name}-{split}.arrow"))
+    return candidates[-1] if candidates else None
+
+
+def _mastermind_dataset_loader() -> Any:
+    # Prefer the fully local HF datasets cache so concurrent shards do not block on Hub metadata.
+    def _loader(
+        dataset_path: str,
+        dataset_name: str | None = None,
+        *,
+        split: str,
+        cache_dir: str | None = None,
+        streaming: bool = False,
+        stream: bool | None = None,
+    ) -> Any:
+        if stream is not None:
+            streaming = stream
+        if getattr(load_dataset, "__module__", "").startswith("datasets") and not streaming:
+            cached_arrow_path = _cached_mastermind_arrow_path(dataset_path=dataset_path, split=split)
+            if cached_arrow_path is not None:
+                return Dataset.from_file(str(cached_arrow_path))
+
+        kwargs = {
+            "path": dataset_path,
+            "name": dataset_name,
+            "split": split,
+            "cache_dir": cache_dir,
+            "streaming": streaming,
+        }
+        try:
+            return load_dataset(download_mode="reuse_cache_if_exists", **kwargs)
+        except Exception:
+            return load_dataset(**kwargs)
+
+    return _loader
+
+
 @dataclass(slots=True)
 class Mastermind(BaseMultipleChoiceSuite):
     # Mastermind ranks candidate secret codes via multiple-choice loglikelihood.
     dataset_path: str = "flair/mastermind_24_mcq_random"
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = True
+    stream: bool = (False)
     variant: str = "mastermind_24_easy"
 
     def __post_init__(self) -> None:
@@ -64,7 +106,7 @@ class Mastermind(BaseMultipleChoiceSuite):
             raise ValueError("mastermind does not use a dataset_name")
 
     def dataset_loader(self) -> Any:
-        return load_dataset
+        return _mastermind_dataset_loader()
 
     def task_name(self) -> str:
         return self.variant

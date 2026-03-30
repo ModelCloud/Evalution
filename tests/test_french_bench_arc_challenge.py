@@ -71,7 +71,7 @@ def test_french_bench_arc_challenge_scores_multiple_choice_accuracy(monkeypatch)
         "dataset_name": None,
         "split": "test",
         "order": "native",
-        "stream": True,
+        "stream": False,
         "scoring_mode": "multiple_choice_loglikelihood",
     }
 

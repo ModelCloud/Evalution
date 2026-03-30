@@ -5,18 +5,19 @@
 
 from __future__ import annotations
 
-import re
 import random
 from itertools import islice
 from time import perf_counter
 from typing import Any, Callable, TypeVar
 
+import pcre
+
 from evalution.logbar import get_logger, spinner
 
 T = TypeVar("T")
 _DEFAULT_SHUFFLE_SEED = 7
-_UNEXPECTED_LOADER_KWARG_PATTERN = re.compile(r"unexpected keyword argument '([^']+)'")
-_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN = re.compile(r"doesn't have a '([^']+)' key")
+_UNEXPECTED_LOADER_KWARG_PATTERN = pcre.compile(r"unexpected keyword argument '([^']+)'")
+_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN = pcre.compile(r"doesn't have a '([^']+)' key")
 
 
 def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
@@ -25,6 +26,11 @@ def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
 
 def _unexpected_loader_config_keys(exc: ValueError) -> set[str]:
     return set(_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN.findall(str(exc)))
+
+
+def _cached_stream_config_miss(exc: ValueError) -> bool:
+    message = str(exc)
+    return "Couldn't find cache for" in message and "-stream=" in message
 
 
 def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
@@ -40,6 +46,10 @@ def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
     except ValueError as exc:
         unexpected = _unexpected_loader_config_keys(exc)
         if "stream" in unexpected and "stream" in kwargs:
+            fallback_kwargs = dict(kwargs)
+            fallback_kwargs["streaming"] = fallback_kwargs.pop("stream")
+            return loader(*args, **fallback_kwargs)
+        if "stream" in kwargs and _cached_stream_config_miss(exc):
             fallback_kwargs = dict(kwargs)
             fallback_kwargs["streaming"] = fallback_kwargs.pop("stream")
             return loader(*args, **fallback_kwargs)
@@ -137,7 +147,8 @@ def doc_count(
         count = len(docs)
         return min(max_rows, count) if max_rows is not None else count
 
-    split_info = getattr(getattr(loaded_docs, "info", None), "splits", {}).get(split)
+    split_metadata = getattr(getattr(loaded_docs, "info", None), "splits", None)
+    split_info = split_metadata.get(split) if hasattr(split_metadata, "get") else None
     if split_info is not None and getattr(split_info, "num_examples", None) is not None:
         count = int(split_info.num_examples)
         return min(max_rows, count) if max_rows is not None else count

@@ -161,6 +161,9 @@ def test_gptqmodel_session_generate_continuous_refills_paged_manager_while_calle
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
+        def eval(self):
+            return self
+
         def set_attn_implementation(self, value: str) -> None:
             self.config._attn_implementation = value
 

@@ -41,13 +41,17 @@ class TestSuite(ABC):
         raise NotImplementedError
 
 
+DEFAULT_STREAM = False
+
+
 @dataclass(slots=True)
 class BaseTestSuite(TestSuite):
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
     order: str = "native"
-    stream: bool = True
+    # Materialize datasets by default; benchmarks that rely on streaming opt in explicitly.
+    stream: bool = DEFAULT_STREAM
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
