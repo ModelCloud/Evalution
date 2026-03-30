@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
-from .base import BaseEngine, BaseInferenceSession
+from .base import BaseEngine, BaseInferenceSession, SharedEngineConfig
 from .gptqmodel_engine import GPTQModel
 from .sglang_engine import SGLang
 from .transformers import Transformers
@@ -15,6 +15,7 @@ __all__ = [
     "BaseInferenceSession",
     "GPTQModel",
     "SGLang",
+    "SharedEngineConfig",
     "Transformers",
     "TransformersCompat",
     "VLLM",

@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import gc
-import inspect
 import random
 import threading
 from contextlib import contextmanager, suppress
@@ -22,7 +21,6 @@ from tokenicer import Tokenicer
 
 from evalution.config import Model
 from evalution.engines.base import (
-    BaseEngine,
     BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
@@ -30,6 +28,7 @@ from evalution.engines.base import (
     LoglikelihoodRequest,
     RollingLoglikelihoodOutput,
     RollingLoglikelihoodRequest,
+    SharedEngineConfig,
 )
 from evalution.engines.continuous import stream_request_results
 from evalution.engines.memory import build_memory_profile, gib_to_bytes, resolve_dtype
@@ -100,18 +99,11 @@ class _LoadedTransformerRuntime:
 
 
 @dataclass(slots=True)
-class _TransformersCommonConfig(BaseEngine):
+class _TransformersCommonConfig(SharedEngineConfig):
     # Hold the load and generation controls shared by both transformer engine variants.
-    dtype: str | None = "auto"
     attn_implementation: str | None = None
     device: str | None = None
     device_map: str | dict[str, Any] | None = None
-    seed: int | None = None
-    batch_size: int | str = _AUTO_BATCH_SIZE
-    max_new_tokens: int = 256
-    trust_remote_code: bool | None = None
-    padding_side: str = "left"
-    resolved_engine: str | None = field(default=None, init=False)
 
     # Keep engine serialization stable across runtime APIs and test assertions.
     def to_dict(self) -> dict[str, Any]:

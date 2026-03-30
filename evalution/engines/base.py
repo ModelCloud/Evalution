@@ -195,5 +195,17 @@ class BaseEngine(ABC):
         return {}
 
 
+@dataclass(slots=True)
+class SharedEngineConfig(BaseEngine):
+    # Hold engine controls shared across the major runtime families.
+    dtype: str | None = "auto"
+    batch_size: int | str = "auto"
+    max_new_tokens: int = 256
+    trust_remote_code: bool | None = None
+    seed: int | None = None
+    padding_side: str = "left"
+    resolved_engine: str | None = field(default=None, init=False)
+
+
 # Keep the older type name available inside suite modules while the concrete base class stays explicit.
 InferenceSession = BaseInferenceSession

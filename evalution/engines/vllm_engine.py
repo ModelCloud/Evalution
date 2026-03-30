@@ -18,7 +18,6 @@ from typing import Any
 
 from evalution.config import Model
 from evalution.engines.base import (
-    BaseEngine,
     BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
@@ -26,6 +25,7 @@ from evalution.engines.base import (
     LoglikelihoodRequest,
     RollingLoglikelihoodOutput,
     RollingLoglikelihoodRequest,
+    SharedEngineConfig,
 )
 from evalution.engines.transformers_common import (
     _friendly_batch_size,
@@ -44,20 +44,14 @@ _DEFAULT_VLLM_CHECKOUT_CANDIDATES = (
 
 
 @dataclass(slots=True)
-class VLLM(BaseEngine):
+class VLLM(SharedEngineConfig):
     """Configure Evalution to run generation and scoring through vLLM."""
 
     # This engine intentionally models vLLM as a first-class Evalution backend
     # instead of routing through GPTQModel or the legacy TransformersCompat path.
     # That lets us preserve vLLM-specific behavior such as request-id based
     # continuous batching, prompt_logprobs scoring, and local checkout loading.
-    dtype: str | None = "auto"
-    batch_size: int | str = _AUTO_BATCH_SIZE
-    max_new_tokens: int = 256
-    trust_remote_code: bool | None = None
-    seed: int | None = None
     tokenizer_mode: str = "auto"
-    padding_side: str = "left"
     tensor_parallel_size: int = 1
     gpu_memory_utilization: float = 0.9
     quantization: str | None = None
@@ -66,7 +60,6 @@ class VLLM(BaseEngine):
     tokenizer_revision: str | None = None
     vllm_path: str | None = None
     llm_kwargs: dict[str, Any] = field(default_factory=dict)
-    resolved_engine: str | None = field(default=None, init=False)
 
     def build(self, model: Model) -> BaseInferenceSession:
         """Construct a vLLM-backed inference session for the requested model."""

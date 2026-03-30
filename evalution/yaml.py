@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import fields, is_dataclass
 from functools import lru_cache
 from pathlib import Path
 from pprint import pformat
@@ -18,128 +18,14 @@ from evalution.config import Model
 from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat, VLLM, SGLang
 from evalution.runtime import EvaluationRun
 
-@dataclass(frozen=True, slots=True)
-class _EngineSpec:
-    """Describe one engine node used by YAML execution, emission, and key inheritance."""
-
-    factory: Any | None = None
-    emit_alias: str | None = None
-    direct_option_keys: frozenset[str] = frozenset()
-    parents: tuple[str, ...] = ()
-
-
-# Keep all engine metadata in one registry so factory lookup, Python emission,
-# and option-key inheritance cannot drift apart across several parallel maps.
-# Order this registry from the most-reused parent nodes down to concrete engines
-# so the dependency graph reads top-down.
-_ENGINE_REGISTRY: dict[str, _EngineSpec] = {
-    "shared": _EngineSpec(
-        direct_option_keys=frozenset(
-            {
-                "dtype",
-                "batch_size",
-                "max_new_tokens",
-                "trust_remote_code",
-                "seed",
-                "padding_side",
-            }
-        )
-    ),
-    "transformers": _EngineSpec(
-        factory=Transformers,
-        emit_alias="Transformers",
-        direct_option_keys=frozenset(
-            {
-                "attn_implementation",
-                "device",
-                "device_map",
-                "manual_eviction",
-                "continuous_batching",
-                "allow_block_sharing",
-                "use_async_batching",
-                "q_padding_interval_size",
-                "kv_padding_interval_size",
-                "max_cached_graphs",
-            }
-        ),
-        parents=("shared",),
-    ),
-    "transformerscompat": _EngineSpec(
-        factory=TransformersCompat,
-        emit_alias="TransformersCompat",
-        direct_option_keys=frozenset(
-            {
-                "attn_implementation",
-                "device",
-                "device_map",
-            }
-        ),
-        parents=("shared",),
-    ),
-    "gptqmodel": _EngineSpec(
-        factory=GPTQModel,
-        emit_alias="GPTQModel",
-        direct_option_keys=frozenset(
-            {
-                "attn_implementation",
-                "device",
-                "device_map",
-                "manual_eviction",
-                "allow_block_sharing",
-                "use_async_batching",
-                "q_padding_interval_size",
-                "kv_padding_interval_size",
-                "max_cached_graphs",
-                "backend",
-                "gptqmodel_path",
-            }
-        ),
-        parents=("shared",),
-    ),
-    "vllm": _EngineSpec(
-        factory=VLLM,
-        emit_alias="VLLM",
-        direct_option_keys=frozenset(
-            {
-                "tokenizer_mode",
-                "tensor_parallel_size",
-                "gpu_memory_utilization",
-                "quantization",
-                "max_model_len",
-                "enforce_eager",
-                "tokenizer_revision",
-                "vllm_path",
-                "llm_kwargs",
-            }
-        ),
-        parents=("shared",),
-    ),
-    "sglang": _EngineSpec(
-        factory=SGLang,
-        emit_alias="SGLang",
-        direct_option_keys=frozenset(
-            {
-                "device",
-                "base_url",
-                "tokenizer_mode",
-                "tokenizer_worker_num",
-                "skip_tokenizer_init",
-                "load_format",
-                "context_length",
-                "quantization",
-                "mem_fraction_static",
-                "tp_size",
-                "dp_size",
-                "pp_size",
-                "attention_backend",
-                "sampling_backend",
-                "max_running_requests",
-                "max_total_tokens",
-                "sampling_params",
-            }
-        ),
-        parents=("shared",),
-    ),
+# Keep engine lookup centralized, but derive YAML option inheritance directly
+# from the concrete engine dataclass hierarchy so Python and YAML stay aligned.
+_ENGINE_REGISTRY: dict[str, type[BaseEngine]] = {
+    "transformers": Transformers,
+    "transformerscompat": TransformersCompat,
+    "gptqmodel": GPTQModel,
+    "vllm": VLLM,
+    "sglang": SGLang,
 }
 
 _TEST_FACTORIES: dict[str, Any] = {
@@ -617,26 +503,13 @@ def _normalize_engine_name(name: str) -> str:
 def _resolve_engine_emit_alias(engine_name: str) -> str:
     """Resolve the public Python constructor name used by python_from_yaml."""
 
-    spec = _engine_spec(engine_name)
-    alias = spec.emit_alias
-    if alias is None:
-        raise KeyError(f"missing Python emit alias for engine type: {engine_name!r}")
-    return alias
+    return _engine_factory(engine_name).__name__
 
 
-def _engine_spec(engine_name: str) -> _EngineSpec:
-    """Resolve the registered engine spec or raise the standard unknown-engine error."""
-
-    spec = _ENGINE_REGISTRY.get(engine_name)
-    if spec is None:
-        raise KeyError(f"unknown engine type: {engine_name!r}")
-    return spec
-
-
-def _engine_factory(engine_name: str) -> Any:
+def _engine_factory(engine_name: str) -> type[BaseEngine]:
     """Resolve the registered engine factory or raise the standard unknown-engine error."""
 
-    factory = _engine_spec(engine_name).factory
+    factory = _ENGINE_REGISTRY.get(engine_name)
     if factory is None:
         raise KeyError(f"unknown engine type: {engine_name!r}")
     return factory
@@ -644,13 +517,12 @@ def _engine_factory(engine_name: str) -> Any:
 
 @lru_cache(maxsize=None)
 def _engine_option_keys(engine_name: str) -> frozenset[str]:
-    """Resolve the full inherited option-key set for one engine family."""
+    """Resolve YAML option keys from one engine dataclass init signature."""
 
-    spec = _engine_spec(engine_name)
-    resolved = set(spec.direct_option_keys)
-    for parent_name in spec.parents:
-        resolved.update(_engine_option_keys(parent_name))
-    return frozenset(resolved)
+    factory = _engine_factory(engine_name)
+    if not is_dataclass(factory):
+        return frozenset()
+    return frozenset(field.name for field in fields(factory) if field.init)
 
 
 def _validate_engine_option_keys(engine_name: str, kwargs: dict[str, Any]) -> None:
