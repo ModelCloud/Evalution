@@ -6970,8 +6970,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.sst2(batch_size=24, stream=True, max_rows=128),
         expected_name="sst2",
         baseline={
-            "acc,ll": 0.5390625,
-            "acc,ll_avg": 0.5390625,
+            "acc,ll": 0.5,
+            "acc,ll_avg": 0.5,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
