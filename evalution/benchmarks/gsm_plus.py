@@ -38,6 +38,7 @@ def _gsm_plus_target(doc: dict[str, Any]) -> str:
 class _BaseGSMPlusSuite(BaseGSM8KSuite):
     # GSM-Plus reuses GSM8K prompting, but matches lm-eval's strict/flexible answer extraction.
     variant: str = "base"
+    stream: bool = True
     SCORING_MODE = "generated_regex_extract_exact_match"
     PRIMARY_METRIC = "em,strict"
     max_new_tokens: int = 256

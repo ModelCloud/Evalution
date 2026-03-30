@@ -72,7 +72,7 @@ def test_arc_mt_scores_translated_arc_exam_score(monkeypatch) -> None:
         "dataset_path": "LumiOpen/arc_challenge_mt",
         "dataset_name": "da",
         "split": "test",
-        "stream": True,
+        "stream": False,
         "order": "native",
         "scoring_mode": "multiple_choice_exam_score",
         "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",

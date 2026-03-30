@@ -504,7 +504,7 @@ class IFEval(BaseTestSuite):
     split: str = IFEVAL_SPLIT
     # Keep streaming enabled by default; the loader translates Evalution's `stream=` kwarg to
     # Hugging Face's `streaming=` argument at the dataset boundary.
-    stream: bool = True
+    stream: bool = (False)
     max_new_tokens: int = 1280
     do_sample: bool = False
     temperature: float = 0.0

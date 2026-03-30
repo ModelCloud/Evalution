@@ -25,7 +25,7 @@ from evalution.scorers.multiple_choice import (
     multiple_choice_outcome,
     normalize_label_permutation_fraction,
 )
-from evalution.benchmarks.base import TestSuite
+from evalution.benchmarks.base import BaseTestSuite, TestSuite
 from evalution.benchmarks.data import (
     apply_order,
     doc_count,
@@ -55,7 +55,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     # default here would silently change benchmark semantics.
     split: str = "validation"
     order: str = "native"
-    stream: bool = True
+    # Materialize datasets by default so non-stream benchmark metadata stays stable unless a suite opts in.
+    stream: bool = (False)
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

@@ -31,7 +31,7 @@ class MuTual(BaseMultipleChoiceSuite):
     dataset_path: str = "tasksource/mutual"
     dataset_name: str | None = None
     split: str = "validation"
-    stream: bool = True
+    stream: bool = (False)
 
     def dataset_loader(self) -> Any:
         return load_dataset

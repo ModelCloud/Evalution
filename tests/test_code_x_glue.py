@@ -92,7 +92,7 @@ def test_code_x_glue_scores_corpus_bleu(monkeypatch) -> None:
         "dataset_name": None,
         "split": "test",
         "order": "native",
-        "stream": True,
+        "stream": False,
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_docstring_corpus_bleu4",
         "primary_metric": "bleu4",

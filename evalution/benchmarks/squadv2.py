@@ -52,7 +52,7 @@ class SQuADV2(BaseTestSuite):
     max_new_tokens: int = 32
     batch_size: int | None = None
     cache_dir: str | None = None
-    stream: bool = True
+    stream: bool = (False)
     do_sample: bool = False
     temperature: float = 0.0
 

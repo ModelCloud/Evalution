@@ -60,6 +60,7 @@ class WikiText(BaseRollingPerplexitySuite):
     dataset_path: str = "EleutherAI/wikitext_document_level"
     dataset_name: str | None = "wikitext-2-raw-v1"
     split: str = "test"
+    stream: bool = True
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

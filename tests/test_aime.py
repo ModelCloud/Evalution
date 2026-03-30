@@ -57,7 +57,7 @@ def test_aime_scores_boxed_math_exact_match(monkeypatch) -> None:
         "dataset_name": None,
         "split": "train",
         "order": "native",
-        "stream": True,
+        "stream": False,
         "generation_submission_mode": "fixed_batches",
         "scoring_mode": "generated_math_exact_match",
         "primary_metric": "em",

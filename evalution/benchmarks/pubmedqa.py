@@ -53,7 +53,7 @@ def _load_pubmedqa_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = True,
+    stream: bool = (False),
 ) -> Dataset:
     del stream
     if dataset_path != "bigbio/pubmed_qa":
@@ -82,7 +82,7 @@ class PubMedQA(BaseMultipleChoiceSuite):
     dataset_path: str = "bigbio/pubmed_qa"
     dataset_name: str | None = "pubmed_qa_labeled_fold0_source"
     split: str = "test"
-    stream: bool = True
+    stream: bool = (False)
 
     def dataset_loader(self) -> Any:
         return _load_pubmedqa_dataset

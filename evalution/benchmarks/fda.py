@@ -33,6 +33,7 @@ class FDA(BaseTestSuite):
     dataset_path: str = FDA_DATASET_PATH
     dataset_name: str | None = FDA_DATASET_NAME
     split: str = "validation"
+    stream: bool = True
     max_new_tokens: int = 48
     do_sample: bool = False
     temperature: float = 0.0

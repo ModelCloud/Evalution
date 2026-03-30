@@ -144,7 +144,7 @@ def test_asdiv_cot_llama_scores_numeric_generation_with_chat_fewshots(monkeypatc
         "dataset_path": "EleutherAI/asdiv",
         "dataset_name": None,
         "split": "validation",
-        "stream": True,
+        "stream": False,
         "order": "native",
         "generation_submission_mode": "fixed_batches",
         "variant": "cot_llama",

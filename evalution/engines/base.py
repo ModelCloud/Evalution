@@ -99,13 +99,21 @@ class BaseInferenceSession(ABC):
 
     # Stream scored continuations back to the caller while the session keeps refilling fixed-size
     # batches in the background.
-    @abstractmethod
     def loglikelihood_continuous(
         self,
         requests: Iterable[tuple[Any, LoglikelihoodRequest]],
         *,
         batch_size: int | None = None,
-    ) -> Iterator[tuple[Any, LoglikelihoodOutput]]: ...
+    ) -> Iterator[tuple[Any, LoglikelihoodOutput]]:
+        # Fall back to the batched log-likelihood API so simple engines and test doubles do not
+        # need a dedicated continuous implementation when refill behavior is irrelevant.
+        request_items = list(requests)
+        outputs = self.loglikelihood(
+            [request for _, request in request_items],
+            batch_size=batch_size,
+        )
+        for (item_id, _request), output in zip(request_items, outputs, strict=True):
+            yield item_id, output
 
     @abstractmethod
     def loglikelihood_rolling(

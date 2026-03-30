@@ -30,6 +30,7 @@ class ToxiGen(BaseMultipleChoiceSuite):
     dataset_path: str = "skg/toxigen-data"
     dataset_name: str | None = "annotated"
     split: str = "test"
+    stream: bool = True
 
     def dataset_loader(self) -> Any:
         return load_dataset

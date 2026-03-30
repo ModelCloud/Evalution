@@ -11,7 +11,7 @@ from typing import Any
 
 from datasets import load_dataset
 
-from evalution.benchmarks.base import TestSuite
+from evalution.benchmarks.base import BaseTestSuite, TestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger, loglikelihood_progress_metadata
@@ -55,7 +55,7 @@ class TruthfulQAMC(TestSuite):
     dataset_name: str | None = "multiple_choice"
     split: str = "validation"
     variant: str = "mc1"
-    stream: bool = True
+    stream: bool = (False)
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

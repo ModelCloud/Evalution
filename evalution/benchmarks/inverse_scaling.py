@@ -50,7 +50,7 @@ class InverseScaling(BaseMultipleChoiceSuite):
     dataset_name: str | None = "hindsight-neglect"
     split: str = "data"
     subset: str = "hindsight-neglect"
-    stream: bool = True
+    stream: bool = (False)
 
     def __post_init__(self) -> None:
         if self.subset not in INVERSE_SCALING_SUBSETS:
