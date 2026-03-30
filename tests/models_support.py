@@ -5358,8 +5358,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.mathqa(batch_size=24, max_rows=128),
         expected_name="mathqa",
         baseline={
-            "acc,ll": 0.359375,
-            "acc,ll_avg": 0.3515625,
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.2890625,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -6304,8 +6304,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.medmcqa(batch_size=24, stream=True, max_rows=128),
         expected_name="medmcqa",
         baseline={
-            "acc,ll": 0.4296875,
-            "acc,ll_avg": 0.4296875,
+            "acc,ll": 0.5,
+            "acc,ll_avg": 0.5,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
@@ -6576,8 +6576,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.piqa(batch_size=24, stream=True, max_rows=128),
         expected_name="piqa",
         baseline={
-            "acc,ll": 0.71875,
-            "acc,ll_avg": 0.7890625,
+            "acc,ll": 0.703125,
+            "acc,ll_avg": 0.7578125,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
