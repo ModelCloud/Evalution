@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from evalution.benchmarks.base import TestSuite
+from evalution.benchmarks.base import BaseTestSuite, TestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger, loglikelihood_progress_metadata
@@ -32,7 +32,8 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = True
+    # Materialize datasets by default so suites only stream when they explicitly depend on it.
+    stream: bool = (False)
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

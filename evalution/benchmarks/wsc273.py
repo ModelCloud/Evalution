@@ -14,6 +14,7 @@ from urllib.request import urlretrieve
 
 from datasets import Dataset
 
+from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger
@@ -80,7 +81,7 @@ def _load_wsc273_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = True,
+    stream: bool = (False),
 ) -> Dataset:
     del stream
     if dataset_path != "winograd_wsc":
@@ -126,7 +127,7 @@ class WSC273:
     dataset_path: str = "winograd_wsc"
     dataset_name: str | None = "wsc273"
     split: str = "test"
-    stream: bool = True
+    stream: bool = (False)
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

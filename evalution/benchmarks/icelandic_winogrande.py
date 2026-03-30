@@ -11,6 +11,7 @@ from typing import Any
 
 from datasets import load_dataset
 
+from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger
@@ -41,7 +42,7 @@ def _blank_choice_contexts_and_suffix(
 class IcelandicWinoGrande:
     dataset_path: str = "mideind/icelandic-winogrande"
     split: str = "train"
-    stream: bool = True
+    stream: bool = (False)
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

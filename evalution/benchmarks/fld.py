@@ -41,6 +41,7 @@ class FLD(BaseTestSuite):
     dataset_path: str = "hitachi-nlp/FLD.v2"
     dataset_name: str | None = "default"
     split: str = "test"
+    stream: bool = True
     max_new_tokens: int = 256
     do_sample: bool = False
     temperature: float = 0.0

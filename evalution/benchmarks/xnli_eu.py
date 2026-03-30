@@ -25,6 +25,7 @@ class XNLIEU(BaseMultipleChoiceSuite):
     dataset_path: str = "HiTZ/xnli-eu"
     dataset_name: str | None = "eu"
     split: str = "test"
+    stream: bool = True
 
     def dataset_loader(self) -> Any:
         return load_dataset

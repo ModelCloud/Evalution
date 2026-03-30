@@ -67,7 +67,7 @@ class MBPP(BaseTestSuite):
     dataset_path: str = MBPP_DATASET_PATH
     dataset_name: str | None = MBPP_DATASET_NAME
     split: str = MBPP_TEST_SPLIT
-    stream: bool = True
+    stream: bool = (False)
     max_new_tokens: int = 512
     do_sample: bool = False
     temperature: float = 0.0

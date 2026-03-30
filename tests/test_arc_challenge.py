@@ -76,7 +76,7 @@ def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
         "dataset_name": "ARC-Challenge",
         "split": "test",
         "order": "native",
-        "stream": True,
+        "stream": False,
         "scoring_mode": "multiple_choice_exam_score",
         "scoring_reference": "clark2018arc arc-solvers calculate_scores.py",
     }

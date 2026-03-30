@@ -22,6 +22,7 @@ class MoralStories(BaseMultipleChoiceSuite):
     # Moral Stories scores whether the model prefers the normative action over the divergent one.
     dataset_path: str = "LabHC/moral_stories"
     split: str = "train"
+    stream: bool = True
 
     def dataset_loader(self) -> Any:
         return load_dataset
