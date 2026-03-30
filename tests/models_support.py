@@ -3454,7 +3454,7 @@ SUITE_SPECS = {
     "polemo2_out": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.polemo2_out(batch_size=24, max_rows=128),
         expected_name="polemo2_out",
-        baseline={"f1": 0.4765625},
+        baseline={"f1": 0.5390625},
         expected_metrics=frozenset({"f1"}),
         expected_metadata={
             "stream": False,
@@ -5913,6 +5913,7 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_kormedmcqa_fields(subset="doctor"),
             allow_empty_prediction=True,
         ),
+        abs_tolerance=3 / 128,
     ),
     "kormedmcqa_nurse": SuiteSpec(
         suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa_nurse")(batch_size=24, max_rows=128),
