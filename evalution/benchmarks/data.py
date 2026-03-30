@@ -27,6 +27,11 @@ def _unexpected_loader_config_keys(exc: ValueError) -> set[str]:
     return set(_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN.findall(str(exc)))
 
 
+def _cached_stream_config_miss(exc: ValueError) -> bool:
+    message = str(exc)
+    return "Couldn't find cache for" in message and "-stream=" in message
+
+
 def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
     try:
         return loader(*args, **kwargs)
@@ -40,6 +45,10 @@ def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
     except ValueError as exc:
         unexpected = _unexpected_loader_config_keys(exc)
         if "stream" in unexpected and "stream" in kwargs:
+            fallback_kwargs = dict(kwargs)
+            fallback_kwargs["streaming"] = fallback_kwargs.pop("stream")
+            return loader(*args, **fallback_kwargs)
+        if "stream" in kwargs and _cached_stream_config_miss(exc):
             fallback_kwargs = dict(kwargs)
             fallback_kwargs["streaming"] = fallback_kwargs.pop("stream")
             return loader(*args, **fallback_kwargs)
