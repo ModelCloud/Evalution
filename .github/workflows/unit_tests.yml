@@ -94,7 +94,7 @@ jobs:
         test-file: ${{ fromJSON(needs.list-test-files.outputs.files) }}
     runs-on: [ self-hosted, xeon5 ]
     container:
-      image: 10.0.13.31:5000/nvidia/cuda:131-ubuntu22.04_0206
+      image: 10.0.13.31:5000/nvidia/cuda:132-ubuntu22.04_0206
       volumes:
         - /monster/ci/env/entrypoint.sh:/entrypoint.sh
         - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
@@ -130,8 +130,8 @@ jobs:
       - name: Setup uv env
         run: |
           /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
-          # uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
-          uv pip uninstall flash_attn
+           uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
+      #          uv pip uninstall flash_attn
 
       - name: Print uv env
         run: |
