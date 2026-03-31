@@ -6,12 +6,25 @@
 from __future__ import annotations
 
 import importlib
+from dataclasses import fields
 
 from datasets import Dataset
 
 import evalution
 from evalution import yaml as evalution_yaml
-from evalution.engines import SGLang
+from evalution.engines import (
+    BaseEngineDeviceConfig,
+    BaseEnginePagedBatchingConfig,
+    BaseEngineQuantizationConfig,
+    BaseEngineTokenizerModeConfig,
+    BaseEngineTransformersRuntimeConfig,
+    GPTQModel,
+    SGLang,
+    SharedEngineConfig,
+    Transformers,
+    TransformersCompat,
+    VLLM,
+)
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
@@ -97,7 +110,7 @@ def test_run_yaml_executes_yaml_spec_and_returns_structured_result(monkeypatch) 
     monkeypatch.setitem(
         evalution_yaml._ENGINE_REGISTRY,
         "fake",
-        evalution_yaml._EngineSpec(factory=FakeEngine, emit_alias="FakeEngine"),
+        FakeEngine,
     )
 
     result = evalution.run_yaml(
@@ -861,28 +874,67 @@ tests:
     assert "eval(engines." not in script
 
 
-def test_engine_option_keys_are_inheritable_across_engine_families() -> None:
-    """Verify engine option keys are composed through explicit inheritance layers."""
+def test_non_yaml_engine_api_uses_shared_engine_config_inheritance() -> None:
+    """Verify the public engine classes inherit common runtime controls from one shared base."""
+
+    assert issubclass(Transformers, SharedEngineConfig)
+    assert issubclass(TransformersCompat, SharedEngineConfig)
+    assert issubclass(GPTQModel, SharedEngineConfig)
+    assert issubclass(VLLM, SharedEngineConfig)
+    assert issubclass(SGLang, SharedEngineConfig)
+    assert issubclass(TransformersCompat, BaseEngineTransformersRuntimeConfig)
+    assert issubclass(Transformers, BaseEngineTransformersRuntimeConfig)
+    assert issubclass(GPTQModel, BaseEngineTransformersRuntimeConfig)
+    assert issubclass(Transformers, BaseEnginePagedBatchingConfig)
+    assert issubclass(GPTQModel, BaseEnginePagedBatchingConfig)
+    assert issubclass(VLLM, BaseEngineTokenizerModeConfig)
+    assert issubclass(SGLang, BaseEngineTokenizerModeConfig)
+    assert issubclass(VLLM, BaseEngineQuantizationConfig)
+    assert issubclass(SGLang, BaseEngineQuantizationConfig)
+    assert issubclass(SGLang, BaseEngineDeviceConfig)
+
+
+def test_repeated_engine_keys_live_on_dedicated_base_configs() -> None:
+    """Verify repeated engine keys are defined once on dedicated base config classes."""
+
+    assert {field.name for field in fields(BaseEngineDeviceConfig)} == {"device"}
+    assert {field.name for field in fields(BaseEngineTokenizerModeConfig)} == {"tokenizer_mode"}
+    assert {field.name for field in fields(BaseEngineQuantizationConfig)} == {"quantization"}
+    assert {field.name for field in fields(BaseEngineTransformersRuntimeConfig)} == {
+        "device",
+        "attn_implementation",
+        "device_map",
+    }
+    assert {field.name for field in fields(BaseEnginePagedBatchingConfig)} == {
+        "manual_eviction",
+        "allow_block_sharing",
+        "use_async_batching",
+        "q_padding_interval_size",
+        "kv_padding_interval_size",
+        "max_cached_graphs",
+    }
+
+
+def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> None:
+    """Verify YAML engine option keys come from the engine class inheritance tree."""
 
     # What this test is actually verifying:
-    # Shared runtime keys should be inherited once, engine-family-specific keys
-    # should stay scoped to that family, and engine-only extras should remain local.
-    shared_keys = evalution_yaml._engine_option_keys("shared")
+    # Shared runtime keys should come from the shared engine config base class,
+    # while engine-family-specific keys stay scoped to that family.
     transformers_keys = evalution_yaml._engine_option_keys("transformers")
     gptqmodel_keys = evalution_yaml._engine_option_keys("gptqmodel")
     transformers_compat_keys = evalution_yaml._engine_option_keys("transformerscompat")
     vllm_keys = evalution_yaml._engine_option_keys("vllm")
     sglang_keys = evalution_yaml._engine_option_keys("sglang")
 
-    assert "dtype" in shared_keys
-    assert "batch_size" in shared_keys
-    assert "padding_side" in shared_keys
-
     assert "dtype" in transformers_keys
+    assert "batch_size" in transformers_keys
+    assert "padding_side" in transformers_keys
     assert "attn_implementation" in transformers_keys
     assert "continuous_batching" in transformers_keys
 
     assert "dtype" in gptqmodel_keys
+    assert "batch_size" in gptqmodel_keys
     assert "attn_implementation" in gptqmodel_keys
     assert "manual_eviction" in gptqmodel_keys
     assert "backend" in gptqmodel_keys
@@ -890,6 +942,7 @@ def test_engine_option_keys_are_inheritable_across_engine_families() -> None:
     assert "continuous_batching" not in gptqmodel_keys
 
     assert "dtype" in transformers_compat_keys
+    assert "batch_size" in transformers_compat_keys
     assert "attn_implementation" in transformers_compat_keys
     assert "continuous_batching" not in transformers_compat_keys
     assert "manual_eviction" not in transformers_compat_keys

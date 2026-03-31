@@ -195,5 +195,53 @@ class BaseEngine(ABC):
         return {}
 
 
+@dataclass(slots=True)
+class SharedEngineConfig(BaseEngine):
+    # Hold engine controls shared across the major runtime families.
+    dtype: str | None = "auto"
+    batch_size: int | str = "auto"
+    max_new_tokens: int = 256
+    trust_remote_code: bool | None = None
+    seed: int | None = None
+    padding_side: str = "left"
+    resolved_engine: str | None = field(default=None, init=False)
+
+
+@dataclass
+class BaseEngineDeviceConfig:
+    # Share the simple explicit runtime device override across engine families.
+    device: str | None = None
+
+
+@dataclass
+class BaseEngineTokenizerModeConfig:
+    # Share tokenizer runtime mode selection across backends that expose it.
+    tokenizer_mode: str = "auto"
+
+
+@dataclass
+class BaseEngineQuantizationConfig:
+    # Share runtime quantization mode selection across backends that expose it.
+    quantization: str | None = None
+
+
+@dataclass
+class BaseEngineTransformersRuntimeConfig(BaseEngineDeviceConfig):
+    # Group the Hugging Face style runtime controls shared by transformer-like backends.
+    attn_implementation: str | None = None
+    device_map: str | dict[str, Any] | None = None
+
+
+@dataclass
+class BaseEnginePagedBatchingConfig:
+    # Group the paged-batching controls shared by engines that expose the same scheduler knobs.
+    manual_eviction: bool = False
+    allow_block_sharing: bool = True
+    use_async_batching: bool | None = None
+    q_padding_interval_size: int = 0
+    kv_padding_interval_size: int = 0
+    max_cached_graphs: int = 0
+
+
 # Keep the older type name available inside suite modules while the concrete base class stays explicit.
 InferenceSession = BaseInferenceSession

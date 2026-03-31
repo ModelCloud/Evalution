@@ -9,20 +9,20 @@ import asyncio
 import gc
 import importlib
 import queue
-import sys
 import threading
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field, replace
 from itertools import chain, islice
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 from evalution.config import Model
 from evalution.engines.base import (
-    BaseEngine,
+    BaseEngineDeviceConfig,
+    BaseEngineQuantizationConfig,
+    BaseEngineTokenizerModeConfig,
     BaseInferenceSession,
     GenerationOutput,
     GenerationRequest,
@@ -30,6 +30,7 @@ from evalution.engines.base import (
     LoglikelihoodRequest,
     RollingLoglikelihoodOutput,
     RollingLoglikelihoodRequest,
+    SharedEngineConfig,
 )
 from evalution.engines.continuous import stream_request_results
 from evalution.engines.transformers_common import (
@@ -98,24 +99,19 @@ class _LoadedSGLangRuntime:
 
 
 @dataclass(slots=True)
-class SGLang(BaseEngine):
+class SGLang(
+    BaseEngineTokenizerModeConfig,
+    BaseEngineQuantizationConfig,
+    BaseEngineDeviceConfig,
+    SharedEngineConfig,
+):
     # SGLang integration stays in-process through `sglang.Engine`; no HTTP server is used.
     # Expose SGLang runtime kwargs using the same names as ServerArgs / Engine kwargs.
-    dtype: str | None = "auto"
-    device: str | None = None
-    seed: int | None = None
-    trust_remote_code: bool | None = None
-    padding_side: str = "left"
-    resolved_engine: str | None = field(default=None, init=False)
     base_url: str | None = None
-    batch_size: int | str = "auto"
-    max_new_tokens: int = 256
-    tokenizer_mode: str = "auto"
     tokenizer_worker_num: int = 1
     skip_tokenizer_init: bool = False
     load_format: str = "auto"
     context_length: int | None = None
-    quantization: str | None = None
     mem_fraction_static: float | None = None
     tp_size: int = 1
     dp_size: int = 1
