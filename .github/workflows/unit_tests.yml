@@ -14,6 +14,14 @@ on:
         description: "GitHub ref: Branch, Tag or Commit SHA"
         required: false
         default: ""
+      test_regex:
+        description: "Regex to filter test files"
+        required: false
+        default: ""
+      max-parallel:
+        description: "Parallel jobs"
+        required: false
+        default: "8"
 
 env:
   ref: ${{ github.event.inputs.ref || github.ref }}
@@ -30,7 +38,60 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  list-test-files:
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.files.outputs.files }}
+      max-parallel: ${{ steps.config.outputs.max-parallel }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.ref }}
+
+      - name: Set matrix config
+        id: config
+        run: |
+          echo "max-parallel=${{ github.event.inputs['max-parallel'] || '8' }}" >> "$GITHUB_OUTPUT"
+
+      - name: List test files
+        id: files
+        env:
+          TEST_REGEX: ${{ github.event.inputs.test_regex || '' }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+
+          root = pathlib.Path("tests")
+          pattern = os.environ.get("TEST_REGEX", "")
+          regex = re.compile(pattern) if pattern else None
+
+          files = []
+          for path in sorted(root.rglob("test_*.py")):
+            rel = path.as_posix()
+            if regex and not regex.search(rel):
+              continue
+            files.append(rel)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+            print(f"files={json.dumps(files)}", file=fh)
+
+          print("Matched test files:")
+          for rel in files:
+            print(rel)
+          PY
+
   test:
+    needs: list-test-files
+    if: needs.list-test-files.outputs.files != '[]'
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(needs.list-test-files.outputs.max-parallel) }}
+      matrix:
+        test-file: ${{ fromJSON(needs.list-test-files.outputs.files) }}
     runs-on: [ self-hosted, xeon5 ]
     container:
       image: 10.0.13.31:5000/nvidia/cuda:131-ubuntu22.04_0206
@@ -44,6 +105,14 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ env.ref }}
+
+      - name: Set test metadata
+        id: meta
+        run: |
+          test_file="${{ matrix.test-file }}"
+          safe_name="${test_file//\//__}"
+          safe_name="${safe_name//./_}"
+          echo "safe-name=$safe_name" >> "$GITHUB_OUTPUT"
 
 
       - name: Activate uv env
@@ -88,7 +157,7 @@ jobs:
           git status
           echo "::endgroup::"
 
-      - name: Run tests
+      - name: Run test
         run: |
           if [ ! -d tests ]; then
             echo "::error::tests/ directory not found."
@@ -103,12 +172,12 @@ jobs:
           echo "::endgroup::"
           
           mkdir -p artifacts
-          pytest --durations=0 tests --junitxml=artifacts/unit-tests.xml
+          pytest --durations=0 "${{ matrix.test-file }}" --junitxml="artifacts/${{ steps.meta.outputs.safe-name }}.xml"
 
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: unit-test-results
+          name: unit-test-results-${{ steps.meta.outputs.safe-name }}
           path: artifacts/*
           if-no-files-found: ignore
