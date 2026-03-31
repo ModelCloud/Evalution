@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -36,8 +37,25 @@ from evalution.engines.transformers_common import (
 )
 from evalution.logbar import get_logger
 
-_DEFAULT_GPTQMODEL_PATH = "/root/gptqmodel"
 _UNSUPPORTED_GPTQMODEL_BACKENDS = frozenset({"mlx", "sglang", "vllm"})
+
+
+def _default_gptqmodel_path() -> str | None:
+    for env_name in ("EVALUTION_GPTQMODEL_PATH", "GPTQMODEL_PATH"):
+        configured = os.environ.get(env_name)
+        if configured:
+            return configured
+
+    repo_root = Path(__file__).resolve().parents[2]
+    for candidate in (
+            repo_root / "gptqmodel",
+            repo_root.parent / "gptqmodel",
+            Path.cwd() / "gptqmodel",
+    ):
+        if candidate.exists():
+            return str(candidate)
+
+    return None
 
 
 @dataclass(slots=True)
@@ -58,7 +76,7 @@ class _LoadedGPTQModelRuntime:
 class GPTQModel(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
     # Load quantized Hugging Face-compatible checkpoints through GPTQModel.
     backend: str = "auto"
-    gptqmodel_path: str | None = _DEFAULT_GPTQMODEL_PATH
+    gptqmodel_path: str | None = field(default_factory=_default_gptqmodel_path)
 
     # Reuse the same paged-attention feature gating as the native transformer engine.
     def build(self, model: Model) -> TransformersSession:
