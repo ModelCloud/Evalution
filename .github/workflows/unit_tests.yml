@@ -98,8 +98,13 @@ jobs:
       volumes:
         - /monster/ci/env/entrypoint.sh:/entrypoint.sh
         - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
+        - /dev/dri/by-path:/dev/dri/by-path
+        - /monster/ci/models:/monster/data/model
+        - /monster/ci/dataset:/monster/data/model/dataset
+        - /monster/ci/huggingface:/github/home/.cache/huggingface
         - /monster/ci/uv:/opt/uv
         - /monster/ci/env:/opt/env
+        - /monster/ci/dist:/opt/dist
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
