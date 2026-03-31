@@ -94,7 +94,7 @@ jobs:
         test-file: ${{ fromJSON(needs.list-test-files.outputs.files) }}
     runs-on: [ self-hosted, xeon5 ]
     container:
-      image: 10.0.13.31:5000/nvidia/cuda:132-ubuntu22.04_0206
+      image: 10.0.13.31:5000/nvidia/cuda:132-ubuntu24.04_0325
       volumes:
         - /monster/ci/env/entrypoint.sh:/entrypoint.sh
         - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
