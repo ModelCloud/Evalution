@@ -171,7 +171,7 @@ jobs:
           fi
           
           uv pip install .
-          uv pip install -U pytest datasets rouge_score sglang
+          uv pip install -U pytest datasets rouge_score sglang fsspec
           
           echo "::group::pip list"
           uv pip list
