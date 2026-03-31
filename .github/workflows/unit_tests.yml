@@ -130,6 +130,7 @@ jobs:
       - name: Setup uv env
         run: |
           /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
+          uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
 
       - name: Print uv env
         run: |
