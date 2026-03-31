@@ -21,6 +21,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest, Loglikel
 from evalution.engines.gptqmodel_engine import (
     GPTQModel,
     GPTQModelSession,
+    _default_gptqmodel_path,
     _import_gptqmodel,
     _validate_gptqmodel_backend,
     load_gptqmodel_runtime,
@@ -31,11 +32,12 @@ _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-
 
 def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     engine = GPTQModel()
+    expected_gptqmodel_path = _default_gptqmodel_path()
 
     assert engine.batch_size == "auto"
     assert engine.seed is None
     assert engine.backend == "auto"
-    assert engine.gptqmodel_path == "/root/gptqmodel"
+    assert engine.gptqmodel_path == expected_gptqmodel_path
     assert engine.manual_eviction is False
     assert engine.allow_block_sharing is True
     assert engine.use_async_batching is None
@@ -45,13 +47,21 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["batch_size"] == "auto"
     assert engine.to_dict()["seed"] is None
     assert engine.to_dict()["backend"] == "auto"
-    assert engine.to_dict()["gptqmodel_path"] == "/root/gptqmodel"
+    assert engine.to_dict()["gptqmodel_path"] == expected_gptqmodel_path
     assert engine.to_dict()["manual_eviction"] is False
     assert engine.to_dict()["allow_block_sharing"] is True
     assert engine.to_dict()["use_async_batching"] is None
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
+
+
+def test_gptqmodel_engine_defaults_path_from_environment(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("EVALUTION_GPTQMODEL_PATH", str(tmp_path))
+
+    engine = GPTQModel()
+
+    assert engine.gptqmodel_path == str(tmp_path)
 
 
 def test_load_gptqmodel_runtime_seeds_runtime(monkeypatch) -> None:
