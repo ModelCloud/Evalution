@@ -50,3 +50,10 @@ filterwarnings = [
     "ignore:Importing from torchao\\.dtypes\\.uintx\\.uintx_layout is deprecated.*:DeprecationWarning",
     "ignore:Importing BlockSparseLayout from torchao\\.dtypes is deprecated.*:DeprecationWarning",
 ]
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "rouge-score",
+    "torch",
+]
+#
