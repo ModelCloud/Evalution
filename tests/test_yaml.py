@@ -21,6 +21,7 @@ from evalution.engines import (
     GPTQModel,
     SGLang,
     SharedEngineConfig,
+    TensorRTLLM,
     Transformers,
     TransformersCompat,
     VLLM,
@@ -874,6 +875,26 @@ tests:
     assert "eval(engines." not in script
 
 
+def test_python_from_yaml_emits_tensorrt_llm_name() -> None:
+    """Verify python_from_yaml emits the explicit TensorRTLLM engine constructor name."""
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: TensorRTLLM
+  tensor_parallel_size: 2
+model:
+  path: /tmp/model
+tests:
+  - type: gsm8k_platinum
+    max_rows: 8
+"""
+    )
+
+    assert "engines.TensorRTLLM(" in script
+    assert "eval(engines." not in script
+
+
 def test_non_yaml_engine_api_uses_shared_engine_config_inheritance() -> None:
     """Verify the public engine classes inherit common runtime controls from one shared base."""
 
@@ -882,6 +903,7 @@ def test_non_yaml_engine_api_uses_shared_engine_config_inheritance() -> None:
     assert issubclass(GPTQModel, SharedEngineConfig)
     assert issubclass(VLLM, SharedEngineConfig)
     assert issubclass(SGLang, SharedEngineConfig)
+    assert issubclass(TensorRTLLM, SharedEngineConfig)
     assert issubclass(TransformersCompat, BaseEngineTransformersRuntimeConfig)
     assert issubclass(Transformers, BaseEngineTransformersRuntimeConfig)
     assert issubclass(GPTQModel, BaseEngineTransformersRuntimeConfig)
@@ -926,6 +948,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     transformers_compat_keys = evalution_yaml._engine_option_keys("transformerscompat")
     vllm_keys = evalution_yaml._engine_option_keys("vllm")
     sglang_keys = evalution_yaml._engine_option_keys("sglang")
+    tensorrt_llm_keys = evalution_yaml._engine_option_keys("tensorrtllm")
 
     assert "dtype" in transformers_keys
     assert "batch_size" in transformers_keys
@@ -960,6 +983,13 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "sampling_params" in sglang_keys
     assert "attn_implementation" not in sglang_keys
 
+    assert "dtype" in tensorrt_llm_keys
+    assert "batch_size" in tensorrt_llm_keys
+    assert "tensor_parallel_size" in tensorrt_llm_keys
+    assert "runtime_backend" in tensorrt_llm_keys
+    assert "tensorrt_llm_path" in tensorrt_llm_keys
+    assert "attn_implementation" not in tensorrt_llm_keys
+
 
 def test_build_engine_constructs_sglang() -> None:
     """Verify YAML engine construction resolves the registered SGLang engine."""
@@ -975,6 +1005,22 @@ def test_build_engine_constructs_sglang() -> None:
     assert isinstance(engine, SGLang)
     assert engine.tp_size == 2
     assert engine.seed == 7
+
+
+def test_build_engine_constructs_tensorrt_llm() -> None:
+    """Verify YAML engine construction resolves the registered TensorRTLLM engine."""
+
+    engine = evalution_yaml._build_engine(
+        {
+            "type": "TensorRTLLM",
+            "tensor_parallel_size": 2,
+            "runtime_backend": "trt",
+        }
+    )
+
+    assert isinstance(engine, TensorRTLLM)
+    assert engine.tensor_parallel_size == 2
+    assert engine.runtime_backend == "trt"
 
 
 def test_python_from_yaml_rejects_engine_keys_from_the_wrong_engine_family() -> None:

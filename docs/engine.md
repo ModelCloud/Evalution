@@ -111,14 +111,15 @@ If the backend does not support real continuous batching, emulate it with fixed 
 how `TransformersCompat` works today. The suite runtime depends on the method shape, not on a
 specific batching implementation.
 
-## Built-in Transformers Engines
+## Built-in Engines
 
-Evalution ships three Hugging Face-compatible engines:
+Evalution ships these built-in engines:
 
 - `engines.Transformers()`: the modern backend
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
 - `engines.SGLang()`: the in-process SGLang runtime backend
+- `engines.TensorRTLLM()`: the TensorRT-LLM runtime backend
 - `engines.VLLM()`: the vLLM runtime backend
 
 The preferred import shape is:
@@ -151,6 +152,12 @@ surfaces the resolved quantized runtime backend in execution metadata.
 `engines.SGLang()` loads the runtime through `sglang.Engine(...)`, keeps generation and
 log-likelihood execution fully in process, and normalizes SGLang's generation and prompt-logprob
 responses into Evalution's shared output objects. 
+
+`engines.TensorRTLLM()` loads the runtime through `tensorrt_llm.LLM(...)`, keeps tokenizer-based
+request preparation inside Evalution, and implements generation plus log-likelihood scoring through
+TensorRT-LLM request outputs and prompt log-probabilities when the installed runtime exposes them.
+If the runtime does not expose request-level scheduling primitives, the engine falls back to
+fixed-batch emulation for `generate_continuous(...)`.
 
 `engines.VLLM()` loads the runtime through `vllm.LLM(...)`, keeps a tokenizer for prompt rendering
 and scoring prep, and implements generation plus both log-likelihood APIs through vLLM-native

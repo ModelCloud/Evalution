@@ -15,7 +15,15 @@ import yaml
 
 import evalution.benchmarks as benchmarks
 from evalution.config import Model
-from evalution.engines import BaseEngine, GPTQModel, Transformers, TransformersCompat, VLLM, SGLang
+from evalution.engines import (
+    BaseEngine,
+    GPTQModel,
+    SGLang,
+    TensorRTLLM,
+    Transformers,
+    TransformersCompat,
+    VLLM,
+)
 from evalution.runtime import EvaluationRun
 
 # Keep engine lookup centralized, but derive YAML option inheritance directly
@@ -26,6 +34,7 @@ _ENGINE_REGISTRY: dict[str, type[BaseEngine]] = {
     "gptqmodel": GPTQModel,
     "vllm": VLLM,
     "sglang": SGLang,
+    "tensorrtllm": TensorRTLLM,
 }
 
 _TEST_FACTORIES: dict[str, Any] = {
@@ -432,8 +441,12 @@ def _load_yaml_spec(source: str | Path) -> dict[str, Any]:
         path = source
     elif isinstance(source, str):
         maybe_path = Path(source)
-        if maybe_path.exists():
-            path = maybe_path
+        try:
+            if maybe_path.exists():
+                path = maybe_path
+        except OSError:
+            # Treat long or multiline strings as inline YAML instead of filesystem paths.
+            path = None
     if path is not None:
         text = path.read_text(encoding="utf-8")
     elif isinstance(source, str):
