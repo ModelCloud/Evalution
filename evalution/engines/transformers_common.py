@@ -6,12 +6,14 @@
 from __future__ import annotations
 
 import gc
+import os
 import random
 import threading
 from contextlib import contextmanager, suppress
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field, replace
 from itertools import chain, islice
+from pathlib import Path
 from statistics import mean
 from typing import Any
 
@@ -1306,11 +1308,99 @@ def _resolve_tokenizer_source(model_config: Model) -> Any:
     return model_config.path
 
 
+def _is_dense_weight_file(path_or_name: str) -> bool:
+    # Detect dense checkpoint payloads so GGUF-only repos do not get mixed with standard HF weights.
+    filename = Path(path_or_name).name
+    return filename.endswith(".safetensors") or filename in {
+        "pytorch_model.bin",
+        "pytorch_model.bin.index.json",
+        "model.safetensors.index.json",
+        "flax_model.msgpack",
+        "tf_model.h5",
+    }
+
+
+def _single_gguf_file_from_entries(entries: list[str]) -> str | None:
+    # Infer the one GGUF payload only when no dense checkpoint files are present alongside it.
+    if any(_is_dense_weight_file(entry) for entry in entries):
+        return None
+    gguf_files = [entry for entry in entries if entry.lower().endswith(".gguf")]
+    if len(gguf_files) != 1:
+        return None
+    return gguf_files[0]
+
+
+def _list_local_source_entries(path: Path) -> list[str]:
+    # Walk local model directories once so direct GGUF files and unpacked repo snapshots normalize
+    # to the same Hugging Face `gguf_file` contract.
+    if path.is_file():
+        return [path.name]
+    if not path.is_dir():
+        return []
+    return [str(child.relative_to(path)).replace(os.sep, "/") for child in path.rglob("*") if child.is_file()]
+
+
+def _list_hub_repo_entries(repo_id: str, *, revision: str | None) -> list[str]:
+    # Query Hub file names lazily only for retry fallback paths so normal repo loads avoid extra
+    # network round-trips.
+    from huggingface_hub import HfApi
+
+    return list(HfApi().list_repo_files(repo_id=repo_id, revision=revision, repo_type="model"))
+
+
+def _normalize_single_gguf_tokenizer_source(
+    pretrained_model_name_or_path_or_tokenizer: Any,
+    *,
+    revision: str | None = None,
+    kwargs: dict[str, Any] | None = None,
+) -> tuple[Any, dict[str, Any]]:
+    # Convert direct `.gguf` files or single-GGUF-only repos into the `(source, gguf_file)` shape
+    # expected by HF and Tokenicer.
+    normalized_kwargs = dict(kwargs or {})
+    if normalized_kwargs.get("gguf_file"):
+        return pretrained_model_name_or_path_or_tokenizer, normalized_kwargs
+
+    if not isinstance(pretrained_model_name_or_path_or_tokenizer, (str, os.PathLike)):
+        return pretrained_model_name_or_path_or_tokenizer, normalized_kwargs
+
+    source = os.fspath(pretrained_model_name_or_path_or_tokenizer)
+    local_path = Path(source).expanduser()
+    if local_path.exists():
+        local_entries = _list_local_source_entries(local_path)
+        gguf_file = _single_gguf_file_from_entries(local_entries)
+        if gguf_file is None:
+            return pretrained_model_name_or_path_or_tokenizer, normalized_kwargs
+        if local_path.is_file():
+            return str(local_path.parent), {**normalized_kwargs, "gguf_file": gguf_file}
+        return str(local_path), {**normalized_kwargs, "gguf_file": gguf_file}
+
+    with suppress(Exception):
+        repo_entries = _list_hub_repo_entries(source, revision=revision)
+        gguf_file = _single_gguf_file_from_entries(repo_entries)
+        if gguf_file is not None:
+            return source, {**normalized_kwargs, "gguf_file": gguf_file}
+
+    return pretrained_model_name_or_path_or_tokenizer, normalized_kwargs
+
+
 def _load_tokenizer_from_model(
     pretrained_model_name_or_path_or_tokenizer: Any,
     **kwargs: Any,
 ) -> Any:
-    return Tokenicer.load(pretrained_model_name_or_path_or_tokenizer, strict=False, **kwargs)
+    try:
+        return Tokenicer.load(pretrained_model_name_or_path_or_tokenizer, strict=False, **kwargs)
+    except Exception:
+        normalized_source, normalized_kwargs = _normalize_single_gguf_tokenizer_source(
+            pretrained_model_name_or_path_or_tokenizer,
+            revision=kwargs.get("revision"),
+            kwargs=kwargs,
+        )
+        if (
+            normalized_source == pretrained_model_name_or_path_or_tokenizer
+            and normalized_kwargs == kwargs
+        ):
+            raise
+        return Tokenicer.load(normalized_source, strict=False, **normalized_kwargs)
 
 
 def _normalize_tokenizer_special_tokens(tokenizer: Any, *, model: Any | None = None) -> None:

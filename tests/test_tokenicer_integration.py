@@ -8,6 +8,8 @@ from __future__ import annotations
 import tokenicer
 from types import SimpleNamespace
 
+import pytest
+
 from evalution.engines import transformers_common as common
 
 
@@ -38,6 +40,117 @@ def test_load_tokenizer_from_model_uses_tokenicer_load(monkeypatch) -> None:
     assert observed["path"] == "model/path"
     assert observed["strict"] is False
     assert observed["kwargs"] == {"trust_remote_code": True, "revision": "main"}
+
+
+def test_load_tokenizer_from_model_retries_direct_local_gguf_file(monkeypatch, tmp_path) -> None:
+    calls: list[tuple[str, bool, dict[str, object]]] = []
+    gguf_path = tmp_path / "Bonsai-1.7B.gguf"
+    gguf_path.write_bytes(b"GGUF")
+
+    class FakeTokenicer:
+        @classmethod
+        def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            calls.append((path, strict, dict(kwargs)))
+            if len(calls) == 1:
+                raise ValueError("missing gguf_file")
+            return "tokenizer"
+
+    monkeypatch.setattr(common, "Tokenicer", FakeTokenicer)
+
+    tokenizer = common._load_tokenizer_from_model(str(gguf_path))
+
+    assert tokenizer == "tokenizer"
+    assert calls == [
+        (str(gguf_path), False, {}),
+        (str(tmp_path), False, {"gguf_file": "Bonsai-1.7B.gguf"}),
+    ]
+
+
+def test_load_tokenizer_from_model_retries_single_gguf_directory(monkeypatch, tmp_path) -> None:
+    calls: list[tuple[str, bool, dict[str, object]]] = []
+    (tmp_path / "Bonsai-1.7B.gguf").write_bytes(b"GGUF")
+    (tmp_path / "README.md").write_text("docs")
+
+    class FakeTokenicer:
+        @classmethod
+        def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            calls.append((path, strict, dict(kwargs)))
+            if len(calls) == 1:
+                raise ValueError("missing gguf_file")
+            return "tokenizer"
+
+    monkeypatch.setattr(common, "Tokenicer", FakeTokenicer)
+
+    tokenizer = common._load_tokenizer_from_model(str(tmp_path))
+
+    assert tokenizer == "tokenizer"
+    assert calls == [
+        (str(tmp_path), False, {}),
+        (str(tmp_path), False, {"gguf_file": "Bonsai-1.7B.gguf"}),
+    ]
+
+
+def test_load_tokenizer_from_model_retries_single_gguf_hub_repo(monkeypatch) -> None:
+    calls: list[tuple[str, bool, dict[str, object]]] = []
+
+    class FakeTokenicer:
+        @classmethod
+        def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            calls.append((path, strict, dict(kwargs)))
+            if len(calls) == 1:
+                raise ValueError("missing gguf_file")
+            return "tokenizer"
+
+    monkeypatch.setattr(common, "Tokenicer", FakeTokenicer)
+    monkeypatch.setattr(
+        common,
+        "_list_hub_repo_entries",
+        lambda repo_id, *, revision: [
+            "Bonsai-1.7B.gguf",
+            "README.md",
+            "assets/hero.png",
+        ],
+    )
+
+    tokenizer = common._load_tokenizer_from_model(
+        "prism-ml/Bonsai-1.7B-gguf",
+        revision="main",
+    )
+
+    assert tokenizer == "tokenizer"
+    assert calls == [
+        ("prism-ml/Bonsai-1.7B-gguf", False, {"revision": "main"}),
+        (
+            "prism-ml/Bonsai-1.7B-gguf",
+            False,
+            {"revision": "main", "gguf_file": "Bonsai-1.7B.gguf"},
+        ),
+    ]
+
+
+def test_load_tokenizer_from_model_does_not_retry_when_dense_weights_are_present(monkeypatch) -> None:
+    calls: list[tuple[str, bool, dict[str, object]]] = []
+
+    class FakeTokenicer:
+        @classmethod
+        def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            calls.append((path, strict, dict(kwargs)))
+            raise RuntimeError("original failure")
+
+    monkeypatch.setattr(common, "Tokenicer", FakeTokenicer)
+    monkeypatch.setattr(
+        common,
+        "_list_hub_repo_entries",
+        lambda repo_id, *, revision: [
+            "Bonsai-1.7B.gguf",
+            "model.safetensors",
+        ],
+    )
+
+    with pytest.raises(RuntimeError, match="original failure"):
+        common._load_tokenizer_from_model("prism-ml/Bonsai-1.7B-mixed", revision="main")
+
+    assert calls == [("prism-ml/Bonsai-1.7B-mixed", False, {"revision": "main"})]
 
 
 def test_normalize_tokenizer_special_tokens_calls_auto_fix_with_model_when_present() -> None:
