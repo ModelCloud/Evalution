@@ -31,6 +31,7 @@ env:
   UV_PYTHON: 3.14t
   UV_INDEX_URL: http://10.0.14.249/simple
   PYTHON_GIL: 0
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
 concurrency:
   group: ${{ github.event.inputs.ref || github.ref }}-workflow-unit-tests
