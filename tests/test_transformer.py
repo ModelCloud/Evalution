@@ -22,7 +22,7 @@ from evalution.engines.base import (
     LoglikelihoodRequest,
     RollingLoglikelihoodRequest,
 )
-from evalution.engines.transformers_common import _seed_transformer_runtime
+from evalution.engines.transformers_common import _resolve_input_device, _seed_transformer_runtime
 from evalution.engines.transformers import Transformers, TransformersSession
 from evalution.engines.transformers_compat import TransformersCompat
 
@@ -48,6 +48,20 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
+
+
+def test_resolve_input_device_keeps_cpu_only_hf_device_maps_on_cpu() -> None:
+    class FakeModel:
+        hf_device_map = {"": "cpu"}
+
+    assert _resolve_input_device(FakeModel()) == torch.device("cpu")
+
+
+def test_resolve_input_device_uses_model_device_when_no_device_map_exists() -> None:
+    class FakeModel:
+        device = torch.device("cpu")
+
+    assert _resolve_input_device(FakeModel()) == torch.device("cpu")
 
 
 def test_transformer_session_from_config_seeds_runtime(monkeypatch) -> None:
