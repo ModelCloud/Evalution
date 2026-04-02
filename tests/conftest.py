@@ -18,7 +18,9 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     # The no-GIL test matrix must fail fast on the wrong interpreter instead of silently downgrading.
     del session
     # allow skip for tensorrt-llm requires py <= 3.12
-    if os.environ.get("PYTHON_GIL") != "0" and os.environ.get("EVALUTION_SKIP_GIL_CHECK") != "1":
+    if os.environ.get("EVALUTION_SKIP_GIL_CHECK") == "1":
+        return
+    if os.environ.get("PYTHON_GIL") != "0":
         raise pytest.UsageError("the test suite must be run with PYTHON_GIL=0")
 
     is_gil_enabled = getattr(sys, "_is_gil_enabled", None)
