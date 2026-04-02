@@ -24,6 +24,7 @@ on:
 
 env:
   ref: ${{ github.event.inputs.ref || github.ref }}
+  CUDA_DEVICE_ORDER: PCI_BUS_ID
   CUDA_VERSION: 131
   UV_TORCH_BACKEND: cu130
   TORCH_VERSION: 2.11.0
@@ -31,6 +32,7 @@ env:
   UV_PYTHON: 3.14t
   UV_INDEX_URL: http://10.0.14.249/simple
   PYTHON_GIL: 0
+  RUNNER: 10.0.13.31
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
 concurrency:
@@ -119,6 +121,18 @@ jobs:
           safe_name="${safe_name//./_}"
           echo "safe-name=$safe_name" >> "$GITHUB_OUTPUT"
 
+      - name: Find suitable GPU
+        env:
+          BASE_URL: http://${{ env.RUNNER }}
+        run: |
+          python3 .github/scripts/allocate_gpu.py \
+            --base-url "$BASE_URL" \
+            --run-id "${{ github.run_id }}" \
+            --test "${{ matrix.test-file }}" \
+            --runner "${{ runner.name }}" \
+            --count "1" \
+            --require-single
+
 
       - name: Activate uv env
         run: |
@@ -165,6 +179,8 @@ jobs:
           echo "::endgroup::"
 
       - name: Run test
+        env:
+          BASE_URL: http://${{ env.RUNNER }}
         run: |
           if [ ! -d tests ]; then
             echo "::error::tests/ directory not found."
@@ -178,9 +194,31 @@ jobs:
           echo "::group::pip list"
           uv pip list
           echo "::endgroup::"
-          
-          mkdir -p artifacts
-          pytest --durations=0 "${{ matrix.test-file }}" --junitxml="artifacts/${{ steps.meta.outputs.safe-name }}.xml"
+
+          python .github/scripts/run_tests.py \
+            --base-url "$BASE_URL" \
+            --run-id "${{ github.run_id }}" \
+            --test-file "${{ matrix.test-file }}" \
+            --runner "${{ runner.name }}" \
+            --gpu-id "${CUDA_VISIBLE_DEVICES:-}" \
+            --artifacts-dir artifacts
+
+      - name: Release GPU
+        if: always()
+        env:
+          BASE_URL: http://${{ env.RUNNER }}
+        run: |
+          if [ -n "${CUDA_VISIBLE_DEVICES:-}" ] && [ -n "${STEP_TIMESTAMP:-}" ]; then
+            python3 .github/scripts/release_gpu.py \
+              --base-url "$BASE_URL" \
+              --run-id "${{ github.run_id }}" \
+              --gpu-id "${CUDA_VISIBLE_DEVICES}" \
+              --timestamp "${STEP_TIMESTAMP}" \
+              --test "${{ matrix.test-file }}" \
+              --runner "${{ runner.name }}"
+          else
+            echo "Skip GPU release because allocation metadata is missing."
+          fi
 
       - name: Upload test artifacts
         if: always()
