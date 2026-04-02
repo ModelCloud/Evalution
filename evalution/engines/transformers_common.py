@@ -1542,12 +1542,37 @@ def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:
         return torch.device(prefer)
 
     hf_device_map = getattr(model, "hf_device_map", {})
+    saw_cpu_only = False
     for device in hf_device_map.values():
-        if device in {"cpu", "disk"}:
-            continue
         if isinstance(device, int):
             return torch.device(f"cuda:{device}")
-        return torch.device(str(device))
+
+        normalized = str(device).strip()
+        if normalized in {"", "disk"}:
+            continue
+        if normalized == "cpu":
+            saw_cpu_only = True
+            continue
+        return torch.device(normalized)
+
+    if saw_cpu_only:
+        return torch.device("cpu")
+
+    model_device = getattr(model, "device", None)
+    if model_device is not None:
+        return torch.device(str(model_device))
+
+    for attr_name in ("parameters", "buffers"):
+        iterator = getattr(model, attr_name, None)
+        if not callable(iterator):
+            continue
+        try:
+            tensor = next(iterator())
+        except (StopIteration, TypeError):
+            continue
+        except Exception:
+            continue
+        return tensor.device
 
     return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
