@@ -121,15 +121,31 @@ jobs:
 
       - name: Activate uv env
         run: |
-          env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
+          python_version="${PYTHON_VERSION}"
+          uv_python="${UV_PYTHON}"
+
+          if [ "${{ matrix.test-file }}" = "tests/test_tensorrt_llm_engine.py" ]; then
+            python_version="3.12"
+            uv_python="3.12"
+          fi
+
+          echo "PYTHON_VERSION=$python_version" >> "$GITHUB_ENV"
+          echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
+
+          env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
           echo "env_name=$env_name"
-          source /opt/uv/setup_uv_venv.sh $env_name
+          source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
           python -VV
 
       - name: Setup uv env
         run: |
           /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
-           uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
+
+          if [ "${UV_PYTHON}" = "3.14t" ]; then
+            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
+          else
+            uv pip install flash-attn
+          fi
       #          uv pip uninstall flash_attn
 
       - name: Print uv env
