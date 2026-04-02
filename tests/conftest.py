@@ -10,7 +10,6 @@ import sys
 
 import pytest
 
-
 # Keep CUDA ordinal assignment stable across test runs so cuda:0/cuda:1 map by PCI bus order.
 os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
 
@@ -18,6 +17,9 @@ os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
 def pytest_sessionstart(session: pytest.Session) -> None:
     # The no-GIL test matrix must fail fast on the wrong interpreter instead of silently downgrading.
     del session
+    # allow skip for tensorrt-llm requires py <= 3.12
+    if os.environ.get("EVALUTION_SKIP_GIL_CHECK") == "1":
+        return
     if os.environ.get("PYTHON_GIL") != "0":
         raise pytest.UsageError("the test suite must be run with PYTHON_GIL=0")
 

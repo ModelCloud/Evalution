@@ -141,7 +141,7 @@ jobs:
           echo "::endgroup::"
           
           echo "== python =="
-          python --version
+          python -VV
           which python
           which pip || true
 
@@ -172,7 +172,8 @@ jobs:
           fi
           
           uv pip install .
-          uv pip install -U pytest datasets rouge_score sglang fsspec
+          uv pip install -U pytest datasets rouge_score sglang
+          uv install "fsspec[http]>=2023.1.0,<=2026.2.0"
           
           echo "::group::pip list"
           uv pip list
