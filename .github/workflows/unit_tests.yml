@@ -31,6 +31,7 @@ env:
   UV_PYTHON: 3.14t
   UV_INDEX_URL: http://10.0.14.249/simple
   PYTHON_GIL: 0
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
 concurrency:
   group: ${{ github.event.inputs.ref || github.ref }}-workflow-unit-tests
@@ -133,7 +134,7 @@ jobs:
           echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
 
           env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
-          echo "env_name=$env_name"
+          echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
           source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
           python -VV
 
@@ -159,7 +160,7 @@ jobs:
           echo "::endgroup::"
           
           echo "== python =="
-          python --version
+          python -VV
           which python
           which pip || true
 
@@ -190,7 +191,8 @@ jobs:
           fi
           
           uv pip install .
-          uv pip install -U pytest datasets rouge_score sglang fsspec
+          uv pip install -U pytest datasets rouge_score sglang
+          uv install "fsspec[http]>=2023.1.0,<=2026.2.0"
           
           echo "::group::pip list"
           uv pip list
