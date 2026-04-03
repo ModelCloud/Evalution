@@ -167,7 +167,7 @@ jobs:
 
       - name: Find suitable GPU
         env:
-          BASE_URL: http://${{ env.RUNNER }}
+          BASE_URL: http://10.0.14.249
         run: |
           python3 .github/scripts/allocate_gpu.py \
             --base-url "$BASE_URL" \
@@ -179,7 +179,7 @@ jobs:
 
       - name: Run test
         env:
-          BASE_URL: http://${{ env.RUNNER }}
+          BASE_URL: http://10.0.14.249
         run: |
           if [ ! -d tests ]; then
             echo "::error::tests/ directory not found."
@@ -205,7 +205,7 @@ jobs:
       - name: Release GPU
         if: always()
         env:
-          BASE_URL: http://${{ env.RUNNER }}
+          BASE_URL: http://10.0.14.249
         run: |
           if [ -n "${CUDA_VISIBLE_DEVICES:-}" ] && [ -n "${STEP_TIMESTAMP:-}" ]; then
             python3 .github/scripts/release_gpu.py \
