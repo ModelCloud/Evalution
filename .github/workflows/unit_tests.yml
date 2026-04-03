@@ -134,7 +134,7 @@ jobs:
           echo "PYTHON_VERSION=$python_version" >> "$GITHUB_ENV"
           echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
 
-          env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
+          env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_evalution_test"
           echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
           source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
           python -VV
