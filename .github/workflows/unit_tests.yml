@@ -71,8 +71,13 @@ jobs:
           pattern = os.environ.get("TEST_REGEX", "")
           regex = re.compile(pattern) if pattern else None
 
+          def sort_key(path: pathlib.Path) -> tuple[int, str]:
+            # Prioritize direct children of tests/ before nested test files.
+            rel = path.relative_to(root)
+            return (len(rel.parts), path.as_posix())
+
           files = []
-          for path in sorted(root.rglob("test_*.py")):
+          for path in sorted(root.rglob("test_*.py"), key=sort_key):
             rel = path.as_posix()
             if regex and not regex.search(rel):
               continue
