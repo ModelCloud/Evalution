@@ -124,6 +124,7 @@ jobs:
           test_file="${{ matrix.test-file }}"
           safe_name="${test_file//\//__}"
           safe_name="${safe_name//./_}"
+          echo "SAFE_NAME=$safe_name" >> "$GITHUB_ENV"
           echo "safe-name=$safe_name" >> "$GITHUB_OUTPUT"
 
       - name: Activate uv env
@@ -139,7 +140,7 @@ jobs:
           echo "PYTHON_VERSION=$python_version" >> "$GITHUB_ENV"
           echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
 
-          env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_evalution_test"
+          env_name="evalution_${{ env.SAFE_NAME }}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
           echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
           source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
           python -VV
