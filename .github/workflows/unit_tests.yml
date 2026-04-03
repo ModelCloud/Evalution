@@ -121,19 +121,6 @@ jobs:
           safe_name="${safe_name//./_}"
           echo "safe-name=$safe_name" >> "$GITHUB_OUTPUT"
 
-      - name: Find suitable GPU
-        env:
-          BASE_URL: http://${{ env.RUNNER }}
-        run: |
-          python3 .github/scripts/allocate_gpu.py \
-            --base-url "$BASE_URL" \
-            --run-id "${{ github.run_id }}" \
-            --test "${{ matrix.test-file }}" \
-            --runner "${{ runner.name }}" \
-            --count "1" \
-            --require-single
-
-
       - name: Activate uv env
         run: |
           env_name="cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
@@ -177,6 +164,18 @@ jobs:
           git config --global --add safe.directory $(pwd)
           git status
           echo "::endgroup::"
+
+      - name: Find suitable GPU
+        env:
+          BASE_URL: http://${{ env.RUNNER }}
+        run: |
+          python3 .github/scripts/allocate_gpu.py \
+            --base-url "$BASE_URL" \
+            --run-id "${{ github.run_id }}" \
+            --test "${{ matrix.test-file }}" \
+            --runner "${{ runner.name }}" \
+            --count "1" \
+            --require-single
 
       - name: Run test
         env:
