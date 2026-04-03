@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -76,6 +77,22 @@ def to_safe_name(test_file: str) -> str:
     return test_file.replace("/", "__").replace(".", "_")
 
 
+def log_python_and_pytest_resolution() -> None:
+    print(f"sys.executable={sys.executable}")
+    print(f"sys.version={sys.version}")
+    pytest_path = shutil.which("pytest")
+    print(f"which pytest={pytest_path}")
+    if not pytest_path:
+        return
+    try:
+        with open(pytest_path, encoding="utf-8") as fh:
+            first_line = fh.readline().rstrip()
+    except OSError as exc:
+        print(f"failed to read pytest launcher: {exc}")
+        return
+    print(f"pytest shebang={first_line}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", required=True)
@@ -102,6 +119,7 @@ def main() -> int:
     junitxml = artifacts_dir / f"{safe_name}.xml"
 
     pytest_cmd = ["pytest", "--durations=0", args.test_file, f"--junitxml={junitxml}"]
+    log_python_and_pytest_resolution()
     print(f"+ {' '.join(pytest_cmd)}")
 
     proc = subprocess.Popen(
