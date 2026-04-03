@@ -23,9 +23,7 @@ from evalution.engines.openvino_engine import (
     load_openvino_runtime,
 )
 
-# _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-# _TINYLLAMA_GPTQ_MODEL = Path("/root/projects/GPTQModel/hub/Evalution/tmp/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-_TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/Llama-3.2-1B-Instruct")
+_TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0")
 
 
 def _openvino_runtime_available() -> bool:
@@ -62,7 +60,7 @@ def test_import_openvino_optimum_requires_optional_dependency(monkeypatch) -> No
 
     with pytest.raises(
         ModuleNotFoundError,
-        match="OpenVINO engine requires the optional `optimum\\[openvino\\]` dependency",
+        match="OpenVINO engine requires the optional `optimum\\[openvino\\]`.*",
     ):
         _import_openvino_optimum()
 
@@ -190,7 +188,7 @@ def test_load_openvino_runtime_uses_optimum_loader(monkeypatch) -> None:
     ]
     assert runtime.model is fake_model
     assert runtime.prepare_tokenizer == "prepare-tokenizer"
-    assert runtime.input_device == "cuda"
+    assert runtime.input_device.type == "cuda"
     assert fake_model.requires_grad_calls == [False]
     assert fake_model.eval_calls == 1
     assert fake_model.seed_calls == [17]
@@ -242,7 +240,7 @@ def test_openvino_build_constructs_session(monkeypatch) -> None:
 )
 def test_openvino_engine_can_generate_and_score_on_tinyllama_checkpoint() -> None:
     session = OpenVINO(
-        device="CPU",
+        device="cpu",
         batch_size=1,
     ).build(Model(path=str(_TINYLLAMA_GPTQ_MODEL)))
 

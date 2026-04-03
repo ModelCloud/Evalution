@@ -72,7 +72,7 @@ def _import_openvino_optimum() -> Any:
         return importlib.import_module("optimum.intel.openvino")
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
-            "OpenVINO engine requires the optional `optimum[openvino]` dependency"
+            "OpenVINO engine requires the optional `optimum[openvino]` and `transformers>=4.45,<4.58` dependency"
         ) from exc
 
 
@@ -98,12 +98,13 @@ def load_openvino_runtime(
     tokenizer.padding_side = config.padding_side
 
     openvino_module = _import_openvino_optimum()
-    input_device = config.device or "CPU"
+    device_str = config.device or "cpu"
+    input_device = torch.device(device_str)
     load_kwargs = {
         **model_config.model_kwargs,
         "revision": model_config.revision,
         "trust_remote_code": trust_remote_code,
-        "device": input_device,
+        "device": device_str,
     }
     if config.ov_config is not None:
         load_kwargs["ov_config"] = dict(config.ov_config)
