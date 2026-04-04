@@ -19,6 +19,7 @@ from evalution.engines import (
     BaseEngineTokenizerModeConfig,
     BaseEngineTransformersRuntimeConfig,
     GPTQModel,
+    OpenVINO,
     SGLang,
     SharedEngineConfig,
     Transformers,
@@ -851,6 +852,27 @@ tests:
     assert "eval(engines." not in script
 
 
+def test_python_from_yaml_emits_openvino_name() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: OpenVINO
+  device: GPU
+  compile: false
+model:
+  path: /tmp/model
+tests:
+  - type: gsm8k_platinum
+    max_rows: 8
+"""
+    )
+
+    assert "engines.OpenVINO(" in script
+    assert "device='GPU'" in script
+    assert "compile=False" in script
+    assert "eval(engines." not in script
+
+
 def test_python_from_yaml_emits_vllm_name() -> None:
     """Verify python_from_yaml emits the explicit VLLM engine constructor name."""
 
@@ -880,8 +902,10 @@ def test_non_yaml_engine_api_uses_shared_engine_config_inheritance() -> None:
     assert issubclass(Transformers, SharedEngineConfig)
     assert issubclass(TransformersCompat, SharedEngineConfig)
     assert issubclass(GPTQModel, SharedEngineConfig)
+    assert issubclass(OpenVINO, SharedEngineConfig)
     assert issubclass(VLLM, SharedEngineConfig)
     assert issubclass(SGLang, SharedEngineConfig)
+    assert issubclass(OpenVINO, BaseEngineDeviceConfig)
     assert issubclass(TransformersCompat, BaseEngineTransformersRuntimeConfig)
     assert issubclass(Transformers, BaseEngineTransformersRuntimeConfig)
     assert issubclass(GPTQModel, BaseEngineTransformersRuntimeConfig)
@@ -926,6 +950,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     transformers_compat_keys = evalution_yaml._engine_option_keys("transformerscompat")
     vllm_keys = evalution_yaml._engine_option_keys("vllm")
     sglang_keys = evalution_yaml._engine_option_keys("sglang")
+    openvino_keys = evalution_yaml._engine_option_keys("openvino")
 
     assert "dtype" in transformers_keys
     assert "batch_size" in transformers_keys
@@ -959,6 +984,28 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "tp_size" in sglang_keys
     assert "sampling_params" in sglang_keys
     assert "attn_implementation" not in sglang_keys
+
+    assert "dtype" in openvino_keys
+    assert "batch_size" in openvino_keys
+    assert "device" in openvino_keys
+    assert "compile" in openvino_keys
+    assert "dynamic_shapes" in openvino_keys
+    assert "ov_config" in openvino_keys
+    assert "attn_implementation" not in openvino_keys
+
+
+def test_build_engine_constructs_openvino() -> None:
+    engine = evalution_yaml._build_engine(
+        {
+            "type": "OpenVINO",
+            "device": "GPU",
+            "compile": False,
+        }
+    )
+
+    assert isinstance(engine, OpenVINO)
+    assert engine.device == "GPU"
+    assert engine.compile is False
 
 
 def test_build_engine_constructs_sglang() -> None:

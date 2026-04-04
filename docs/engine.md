@@ -113,11 +113,12 @@ specific batching implementation.
 
 ## Built-in Transformers Engines
 
-Evalution ships three Hugging Face-compatible engines:
+Evalution ships six Hugging Face-compatible engines:
 
 - `engines.Transformers()`: the modern backend
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
+- `engines.OpenVINO()`: the Optimum Intel OpenVINO backend
 - `engines.SGLang()`: the in-process SGLang runtime backend
 - `engines.VLLM()`: the vLLM runtime backend
 
@@ -147,6 +148,10 @@ suites or on `close()`.
 the same shared generation, scoring, and paged continuous-batching path as the built-in
 transformer engines when the loaded quantized model exposes the required HF hooks. It also
 surfaces the resolved quantized runtime backend in execution metadata.
+
+`engines.OpenVINO()` loads decoder-only models through `optimum.intel.openvino.OVModelForCausalLM`
+while reusing Evalution's shared transformer-style generation, log-likelihood, and rolling
+log-likelihood session logic.
 
 `engines.SGLang()` loads the runtime through `sglang.Engine(...)`, keeps generation and
 log-likelihood execution fully in process, and normalizes SGLang's generation and prompt-logprob
