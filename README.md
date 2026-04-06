@@ -248,8 +248,91 @@ tests:
     num_fewshot: 5
 ```
 
-Use `engines.TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you
-want the compatibility engine explicitly.
+## Engine Samples
+
+Each exported engine has a minimal sample below. `Transformers` covers both the modern
+`Transformers` engine and the fixed-batch `TransformersCompat` engine; swap `Transformers` for
+`TransformersCompat` or `type: Transformers` for `type: TransformersCompat` when you need the
+compatibility backend explicitly.
+
+### Transformers / TransformersCompat
+
+Use `engines.Transformers()` in Python or `engine.type: Transformers` in YAML when you want the
+preferred Hugging Face runtime.
+
+Python:
+
+```python
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.Transformers(
+        dtype="bfloat16",
+        device="cuda:0",
+    )
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .run(benchmarks.arc_challenge(max_rows=128))
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: Transformers
+  dtype: bfloat16
+  device: cuda:0
+
+model:
+  path: /monster/data/model/Llama-3.2-1B-Instruct
+
+tests:
+  - type: arc_challenge
+    max_rows: 128
+```
+
+### GPTQModel
+
+Use `engines.GPTQModel()` in Python or `engine.type: GPTQModel` in YAML when you want to load a
+quantized checkpoint through GPTQModel's native loader. Configure `gptqmodel_path` only when the
+runtime is not importable from the active environment.
+
+Python:
+
+```python
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.GPTQModel(
+        device="cuda:0",
+        backend="auto",
+        batch_size=16,
+    )
+    .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
+    .run(benchmarks.arc_challenge(max_rows=128))
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: GPTQModel
+  device: cuda:0
+  backend: auto
+  batch_size: 16
+
+model:
+  path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
+
+tests:
+  - type: arc_challenge
+    max_rows: 128
+```
+
+### OpenVINO
 
 Use `engines.OpenVINO()` in Python or `engine.type: OpenVINO` in YAML when you want to run an
 Optimum Intel `OVModelForCausalLM` backend.
@@ -284,6 +367,8 @@ tests:
   - type: arc_challenge
     max_rows: 128
 ```
+
+### VLLM
 
 Use `engines.VLLM()` in Python or `engine.type: VLLM` in YAML when you want the vLLM runtime.
 Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
@@ -326,6 +411,8 @@ tests:
   - type: arc_challenge
     max_rows: 128
 ```
+
+### SGLang
 
 Use `engines.SGLang()` in Python or `engine.type: SGLang` in YAML when you want the SGLang runtime.
 Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
