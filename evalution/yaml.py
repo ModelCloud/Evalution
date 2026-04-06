@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from dataclasses import fields, is_dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from functools import lru_cache
 from pathlib import Path
 from pprint import pformat
@@ -26,17 +26,28 @@ from evalution.engines import (
 )
 from evalution.runtime import EvaluationRun
 
+
+@dataclass(frozen=True, slots=True)
+class _EngineSpec:
+    # Preserve the legacy registry shape used by CLI/YAML tests while still allowing bare classes.
+    factory: type[BaseEngine]
+    emit_alias: str | None = None
+
+
+_EngineRegistryEntry = type[BaseEngine] | _EngineSpec
+
 # Keep engine lookup centralized, but derive YAML option inheritance directly
 # from the concrete engine dataclass hierarchy so Python and YAML stay aligned.
-_ENGINE_REGISTRY: dict[str, type[BaseEngine]] = {
-    "transformers": Transformers,
-    "transformerscompat": TransformersCompat,
-    "gptqmodel": GPTQModel,
-    "openvino": OpenVINO,
-    "vllm": VLLM,
-    "sglang": SGLang,
+_ENGINE_REGISTRY: dict[str, _EngineRegistryEntry] = {
+    "transformers": _EngineSpec(factory=Transformers, emit_alias="Transformers"),
+    "transformerscompat": _EngineSpec(factory=TransformersCompat, emit_alias="TransformersCompat"),
+    "gptqmodel": _EngineSpec(factory=GPTQModel, emit_alias="GPTQModel"),
+    "openvino": _EngineSpec(factory=OpenVINO, emit_alias="OpenVINO"),
+    "vllm": _EngineSpec(factory=VLLM, emit_alias="VLLM"),
+    "sglang": _EngineSpec(factory=SGLang, emit_alias="SGLang"),
 }
 
+# Map every YAML/CLI benchmark name to the corresponding benchmark factory.
 _TEST_FACTORIES: dict[str, Any] = {
     "aexams_biology": benchmarks.aexams_biology,
     "aexams_islamic_studies": benchmarks.aexams_islamic_studies,
@@ -509,22 +520,33 @@ def _extract_name(mapping: dict[str, Any], *, label: str) -> str:
 
 
 def _normalize_engine_name(name: str) -> str:
+    """Normalize engine lookup keys so CLI, YAML, and Python inputs share one registry."""
+
     return name.strip().lower()
 
 
 def _resolve_engine_emit_alias(engine_name: str) -> str:
     """Resolve the public Python constructor name used by python_from_yaml."""
 
-    return _engine_factory(engine_name).__name__
+    spec = _engine_spec(engine_name)
+    return spec.emit_alias or spec.factory.__name__
 
 
 def _engine_factory(engine_name: str) -> type[BaseEngine]:
     """Resolve the registered engine factory or raise the standard unknown-engine error."""
 
-    factory = _ENGINE_REGISTRY.get(engine_name)
-    if factory is None:
+    return _engine_spec(engine_name).factory
+
+
+def _engine_spec(engine_name: str) -> _EngineSpec:
+    """Normalize legacy and new registry entries to one internal shape."""
+
+    entry = _ENGINE_REGISTRY.get(engine_name)
+    if entry is None:
         raise KeyError(f"unknown engine type: {engine_name!r}")
-    return factory
+    if isinstance(entry, _EngineSpec):
+        return entry
+    return _EngineSpec(factory=entry, emit_alias=entry.__name__)
 
 
 @lru_cache(maxsize=None)
