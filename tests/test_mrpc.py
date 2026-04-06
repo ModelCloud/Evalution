@@ -69,8 +69,8 @@ def test_mrpc_scores_accuracy_and_positive_class_f1(monkeypatch) -> None:
     assert result.name == "mrpc"
     assert result.metrics["acc,ll"] == pytest.approx(2 / 3)
     assert result.metrics["acc,ll_avg"] == pytest.approx(2 / 3)
-    assert result.metrics["f1,ll_yes"] == pytest.approx(0.8)
-    assert result.metrics["f1,ll_avg_yes"] == pytest.approx(0.8)
+    assert result.metrics["f1,ll_boolean"] == pytest.approx(0.8)
+    assert result.metrics["f1,ll_avg_boolean"] == pytest.approx(0.8)
     assert result.metadata["dataset_path"] == "nyu-mll/glue"
     assert result.metadata["dataset_name"] == "mrpc"
     assert len(result.samples) == 3

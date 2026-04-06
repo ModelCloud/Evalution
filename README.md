@@ -555,13 +555,13 @@ Metric key glossary:
 - `bits_per_byte`: negative mean log-likelihood per original-document byte in base-2 units.
 - `choice_label`: extracted option-label match such as `A/B/C/D`.
 - `pct_stereotype`: fraction of sentence pairs where the more stereotypical sentence receives the higher score.
-- `likelihood_diff`: average absolute log-likelihood gap between paired candidate sentences.
+- `ll_diff`: average absolute log-likelihood gap between paired candidate sentences.
 - `label_perm:<fraction>`: permutation-averaged label-only accuracy using the configured fraction
   of all label permutations.
 - `f1`: F1 score derived from the suite's predicted labels.
 - `mcc`: Matthews correlation coefficient derived from the suite's predicted labels.
 - `macro`: macro-average across labels rather than a single positive class.
-- `yes`: positive-class metric using the suite's `yes` or equivalent positive label.
+- `boolean`: positive-class metric using the suite's positive boolean label.
 
 Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
 

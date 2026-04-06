@@ -18,7 +18,7 @@ Examples:
 - `em,choice_label`
 - `f1,ll_avg_macro`
 - `pct_stereotype`
-- `likelihood_diff`
+- `ll_diff`
 - `mcc,ll_avg`
 
 ## Metric Key Glossary
@@ -30,14 +30,14 @@ Examples:
 - `num`: numeric-answer match after numeric extraction and canonicalization.
 - `em`: exact match after the suite's task-specific extraction step.
 - `pct_stereotype`: fraction of minimal pairs where the more stereotypical sentence receives the higher score.
-- `likelihood_diff`: average absolute log-likelihood gap between paired candidate sentences.
+- `ll_diff`: average absolute log-likelihood gap between paired candidate sentences.
 - `choice_label`: extracted option-label match such as `A/B/C/D`.
 - `label_perm:<fraction>`: permutation-averaged label-only accuracy using the configured fraction
   of all label permutations.
 - `f1`: F1 score derived from the suite's predicted labels.
 - `mcc`: Matthews correlation coefficient derived from the suite's predicted labels.
 - `macro`: macro-average across labels rather than a single positive class.
-- `yes`: positive-class metric using the suite's `yes` or equivalent positive label.
+- `boolean`: positive-class metric using the suite's positive boolean label.
 
 ## Notes
 
@@ -46,7 +46,7 @@ Examples:
   shorter options.
 - `label_perm:<fraction>` is opt-in and additive. It does not replace the suite's default
   benchmark score.
-- In keys like `f1,ll_avg_yes`, the `yes` suffix is not part of `ll_avg`. It states which class
+- In keys like `f1,ll_avg_boolean`, the `boolean` suffix is not part of `ll_avg`. It states which class
   the F1 is computed for.
 - Some suites expose only one metric family. For example, ARC uses `acc,exam`, GSM8K uses
   `acc,num`, and MMLU-Pro uses `em,choice_label`.
