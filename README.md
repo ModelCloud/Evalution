@@ -37,7 +37,7 @@ import evalution.engines as engines
 
 result = (
     engines.Transformers()
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
     .run(benchmarks.gsm8k_platinum())
 )
 ```
@@ -59,20 +59,18 @@ result = (
         use_async_batching=None,
         max_new_tokens=256,
     )
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
     .run(
         benchmarks.gsm8k_platinum(
             variant="cot",
             apply_chat_template=True,
             max_new_tokens=96,
             batch_size=64,
-            max_rows=128,
         )
     )
     .run(
-        benchmarks.arc_challenge(
+        benchmarks.gsm8k_platinum(
             batch_size=64,
-            max_rows=128,
         )
     )
 )
@@ -91,7 +89,7 @@ import evalution.engines as engines
 result = (
     eval.compare(
         engines.Transformers(dtype="bfloat16", device="cuda:0").model(
-            path="/monster/data/model/Llama-3.2-1B-Instruct",
+            path="meta-llama/Llama-3.2-1B-Instruct",
             label="llama",
         ),
         engines.TransformersCompat(device="cuda:1").model(
@@ -99,8 +97,8 @@ result = (
             label="qwen",
         ),
     )
-    .run(benchmarks.gsm8k_platinum(max_rows=128))
-    .run(benchmarks.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
+    .run(benchmarks.gsm8k_platinum(variant="cot"))
 )
 ```
 
@@ -121,7 +119,7 @@ engine:
   device: cuda:0
 
 model:
-  path: /monster/data/model/Llama-3.2-1B-Instruct
+  path: meta-llama/Llama-3.2-1B-Instruct
 
 tests:
   - type: gsm8k_platinum
@@ -129,10 +127,8 @@ tests:
     apply_chat_template: true
     max_new_tokens: 96
     batch_size: 64
-    max_rows: 128
-  - type: arc_challenge
+  - type: gsm8k_platinum
     batch_size: 64
-    max_rows: 128
 ```
 
 ```python
@@ -189,7 +185,7 @@ Python:
 import evalution.benchmarks as benchmarks
 
 suite = benchmarks.gsm8k(order="length|desc")
-suite = benchmarks.arc_challenge(order="shuffle|245")
+suite = benchmarks.gsm8k_platinum(order="shuffle|245")
 ```
 
 YAML:
@@ -198,7 +194,7 @@ YAML:
 tests:
   - type: gsm8k
     order: length|desc
-  - type: arc_challenge
+  - type: gsm8k_platinum
     order: shuffle|245
 ```
 
@@ -228,7 +224,7 @@ import evalution.engines as engines
 
 result = (
     engines.Transformers()
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
     .run(benchmarks.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
     .run(benchmarks.mmlu_pro(subsets="stem.math"))
 )
@@ -248,8 +244,89 @@ tests:
     num_fewshot: 5
 ```
 
-Use `engines.TransformersCompat()` in Python or `engine.type: TransformersCompat` in YAML when you
-want the compatibility engine explicitly.
+## Engine Samples
+
+Each exported engine has a minimal sample below. `Transformers` covers both the modern
+`Transformers` engine and the fixed-batch `TransformersCompat` engine; swap `Transformers` for
+`TransformersCompat` or `type: Transformers` for `type: TransformersCompat` when you need the
+compatibility backend explicitly.
+
+### Transformers / TransformersCompat
+
+Use `engines.Transformers()` in Python or `engine.type: Transformers` in YAML when you want the
+preferred Hugging Face runtime.
+
+Python:
+
+```python
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.Transformers(
+        dtype="bfloat16",
+        device="cuda:0",
+    )
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: Transformers
+  dtype: bfloat16
+  device: cuda:0
+
+model:
+  path: meta-llama/Llama-3.2-1B-Instruct
+
+tests:
+  - type: gsm8k_platinum
+```
+
+### GPTQModel
+
+Use `engines.GPTQModel()` in Python or `engine.type: GPTQModel` in YAML when you want to load a
+quantized checkpoint through GPTQModel's native loader. Configure `gptqmodel_path` only when the
+runtime is not importable from the active environment.
+
+Python:
+
+```python
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.GPTQModel(
+        device="cuda:0",
+        backend="auto",
+        batch_size=16,
+    )
+    .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: GPTQModel
+  device: cuda:0
+  backend: auto
+  batch_size: 16
+
+model:
+  path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
+
+tests:
+  - type: gsm8k_platinum
+```
+
+### OpenVINO
 
 Use `engines.OpenVINO()` in Python or `engine.type: OpenVINO` in YAML when you want to run an
 Optimum Intel `OVModelForCausalLM` backend.
@@ -266,7 +343,7 @@ result = (
         device="cpu",
     )
     .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-    .run(benchmarks.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -281,9 +358,10 @@ model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
 
 tests:
-  - type: arc_challenge
-    max_rows: 128
+  - type: gsm8k_platinum
 ```
+
+### VLLM
 
 Use `engines.VLLM()` in Python or `engine.type: VLLM` in YAML when you want the vLLM runtime.
 Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
@@ -305,7 +383,7 @@ result = (
         enforce_eager=True,
     )
     .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-    .run(benchmarks.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -323,9 +401,10 @@ model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
 
 tests:
-  - type: arc_challenge
-    max_rows: 128
+  - type: gsm8k_platinum
 ```
+
+### SGLang
 
 Use `engines.SGLang()` in Python or `engine.type: SGLang` in YAML when you want the SGLang runtime.
 Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
@@ -346,7 +425,7 @@ if __name__ == '__main__':
             mem_fraction_static=0.8,
         )
         .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-        .run(benchmarks.arc_challenge(max_rows=128))
+        .run(benchmarks.gsm8k_platinum())
     )
 ```
 
@@ -362,8 +441,7 @@ model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
 
 tests:
-  - type: arc_challenge
-    max_rows: 128
+  - type: gsm8k_platinum
 ```
 
 `Tokenicer` is used to load tokenizers for the transformer, transformer-compat, OpenVINO, GPTQModel,
@@ -382,10 +460,10 @@ custom_tokenizer = ...
 result = (
     engines.Transformers()
     .model(
-        path="/monster/data/model/Llama-3.2-1B-Instruct",
+        path="meta-llama/Llama-3.2-1B-Instruct",
         tokenizer=custom_tokenizer,
     )
-    .run(benchmarks.gsm8k_platinum(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
