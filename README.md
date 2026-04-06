@@ -444,7 +444,7 @@ built-in suite names covered by that row.
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `multirc` | Multi-answer reading comprehension with per-question exact match and F1a over selected answer indices | SuperGLUE `wang2019superglue` |
-| `click` | Multiple-choice log-likelihood across Korean CLIcK language and culture subsets, raw + length-normalized accuracy | CLIcK `kim2024click` |
+| `click` | Multiple-choice log-likelihood across Korean CLIcK language and culture subsets, raw + length-normalized accuracy | CLIcK `kim-etal-2024-click` |
 | `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
 | `cnn_dailymail` | Generated summarization with ROUGE-1, ROUGE-2, and ROUGE-Lsum F1 | CNN/DailyMail `nallapati2016abstractive` |
 | `code_x_glue` | Code-to-docstring generation with corpus smoothed BLEU-4 across `go/java/javascript/php/python/ruby` language subsets | CodeXGLUE `lu2021codexglue` |
@@ -455,25 +455,25 @@ built-in suite names covered by that row.
 | `copal_id` | Multiple-choice log-likelihood across `standard/colloquial` variants, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
 | `crows_pairs` | Pairwise full-sentence log-likelihood across `english/french` language splits and supported bias-category subsets, with stereotype-preference rate and average absolute log-likelihood gap | CrowS-Pairs `nangia-etal-2020-crows`, French CrowS-Pairs `neveol-etal-2022-french` |
 | `darijahellaswag` | Multiple-choice log-likelihood over Moroccan Darija translated HellaSwag endings, raw + length-normalized accuracy | DarijaHellaSwag `shang2024atlaschatadaptinglargelanguage` |
-| `egyhellaswag` | Multiple-choice log-likelihood over Egyptian Arabic translated HellaSwag endings, raw + length-normalized accuracy | EgyHellaSwag `mekki2025nilechatlinguisticallydiverseculturally` |
+| `egyhellaswag` | Multiple-choice log-likelihood over Egyptian Arabic translated HellaSwag endings, raw + length-normalized accuracy | NileChat `el-mekki-etal-2025-nilechat` |
 | `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
-| `fld` | Generated exact match over `PROVED/DISPROVED/UNKNOWN` world-assumption verdicts from serialized deduction prompts | FLD `han2024formal` |
-| `fda` | Generated contains-over-answer match over the `validation` split | FDA based on `hazyresearch/based-fda` |
+| `fld` | Generated exact match over `PROVED/DISPROVED/UNKNOWN` world-assumption verdicts from serialized deduction prompts | FLD `morishita2023learning` |
+| `fda` | Generated contains-over-answer match over the `validation` split | BASED / FDA `arora2024simple` |
 | `french_bench_arc_challenge` | Multiple-choice log-likelihood over the French ARC-Challenge split, with raw and length-normalized accuracy | FrenchBench ARC-Challenge |
 | `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
 | `gsm_plus`, `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` and `testmini` splits | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
 | `ethics_{cm,deontology,justice,utilitarianism,virtue}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
-| `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `park2024haeraebenchmarkingkoreanknowledge` |
+| `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `son-etal-2024-hae` |
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_{en,es}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
-| `ifeval` | Instruction-following generation scoring across up to 4 instruction checks per prompt | IFEval `li2025ifeval` |
+| `ifeval` | Instruction-following generation scoring across up to 4 instruction checks per prompt | IFEval `zhou2023instruction` |
 | `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
 | `moral_stories` | Multiple-choice log-likelihood over moral versus immoral actions, raw + length-normalized accuracy | Moral Stories `emelin-etal-2021-moral` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
-| `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `sean0042kormedmcqa` |
+| `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `kweon2024kormedmcqa` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_{openai,openai_cloze,standard,standard_cloze}` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_openai_mt_{de,en,es,fr,it}`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}` | Single-continuation log-likelihood, greedy accuracy + perplexity over multilingual LAMBADA translations | LAMBADA-MT |
@@ -496,11 +496,11 @@ built-in suite names covered by that row.
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
 | `paws_x` | Multiple-choice log-likelihood across `de/en/es/fr/ja/ko/zh` language subsets, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
 | `xcopa` | Multiple-choice log-likelihood over option labels across `et/ht/id/it/qu/sw/ta/th/tr/vi/zh` language subsets, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `polemo2` | Generated sentiment choice-label micro-F1 across the `in/out` opinion subsets | KLEJ POLEMO 2.0 `ogrodniczuk-kobyliński-2024-polemo2` |
+| `polemo2` | Generated sentiment choice-label micro-F1 across the `in/out` opinion subsets | KLEJ POLEMO 2.0 `kocon-etal-2019-multi` |
 | `xquad` | Generated extractive QA exact match and token-overlap F1 across `ar/de/el/en/es/hi/ro/ru/th/tr/vi/zh` language subsets | XQuAD `artetxe2020crosslingual` |
 | `xstorycloze` | Multiple-choice log-likelihood over translated StoryCloze endings across `ar/en/es/eu/hi/id/my/ru/sw/te/zh` subsets, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
 | `xnli` | Three-way NLI multiple-choice log-likelihood across `ar/bg/de/el/en/es/fr/hi/ru/sw/th/tr/ur/vi/zh` language subsets, raw + length-normalized accuracy | XNLI `conneau2018xnli` |
-| `xnli_eu` | Three-way Basque NLI multiple-choice log-likelihood over `Bai/Gainera/Ez` hypothesis relations, raw + length-normalized accuracy | XNLI-EU `etxaniz2023xnlieu` |
+| `xnli_eu` | Three-way Basque NLI multiple-choice log-likelihood over `Bai/Gainera/Ez` hypothesis relations, raw + length-normalized accuracy | XNLI-EU `heredia-etal-2024-xnlieu` |
 | `xwinograd` | Partial-evaluation multiple-choice log-likelihood over blank replacements across `en/fr/jp/pt/ru/zh` language subsets, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
 | `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
 | `piqa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic PIQA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
@@ -516,7 +516,7 @@ built-in suite names covered by that row.
 | `sciq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
 | `siqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | Social IQA `sap2019social` |
 | `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
-| `toxigen` | Binary hateful-statement multiple-choice log-likelihood, raw + length-normalized accuracy | ToxiGen `hartvigsen2022toxigen` |
+| `toxigen` | Binary hateful-statement multiple-choice log-likelihood, raw + length-normalized accuracy | ToxiGen `hartvigsen-etal-2022-toxigen` |
 | `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `squadv2` | Generated QA exact match and token-overlap F1 with explicit no-answer handling | SQuAD 2.0 `rajpurkar2018know` |
 | `truthfulqa` | Multiple-choice truthfulness scoring for `mc1/mc2`, using benchmark-native accuracy semantics | TruthfulQA `lin-etal-2022-truthfulqa` |
@@ -571,7 +571,7 @@ If you use Evalution, cite the project itself. If you use one or more built-in s
 original benchmark papers below.
 
 ```bibtex
-# Evalution
+% Evalution project citation.
 @misc{modelcloud2026evalution,
   author = {ModelCloud and @qubitium},
   title = {Evalution},
@@ -583,114 +583,10 @@ original benchmark papers below.
 }
 ```
 
-The current built-in suite coverage maps to these benchmark citations:
-
-- `aexams_biology`, `aexams_islamic_studies`, `aexams_physics`, `aexams_science`, `aexams_social`: EXAMS `hardalov-etal-2020-exams`
-- `agieval_<subset>` for the built-in single-answer AGIEval subsets: AGIEval `zhong2023agieval`
-- `afrimgsm_<language>` for the built-in AfriMGSM language subsets: IrokoBench AfriMGSM `adelani2025irokobench`
-- `afrimmlu_<language>` for the built-in AfriMMLU language subsets: IrokoBench AfriMMLU `adelani2025irokobench`
-- `afrixnli_amh`, `afrixnli_eng`, `afrixnli_ewe`, `afrixnli_fra`, `afrixnli_hau`, `afrixnli_ibo`, `afrixnli_kin`, `afrixnli_lin`, `afrixnli_lug`, `afrixnli_orm`, `afrixnli_sna`, `afrixnli_sot`, `afrixnli_swa`, `afrixnli_twi`, `afrixnli_wol`, `afrixnli_xho`, `afrixnli_yor`, `afrixnli_zul`: IrokoBench AfriXNLI `adelani2025irokobench`
-- `anli_r1`, `anli_r2`, `anli_r3`: ANLI `nie-etal-2020-adversarial`
-- `arabicmmlu_<subset>` for the built-in ArabicMMLU subsets: ArabicMMLU `koto2024arabicmmlu`
-- `darijammlu_<subset>` for the built-in DarijaMMLU subsets: DarijaMMLU `shang2024atlaschatadaptinglargelanguage`
-- `egymmlu_<subset>` for the built-in EgyMMLU subsets: EgyMMLU `el-mekki-etal-2025-nilechat`
-- `eus_exams_<subset>` for the built-in EusExams subsets: EusExams `etxaniz2024latxa`
-- `eus_reading`: EusReading `etxaniz2024latxa`
-- `eus_proficiency`: EusProficiency `etxaniz2024latxa`
-- `eus_trivia`: EusTrivia `etxaniz2024latxa`
-- `aime`, `aime24`, `aime25`: AIME `aime_1983_2024`, `aime_2024`, `aime_2025`
-- `arc_challenge`, `arc_easy`: ARC `clark2018arc`
-- `arc_mt_da`, `arc_mt_de`, `arc_mt_el`, `arc_mt_es`, `arc_mt_fi`, `arc_mt_hu`, `arc_mt_is`, `arc_mt_it`, `arc_mt_nb`, `arc_mt_pl`, `arc_mt_pt`, `arc_mt_sv`: ARC `clark2018arc`
-- `arithmetic_1dc`, `arithmetic_2da`, `arithmetic_2dm`, `arithmetic_2ds`, `arithmetic_3da`, `arithmetic_3ds`, `arithmetic_4da`, `arithmetic_4ds`, `arithmetic_5da`, `arithmetic_5ds`: GPT-3 arithmetic `brown2020gpt3`
-- `asdiv`, `asdiv_cot_llama`: ASDiv `miao2021diverse`
-- `babi`: bAbI `weston2015towards`
-- `babilong_<qa_split>` for `qa1` through `qa20`: BABILong `kuratov2024babilong`
-- `bbh_<subset>` for all BIG-Bench Hard subsets: BIG-Bench Hard `suzgun2022challenging`
-- `bangla_boolqa`, `bangla_commonsenseqa`, `bangla_mmlu`, `bangla_openbookqa`, `bangla_piqa`: TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms`
-- `bear`, `bear_big`: BEAR `wiland2024bear`
-- `belebele`: Belebele `bandarkar2023belebele`
-- `blimp`: BLiMP `warstadt2020blimp`
-- `c4`: C4 `raffel2020exploring`
-- `careqa_en`, `careqa_es`: CareQA `arias-duart-etal-2025-automatic`
-- `cabbq_<category>` for the built-in Catalan BBQ categories: CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan`
-- `esbbq_<category>` for the built-in Spanish BBQ categories: EsBBQ `ruizfernández2025esbbqcabbqspanishcatalan`
-- `bbq_<category>` for the built-in English BBQ categories: BBQ `parrish2022bbq`
-- `ceval`: C-Eval `huang2023ceval`
-- `boolq`, `cb`, `copa`, `rte`, `wic`: SuperGLUE `wang2019superglue`
-- `cnn_dailymail`: CNN/DailyMail `nallapati2016abstractive`
-- `code2text_go`, `code2text_java`, `code2text_javascript`, `code2text_php`, `code2text_python`, `code2text_ruby`: CodeXGLUE `lu2021codexglue`
-- `commonsense_qa`: CommonsenseQA `talmor2019commonsenseqa`
-- `coqa`: CoQA `reddy2019coqa`
-- `copa_ar`, `piqa_ar`: AlGhafa Arabic translations `almazrouei-etal-2023-alghafa`
-- `copal_id_standard`, `copal_id_colloquial`: COPAL-ID `wibowo-etal-2024-copal`
-- `crows_pairs_english`, `crows_pairs_english_age`, `crows_pairs_english_autre`, `crows_pairs_english_disability`, `crows_pairs_english_gender`, `crows_pairs_english_nationality`, `crows_pairs_english_physical_appearance`, `crows_pairs_english_race_color`, `crows_pairs_english_religion`, `crows_pairs_english_sexual_orientation`, `crows_pairs_english_socioeconomic`: CrowS-Pairs `nangia-etal-2020-crows`
-- `crows_pairs_french`, `crows_pairs_french_age`, `crows_pairs_french_autre`, `crows_pairs_french_disability`, `crows_pairs_french_gender`, `crows_pairs_french_nationality`, `crows_pairs_french_physical_appearance`, `crows_pairs_french_race_color`, `crows_pairs_french_religion`, `crows_pairs_french_sexual_orientation`, `crows_pairs_french_socioeconomic`: French CrowS-Pairs `neveol-etal-2022-french`
-- `darijahellaswag`: DarijaHellaSwag `shang2024atlaschatadaptinglargelanguage`
-- `egyhellaswag`: EgyHellaSwag `mekki2025nilechatlinguisticallydiverseculturally`
-- `drop`: DROP `dua2019drop`
-- `fda`: BASED-FDA dataset
-- `gpqa_main`, `gpqa_diamond`, `gpqa_extended`: GPQA `rein2024gpqa`
-- `ethics_cm`, `ethics_deontology`, `ethics_justice`, `ethics_utilitarianism`, `ethics_virtue`: ETHICS `hendrycks2021ethics`
-- `gsm8k`: GSM8K `cobbe2021trainingverifierssolvemath`
-- `gsm8k_platinum`: GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks`
-- `hellaswag`: HellaSwag `zellers2019hellaswag`
-- `headqa_en`, `headqa_es`: HEAD-QA `vilares-gomez-rodriguez-2019-head`
-- `hendrycks_math_<subset>` for the built-in subject subsets: MATH `hendrycks2021measuring`
-- `histoires_morales`: Histoires Morales `leteno2025histoiresmorales`
-- `moral_stories`: Moral Stories `emelin-etal-2021-moral`
-- `icelandic_winogrande`: Icelandic WinoGrande `snaebjarnarson-etal-2022-warm`
-- `inverse_scaling_<subset>` for the built-in inverse-scaling subsets: Inverse Scaling Prize `mckenzie2023inverse`
-- `kobest_boolq`, `kobest_copa`, `kobest_hellaswag`, `kobest_sentineg`, `kobest_wic`: KoBEST `kim2022kobest`
-- `lambada_openai`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}`, `lambada_openai_cloze`, `lambada_standard`, `lambada_standard_cloze`: LAMBADA `paperno2016lambada`
-- `logiqa`: LogiQA `liu2020logiqa`
-- `logiqa2`: LogiQA 2.0 `liu2022logiqa2`
-- `humaneval`: HumanEval `chen2021evaluatinglargelanguagemodels`
-- `mbpp`: MBPP `austin2021program`
-- `mastermind_24_easy`, `mastermind_24_hard`, `mastermind_35_easy`, `mastermind_35_hard`, `mastermind_46_easy`, `mastermind_46_hard`: Mastermind
-- `click`, `click_lang`, `click_lang_text`, `click_lang_grammar`, `click_lang_function`, `click_cul`, `click_cul_economy`, `click_cul_geography`, `click_cul_history`, `click_cul_kpop`, `click_cul_law`, `click_cul_politics`, `click_cul_society`, `click_cul_tradition`: CLIcK `kim2024click`
-- `haerae`, `haerae_general_knowledge`, `haerae_history`, `haerae_loan_word`, `haerae_rare_word`, `haerae_standard_nomenclature`: HAE-RAE `park2024haeraebenchmarkingkoreanknowledge`
-- `kormedmcqa`, `kormedmcqa_doctor`, `kormedmcqa_nurse`, `kormedmcqa_pharm`, `kormedmcqa_dentist`: KorMedMCQA `sean0042kormedmcqa`
-- `gsm_plus`, `gsm_plus_mini`: GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating`
-- `mathqa`: MathQA `amini2019mathqa`
-- `mc_taco`: MC-TACO `zhou2019mctaco`
-- `medmcqa`: MedMCQA `pmlr-v174-pal22a`
-- `medqa_4options`: MedQA `jin2020disease`
-- `mmlu`: MMLU `hendryckstest2021`
-- `mmlu_pro`: MMLU-Pro `wang2024mmlupro`
-- `cola`, `mnli`, `mrpc`, `qnli`, `qqp`, `sst2`, `wnli`: GLUE `wang-etal-2018-glue`
-- `mutual`: MuTual `cui2020mutual`
-- `nq_open`: Natural Questions `kwiatkowski2019natural`
-- `openbookqa`: OpenBookQA `mihaylov2018openbookqa`
-- `paws_x_de`, `paws_x_en`, `paws_x_es`, `paws_x_fr`, `paws_x_ja`, `paws_x_ko`, `paws_x_zh`: PAWS-X `yang2019pawsx`
-- `piqa`: PIQA `bisk2020piqa`
-- `pile_10k`: The Pile `gao2020pile`
-- `polemo2_in`, `polemo2_out`: KLEJ POLEMO 2.0 `ogrodniczuk-kobyliński-2024-polemo2`
-- `prost`: PROST `aroca-ouellette-etal-2021-prost`
-- `pubmedqa`: PubMedQA `jin2019pubmedqa`
-- `qa4mre_2011`, `qa4mre_2012`, `qa4mre_2013`: QA4MRE `Peas2013QA4MRE2O`
-- `squadv2`: SQuAD 2.0 `rajpurkar2018know`
-- `toxigen`: ToxiGen `hartvigsen2022toxigen`
-- `truthfulqa_mc1`, `truthfulqa_mc2`: TruthfulQA `lin-etal-2022-truthfulqa`
-- `triviaqa`: TriviaQA `joshi2017triviaqa`
-- `race`: RACE `lai-etal-2017-race`
-- `sciq`: SciQ `welbl2017crowdsourcing`
-- `siqa`: Social IQA `sap2019social`
-- `swag`: SWAG `zellers2018swagaf`
-- `webqs`: WebQuestions `berant-etal-2013-semantic`
-- `wikitext`: WikiText-2 `merity2016pointer`
-- `winogender_all`, `winogender_female`, `winogender_gotcha`, `winogender_gotcha_female`, `winogender_gotcha_male`, `winogender_male`, `winogender_neutral`: WinoGender `rudinger2018winogender`
-- `wsc273`: WSC273 `levesque2012winograd`
-- `winogrande`: WinoGrande `sakaguchi2019winogrande`
-- `xcopa_et`, `xcopa_ht`, `xcopa_id`, `xcopa_it`, `xcopa_qu`, `xcopa_sw`, `xcopa_ta`, `xcopa_th`, `xcopa_tr`, `xcopa_vi`, `xcopa_zh`: XCOPA `ponti2020xcopa`
-- `xquad_<language>` for the built-in XQuAD language subsets: XQuAD `artetxe2020crosslingual`
-- `xstorycloze_ar`, `xstorycloze_en`, `xstorycloze_es`, `xstorycloze_eu`, `xstorycloze_hi`, `xstorycloze_id`, `xstorycloze_my`, `xstorycloze_ru`, `xstorycloze_sw`, `xstorycloze_te`, `xstorycloze_zh`: XStoryCloze `lin2021fewshotmultilingual`
-- `xnli_<language>` for the built-in XNLI language subsets: XNLI `conneau2018xnli`
-- `xnli_eu`: XNLI-EU `etxaniz2023xnlieu`
-- `xwinograd_en`, `xwinograd_fr`, `xwinograd_jp`, `xwinograd_pt`, `xwinograd_ru`, `xwinograd_zh`: XWinograd `tikhonov2021heads`
+Comments inside the BibTeX block below note which built-in suites each citation covers.
 
 ```bibtex
-
-# EXAMS
+% EXAMS. Suites: aexams_{biology,islamic_studies,physics,science,social}.
 @inproceedings{hardalov-etal-2020-exams,
   title = {EXAMS: A Multi-Subject High School Examinations Dataset for Cross-Lingual and Multilingual Question Answering},
   author = {Momchil Hardalov and Todor Mihaylov and Vassil Momchev and Pepa Atanasova and Preslav Nakov and Iryna Gurevych},
@@ -701,7 +597,7 @@ The current built-in suite coverage maps to these benchmark citations:
   doi = {10.18653/v1/2020.emnlp-main.438},
 }
 
-# AIME
+% AIME suites: aime -> aime_1983_2024, aime24 -> aime_2024, aime25 -> aime_2025.
 @dataset{aime_1983_2024,
   author = {Hemish Veeraboina},
   title = {AIME Problem Set 1983-2024},
@@ -726,7 +622,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://huggingface.co/datasets/math-ai/aime25},
 }
 
-# AGIEval
+% AGIEval. Suites: agieval_<subset>.
 @article{zhong2023agieval,
   title = {AGIEval: A Human-Centric Benchmark for Evaluating Foundation Models},
   author = {Wanjun Zhong and Zijie Huang and Shirong Ma and Angelica Chen and Yuxin Wang and Li Dong and Jie Tang and Nan Duan},
@@ -735,7 +631,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2304.06364},
 }
 
-# ANLI
+% ANLI. Suites: anli_{r1,r2,r3}.
 @inproceedings{nie-etal-2020-adversarial,
   title = {Adversarial NLI: A New Benchmark for Natural Language Understanding},
   author = {Yixin Nie and Adina Williams and Emily Dinan and Mohit Bansal and Jason Weston and Douwe Kiela},
@@ -743,7 +639,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2020},
 }
 
-# bAbI
+% bAbI
 @article{weston2015towards,
   title = {Towards AI-Complete Question Answering: A Set of Prerequisite Toy Tasks},
   author = {Jason Weston and Antoine Bordes and Sumit Chopra and Alexander M. Rush and Bart van Merri{\"e}nboer and Armand Joulin and Tomas Mikolov},
@@ -751,7 +647,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2015},
 }
 
-# Bangla
+% Bangla. Suites: bangla_{boolqa,commonsenseqa,mmlu,openbookqa,piqa}.
 @misc{nahin2025titullmsfamilybanglallms,
   title = {TituLLMs: A Family of Bangla LLMs with Comprehensive Benchmarking},
   author = {Shahriar Kabir Nahin and Rabindra Nath Nandi and Sagor Sarker and Quazi Sarwar Muhtaseem and Md Kowsher and Apu Chandraw Shill and Md Ibrahim and Mehadi Hasan Menon and Tareq Al Muntasir and Firoj Alam},
@@ -762,7 +658,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2502.11187},
 }
 
-# BEAR
+% BEAR. Suites: bear, bear_big.
 @article{wiland2024bear,
   title = {BEAR: A Unified Framework for Evaluating Relational Knowledge in Causal and Masked Language Models},
   author = {Jacek Wiland and Max Ploner and Alan Akbik},
@@ -771,7 +667,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2404.04113},
 }
 
-# Belebele
+% Belebele
 @misc{bandarkar2023belebele,
   title = {The Belebele Benchmark: a Parallel Reading Comprehension Dataset in 122 Language Variants},
   author = {Lucas Bandarkar and Davis Liang and Benjamin Muller and Mikel Artetxe and Satya Narayan Shukla and Donald Husa and Naman Goyal and Abhinandan Krishnan and Luke Zettlemoyer and Madian Khabsa},
@@ -782,7 +678,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2308.16884},
 }
 
-# BLiMP
+% BLiMP
 @article{warstadt2020blimp,
   title = {BLiMP: The Benchmark of Linguistic Minimal Pairs for English},
   author = {Alex Warstadt and Alicia Parrish and Haokun Liu and Anhad Mohananey and Wei Peng and Sheng-Fu Wang and Samuel R. Bowman},
@@ -794,7 +690,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://doi.org/10.1162/tacl_a_00321},
 }
 
-# BIG-Bench Hard
+% BIG-Bench Hard. Suites: bbh_<subset>.
 @article{suzgun2022challenging,
   title = {Challenging {BIG-Bench} Tasks and Whether Chain-of-Thought Can Solve Them},
   author = {Suzgun, Mirac and Scales, Nathan and Sch{\"a}rli, Nathanael and Gehrmann, Sebastian and Tay, Yi and Chung, Hyung Won and Chowdhery, Aakanksha and Le, Quoc V. and Chi, Ed H. and Zhou, Denny and Wei, Jason},
@@ -803,7 +699,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2210.09261},
 }
 
-# BABILong
+% BABILong. Suites: babilong_{qa1..qa20}.
 @article{kuratov2024babilong,
   title = {BABILong: Testing the Limits of LLMs with Long Context Reasoning-in-a-Haystack},
   author = {Kuratov, Yuri and Bulatov, Aydar and Anokhin, Petr and Rodkin, Ivan and Sorokin, Dmitry and Burtsev, Mikhail},
@@ -812,7 +708,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2406.10149},
 }
 
-# C4
+% C4
 @article{raffel2020exploring,
   title = {Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer},
   author = {Colin Raffel and Noam Shazeer and Adam Roberts and Katherine Lee and Sharan Narang and Michael Matena and Yanqi Zhou and Wei Li and Peter J. Liu},
@@ -824,7 +720,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://jmlr.org/papers/v21/20-074.html},
 }
 
-# C-Eval
+% C-Eval
 @article{huang2023ceval,
   title = {C-Eval: A Multi-Level Multi-Discipline Chinese Evaluation Suite for Foundation Models},
   author = {Yuzhen Huang and Yidong Wang and Chunyang Wang and Lei Chen and Xiaonan Luo and Yuxin Tang and Zhilin Yang and Qianqian Wang and Cheng Li and Weijian Yin and others},
@@ -833,7 +729,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2305.08322},
 }
 
-# DarijaHellaSwag
+% Atlas-Chat. Suites: darijahellaswag, darijammlu_<subset>.
 @article{shang2024atlaschatadaptinglargelanguage,
   title = {Atlas-Chat: Adapting Large Language Models for Low-Resource Moroccan Arabic Dialect},
   author = {Shang, Guokan and others},
@@ -842,16 +738,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2409.17912},
 }
 
-# EgyHellaSwag
-@article{mekki2025nilechatlinguisticallydiverseculturally,
-  title = {NileChat: Towards Linguistically Diverse and Culturally Aware LLMs for Local Communities},
-  author = {El Mekki, Abdellah and Atou, Houdaifa and Nacar, Omer and Shehata, Shady and Abdul-Mageed, Muhammad},
-  journal = {arXiv preprint arXiv:2505.18383},
-  year = {2025},
-  url = {https://arxiv.org/abs/2505.18383},
-}
-
-# GSM8K-Platinum
+% GSM8K-Platinum
 @article{vendrow2025largelanguagemodelbenchmarks,
   title = {Do Large Language Model Benchmarks Test Reliability?},
   author = {Joshua Vendrow and Edward Vendrow and Sara Beery and Aleksander Madry},
@@ -859,7 +746,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2025},
 }
 
-# GSM8K
+% GSM8K
 @article{cobbe2021trainingverifierssolvemath,
   title = {Training Verifiers to Solve Math Word Problems},
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
@@ -867,7 +754,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2021},
 }
 
-# GSM-Plus
+% GSM-Plus. Suites: gsm_plus, gsm_plus_mini.
 @misc{li2024gsmpluscomprehensivebenchmarkevaluating,
   title = {GSM-Plus: A Comprehensive Benchmark for Evaluating the Robustness of LLMs as Mathematical Problem Solvers},
   author = {Qintong Li and Leyang Cui and Xueliang Zhao and Lingpeng Kong and Wei Bi},
@@ -878,7 +765,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2402.19255},
 }
 
-# Histoires Morales
+% Histoires Morales
 @article{leteno2025histoiresmorales,
   title = {Histoires Morales: A French Dataset for Assessing Moral Alignment},
   author = {Leteno, Thibaud and Proskurina, Irina and Gourru, Antoine and Velcin, Julien and Laclau, Charlotte and Metzler, Guillaume and Gravier, Christophe},
@@ -887,7 +774,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2501.17117},
 }
 
-# Moral Stories
+% Moral Stories
 @inproceedings{emelin-etal-2021-moral,
   title = {Moral Stories: Situated Reasoning about Norms, Intents, Actions, and their Consequences},
   author = {Emelin, Denis and Le Bras, Ronan and Hwang, Jena D. and Forbes, Maxwell and Choi, Yejin},
@@ -896,7 +783,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://aclanthology.org/2021.emnlp-main.54},
 }
 
-# Icelandic WinoGrande
+% Icelandic WinoGrande
 @inproceedings{snaebjarnarson-etal-2022-warm,
   title = {A Warm Start and a Clean Crawled Corpus - A Recipe for Good Language Models},
   author = {Sn{\ae}bjarnarson, V{\'e}steinn and S{\'i}monarson, Haukur Barri and Ragnarsson, P{\'e}tur Orri and Ing{\'o}lfsd{\'o}ttir, Svanhv{\'i}t Lilja and J{\'o}nsson, Haukur and Thorsteinsson, Vilhjalmur and Einarsson, Hafsteinn},
@@ -908,7 +795,7 @@ The current built-in suite coverage maps to these benchmark citations:
   pages = {4356--4366},
 }
 
-# GPQA
+% GPQA. Suites: gpqa_{main,diamond,extended}.
 @inproceedings{rein2024gpqa,
   title = {{GPQA}: A Graduate-Level Google-Proof {Q\&A} Benchmark},
   author = {David Rein and Betty Li Hou and Asa Cooper Stickland and Jackson Petty and Richard Yuanzhe Pang and Julien Dirani and Julian Michael and Samuel R. Bowman},
@@ -917,7 +804,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://openreview.net/forum?id=Ti67584b98},
 }
 
-# ARC
+% ARC. Suites: arc_challenge, arc_easy, arc_mt_{da,de,el,es,fi,hu,is,it,nb,pl,pt,sv}.
 @article{clark2018arc,
   title = {Think you have Solved Question Answering? Try {ARC}, the {AI2} Reasoning Challenge},
   author = {Peter Clark and Isaac Cowhey and Oren Etzioni and Tushar Khot and Ashish Sabharwal and Carissa Schoenick and Oyvind Tafjord},
@@ -925,7 +812,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2018},
 }
 
-# GPT-3 Arithmetic
+% GPT-3 Arithmetic. Suites: arithmetic_{1dc,2da,2dm,2ds,3da,3ds,4da,4ds,5da,5ds}.
 @inproceedings{brown2020gpt3,
   title = {Language Models are Few-Shot Learners},
   author = {Tom Brown and Benjamin Mann and Nick Ryder and Melanie Subbiah and Jared Kaplan and Prafulla Dhariwal and Arvind Neelakantan and Pranav Shyam and Girish Sastry and Amanda Askell and Sandhini Agarwal and Ariel Herbert-Voss and Gretchen Krueger and Tom Henighan and Rewon Child and Aditya Ramesh and Daniel Ziegler and Jeffrey Wu and Clemens Winter and Chris Hesse and Mark Chen and Eric Sigler and Mateusz Litwin and Scott Gray and Benjamin Chess and Jack Clark and Christopher Berner and Sam McCandlish and Alec Radford and Ilya Sutskever and Dario Amodei},
@@ -933,7 +820,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2020},
 }
 
-# CareQA
+% CareQA. Suites: careqa_{en,es}.
 @inproceedings{arias-duart-etal-2025-automatic,
   title = {Automatic Evaluation of Healthcare LLMs Beyond Question-Answering},
   author = {Arias-Duart, Anna and Bernabeu, Pablo and Lopez, Adria and Hadj Taieb, Meriem and Villegas, Marta and Gonzalez-Agirre, Aitor},
@@ -942,7 +829,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2502.06666},
 }
 
-# CaBBQ / EsBBQ
+% CaBBQ / EsBBQ. Suites: cabbq_<category>, esbbq_<category>.
 @misc{ruizfernández2025esbbqcabbqspanishcatalan,
   title = {EsBBQ and CaBBQ: The Spanish and Catalan Bias Benchmarks for Question Answering},
   author = {Valle Ruiz-Fernández and Mario Mina and Júlia Falcão and Luis Vasquez-Reina and Anna Sallés and Aitor Gonzalez-Agirre and Olatz Perez-de-Viñaspre},
@@ -953,7 +840,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2507.11216},
 }
 
-# BBQ
+% BBQ. Suites: bbq_<category>.
 @inproceedings{parrish2022bbq,
   title = {BBQ: A Hand-Built Bias Benchmark for Question Answering},
   author = {Parrish, Alicia and Chen, Angelica and Nangia, Nikita and Padmakumar, Vishakh and Phang, Jason and Thompson, John and Htut, Phu Mon and Bowman, Samuel R.},
@@ -962,7 +849,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://aclanthology.org/2022.findings-acl.165/},
 }
 
-# XNLI
+% XNLI. Suites: xnli_<language>.
 @inproceedings{conneau2018xnli,
   title = {XNLI: Evaluating Cross-lingual Sentence Representations},
   author = {Conneau, Alexis and Rinott, Ruty and Lample, Guillaume and Williams, Adina and Bowman, Samuel R. and Schwenk, Holger and Stoyanov, Veselin},
@@ -973,7 +860,7 @@ The current built-in suite coverage maps to these benchmark citations:
   doi = {10.18653/v1/D18-1269},
 }
 
-# XQuAD
+% XQuAD. Suites: xquad_<language>.
 @inproceedings{artetxe2020crosslingual,
   title = {Cross-lingual Question Answering},
   author = {Artetxe, Mikel and Ruder, Sebastian and Yogatama, Dani},
@@ -984,7 +871,7 @@ The current built-in suite coverage maps to these benchmark citations:
   doi = {10.18653/v1/2020.acl-main.119},
 }
 
-# TruthfulQA
+% TruthfulQA. Suites: truthfulqa_{mc1,mc2}.
 @inproceedings{lin-etal-2022-truthfulqa,
   title = {TruthfulQA: Measuring How Models Mimic Human Falsehoods},
   author = {Lin, Stephanie and Hilton, Jacob and Evans, Owain},
@@ -995,7 +882,7 @@ The current built-in suite coverage maps to these benchmark citations:
   doi = {10.18653/v1/2022.acl-long.229},
 }
 
-# ASDiv
+% ASDiv. Suites: asdiv, asdiv_cot_llama.
 @article{miao2021diverse,
   title = {A Diverse Corpus for Evaluating and Developing English Math Word Problem Solvers},
   author = {Shen-Yun Miao and Chao-Chun Liang and Keh-Yih Su},
@@ -1003,7 +890,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2021},
 }
 
-# PIQA
+% PIQA
 @inproceedings{bisk2020piqa,
   title = {PIQA: Reasoning about Physical Commonsense in Natural Language},
   author = {Yonatan Bisk and Rowan Zellers and Ronan Le Bras and Jianfeng Gao and Yejin Choi},
@@ -1011,7 +898,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2020},
 }
 
-# AlGhafa
+% AlGhafa. Suites: copa_ar, piqa_ar.
 @inproceedings{almazrouei-etal-2023-alghafa,
   title = {AlGhafa Evaluation Benchmark for Arabic Language Models},
   author = {Almazrouei, Ebtesam and Cojocaru, Ruxandra and Baldo, Michele and Malartic, Quentin and Alobeidli, Hamza and Mazzotta, Daniele and Penedo, Guilherme and Campesan, Giulia and Farooq, Mugariya and Alhammadi, Maitha and Launay, Julien and Noune, Badreddine},
@@ -1025,7 +912,7 @@ The current built-in suite coverage maps to these benchmark citations:
   pages = {244--275},
 }
 
-# The Pile
+% The Pile
 @article{gao2020pile,
   title = {The Pile: An 800GB Dataset of Diverse Text for Language Modeling},
   author = {Leo Gao and Stella Biderman and Sid Black and Laurence Golding and Travis Hoppe and Charles Foster and Jason Phang and Horace He and Anish Thite and Noa Nabeshima and Shawn Presser and Connor Leahy},
@@ -1033,7 +920,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2020},
 }
 
-# PROST
+% PROST
 @inproceedings{aroca-ouellette-etal-2021-prost,
   title = {{PROST}: Physical Reasoning about Objects through Space and Time},
   author = {St{\'e}phane Aroca-Ouellette and Cory Paik and Alessandro Roncone and Katharina Kann},
@@ -1043,7 +930,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://aclanthology.org/2021.findings-acl.404},
 }
 
-# SQuAD 2.0
+% SQuAD 2.0
 @article{rajpurkar2018know,
   title = {Know What You Don’t Know: Unanswerable Questions for SQuAD},
   author = {Pranav Rajpurkar and Robin Jia and Percy Liang},
@@ -1051,7 +938,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2018},
 }
 
-# TriviaQA
+% TriviaQA
 @article{joshi2017triviaqa,
   title = {TriviaQA: A Large Scale Distantly Supervised Challenge Dataset for Reading Comprehension},
   author = {Mandar Joshi and Eunsol Choi and Daniel Weld and Luke Zettlemoyer},
@@ -1059,7 +946,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2017},
 }
 
-# Natural Questions
+% Natural Questions
 @article{kwiatkowski2019natural,
   title = {Natural Questions: A Benchmark for Question Answering Research},
   author = {Tom Kwiatkowski and Jennimaria Palomaki and Olivia Redfield and Michael Collins and Ankur Parikh and Chris Alberti and Danielle Epstein and Illia Polosukhin and Jacob Devlin and Kenton Lee and Kristina Toutanova and Llion Jones and Matthew Kelcey and Ming-Wei Chang and Andrew M. Dai and Jakob Uszkoreit and Quoc Le and Slav Petrov},
@@ -1069,7 +956,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# PubMedQA
+% PubMedQA
 @inproceedings{jin2019pubmedqa,
   title = {PubMedQA: A Dataset for Biomedical Research Question Answering},
   author = {Qiao Jin and Bhuwan Dhingra and Zhengping Liu and William Cohen and Xinghua Lu},
@@ -1078,7 +965,7 @@ The current built-in suite coverage maps to these benchmark citations:
   pages = {2567--2577},
 }
 
-# QA4MRE
+% QA4MRE
 @inproceedings{Peas2013QA4MRE2O,
   title = {QA4MRE 2011-2013: Overview of Question Answering for Machine Reading Evaluation},
   author = {Pe{\~n}as, Anselmo and Hovy, Eduard H. and Forner, Pamela and Rodrigo, {\'A}lvaro and Sutcliffe, Richard F. E. and Morante, Roser},
@@ -1086,7 +973,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2013},
 }
 
-# CommonsenseQA
+% CommonsenseQA
 @inproceedings{talmor2019commonsenseqa,
   title = {CommonsenseQA: A Question Answering Challenge Targeting Commonsense Knowledge},
   author = {Alon Talmor and Jonathan Herzig and Nicholas Lourie and Jonathan Berant},
@@ -1094,7 +981,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# CoQA
+% CoQA
 @article{reddy2019coqa,
   title = {CoQA: A Conversational Question Answering Challenge},
   author = {Siva Reddy and Danqi Chen and Christopher D. Manning},
@@ -1104,7 +991,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# CrowS-Pairs
+% CrowS-Pairs. Suites: crows_pairs_english and crows_pairs_english_<bias_type>; French CrowS-Pairs suites: crows_pairs_french and crows_pairs_french_<bias_type>.
 @inproceedings{nangia-etal-2020-crows,
   title = {CrowS-Pairs: A Challenge Dataset for Measuring Social Biases in Masked Language Models},
   author = {Nikita Nangia and Clara Vania and Rasika Bhalerao and Samuel R. Bowman},
@@ -1125,7 +1012,7 @@ The current built-in suite coverage maps to these benchmark citations:
   doi = {10.18653/v1/2022.acl-long.583},
 }
 
-# COPAL-ID
+% COPAL-ID. Suites: copal_id_{standard,colloquial}.
 @inproceedings{wibowo-etal-2024-copal,
   title = {COPAL-ID: Indonesian Language Reasoning with Local Culture and Nuances},
   author = {Haryo Akbarianto Wibowo and Swandana Rama Sandhiyudha and Genta Indra Winata and Ayu Purwarianti and Sebastian Ruder and Rahmad Mahardhika and Pascale Fung},
@@ -1135,7 +1022,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://aclanthology.org/2024.naacl-long.77/},
 }
 
-# DROP
+% DROP
 @inproceedings{dua2019drop,
   title = {DROP: A Reading Comprehension Benchmark Requiring Discrete Reasoning Over Paragraphs},
   author = {Dheeru Dua and Yizhong Wang and Pradeep Dasigi and Gabriel Stanovsky and Sameer Singh and Matt Gardner},
@@ -1143,7 +1030,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# ETHICS
+% ETHICS. Suites: ethics_{cm,deontology,justice,utilitarianism,virtue}.
 @article{hendrycks2021ethics,
   title = {Aligning AI With Shared Human Values},
   author = {Dan Hendrycks and Collin Burns and Steven Basart and Andrew Critch and Jerry Li and Dawn Song and Jacob Steinhardt},
@@ -1151,7 +1038,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2021},
 }
 
-# MMLU
+% MMLU
 @article{hendryckstest2021,
   title = {Measuring Massive Multitask Language Understanding},
   author = {Dan Hendrycks and Collin Burns and Steven Basart and Andy Zou and Mantas Mazeika and Dawn Song and Jacob Steinhardt},
@@ -1159,7 +1046,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2021},
 }
 
-# MMLU-Pro
+% MMLU-Pro
 @article{wang2024mmlupro,
   title = {MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark},
   author = {Yubo Wang and Xueguang Ma and Ge Zhang and Yuansheng Ni and Abhranil Chandra and Shiguang Guo and Weiming Ren and Aaran Arulraj and Xuan He and Ziyan Jiang and Tianle Li and Max Ku and Kai Wang and Alex Zhuang and Rongqi Fan and Xiang Yue and Wenhu Chen},
@@ -1167,7 +1054,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2024},
 }
 
-# ArabicMMLU
+% ArabicMMLU. Suites: arabicmmlu_<subset>.
 @misc{koto2024arabicmmlu,
   title = {ArabicMMLU: Assessing Massive Multitask Language Understanding in Arabic},
   author = {Koto, Fajri and Li, Haonan and Shatnawi, Sara and Doughman, Jad and Sadallah, Abdelrahman Boda and Alraeesi, Aisha and Almubarak, Khalid and Alyafeai, Zaid and Sengupta, Neha and Shehata, Shady and Habash, Nizar and Nakov, Preslav and Baldwin, Timothy},
@@ -1176,19 +1063,7 @@ The current built-in suite coverage maps to these benchmark citations:
   archivePrefix = {arXiv},
   url = {https://arxiv.org/abs/2402.12840},
 }
-
-# DarijaMMLU
-@article{shang2024atlaschatadaptinglargelanguage,
-  title = {Atlas-Chat: Adapting Large Language Models for Low-Resource Moroccan Arabic Dialect},
-  author = {Guokan Shang and Hadi Abdine and Yousef Khoubrane and Amr Mohamed and Yassine Abbahaddou and Sofiane Ennadir and Imane Momayiz and Xuguang Ren and Eric Moulines and Preslav Nakov and Michalis Vazirgiannis and Eric Xing},
-  year = {2024},
-  eprint = {2409.17912},
-  archivePrefix = {arXiv},
-  primaryClass = {cs.CL},
-  url = {https://arxiv.org/abs/2409.17912},
-}
-
-# EgyMMLU
+% NileChat. Suites: egyhellaswag, egymmlu_<subset>.
 @inproceedings{el-mekki-etal-2025-nilechat,
   title = {NileChat: Towards Linguistically Diverse and Culturally Aware LLMs for Local Communities},
   author = {El Mekki, Abdellah and Atou, Houdaifa and Nacar, Omer and Shehata, Shady and Abdul-Mageed, Muhammad},
@@ -1200,7 +1075,7 @@ The current built-in suite coverage maps to these benchmark citations:
   doi = {10.18653/v1/2025.emnlp-main.556},
 }
 
-# EusExams
+% Latxa / EusExams. Suites: eus_exams_<subset>, eus_reading, eus_proficiency, eus_trivia.
 @misc{etxaniz2024latxa,
   title = {Latxa: An Open Language Model and Evaluation Suite for Basque},
   author = {Julen Etxaniz and Oscar Sainz and Naiara Perez and Itziar Aldabe and German Rigau and Eneko Agirre and Aitor Ormazabal and Mikel Artetxe and Aitor Soroa},
@@ -1211,7 +1086,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2403.20266},
 }
 
-# GLUE
+% GLUE. Suites: cola, mnli, mrpc, qnli, qqp, sst2, wnli.
 @inproceedings{wang-etal-2018-glue,
   title = {{GLUE}: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding},
   author = {Alex Wang and Amanpreet Singh and Julian Michael and Felix Hill and Omer Levy and Samuel Bowman},
@@ -1219,7 +1094,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2018},
 }
 
-# SuperGLUE
+% SuperGLUE. Suites: boolq, cb, copa, multirc, record, rte, wic, wsc.
 @inproceedings{wang2019superglue,
   title = {SuperGLUE: A Stickier Benchmark for General-Purpose Language Understanding Systems},
   author = {Alex Wang and Yada Pruksachatkun and Nikita Nangia and Amanpreet Singh and Julian Michael and Felix Hill and Omer Levy and Samuel Bowman},
@@ -1227,7 +1102,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# HellaSwag
+% HellaSwag
 @inproceedings{zellers2019hellaswag,
   title = {HellaSwag: Can a Machine Really Finish Your Sentence?},
   author = {Rowan Zellers and Ari Holtzman and Yonatan Bisk and Ali Farhadi and Yejin Choi},
@@ -1235,7 +1110,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# HEAD-QA
+% HEAD-QA. Suites: headqa_{en,es}.
 @inproceedings{vilares-gomez-rodriguez-2019-head,
   title = {HEAD-QA: A Healthcare Dataset for Complex Reasoning},
   author = {David Vilares and Carlos G{\'o}mez-Rodr{\'i}guez},
@@ -1243,7 +1118,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# KoBEST
+% KoBEST. Suites: kobest_{boolq,copa,hellaswag,sentineg,wic}.
 @misc{kim2022kobest,
   title = {KoBEST: Korean Balanced Evaluation of Significant Tasks},
   author = {Dohyeong Kim and Myeongjun Jang and Deuk Sin Kwon and Eric Davis},
@@ -1254,7 +1129,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2204.04541},
 }
 
-# IrokoBench
+% IrokoBench. Suites: afrimgsm_<language>, afrimmlu_<language>, afrixnli_<language>.
 @inproceedings{adelani2025irokobench,
   title = {IrokoBench: A New Benchmark for African Languages in the Age of Large Language Models},
   author = {David Ifeoluwa Adelani and Jessica Ojo and Israel Abebe Azime and Jian Yun Zhuang and Jesujoba O. Alabi and others},
@@ -1264,7 +1139,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://aclanthology.org/2025.naacl-long.139/},
 }
 
-# LAMBADA
+% LAMBADA. Suites: lambada_{openai,openai_cloze,standard,standard_cloze}, lambada_openai_mt_{de,en,es,fr,it}, lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}.
 @misc{paperno2016lambada,
   title = {The LAMBADA dataset: Word prediction requiring a broad discourse context},
   author = {Denis Paperno and Germ{\'a}n Kruszewski and Angeliki Lazaridou and Quan Ngoc Pham and Raffaella Bernardi and Sandro Pezzelle and Marco Baroni and Gemma Boleda and Raquel Fern{\'a}ndez},
@@ -1273,7 +1148,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2016},
 }
 
-# LogiQA
+% Inverse Scaling Prize. Suites: inverse_scaling_<subset>.
 @article{mckenzie2023inverse,
   title = {Inverse Scaling Prize: First Round Winners},
   author = {Robert McKenzie and Ethan Perez and Jan Leike and others},
@@ -1282,7 +1157,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://arxiv.org/abs/2306.09479},
 }
 
-# LogiQA
+% LogiQA. Suites: logiqa.
 @misc{liu2020logiqa,
   title = {LogiQA: A Challenge Dataset for Machine Reading Comprehension with Logical Reasoning},
   author = {Jian Liu and Leyang Cui and Hanmeng Liu and Dandan Huang and Yile Wang and Yue Zhang},
@@ -1292,7 +1167,7 @@ The current built-in suite coverage maps to these benchmark citations:
   primaryClass = {cs.CL},
 }
 
-# LogiQA 2.0
+% LogiQA 2.0. Suites: logiqa2.
 @misc{liu2022logiqa2,
   title = {LogiQA 2.0: An Improved Dataset for Logical Reasoning in Natural Language Understanding},
   author = {Jian Liu and Leyang Cui and Hanmeng Liu and Dandan Huang and Yile Wang and Yue Zhang},
@@ -1302,7 +1177,7 @@ The current built-in suite coverage maps to these benchmark citations:
   primaryClass = {cs.CL},
 }
 
-# HumanEval
+% HumanEval
 @misc{chen2021evaluatinglargelanguagemodels,
   title = {Evaluating Large Language Models Trained on Code},
   author = {Mark Chen and Jerry Tworek and Heewoo Jun and Qiming Yuan and Henrique Ponde de Oliveira Pinto and Jared Kaplan and Harri Edwards and Yuri Burda and Nicholas Joseph and Greg Brockman and Alex Ray and Raul Puri and Gretchen Krueger and Girish Sastry and Amanda Askell and Pamela Mishkin and Jack Clark and Krzysztof Misztal and John Schulman and Dario Amodei},
@@ -1312,7 +1187,7 @@ The current built-in suite coverage maps to these benchmark citations:
   primaryClass = {cs.LG},
 }
 
-# MBPP
+% MBPP
 @misc{austin2021program,
   title = {Program Synthesis with Large Language Models},
   author = {Jacob Austin and Augustus Odena and Maxwell Nye and Maarten Bosma and Henryk Michalewski and David Dohan and Ellen Jiang and Carrie Cai and Michael Terry and Quoc Le and Charles Sutton},
@@ -1322,7 +1197,7 @@ The current built-in suite coverage maps to these benchmark citations:
   primaryClass = {cs.LG},
 }
 
-# MuTual
+% MuTual. Suites: mutual.
 @inproceedings{cui2020mutual,
   title = {MuTual: A Dataset for Multi-Turn Dialogue Reasoning},
   author = {Cui, Leyang and Wu, Yu and Liu, Shujie and Zhang, Yue and Zhou, Ming},
@@ -1331,7 +1206,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://aclanthology.org/2020.acl-main.130/},
 }
 
-# MathQA
+% MathQA
 @misc{amini2019mathqa,
   title = {MathQA: Towards Interpretable Math Word Problem Solving with Operation-Based Formalisms},
   author = {Aida Amini and Saadia Gabriel and Peter Lin and Rik Koncel-Kedziorski and Yejin Choi and Hannaneh Hajishirzi},
@@ -1341,7 +1216,7 @@ The current built-in suite coverage maps to these benchmark citations:
   primaryClass = {cs.CL},
 }
 
-# MATH
+% MATH. Suites: hendrycks_math_<subset>.
 @article{hendrycks2021measuring,
   title = {Measuring Mathematical Problem Solving With the MATH Dataset},
   author = {Hendrycks, Dan and Burns, Collin and Kadavath, Saurav and Arora, Akul and Basart, Steven and Tang, Eric and Song, Dawn and Steinhardt, Jacob},
@@ -1352,7 +1227,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://proceedings.neurips.cc/paper/2021/hash/be83ab3ecd0db773eb2dc1b0a17836a1-Abstract.html},
 }
 
-# MC-TACO
+% MC-TACO
 @inproceedings{zhou2019mctaco,
   title = {Going on a vacation takes longer than going for a walk: A Study of Temporal Commonsense Understanding},
   author = {Ben Zhou and Daniel Khashabi and Qiang Ning and Dan Roth},
@@ -1360,7 +1235,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# MedMCQA
+% MedMCQA
 @inproceedings{pmlr-v174-pal22a,
   title = {MedMCQA: A Large-scale Multi-Subject Multi-Choice Dataset for Medical domain Question Answering},
   author = {Ankit Pal and Logesh Kumar Umapathi and Malaikannan Sankarasubbu},
@@ -1368,7 +1243,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2022},
 }
 
-# MedQA
+% MedQA
 @article{jin2020disease,
   title = {What Disease does this Patient Have? A Large-scale Open Domain Question Answering Dataset from Medical Exams},
   author = {Di Jin and Eileen Pan and Nassim Oufattole and Wei-Hung Weng and Hanyi Fang and Peter Szolovits},
@@ -1376,7 +1251,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2020},
 }
 
-# OpenBookQA
+% OpenBookQA
 @inproceedings{mihaylov2018openbookqa,
   title = {Can a Suit of Armor Conduct Electricity? A New Dataset for Open Book Question Answering},
   author = {Todor Mihaylov and Peter Clark and Tushar Khot and Ashish Sabharwal},
@@ -1384,7 +1259,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2018},
 }
 
-# PAWS-X
+% PAWS-X. Suites: paws_x_{de,en,es,fr,ja,ko,zh}.
 @inproceedings{yang2019pawsx,
   title = {PAWS-X: A Cross-lingual Adversarial Dataset for Paraphrase Identification},
   author = {Yinfei Yang and Yuan Zhang and Chris Tar and Jason Baldridge},
@@ -1392,7 +1267,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# CNN/DailyMail
+% CNN/DailyMail
 @article{nallapati2016abstractive,
   title = {Abstractive Text Summarization using Sequence-to-Sequence RNNs and Beyond},
   author = {Ramesh Nallapati and Bowen Zhou and Cicero dos Santos and {\c{C}}aglar Gul{\c{c}}ehre and Bing Xiang},
@@ -1400,7 +1275,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2016},
 }
 
-# CodeXGLUE
+% CodeXGLUE. Suites: code2text_{go,java,javascript,php,python,ruby}.
 @inproceedings{lu2021codexglue,
   title = {CodeXGLUE: A Machine Learning Benchmark Dataset for Code Understanding and Generation},
   author = {Shuai Lu and Daya Guo and Shuo Ren and Junjie Huang and Alexey Svyatkovskiy and Ambrosio Blanco and Colin B. Clement and Dawn Drain and Daxin Jiang and Duyu Tang and Ge Li and Lidong Zhou and Linjun Shou and Long Zhou and Michele Tufano and Ming Gong and Ming Zhou and Nan Duan and Neel Sundaresan and Shao Kun Deng and Shengyu Fu and Shujie Liu},
@@ -1408,7 +1283,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2021},
 }
 
-# XCOPA
+% XCOPA. Suites: xcopa_{et,ht,id,it,qu,sw,ta,th,tr,vi,zh}.
 @inproceedings{ponti2020xcopa,
   title = {XCOPA: A Multilingual Dataset for Causal Commonsense Reasoning},
   author = {Edoardo M. Ponti and Rahul Gupta and Ivan Vuli{\'c} and Goran Glava{\v{s}} and Anna Korhonen},
@@ -1416,7 +1291,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2020},
 }
 
-# SciQ
+% SciQ
 @inproceedings{welbl2017crowdsourcing,
   title = {Crowdsourcing Multiple Choice Science Questions},
   author = {Johannes Welbl and Nelson F. Liu and Matt Gardner},
@@ -1424,7 +1299,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2017},
 }
 
-# Social IQA
+% Social IQA
 @inproceedings{sap2019social,
   title = {Social IQa: Commonsense Reasoning about Social Interactions},
   author = {Maarten Sap and Hannah Rashkin and Derek Chen and Ronan Le Bras and Yejin Choi},
@@ -1432,7 +1307,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2019},
 }
 
-# SWAG
+% SWAG
 @inproceedings{zellers2018swagaf,
   title = {SWAG: A Large-Scale Adversarial Dataset for Grounded Commonsense Inference},
   author = {Rowan Zellers and Yonatan Bisk and Roy Schwartz and Yejin Choi},
@@ -1440,7 +1315,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2018},
 }
 
-# WebQuestions
+% WebQuestions
 @inproceedings{berant-etal-2013-semantic,
   title = {Semantic Parsing on Freebase from Question-Answer Pairs},
   author = {Jonathan Berant and Andrew Chou and Roy Frostig and Percy Liang},
@@ -1450,7 +1325,7 @@ The current built-in suite coverage maps to these benchmark citations:
   url = {https://aclanthology.org/D13-1160},
 }
 
-# WikiText-2
+% WikiText-2
 @misc{merity2016pointer,
   title = {Pointer Sentinel Mixture Models},
   author = {Stephen Merity and Caiming Xiong and James Bradbury and Richard Socher},
@@ -1460,7 +1335,7 @@ The current built-in suite coverage maps to these benchmark citations:
   primaryClass = {cs.CL},
 }
 
-# WinoGender
+% WinoGender. Suites: winogender_{all,female,gotcha,gotcha_female,gotcha_male,male,neutral}.
 @inproceedings{rudinger2018winogender,
   title = {Gender Bias in Coreference Resolution},
   author = {Rachel Rudinger and Jason Naradowsky and Brian Leonard and Benjamin Van Durme},
@@ -1468,7 +1343,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2018},
 }
 
-# WSC273
+% WSC273
 @inproceedings{levesque2012winograd,
   title = {The Winograd Schema Challenge},
   author = {Hector Levesque and Ernest Davis and Leora Morgenstern},
@@ -1476,7 +1351,7 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2012},
 }
 
-# XWinograd
+% XWinograd. Suites: xwinograd_{en,fr,jp,pt,ru,zh}.
 @misc{tikhonov2021heads,
   title = {It's All in the Heads: Using Attention Heads as a Baseline for Cross-Lingual Transfer in Commonsense Reasoning},
   author = {Alexey Tikhonov and Max Ryabinin},
@@ -1486,7 +1361,7 @@ The current built-in suite coverage maps to these benchmark citations:
   primaryClass = {cs.CL},
 }
 
-# XStoryCloze
+% XStoryCloze. Suites: xstorycloze_{ar,en,es,eu,hi,id,my,ru,sw,te,zh}.
 @article{lin2021fewshotmultilingual,
   title = {Few-shot Learning with Multilingual Language Models},
   author = {Xi Victoria Lin and Todor Mihaylov and Mikel Artetxe and Tianlu Wang and Shuohui Chen and Daniel Simig and Myle Ott and Naman Goyal and Shruti Bhosale and Jingfei Du and Ramakanth Pasunuru and Sam Shleifer and Punit Singh Koura and Vishrav Chaudhary and Brian O'Horo and Jeff Wang and Luke Zettlemoyer and Zornitsa Kozareva and Mona T. Diab and Veselin Stoyanov and Xian Li},
@@ -1494,11 +1369,155 @@ The current built-in suite coverage maps to these benchmark citations:
   year = {2021},
 }
 
-# WinoGrande
+% WinoGrande
 @article{sakaguchi2019winogrande,
   title = {WinoGrande: An Adversarial Winograd Schema Challenge at Scale},
   author = {Keisuke Sakaguchi and Ronan Le Bras and Chandra Bhagavatula and Yejin Choi},
   journal = {arXiv preprint arXiv:1907.10641},
   year = {2019},
 }
+
+% BASED / FDA. Suites: fda.
+@article{arora2024simple,
+  title = {Simple linear attention language models balance the recall-throughput tradeoff},
+  author = {Simran Arora and Sabri Eyuboglu and Michael Zhang and Aman Timalsina and Silas Alberti and Dylan Zinsley and James Zou and Atri Rudra and Christopher R{'e}},
+  journal = {arXiv preprint arXiv:2402.18668},
+  year = {2024},
+  url = {https://arxiv.org/abs/2402.18668},
+}
+
+% FLD. Suites: fld.
+@article{morishita2023learning,
+  title = {Learning Deductive Reasoning from Synthetic Corpus based on Formal Logic},
+  author = {Terufumi Morishita and Gaku Morio and Atsuki Yamaguchi and Yasuhiro Sogawa},
+  journal = {arXiv preprint arXiv:2308.07336},
+  year = {2023},
+  url = {https://arxiv.org/abs/2308.07336},
+}
+
+% IFEval. Suites: ifeval.
+@article{zhou2023instruction,
+  title = {Instruction-Following Evaluation for Large Language Models},
+  author = {Jeffrey Zhou and Tianjian Lu and Swaroop Mishra and Siddhartha Brahma and Sujoy Basu and Yi Luan and Denny Zhou and Le Hou},
+  journal = {arXiv preprint arXiv:2311.07911},
+  year = {2023},
+  url = {https://arxiv.org/abs/2311.07911},
+}
+
+% CLIcK. Suites: click, click_lang, click_lang_{text,grammar,function}, click_cul, click_cul_{economy,geography,history,kpop,law,politics,society,tradition}.
+@inproceedings{kim-etal-2024-click,
+  title = "{CLI}c{K}: A Benchmark Dataset of Cultural and Linguistic Intelligence in {K}orean",
+  author = "Kim, Eunsu  and
+    Suk, Juyoung  and
+    Oh, Philhoon  and
+    Yoo, Haneul  and
+    Thorne, James  and
+    Oh, Alice",
+  booktitle = "Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024)",
+  year = "2024",
+  address = "Torino, Italia",
+  publisher = "ELRA and ICCL",
+  url = "https://aclanthology.org/2024.lrec-main.296/",
+  pages = "3335--3346",
+}
+
+% HAE-RAE. Suites: haerae, haerae_{general_knowledge,history,loan_word,rare_word,standard_nomenclature}.
+@inproceedings{son-etal-2024-hae,
+  title = "{HAE}-{RAE} Bench: Evaluation of {K}orean Knowledge in Language Models",
+  author = "Son, Guijin  and
+    Lee, Hanwool  and
+    Kim, Suwan  and
+    Kim, Huiseo  and
+    Lee, Jae cheol  and
+    Yeom, Je Won  and
+    Jung, Jihyu  and
+    Kim, Jung woo  and
+    Kim, Songseong",
+  booktitle = "Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024)",
+  year = "2024",
+  address = "Torino, Italia",
+  publisher = "ELRA and ICCL",
+  url = "https://aclanthology.org/2024.lrec-main.704/",
+  pages = "7993--8007",
+}
+
+% KorMedMCQA. Suites: kormedmcqa, kormedmcqa_{doctor,nurse,pharm,dentist}.
+@misc{kweon2024kormedmcqa,
+  title = {KorMedMCQA: Multi-Choice Question Answering Benchmark for Korean Healthcare Professional Licensing Examinations},
+  author = {Sunjun Kweon and Byungjin Choi and Gyouk Chu and Junyeong Song and Daeun Hyeon and Sujin Gan and Jueon Kim and Minkyu Kim and Rae Woong Park and Edward Choi},
+  year = {2024},
+  eprint = {2403.01469},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2403.01469},
+}
+
+% KLEJ POLEMO 2.0. Suites: polemo2_{in,out}.
+@inproceedings{kocon-etal-2019-multi,
+  title = "Multi-Level Sentiment Analysis of {P}ol{E}mo 2.0: Extended Corpus of Multi-Domain Consumer Reviews",
+  author = "Koco{'n}, Jan  and
+    Mi{\l}kowski, Piotr  and
+    Za{'s}ko-Zieli{'n}ska, Monika",
+  booktitle = "Proceedings of the 23rd Conference on Computational Natural Language Learning (CoNLL)",
+  year = "2019",
+  address = "Hong Kong, China",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/K19-1092/",
+  doi = "10.18653/v1/K19-1092",
+  pages = "980--991",
+}
+
+% RACE. Suites: race.
+@inproceedings{lai-etal-2017-race,
+  title = "{RACE}: Large-scale {R}e{A}ding Comprehension Dataset From Examinations",
+  author = "Lai, Guokun  and
+    Xie, Qizhe  and
+    Liu, Hanxiao  and
+    Yang, Yiming  and
+    Hovy, Eduard",
+  booktitle = "Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing",
+  year = "2017",
+  address = "Copenhagen, Denmark",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/D17-1082/",
+  doi = "10.18653/v1/D17-1082",
+  pages = "785--794",
+}
+
+% ToxiGen. Suites: toxigen.
+@inproceedings{hartvigsen-etal-2022-toxigen,
+  title = "{T}oxi{G}en: A Large-Scale Machine-Generated Dataset for Adversarial and Implicit Hate Speech Detection",
+  author = "Hartvigsen, Thomas  and
+    Gabriel, Saadia  and
+    Palangi, Hamid  and
+    Sap, Maarten  and
+    Ray, Dipankar  and
+    Kamar, Ece",
+  booktitle = "Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+  year = "2022",
+  address = "Dublin, Ireland",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/2022.acl-long.234/",
+  doi = "10.18653/v1/2022.acl-long.234",
+  pages = "3309--3326",
+}
+
+% XNLI-EU. Suites: xnli_eu.
+@inproceedings{heredia-etal-2024-xnlieu,
+  title = "{XNLI}eu: a dataset for cross-lingual {NLI} in {B}asque",
+  author = "Heredia, Maite  and
+    Etxaniz, Julen  and
+    Zulaika, Muitze  and
+    Saralegi, Xabier  and
+    Barnes, Jeremy  and
+    Soroa, Aitor",
+  booktitle = "Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers)",
+  year = "2024",
+  address = "Mexico City, Mexico",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/2024.naacl-long.234/",
+  doi = "10.18653/v1/2024.naacl-long.234",
+  pages = "4177--4188",
+}
+
 ```
