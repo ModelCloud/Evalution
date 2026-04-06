@@ -65,8 +65,8 @@ class PAWSX(BaseMultipleChoiceSuite):
     ) -> dict[str, float]:
         gold_labels = [sample.gold_index for sample in samples]
         return {
-            "f1,ll_yes": f1_for_label(gold_labels, raw_predictions, label=1),
-            "f1,ll_avg_yes": f1_for_label(
+            "f1,ll_boolean": f1_for_label(gold_labels, raw_predictions, label=1),
+            "f1,ll_avg_boolean": f1_for_label(
                 gold_labels,
                 normalized_predictions,
                 label=1,

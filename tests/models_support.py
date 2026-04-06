@@ -756,7 +756,7 @@ def _assert_crows_pairs_sample(
     }
     assert set(sample.scores) == {
         "pct_stereotype",
-        "likelihood_diff",
+        "ll_diff",
     }
     assert sample.metadata["language"] == language
     assert sample.metadata["bias_category"] == (bias_type or "all")
@@ -2013,8 +2013,8 @@ def _paws_x_suite_spec(
             {
                 "acc,ll",
                 "acc,ll_avg",
-                "f1,ll_yes",
-                "f1,ll_avg_yes",
+                "f1,ll_boolean",
+                "f1,ll_avg_boolean",
             }
         ),
         expected_metadata={
@@ -2640,7 +2640,7 @@ def _crows_pairs_suite_spec(
         ),
         expected_name=task_name,
         baseline=baseline,
-        expected_metrics=frozenset({"pct_stereotype", "likelihood_diff"}),
+        expected_metrics=frozenset({"pct_stereotype", "ll_diff"}),
         expected_metadata={
             "stream": False,
             "dataset_path": "jannalu/crows_pairs_multilingual",
@@ -6281,15 +6281,15 @@ SUITE_SPECS = {
         baseline={
             "acc,ll": 0.4609375,
             "acc,ll_avg": 0.4609375,
-            "f1,ll_yes": 0.488888888888889,
-            "f1,ll_avg_yes": 0.488888888888889,
+            "f1,ll_boolean": 0.488888888888889,
+            "f1,ll_avg_boolean": 0.488888888888889,
         },
         expected_metrics=frozenset(
             {
                 "acc,ll",
                 "acc,ll_avg",
-                "f1,ll_yes",
-                "f1,ll_avg_yes",
+                "f1,ll_boolean",
+                "f1,ll_avg_boolean",
             }
         ),
         expected_metadata={
@@ -6468,15 +6468,15 @@ SUITE_SPECS = {
         baseline={
             "acc,ll": 0.6015625,
             "acc,ll_avg": 0.6015625,
-            "f1,ll_yes": 0.7301587301587302,
-            "f1,ll_avg_yes": 0.7301587301587302,
+            "f1,ll_boolean": 0.7301587301587302,
+            "f1,ll_avg_boolean": 0.7301587301587302,
         },
         expected_metrics=frozenset(
             {
                 "acc,ll",
                 "acc,ll_avg",
-                "f1,ll_yes",
-                "f1,ll_avg_yes",
+                "f1,ll_boolean",
+                "f1,ll_avg_boolean",
             }
         ),
         expected_metadata={
@@ -6799,15 +6799,15 @@ SUITE_SPECS = {
         baseline={
             "acc,ll": 0.6328125,
             "acc,ll_avg": 0.6328125,
-            "f1,ll_yes": 0.4835164835164836,
-            "f1,ll_avg_yes": 0.4835164835164836,
+            "f1,ll_boolean": 0.4835164835164836,
+            "f1,ll_avg_boolean": 0.4835164835164836,
         },
         expected_metrics=frozenset(
             {
                 "acc,ll",
                 "acc,ll_avg",
-                "f1,ll_yes",
-                "f1,ll_avg_yes",
+                "f1,ll_boolean",
+                "f1,ll_avg_boolean",
             }
         ),
         expected_metadata={
@@ -7981,44 +7981,44 @@ for _task_name, _language in (
             "paws_x_de": {
                 "acc,ll": 0.4296875,
                 "acc,ll_avg": 0.4296875,
-                "f1,ll_yes": 0.6010928961748634,
-                "f1,ll_avg_yes": 0.6010928961748634,
+                "f1,ll_boolean": 0.6010928961748634,
+                "f1,ll_avg_boolean": 0.6010928961748634,
             },
             "paws_x_en": {
                 "acc,ll": 0.3671875,
                 "acc,ll_avg": 0.3671875,
-                "f1,ll_yes": 0.4671052631578947,
-                "f1,ll_avg_yes": 0.4671052631578947,
+                "f1,ll_boolean": 0.4671052631578947,
+                "f1,ll_avg_boolean": 0.4671052631578947,
             },
             "paws_x_es": {
                 "acc,ll": 0.4375,
                 "acc,ll_avg": 0.4375,
-                "f1,ll_yes": 0.5135135135135135,
-                "f1,ll_avg_yes": 0.5135135135135135,
+                "f1,ll_boolean": 0.5135135135135135,
+                "f1,ll_avg_boolean": 0.5135135135135135,
             },
             "paws_x_fr": {
                 "acc,ll": 0.5703125,
                 "acc,ll_avg": 0.5703125,
-                "f1,ll_yes": 0.3373493975903614,
-                "f1,ll_avg_yes": 0.3373493975903614,
+                "f1,ll_boolean": 0.3373493975903614,
+                "f1,ll_avg_boolean": 0.3373493975903614,
             },
             "paws_x_ja": {
                 "acc,ll": 0.4375,
                 "acc,ll_avg": 0.4375,
-                "f1,ll_yes": 0.6086956521739131,
-                "f1,ll_avg_yes": 0.6086956521739131,
+                "f1,ll_boolean": 0.6086956521739131,
+                "f1,ll_avg_boolean": 0.6086956521739131,
             },
             "paws_x_ko": {
                 "acc,ll": 0.43359375,
                 "acc,ll_avg": 0.43359375,
-                "f1,ll_yes": 0.6048114048114048,
-                "f1,ll_avg_yes": 0.6048114048114048,
+                "f1,ll_boolean": 0.6048114048114048,
+                "f1,ll_avg_boolean": 0.6048114048114048,
             },
             "paws_x_zh": {
                 "acc,ll": 0.453125,
                 "acc,ll_avg": 0.453125,
-                "f1,ll_yes": 0.6195652173913043,
-                "f1,ll_avg_yes": 0.6195652173913043,
+                "f1,ll_boolean": 0.6195652173913043,
+                "f1,ll_avg_boolean": 0.6195652173913043,
             },
         }[_task_name],
     )
@@ -8299,91 +8299,91 @@ for _language, _dataset_path, _dataset_name, _baseline in (
 for _task_name, _baseline in {
     "crows_pairs_english": {
         "pct_stereotype": 0.5625,
-        "likelihood_diff": 3.1171875,
+        "ll_diff": 3.1171875,
     },
     "crows_pairs_english_age": {
         "pct_stereotype": 0.75,
-        "likelihood_diff": 3.5078125,
+        "ll_diff": 3.5078125,
     },
     "crows_pairs_english_autre": {
         "pct_stereotype": 0.7272727272727273,
-        "likelihood_diff": 6.613636363636363,
+        "ll_diff": 6.613636363636363,
     },
     "crows_pairs_english_disability": {
         "pct_stereotype": 0.625,
-        "likelihood_diff": 8.796875,
+        "ll_diff": 8.796875,
     },
     "crows_pairs_english_gender": {
         "pct_stereotype": 0.5,
-        "likelihood_diff": 3.34375,
+        "ll_diff": 3.34375,
     },
     "crows_pairs_english_nationality": {
         "pct_stereotype": 0.625,
-        "likelihood_diff": 3.9140625,
+        "ll_diff": 3.9140625,
     },
     "crows_pairs_english_physical_appearance": {
         "pct_stereotype": 0.5625,
-        "likelihood_diff": 4.3125,
+        "ll_diff": 4.3125,
     },
     "crows_pairs_english_race_color": {
         "pct_stereotype": 0.40625,
-        "likelihood_diff": 3.1484375,
+        "ll_diff": 3.1484375,
     },
     "crows_pairs_english_religion": {
         "pct_stereotype": 0.6875,
-        "likelihood_diff": 3.3828125,
+        "ll_diff": 3.3828125,
     },
     "crows_pairs_english_sexual_orientation": {
         "pct_stereotype": 0.6875,
-        "likelihood_diff": 5.125,
+        "ll_diff": 5.125,
     },
     "crows_pairs_english_socioeconomic": {
         "pct_stereotype": 0.78125,
-        "likelihood_diff": 4.1875,
+        "ll_diff": 4.1875,
     },
     "crows_pairs_french": {
         "pct_stereotype": 0.46875,
-        "likelihood_diff": 6.6640625,
+        "ll_diff": 6.6640625,
     },
     "crows_pairs_french_age": {
         "pct_stereotype": 0.4375,
-        "likelihood_diff": 3.7421875,
+        "ll_diff": 3.7421875,
     },
     "crows_pairs_french_autre": {
         "pct_stereotype": 0.46153846153846156,
-        "likelihood_diff": 5.288461538461538,
+        "ll_diff": 5.288461538461538,
     },
     "crows_pairs_french_disability": {
         "pct_stereotype": 0.53125,
-        "likelihood_diff": 7.4609375,
+        "ll_diff": 7.4609375,
     },
     "crows_pairs_french_gender": {
         "pct_stereotype": 0.46875,
-        "likelihood_diff": 4.4375,
+        "ll_diff": 4.4375,
     },
     "crows_pairs_french_nationality": {
         "pct_stereotype": 0.40625,
-        "likelihood_diff": 5.046875,
+        "ll_diff": 5.046875,
     },
     "crows_pairs_french_physical_appearance": {
         "pct_stereotype": 0.4375,
-        "likelihood_diff": 3.828125,
+        "ll_diff": 3.828125,
     },
     "crows_pairs_french_race_color": {
         "pct_stereotype": 0.3125,
-        "likelihood_diff": 3.9296875,
+        "ll_diff": 3.9296875,
     },
     "crows_pairs_french_religion": {
         "pct_stereotype": 0.46875,
-        "likelihood_diff": 3.84375,
+        "ll_diff": 3.84375,
     },
     "crows_pairs_french_sexual_orientation": {
         "pct_stereotype": 0.6875,
-        "likelihood_diff": 6.2734375,
+        "ll_diff": 6.2734375,
     },
     "crows_pairs_french_socioeconomic": {
         "pct_stereotype": 0.5625,
-        "likelihood_diff": 5.72265625,
+        "ll_diff": 5.72265625,
     },
 }.items():
     SUITE_SPECS[_task_name] = _crows_pairs_suite_spec(
