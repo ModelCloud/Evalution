@@ -405,19 +405,18 @@ numerics details such as hardware behavior, dtype and normalization choices, ker
 and attention or matmul approximation and accumulation behavior. Even with the same benchmark
 logic, those implementation details can shift results.
 
+Variant-heavy families are folded into a single row below. Brace notation indicates the concrete
+built-in suite names covered by that row.
+
 | Suite | Scoring | Original benchmark |
 | --- | --- | --- |
 | `aexams` | Multiple-choice log-likelihood over answer labels across `biology/islamic_studies/physics/science/social` subjects, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
 | `agieval` | Multiple-choice log-likelihood across supported AGIEval subject subsets, raw + length-normalized accuracy | AGIEval `zhong2023agieval` |
 | `afrimgsm` | Generated numeric exact match across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/vai/wol/xho/yor/zul` translated grade-school math subsets | IrokoBench AfriMGSM `adelani2025irokobench` |
 | `afrimmlu` | Multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` translated MMLU subsets, raw + length-normalized accuracy | IrokoBench AfriMMLU `adelani2025irokobench` |
-| `aime` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024` |
-| `aime24` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2024` |
-| `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_2025` |
+| `aime`, `aime24`, `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024`, `aime_2024`, `aime_2025` |
 | `afrixnli` | Three-way NLI multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` language subsets, raw + length-normalized accuracy | IrokoBench AfriXNLI `adelani2025irokobench` |
-| `anli_r1` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `anli_r2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `anli_r3` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
+| `anli_{r1,r2,r3}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `arabicmmlu` | Multiple-choice log-likelihood across configurable ArabicMMLU subject subsets, raw + length-normalized accuracy | ArabicMMLU `koto2024arabicmmlu` |
 | `darijammlu` | Multiple-choice log-likelihood across configurable DarijaMMLU subject subsets, raw + length-normalized accuracy | DarijaMMLU `shang2024atlaschatadaptinglargelanguage` |
 | `egymmlu` | Multiple-choice log-likelihood across configurable EgyMMLU subject subsets, raw + length-normalized accuracy | EgyMMLU `el-mekki-etal-2025-nilechat` |
@@ -425,27 +424,15 @@ logic, those implementation details can shift results.
 | `eus_reading` | Multiple-choice log-likelihood over Basque reading-comprehension answer labels, raw + length-normalized accuracy | EusReading `etxaniz2024latxa` |
 | `eus_proficiency` | Multiple-choice log-likelihood over Basque proficiency answer labels, raw + length-normalized accuracy | EusProficiency `etxaniz2024latxa` |
 | `eus_trivia` | Multiple-choice log-likelihood over Basque trivia answer labels, raw + length-normalized accuracy | EusTrivia `etxaniz2024latxa` |
-| `arc_challenge` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
-| `arc_easy` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
-| `arc_mt` | Multiple-choice exam score with tie-aware partial credit across translated ARC Challenge subsets `da/de/el/es/fi/hu/is/it/nb/pl/pt/sv` | ARC `clark2018arc` |
-| `arithmetic_1dc` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_2da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_2dm` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_2ds` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_3da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_3ds` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_4da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_4ds` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_5da` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `arithmetic_5ds` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
+| `arc_challenge`, `arc_easy`, `arc_mt_{da,de,el,es,fi,hu,is,it,nb,pl,pt,sv}` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
+| `arithmetic_{1dc,2da,2dm,2ds,3da,3ds,4da,4ds,5da,5ds}` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
 | `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
 | `babi` | Generated exact match | bAbI `weston2015towards` |
 | `babilong` | Generated normalized exact match across `qa1` to `qa20` with configurable context lengths | BABILong `kuratov2024babilong` |
 | `bbh` | Generated exact match across 27 BIG-Bench Hard subsets selected through the `subset` parameter | BIG-Bench Hard `suzgun2022challenging` |
 | `bangla` | Multiple-choice log-likelihood across `boolqa/commonsenseqa/mmlu/openbookqa/piqa` Bangla subsets, raw + length-normalized accuracy | TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms` |
-| `bear` | Full-statement multiple-choice log-likelihood over balanced relational distractors, raw + length-normalized accuracy | BEAR `wiland2024bear` |
-| `bear_big` | Full-statement multiple-choice log-likelihood over the larger BEAR probe, raw + length-normalized accuracy | BEAR `wiland2024bear` |
+| `bear`, `bear_big` | Full-statement multiple-choice log-likelihood over the standard and larger BEAR probes, raw + length-normalized accuracy | BEAR `wiland2024bear` |
 | `belebele` | Multiple-choice reading-comprehension log-likelihood across 122 language variants selected through the `language` parameter, raw + length-normalized accuracy | Belebele `bandarkar2023belebele` |
 | `bbq` | Multiple-choice log-likelihood across English BBQ bias categories, raw + length-normalized accuracy | BBQ `parrish2022bbq` |
 | `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
@@ -474,19 +461,13 @@ logic, those implementation details can shift results.
 | `fda` | Generated contains-over-answer match over the `validation` split | FDA based on `hazyresearch/based-fda` |
 | `french_bench_arc_challenge` | Multiple-choice log-likelihood over the French ARC-Challenge split, with raw and length-normalized accuracy | FrenchBench ARC-Challenge |
 | `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
-| `gsm_plus` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` split | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
-| `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `testmini` split | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
-| `ethics_cm` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_deontology` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_justice` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_utilitarianism` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `ethics_virtue` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
+| `gsm_plus`, `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` and `testmini` splits | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
+| `ethics_{cm,deontology,justice,utilitarianism,virtue}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
 | `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `park2024haeraebenchmarkingkoreanknowledge` |
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
-| `headqa_en` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
-| `headqa_es` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `headqa_{en,es}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `ifeval` | Instruction-following generation scoring across up to 4 instruction checks per prompt | IFEval `li2025ifeval` |
 | `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
@@ -494,12 +475,8 @@ logic, those implementation details can shift results.
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
 | `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `sean0042kormedmcqa` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
-| `lambada_openai` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_openai_mt_{de,en,es,fr,it}` | Single-continuation log-likelihood, greedy accuracy + perplexity over multilingual LAMBADA translations | LAMBADA-MT |
-| `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}` | Single-continuation log-likelihood, greedy accuracy + perplexity over StableLM multilingual LAMBADA translations | LAMBADA-MT |
-| `lambada_openai_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_standard` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_standard_cloze` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_{openai,openai_cloze,standard,standard_cloze}` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
+| `lambada_openai_mt_{de,en,es,fr,it}`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}` | Single-continuation log-likelihood, greedy accuracy + perplexity over multilingual LAMBADA translations | LAMBADA-MT |
 | `inverse_scaling` | Multiple-choice log-likelihood across inverse-scaling subsets, raw + length-normalized accuracy | Inverse Scaling Prize `mckenzie2023inverse` |
 | `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
 | `logiqa2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA 2.0 `liu2022logiqa2` |
@@ -514,7 +491,6 @@ logic, those implementation details can shift results.
 | `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
-| `multirc` | Multiple-choice log-likelihood over candidate answers with yes/no verification, raw + length-normalized accuracy | SuperGLUE MultiRC `wang2019superglue` |
 | `mutual` | Multiple-choice dialogue response selection log-likelihood, raw + length-normalized accuracy | MuTual `cui2020mutual` |
 | `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
 | `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
@@ -554,8 +530,8 @@ logic, those implementation details can shift results.
 | `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
 
-`arc_challenge` and `arc_easy`: choose among answer options and score the question as an exam
-item, including partial credit when multiple top-scoring choices tie.
+ARC suites (`arc_challenge`, `arc_easy`, and `arc_mt_*`) choose among answer options and score the
+question as an exam item, including partial credit when multiple top-scoring choices tie.
 
 For selected multiple-choice suites, `label_permutations` can be set to any float in `[0.0, 1.0]`
 to add an extra permutation-averaged label-only metric. This does not replace the default
