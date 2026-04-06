@@ -21,6 +21,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest, Loglikel
 from evalution.engines.gptqmodel_engine import (
     GPTQModel,
     GPTQModelSession,
+    _CUDA_CUSPARSE_HEADER,
     _default_gptqmodel_path,
     _import_gptqmodel,
     _validate_gptqmodel_backend,
@@ -388,6 +389,64 @@ def test_load_gptqmodel_runtime_uses_quantized_loader(monkeypatch) -> None:
     assert runtime.resolved_backend == "gptq_triton"
     assert runtime.quant_method == "gptq"
     assert runtime.runtime_format == "gptq"
+
+
+def test_load_gptqmodel_runtime_prefers_triton_when_marlin_headers_are_missing(monkeypatch) -> None:
+    """Force GPTQModel auto backend away from Marlin when CUDA developer headers are absent."""
+
+    class FakeTokenizer:
+        pad_token_id = None
+        pad_token = None
+        eos_token = "</s>"
+        unk_token = "<unk>"
+        padding_side = "right"
+
+    class FakeInnerModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(_attn_implementation="flash_attention_2")
+
+        def modules(self):
+            return iter(())
+
+    class FakeWrapper:
+        def __init__(self) -> None:
+            self.model = FakeInnerModel()
+            self.quantize_config = None
+
+        def requires_grad_(self, value: bool):
+            del value
+            return self
+
+        def eval(self):
+            return self
+
+    load_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        "evalution.engines.gptqmodel_engine._load_tokenizer_from_model",
+        lambda *args, **kwargs: FakeTokenizer(),
+    )
+    monkeypatch.setattr(
+        "evalution.engines.gptqmodel_engine._clone_prepare_tokenizer",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(
+        "evalution.engines.gptqmodel_engine._import_gptqmodel",
+        lambda path: SimpleNamespace(
+            GPTQModel=SimpleNamespace(
+                load=lambda **kwargs: load_calls.append(kwargs) or FakeWrapper()
+            )
+        ),
+    )
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(type(_CUDA_CUSPARSE_HEADER), "exists", lambda self: False)
+
+    load_gptqmodel_runtime(
+        GPTQModel(device="cuda:0", backend="auto"),
+        Model(path="/tmp/model"),
+    )
+
+    assert load_calls[0]["backend"] == "gptq_triton"
 
 
 @pytest.mark.integration

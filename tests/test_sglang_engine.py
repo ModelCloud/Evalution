@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import math
 from pathlib import Path
 from types import SimpleNamespace
@@ -28,9 +29,13 @@ from evalution.engines.sglang_engine import (
 )
 
 _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
+# Skip the CUDA integration smoke test when the optional runtime is not installed locally.
+_HAS_SGLANG_RUNTIME = importlib.util.find_spec("sglang") is not None
 
 
 class FakeTokenizer:
+    """Minimal tokenizer test double that makes SGLang payloads easy to assert against."""
+
     pad_token_id = 0
     pad_token = "<pad>"
     eos_token = "</s>"
@@ -579,6 +584,10 @@ def test_build_sglang_client_rejects_server_mode() -> None:
 @pytest.mark.skipif(
     not torch.cuda.is_available(),
     reason="CUDA is required for the SGLang engine integration test",
+)
+@pytest.mark.skipif(
+    not _HAS_SGLANG_RUNTIME,
+    reason="sglang runtime is not installed",
 )
 def test_sglang_engine_can_generate_and_score_on_cuda() -> None:
     """Smoke-test real generation and scoring against a local CUDA runtime."""

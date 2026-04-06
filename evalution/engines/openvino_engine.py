@@ -42,6 +42,8 @@ class _OpenVINOConfig(BaseEngineDeviceConfig, SharedEngineConfig):
 @dataclass(slots=True)
 class OpenVINO(_OpenVINOConfig):
     # Load decoder-only models through Optimum Intel's OpenVINO backend.
+    compile: bool | None = None
+    dynamic_shapes: bool | None = None
     ov_config: dict[str, Any] | None = None
 
     def build(self, model: Model) -> BaseTransformerSession:
@@ -55,6 +57,7 @@ class OpenVINOSession(BaseTransformerSession):
 
     @classmethod
     def from_config(cls, config: OpenVINO, model_config: Model) -> OpenVINOSession:
+        # Build the OpenVINO runtime first so the session always receives fully initialized state.
         runtime = load_openvino_runtime(config, model_config)
         return cls(
             config=config,
@@ -68,6 +71,8 @@ class OpenVINOSession(BaseTransformerSession):
 
 
 def _import_openvino_optimum() -> Any:
+    """Import the optional Optimum Intel module and raise one stable install hint when absent."""
+
     try:
         return importlib.import_module("optimum.intel.openvino")
     except ModuleNotFoundError as exc:
@@ -80,6 +85,8 @@ def load_openvino_runtime(
     config: OpenVINO,
     model_config: Model,
 ) -> _LoadedOpenVINORuntime:
+    """Load the OpenVINO model and tokenizer pair using Evalution's shared transformer setup."""
+
     import torch
 
     _seed_transformer_runtime(config.seed)
@@ -106,6 +113,10 @@ def load_openvino_runtime(
         "trust_remote_code": trust_remote_code,
         "device": device_str,
     }
+    if config.compile is not None:
+        load_kwargs["compile"] = config.compile
+    if config.dynamic_shapes is not None:
+        load_kwargs["dynamic_shapes"] = config.dynamic_shapes
     if config.ov_config is not None:
         load_kwargs["ov_config"] = dict(config.ov_config)
 
