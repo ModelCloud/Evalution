@@ -37,10 +37,16 @@ from evalution.engines.transformers_common import (
 )
 from evalution.logbar import get_logger
 
+# Evalution only supports GPTQModel backends that expose a local HF-style model object.
 _UNSUPPORTED_GPTQMODEL_BACKENDS = frozenset({"mlx", "sglang", "vllm"})
+# GPTQModel auto mode currently prefers Marlin on CUDA, but Marlin cannot build here without
+# the sparse CUDA toolkit headers that ship with the full developer install.
+_CUDA_CUSPARSE_HEADER = Path("/usr/local/cuda/include/cusparse.h")
 
 
 def _default_gptqmodel_path() -> str | None:
+    """Find a local GPTQModel checkout when the runtime is not installed as a package."""
+
     for env_name in ("EVALUTION_GPTQMODEL_PATH", "GPTQMODEL_PATH"):
         configured = os.environ.get(env_name)
         if configured:
@@ -180,6 +186,8 @@ def load_gptqmodel_runtime(
     config: GPTQModel,
     model_config: Model,
 ) -> _LoadedGPTQModelRuntime:
+    """Load the GPTQModel wrapper, inner HF model, and tokenizer into one runtime bundle."""
+
     import torch
 
     _seed_transformer_runtime(config.seed)
@@ -197,7 +205,7 @@ def load_gptqmodel_runtime(
     )
     tokenizer.padding_side = config.padding_side
 
-    backend = _normalize_gptqmodel_backend(config.backend)
+    backend = _resolve_gptqmodel_backend(config)
     _validate_gptqmodel_backend(backend)
     gptqmodel_module = _import_gptqmodel(config.gptqmodel_path)
 
@@ -299,10 +307,36 @@ def _import_gptqmodel(gptqmodel_path: str | None) -> Any:
 
 
 def _normalize_gptqmodel_backend(backend: Any) -> str:
+    """Normalize GPTQModel backend enums and user strings to one lowercase token."""
+
     value = getattr(backend, "value", backend)
     if not isinstance(value, str) or not value.strip():
         raise ValueError("backend must be a non-empty string")
     return value.strip().lower()
+
+
+def _resolve_gptqmodel_backend(config: GPTQModel) -> str:
+    """Prefer a stable CUDA backend when GPTQModel auto mode would select unusable Marlin kernels."""
+
+    import torch
+
+    backend = _normalize_gptqmodel_backend(config.backend)
+    if backend != "auto":
+        return backend
+
+    requested_device = str(config.device).lower() if config.device is not None else None
+    if requested_device is not None and not requested_device.startswith("cuda"):
+        return backend
+    if not torch.cuda.is_available():
+        return backend
+    if _CUDA_CUSPARSE_HEADER.exists():
+        return backend
+
+    get_logger().warning(
+        "GPTQModel auto backend would consider Marlin, but %s is missing; preferring gptq_triton",
+        _CUDA_CUSPARSE_HEADER,
+    )
+    return "gptq_triton"
 
 
 # External runtimes bypass the direct HF model API that Evalution uses for token scoring and paged
@@ -316,6 +350,8 @@ def _validate_gptqmodel_backend(backend: str) -> None:
 
 
 def _detect_loaded_backend(wrapper: Any) -> str | None:
+    """Read back the effective quantized backend from the loaded module graph when available."""
+
     for module in getattr(getattr(wrapper, "model", None), "modules", lambda: [])():
         backend = getattr(module, "backend", None)
         if backend is not None:
@@ -324,6 +360,8 @@ def _detect_loaded_backend(wrapper: Any) -> str | None:
 
 
 def _enum_value(value: Any) -> str | None:
+    """Convert enum-like values into stable strings for execution metadata and tests."""
+
     if value is None:
         return None
     return str(getattr(value, "value", value))
