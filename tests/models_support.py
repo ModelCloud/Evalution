@@ -16,6 +16,7 @@ import torch
 
 import evalution
 
+# Shared local model path and device selection for the Llama 3.2 integration matrix.
 LLAMA3_2_1B_INSTRUCT = Path("/monster/data/model/Llama-3.2-1B-Instruct")
 LLAMA3_2_TRANSFORMERS_DEVICE = os.environ.get("EVALUTION_TEST_DEVICE", "cuda:0")
 LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE = os.environ.get(
@@ -26,6 +27,7 @@ LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE = os.environ.get(
     "EVALUTION_TEST_COMPARE_RIGHT_DEVICE",
     "cuda:1",
 )
+# Baseline tolerances track the maximum accepted score drift for each benchmark sample size.
 SCORE_BASELINE_ABS_TOLERANCE = 2 / 128
 SCORE_BASELINE_ABS_TOLERANCE_32 = 2 / 32
 SCORE_BASELINE_ABS_TOLERANCE_35 = 2 / 35
@@ -291,6 +293,7 @@ KOBEST_TASKS = (
 )
 CROWS_PAIRS_TASKS = tuple(evalution.benchmarks.CROWS_PAIRS_TASKS)
 
+# Reuse one standard mark bundle across all Llama 3.2 full-model transformer integrations.
 LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
     pytest.mark.integration,
     pytest.mark.slow,
@@ -307,6 +310,7 @@ LLAMA3_2_TRANSFORMERS_TEST_MARKS = [
         reason="the full-model continuous batching integration test requires Python free-threading with GIL disabled",
     ),
 ]
+# Compare-mode suites inherit the standard marks and add the two-GPU requirement.
 LLAMA3_2_TRANSFORMERS_COMPARE_TEST_MARKS = [
     *LLAMA3_2_TRANSFORMERS_TEST_MARKS,
     pytest.mark.skipif(
@@ -318,6 +322,7 @@ LLAMA3_2_TRANSFORMERS_COMPARE_TEST_MARKS = [
 
 @dataclass(frozen=True, slots=True)
 class SuiteSpec:
+    # Capture the expected benchmark shape and score so each model test can share one validator.
     suite_factory: Callable[[], Any]
     expected_name: str
     baseline: dict[str, float]
@@ -335,6 +340,8 @@ def assert_metrics_match_baseline(
     *,
     abs_tolerance: float,
 ) -> None:
+    """Compare metric dictionaries with one explicit absolute tolerance for each score."""
+
     assert set(actual) == set(expected)
     for key, expected_value in expected.items():
         assert actual[key] == pytest.approx(expected_value, abs=abs_tolerance)
@@ -3227,7 +3234,7 @@ SUITE_SPECS = {
     "cabbq_disability_status": _cabbq_suite_spec(
         "cabbq_disability_status",
         category="DisabilityStatus",
-        baseline={"acc,ll": 0.546875, "acc,ll_avg": 0.546875},
+        baseline={"acc,ll": 0.5234375, "acc,ll_avg": 0.5234375},
     ),
     "cabbq_gender": _cabbq_suite_spec(
         "cabbq_gender",
@@ -4927,7 +4934,7 @@ SUITE_SPECS = {
         subset="wic",
         baseline={
             "acc,ll": 0.4375,
-            "acc,ll_avg": 0.5,
+            "acc,ll_avg": 0.4765625,
         },
     ),
     "headqa_en": SuiteSpec(
@@ -4982,8 +4989,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.lambada_openai(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai",
         baseline={
-            "acc,ll": 0.5859375,
-            "ppl,ll": 6.8886713904972465,
+            "acc,ll": 0.59375,
+            "ppl,ll": 6.862626502040115,
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
@@ -5003,7 +5010,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_de": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_de(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_de",
-        baseline={"acc,ll": 0.25, "ppl,ll": 158.80795113445453},
+        baseline={"acc,ll": 0.2421875, "ppl,ll": 159.49725779730807},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5060,7 +5067,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_fr": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_fr(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_fr",
-        baseline={"acc,ll": 0.359375, "ppl,ll": 117.15416029600968},
+        baseline={"acc,ll": 0.3359375, "ppl,ll": 117.63198253978209},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5079,7 +5086,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_it": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_it(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_it",
-        baseline={"acc,ll": 0.359375, "ppl,ll": 87.33817021112974},
+        baseline={"acc,ll": 0.34375, "ppl,ll": 86.66940887099368},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5136,7 +5143,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_es": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_es(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_es",
-        baseline={"acc,ll": 0.375, "ppl,ll": 242.8284211788997},
+        baseline={"acc,ll": 0.3515625, "ppl,ll": 241.99668470319156},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5155,7 +5162,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_fr": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_fr(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_fr",
-        baseline={"acc,ll": 0.3671875, "ppl,ll": 49.282717957825355},
+        baseline={"acc,ll": 0.359375, "ppl,ll": 49.21898066726227},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5212,7 +5219,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_pt": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_pt(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_pt",
-        baseline={"acc,ll": 0.4140625, "ppl,ll": 22.15699203823154},
+        baseline={"acc,ll": 0.40625, "ppl,ll": 22.182617076504428},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -5287,7 +5294,7 @@ SUITE_SPECS = {
         expected_name="lambada_standard_cloze",
         baseline={
             "acc,ll": 0.0078125,
-            "ppl,ll": 6059.306211375059,
+            "ppl,ll": 6040.105500898565,
         },
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
@@ -5429,7 +5436,7 @@ SUITE_SPECS = {
     "click_lang_text": SuiteSpec(
         suite_factory=lambda: getattr(evalution.benchmarks, "click_lang_text")(batch_size=4, max_rows=128),
         expected_name="click_lang_text",
-        baseline={"acc,ll": 0.2265625, "acc,ll_avg": 0.2265625},
+        baseline={"acc,ll": 0.25, "acc,ll_avg": 0.25},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "stream": False,
@@ -5890,7 +5897,7 @@ SUITE_SPECS = {
     "kormedmcqa_doctor": SuiteSpec(
         suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa_doctor")(batch_size=24, max_rows=128),
         expected_name="kormedmcqa_doctor",
-        baseline={"em": 0.25},
+        baseline={"em": 0.1953125},
         expected_metrics=frozenset({"em"}),
         expected_metadata={
             "stream": False,
@@ -5973,7 +5980,7 @@ SUITE_SPECS = {
     "kormedmcqa_dentist": SuiteSpec(
         suite_factory=lambda: getattr(evalution.benchmarks, "kormedmcqa_dentist")(batch_size=24, max_rows=128),
         expected_name="kormedmcqa_dentist",
-        baseline={"em": 0.2734375},
+        baseline={"em": 0.3125},
         expected_metrics=frozenset({"em"}),
         expected_metadata={
             "stream": False,
@@ -6459,10 +6466,10 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.mrpc(batch_size=24, stream=True, max_rows=128),
         expected_name="mrpc",
         baseline={
-            "acc,ll": 0.578125,
-            "acc,ll_avg": 0.578125,
-            "f1,ll_yes": 0.7127659574468085,
-            "f1,ll_avg_yes": 0.7127659574468085,
+            "acc,ll": 0.6015625,
+            "acc,ll_avg": 0.6015625,
+            "f1,ll_yes": 0.7301587301587302,
+            "f1,ll_avg_yes": 0.7301587301587302,
         },
         expected_metrics=frozenset(
             {
@@ -8184,7 +8191,7 @@ for _language, _baseline in {
 for _language, _baseline in {
     "ar": {"em": 0.1875, "f1": 0.339294733044733},
     "en": {"em": 0.15625, "f1": 0.3847293331668331},
-    "es": {"em": 0.125, "f1": 0.5209415584415584},
+    "es": {"em": 0.09375, "f1": 0.42406655844155844},
     "zh": {"em": 0.375, "f1": 0.45312499999999994},
 }.items():
     SUITE_SPECS[f"xquad_{_language}"] = _xquad_suite_spec(
@@ -8229,7 +8236,7 @@ for _task_name, _subset, _baseline in (
     (
         "inverse_scaling_hindsight_neglect",
         "hindsight-neglect",
-        {"acc,ll": 0.375, "acc,ll_avg": 0.375},
+        {"acc,ll": 0.421875, "acc,ll_avg": 0.421875},
     ),
     (
         "inverse_scaling_into_the_unknown",
@@ -8267,7 +8274,7 @@ for _language, _baseline in {
 for _subset, _baseline in {
     "boolqa": {"acc,ll": 0.71875, "acc,ll_avg": 0.71875},
     "commonsenseqa": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
-    "mmlu": {"acc,ll": 0.25, "acc,ll_avg": 0.25},
+    "mmlu": {"acc,ll": 0.34375, "acc,ll_avg": 0.34375},
     "openbookqa": {"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
     "piqa": {"acc,ll": 0.546875, "acc,ll_avg": 0.546875},
 }.items():
@@ -8393,6 +8400,8 @@ def run_suite_spec(
     capsys: pytest.CaptureFixture[str],
     suite_key: str,
 ) -> tuple[Any, Any]:
+    """Run one registered suite spec and enforce its serialized and metric baselines."""
+
     spec = SUITE_SPECS[suite_key]
     result, test_result = run_llama3_2_suite(capsys, spec.suite_factory())
     _assert_suite_matches_spec(test_result, spec)

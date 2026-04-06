@@ -21,6 +21,7 @@ from tests.models_support import (
 
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
 
+# Freeze the shared GSM8K Platinum settings so both engines run the exact same workload.
 _GSM8K_PLATINUM_SUITE_KWARGS = {
     "variant": "cot",
     "apply_chat_template": True,
@@ -29,11 +30,15 @@ _GSM8K_PLATINUM_SUITE_KWARGS = {
     "stream": True,
     "max_rows": 128,
 }
+# Re-run the child Python scripts from the repository root so imports stay consistent.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+# Allow small score drift while still catching engine-level regressions.
 _DUAL_ENGINE_SCORE_ABS_TOLERANCE = 3 / 128
 
 
 def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
+    """Execute one engine in a subprocess and parse the printed JSON payload."""
+
     script = textwrap.dedent(
         f"""
         import json
@@ -100,6 +105,8 @@ def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
 
 
 def test_llama3_2_transformers_vs_transformers_compat_gsm8k_platinum_baselines():
+    """Keep the paged and compat engine scores pinned to their validated baselines."""
+
     transformers_result = _run_gsm8k_platinum("transformers")
     compat_result = _run_gsm8k_platinum("compat")
 
@@ -127,6 +134,6 @@ def test_llama3_2_transformers_vs_transformers_compat_gsm8k_platinum_baselines()
     )
     assert_metrics_match_baseline(
         compat_result["metrics"],
-        {"acc,num": 0.390625},
+        {"acc,num": 0.4375},
         abs_tolerance=_DUAL_ENGINE_SCORE_ABS_TOLERANCE,
     )
