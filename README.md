@@ -37,7 +37,7 @@ import evalution.engines as engines
 
 result = (
     engines.Transformers()
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
     .run(benchmarks.gsm8k_platinum())
 )
 ```
@@ -59,7 +59,7 @@ result = (
         use_async_batching=None,
         max_new_tokens=256,
     )
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
     .run(
         benchmarks.gsm8k_platinum(
             variant="cot",
@@ -91,7 +91,7 @@ import evalution.engines as engines
 result = (
     eval.compare(
         engines.Transformers(dtype="bfloat16", device="cuda:0").model(
-            path="/monster/data/model/Llama-3.2-1B-Instruct",
+            path="meta-llama/Llama-3.2-1B-Instruct",
             label="llama",
         ),
         engines.TransformersCompat(device="cuda:1").model(
@@ -121,7 +121,7 @@ engine:
   device: cuda:0
 
 model:
-  path: /monster/data/model/Llama-3.2-1B-Instruct
+  path: meta-llama/Llama-3.2-1B-Instruct
 
 tests:
   - type: gsm8k_platinum
@@ -228,7 +228,7 @@ import evalution.engines as engines
 
 result = (
     engines.Transformers()
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
     .run(benchmarks.mmlu(subsets=["stem.abstract_algebra", "humanities.philosophy"]))
     .run(benchmarks.mmlu_pro(subsets="stem.math"))
 )
@@ -271,7 +271,7 @@ result = (
         dtype="bfloat16",
         device="cuda:0",
     )
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
     .run(benchmarks.arc_challenge(max_rows=128))
 )
 ```
@@ -285,7 +285,7 @@ engine:
   device: cuda:0
 
 model:
-  path: /monster/data/model/Llama-3.2-1B-Instruct
+  path: meta-llama/Llama-3.2-1B-Instruct
 
 tests:
   - type: arc_challenge
@@ -469,7 +469,7 @@ custom_tokenizer = ...
 result = (
     engines.Transformers()
     .model(
-        path="/monster/data/model/Llama-3.2-1B-Instruct",
+        path="meta-llama/Llama-3.2-1B-Instruct",
         tokenizer=custom_tokenizer,
     )
     .run(benchmarks.gsm8k_platinum(max_rows=128))
