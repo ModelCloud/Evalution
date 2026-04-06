@@ -237,7 +237,9 @@ class BaseEnginePagedBatchingConfig:
     # Group the paged-batching controls shared by engines that expose the same scheduler knobs.
     manual_eviction: bool = False
     allow_block_sharing: bool = True
+    max_blocks_per_request: int | None = None
     use_async_batching: bool | None = None
+    use_cuda_graph: bool | None = None
     q_padding_interval_size: int = 0
     kv_padding_interval_size: int = 0
     max_cached_graphs: int = 0

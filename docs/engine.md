@@ -139,10 +139,12 @@ If the installed `transformers` build predates the first release that includes
 explicit fixed-batch execution path.
 
 The modern `engines.Transformers(...)` engine also exposes the upstream continuous batching manager
-knobs `manual_eviction`, `allow_block_sharing`, `use_async_batching`, `q_padding_interval_size`,
-`kv_padding_interval_size`, and `max_cached_graphs`. Evalution keeps a session-owned manager alive
-while stop strings and sampling settings stay compatible, then tears it down on `gc()` between
-suites or on `close()`.
+knobs `manual_eviction`, `allow_block_sharing`, `max_blocks_per_request`, `use_async_batching`,
+`use_cuda_graph`, `q_padding_interval_size`, `kv_padding_interval_size`, and `max_cached_graphs`.
+When `attn_implementation` resolves to paged FlashAttention and `max_blocks_per_request` is left
+unset, Evalution enables the block-table decode fast path automatically and defaults
+`use_cuda_graph=False`. Evalution keeps a session-owned manager alive while stop strings and
+sampling settings stay compatible, then tears it down on `gc()` between suites or on `close()`.
 
 `engines.GPTQModel()` loads quantized checkpoints through GPTQModel's native loader, then reuses
 the same shared generation, scoring, and paged continuous-batching path as the built-in

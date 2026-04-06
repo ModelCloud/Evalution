@@ -39,7 +39,11 @@ _PENDING_NOGIL_TRANSFORMERS_PR_WARNED = False
 _PENDING_NOGIL_TRANSFORMERS_PR_WARN_LOCK = threading.Lock()
 # Serialize the one-time Evalution-side stop-gap patch for transformers continuous batching.
 _CONTINUOUS_BATCHING_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
+_CONTINUOUS_BATCHING_FA_DECODE_PATCH_LOCK = threading.Lock()
 _FLASH_ATTN_VARLEN_FWD_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
+_FLASH_ATTENTION_SMALL_MAX_BATCH_TOKENS = 4096
+_FLASH_ATTENTION_SMALL_BLOCKS_PER_REQUEST = 1
+_FLASH_ATTENTION_LARGE_BLOCKS_PER_REQUEST = 16
 
 
 @dataclass(slots=True)
@@ -149,6 +153,96 @@ def _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManag
         # Mark the wrapper so repeated manager construction in the same process stays idempotent.
         _wrapped_run_generation_loop.__evalution_cuda_context_patch__ = True
         ContinuousBatchingManager._run_generation_loop = _wrapped_run_generation_loop
+
+
+def _flash_attention_cb_default_max_blocks(max_batch_tokens: int | None) -> int:
+    if max_batch_tokens is not None and max_batch_tokens > _FLASH_ATTENTION_SMALL_MAX_BATCH_TOKENS:
+        return _FLASH_ATTENTION_LARGE_BLOCKS_PER_REQUEST
+    return _FLASH_ATTENTION_SMALL_BLOCKS_PER_REQUEST
+
+
+def _is_supported_flash_attention(attn_implementation: str | None) -> bool:
+    return attn_implementation in {"flash_attention_2", "flash_attention_3"}
+
+
+def _patch_continuous_batching_flash_attention_decode_once() -> None:
+    """Apply Evalution's generic paged FlashAttention decode fast-path compat patch once."""
+
+    try:
+        import torch
+        from transformers import ContinuousBatchingConfig
+        from transformers.generation.continuous_batching import continuous_api
+        from transformers.modeling_flash_attention_utils import lazy_import_paged_flash_attention
+        from transformers.utils.generic import is_flash_attention_requested
+    except Exception:
+        return
+
+    manager_cls = getattr(continuous_api, "ContinuousBatchingManager", None)
+    processor_cls = getattr(continuous_api, "ContinuousBatchProcessor", None)
+    cb_logger = getattr(continuous_api, "logger", get_logger())
+    if manager_cls is None or processor_cls is None:
+        return
+
+    with _CONTINUOUS_BATCHING_FA_DECODE_PATCH_LOCK:
+        current_create_batch_processor = getattr(manager_cls, "_create_batch_processor", None)
+        if callable(current_create_batch_processor) and not getattr(
+            current_create_batch_processor,
+            "__evalution_flash_attention_defaults_patch__",
+            False,
+        ):
+            @wraps(current_create_batch_processor)
+            def _create_batch_processor_with_flash_attention_defaults(self: Any, *args: Any, **kwargs: Any) -> Any:
+                cb_config = getattr(self, "continuous_batching_config", None)
+                model_config = getattr(getattr(self, "model", None), "config", None)
+                attn_implementation = getattr(model_config, "_attn_implementation", None)
+                if isinstance(cb_config, ContinuousBatchingConfig) and _is_supported_flash_attention(attn_implementation):
+                    if cb_config.use_cuda_graph is None:
+                        cb_config.use_cuda_graph = False
+                    if cb_config.max_blocks_per_request is None:
+                        cb_config.max_blocks_per_request = _flash_attention_cb_default_max_blocks(
+                            cb_config.max_batch_tokens
+                        )
+                return current_create_batch_processor(self, *args, **kwargs)
+
+            _create_batch_processor_with_flash_attention_defaults.__evalution_flash_attention_defaults_patch__ = True
+            manager_cls._create_batch_processor = _create_batch_processor_with_flash_attention_defaults
+
+        current_ensure_fast_path = getattr(processor_cls, "_ensure_decode_fast_path_is_available", None)
+        if callable(current_ensure_fast_path) and not getattr(
+            current_ensure_fast_path,
+            "__evalution_flash_attention_decode_patch__",
+            False,
+        ):
+            def _ensure_decode_fast_path_is_available(self) -> None:
+                if self.cache.max_blocks_per_request <= 0:
+                    return
+
+                if is_flash_attention_requested(self.config, version=2) or is_flash_attention_requested(self.config, version=3):
+                    flash_attn_with_kvcache = lazy_import_paged_flash_attention(self.config._attn_implementation)[1]
+                    conditions = [
+                        self.cache.num_sliding_attention_groups == 0,
+                        torch.cuda.is_available(),
+                        flash_attn_with_kvcache is not None,
+                    ]
+                    if not all(conditions):
+                        cb_logger.warning(
+                            "Although self.cache.max_blocks_per_request=%s, the decode fast path is not available "
+                            "because one condition is not met: %s.",
+                            self.cache.max_blocks_per_request,
+                            conditions,
+                        )
+                        self.cache.max_blocks_per_request = 0
+                else:
+                    cb_logger.warning(
+                        "Although self.cache.max_blocks_per_request=%s, the decode fast path is not available "
+                        "because attention is not FA2/FA3. Got self.config._attn_implementation=%s.",
+                        self.cache.max_blocks_per_request,
+                        getattr(self.config, "_attn_implementation", None),
+                    )
+                    self.cache.max_blocks_per_request = 0
+
+            _ensure_decode_fast_path_is_available.__evalution_flash_attention_decode_patch__ = True
+            processor_cls._ensure_decode_fast_path_is_available = _ensure_decode_fast_path_is_available
 
 
 def _patch_flash_attn_varlen_fwd_cuda_context_once() -> None:
@@ -520,6 +614,7 @@ class TransformersSession(BaseTransformerSession):
         from transformers import ContinuousBatchingManager
 
         _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManager)
+        _patch_continuous_batching_flash_attention_decode_once()
         generation_config = self._build_generation_config([request])
 
         with self._state_lock:
@@ -558,13 +653,21 @@ class TransformersSession(BaseTransformerSession):
 
             continuous_batching_config_kwargs: dict[str, Any] = {
                 "allow_block_sharing": self.config.allow_block_sharing,
+                "max_blocks_per_request": self.config.max_blocks_per_request,
                 "use_async_batching": self.config.use_async_batching,
+                "use_cuda_graph": self.config.use_cuda_graph,
                 "q_padding_interval_size": self.config.q_padding_interval_size,
                 "kv_padding_interval_size": self.config.kv_padding_interval_size,
                 "max_cached_graphs": self.config.max_cached_graphs,
             }
             continuous_batching_config_signature = inspect.signature(ContinuousBatchingConfig)
-            if "torch_compile" in continuous_batching_config_signature.parameters:
+            supported_cb_keys = set(continuous_batching_config_signature.parameters)
+            continuous_batching_config_kwargs = {
+                key: value
+                for key, value in continuous_batching_config_kwargs.items()
+                if key in supported_cb_keys
+            }
+            if "torch_compile" in supported_cb_keys:
                 continuous_batching_config_kwargs["torch_compile"] = True
             continuous_batching_config = ContinuousBatchingConfig(**continuous_batching_config_kwargs)
             return ContinuousBatchingManager(
