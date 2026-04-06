@@ -66,13 +66,11 @@ result = (
             apply_chat_template=True,
             max_new_tokens=96,
             batch_size=64,
-            max_rows=128,
         )
     )
     .run(
-        benchmarks.arc_challenge(
+        benchmarks.gsm8k_platinum(
             batch_size=64,
-            max_rows=128,
         )
     )
 )
@@ -99,8 +97,8 @@ result = (
             label="qwen",
         ),
     )
-    .run(benchmarks.gsm8k_platinum(max_rows=128))
-    .run(benchmarks.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
+    .run(benchmarks.gsm8k_platinum(variant="cot"))
 )
 ```
 
@@ -129,10 +127,8 @@ tests:
     apply_chat_template: true
     max_new_tokens: 96
     batch_size: 64
-    max_rows: 128
-  - type: arc_challenge
+  - type: gsm8k_platinum
     batch_size: 64
-    max_rows: 128
 ```
 
 ```python
@@ -189,7 +185,7 @@ Python:
 import evalution.benchmarks as benchmarks
 
 suite = benchmarks.gsm8k(order="length|desc")
-suite = benchmarks.arc_challenge(order="shuffle|245")
+suite = benchmarks.gsm8k_platinum(order="shuffle|245")
 ```
 
 YAML:
@@ -198,7 +194,7 @@ YAML:
 tests:
   - type: gsm8k
     order: length|desc
-  - type: arc_challenge
+  - type: gsm8k_platinum
     order: shuffle|245
 ```
 
@@ -272,7 +268,7 @@ result = (
         device="cuda:0",
     )
     .model(path="meta-llama/Llama-3.2-1B-Instruct")
-    .run(benchmarks.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -288,8 +284,7 @@ model:
   path: meta-llama/Llama-3.2-1B-Instruct
 
 tests:
-  - type: arc_challenge
-    max_rows: 128
+  - type: gsm8k_platinum
 ```
 
 ### GPTQModel
@@ -311,7 +306,7 @@ result = (
         batch_size=16,
     )
     .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-    .run(benchmarks.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -328,8 +323,7 @@ model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
 
 tests:
-  - type: arc_challenge
-    max_rows: 128
+  - type: gsm8k_platinum
 ```
 
 ### OpenVINO
@@ -349,7 +343,7 @@ result = (
         device="cpu",
     )
     .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-    .run(benchmarks.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -364,8 +358,7 @@ model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
 
 tests:
-  - type: arc_challenge
-    max_rows: 128
+  - type: gsm8k_platinum
 ```
 
 ### VLLM
@@ -390,7 +383,7 @@ result = (
         enforce_eager=True,
     )
     .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-    .run(benchmarks.arc_challenge(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -408,8 +401,7 @@ model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
 
 tests:
-  - type: arc_challenge
-    max_rows: 128
+  - type: gsm8k_platinum
 ```
 
 ### SGLang
@@ -433,7 +425,7 @@ if __name__ == '__main__':
             mem_fraction_static=0.8,
         )
         .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-        .run(benchmarks.arc_challenge(max_rows=128))
+        .run(benchmarks.gsm8k_platinum())
     )
 ```
 
@@ -449,8 +441,7 @@ model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
 
 tests:
-  - type: arc_challenge
-    max_rows: 128
+  - type: gsm8k_platinum
 ```
 
 `Tokenicer` is used to load tokenizers for the transformer, transformer-compat, OpenVINO, GPTQModel,
@@ -472,7 +463,7 @@ result = (
         path="meta-llama/Llama-3.2-1B-Instruct",
         tokenizer=custom_tokenizer,
     )
-    .run(benchmarks.gsm8k_platinum(max_rows=128))
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
