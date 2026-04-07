@@ -44,7 +44,7 @@ _ENGINE_REGISTRY: dict[str, _EngineRegistryEntry] = {
     "transformerscompat": _EngineSpec(factory=TransformersCompat, emit_alias="TransformersCompat"),
     "gptqmodel": _EngineSpec(factory=GPTQModel, emit_alias="GPTQModel"),
     "openvino": _EngineSpec(factory=OpenVINO, emit_alias="OpenVINO"),
-    "tensorrtllm": _EngineSpec(factory=TensorRTLLM, emit_alias="tensorrtllm"),
+    "tensorrtllm": _EngineSpec(factory=TensorRTLLM, emit_alias="TensorRTLLM"),
     "vllm": _EngineSpec(factory=VLLM, emit_alias="VLLM"),
     "sglang": _EngineSpec(factory=SGLang, emit_alias="SGLang"),
 }
