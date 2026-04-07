@@ -18,12 +18,6 @@ pip install .
 
 Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
 The package also depends on `tokenicer` for tokenizer loading and normalization.
-Optional backends include `vllm` and `sglang` for paged runtime execution and `gptqmodel` for GPTQ-native
-loading. The OpenVINO backend requires Optimum Intel with OpenVINO support:
-
-```bash
-pip install "optimum[openvino]"
-```
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
 Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
@@ -291,6 +285,130 @@ tests:
   - type: gsm8k_platinum
 ```
 
+### SGLang
+
+Use `engines.SGLang()` in Python or `engine.type: SGLang` in YAML when you want the SGLang runtime.
+Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
+`loglikelihood_rolling(...)` through the same shared engine contract. The current sglang backend
+expects `num_beams=1`.
+
+Python:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+# Extra dependency: `pip install sglang`
+if __name__ == '__main__':
+    result = (
+        engines.SGLang(
+            batch_size=16,
+            mem_fraction_static=0.8,
+        )
+        .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
+        .run(benchmarks.gsm8k_platinum())
+    )
+```
+
+YAML:
+
+```yaml
+engine:
+  type: SGLang
+  batch_size: 16
+  tp_size: 1
+
+model:
+  path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
+
+tests:
+  - type: gsm8k_platinum
+```
+
+### VLLM
+
+Use `engines.VLLM()` in Python or `engine.type: VLLM` in YAML when you want the vLLM runtime.
+Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
+`loglikelihood_rolling(...)` through the same shared engine contract. The current vLLM backend
+expects `num_beams=1`.
+
+Python:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+# Extra dependency: `pip install vllm`
+result = (
+    engines.VLLM(
+        batch_size=16,
+        tensor_parallel_size=1,
+        gpu_memory_utilization=0.8,
+        enforce_eager=True,
+    )
+    .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: VLLM
+  batch_size: 16
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.8
+  enforce_eager: true
+
+model:
+  path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
+
+tests:
+  - type: gsm8k_platinum
+```
+
+### TensorRTLLM
+
+Use `engines.TensorRTLLM()` in Python or `engine.type: TensorRTLLM` in YAML when you want the
+TensorRT-LLM runtime. Configure `tensorrt_llm_path` only when `tensorrt_llm` is not importable
+from the active environment. The current backend expects `num_beams=1`.
+
+Python:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+# Extra dependency: install `tensorrt_llm`, or set `tensorrt_llm_path` to a local checkout.
+result = (
+    engines.TensorRTLLM(
+        batch_size=16,
+        tensor_parallel_size=1,
+    )
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: TensorRTLLM
+  batch_size: 16
+  tensor_parallel_size: 1
+
+model:
+  path: /monster/data/model/Llama-3.2-1B-Instruct
+
+tests:
+  - type: gsm8k_platinum
+```
+
 ### GPTQModel
 
 Use `engines.GPTQModel()` in Python or `engine.type: GPTQModel` in YAML when you want to load a
@@ -303,6 +421,7 @@ Python:
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
+# Extra dependency: `pip install gptqmodel`
 result = (
     engines.GPTQModel(
         device="cuda:0",
@@ -342,6 +461,7 @@ import evalution as eval
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
+# Extra dependency: `pip install "optimum[openvino]"`
 result = (
     engines.OpenVINO(
         device="cpu",
@@ -357,89 +477,6 @@ YAML:
 engine:
   type: OpenVINO
   device: cpu
-
-model:
-  path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
-
-tests:
-  - type: gsm8k_platinum
-```
-
-### VLLM
-
-Use `engines.VLLM()` in Python or `engine.type: VLLM` in YAML when you want the vLLM runtime.
-Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
-`loglikelihood_rolling(...)` through the same shared engine contract. The current vLLM backend
-expects `num_beams=1`.
-
-Python:
-
-```python
-import evalution as eval
-import evalution.benchmarks as benchmarks
-import evalution.engines as engines
-
-result = (
-    engines.VLLM(
-        batch_size=16,
-        tensor_parallel_size=1,
-        gpu_memory_utilization=0.8,
-        enforce_eager=True,
-    )
-    .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-    .run(benchmarks.gsm8k_platinum())
-)
-```
-
-YAML:
-
-```yaml
-engine:
-  type: VLLM
-  batch_size: 16
-  tensor_parallel_size: 1
-  gpu_memory_utilization: 0.8
-  enforce_eager: true
-
-model:
-  path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
-
-tests:
-  - type: gsm8k_platinum
-```
-
-### SGLang
-
-Use `engines.SGLang()` in Python or `engine.type: SGLang` in YAML when you want the SGLang runtime.
-Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
-`loglikelihood_rolling(...)` through the same shared engine contract. The current sglang backend
-expects `num_beams=1`.
-
-Python:
-
-```python
-import evalution as eval
-import evalution.benchmarks as benchmarks
-import evalution.engines as engines
-
-if __name__ == '__main__':
-    result = (
-        engines.SGLang(
-            batch_size=16,
-            mem_fraction_static=0.8,
-        )
-        .model(path="/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
-        .run(benchmarks.gsm8k_platinum())
-    )
-```
-
-YAML:
-
-```yaml
-engine:
-  type: SGLang
-  batch_size: 16
-  tp_size: 1
 
 model:
   path: /monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit
