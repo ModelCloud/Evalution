@@ -54,8 +54,8 @@ def test_mc_taco_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
     assert result.name == "mc_taco"
     assert result.metrics["acc,ll"] == 1.0
     assert result.metrics["acc,ll_avg"] == 1.0
-    assert result.metrics["f1,ll_yes"] == pytest.approx(1.0)
-    assert result.metrics["f1,ll_avg_yes"] == pytest.approx(1.0)
+    assert result.metrics["f1,ll_boolean"] == pytest.approx(1.0)
+    assert result.metrics["f1,ll_avg_boolean"] == pytest.approx(1.0)
     assert result.metadata["dataset_path"] == "CogComp/mc_taco"
     assert result.metadata["split"] == "test"
     assert result.metadata["scoring_mode"] == "multiple_choice_loglikelihood"

@@ -92,7 +92,7 @@ def test_crows_pairs_scores_full_and_filtered_variants(monkeypatch) -> None:
     assert english_result.name == "crows_pairs_english"
     assert english_result.metrics == {
         "pct_stereotype": 0.5,
-        "likelihood_diff": 1.6,
+        "ll_diff": 1.6,
     }
     assert english_result.metadata == {
         "dataset_path": "jannalu/crows_pairs_multilingual",
@@ -116,7 +116,7 @@ def test_crows_pairs_scores_full_and_filtered_variants(monkeypatch) -> None:
     }
     assert first_sample.scores == {
         "pct_stereotype": 1.0,
-        "likelihood_diff": 1.2,
+        "ll_diff": 1.2,
     }
     assert first_sample.metadata["choice_labels"] == ["sent_more", "sent_less"]
     assert first_sample.metadata["choice_texts"] == [
@@ -132,13 +132,13 @@ def test_crows_pairs_scores_full_and_filtered_variants(monkeypatch) -> None:
     assert second_sample.extracted["predicted_index"] == "1"
     assert second_sample.scores == {
         "pct_stereotype": 0.0,
-        "likelihood_diff": 2.0,
+        "ll_diff": 2.0,
     }
 
     assert age_result.name == "crows_pairs_english_age"
     assert age_result.metrics == {
         "pct_stereotype": 0.0,
-        "likelihood_diff": 2.0,
+        "ll_diff": 2.0,
     }
     assert age_result.metadata["bias_type"] == "age"
     assert len(age_result.samples) == 1
@@ -148,7 +148,7 @@ def test_crows_pairs_scores_full_and_filtered_variants(monkeypatch) -> None:
     assert french_result.name == "crows_pairs_french_gender"
     assert french_result.metrics == {
         "pct_stereotype": 1.0,
-        "likelihood_diff": 0.6,
+        "ll_diff": 0.6,
     }
     assert french_result.metadata["dataset_name"] == "french"
     assert french_result.metadata["language"] == "french"

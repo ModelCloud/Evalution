@@ -5,12 +5,28 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+import subprocess
+import sys
+
 import pytest
 
 from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, run_suite_spec
 
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
+# Resolve subprocess nodeids from the repository root so child pytest runs stay location-agnostic.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SUBPROCESS_SUITE_ENV = "EVALUTION_LLAMA3_2_SINGLE_SUITE_CHILD"
+# Free-threading + upstream paged-attention teardown can abort the whole worker after one CUDA
+# fault, so isolate each parametrized suite in its own pytest subprocess in the parent run.
+_USE_SUBPROCESS_SUITE_ISOLATION = (
+    os.environ.get(_SUBPROCESS_SUITE_ENV) != "1"
+    and callable(getattr(sys, "_is_gil_enabled", None))
+    and not sys._is_gil_enabled()
+)
 
+# Keep these suite keys identical to the standalone single-suite benchmark coverage.
 SINGLE_SUITE_SPECS = (
     "anli_r1",
     "anli_r2",
@@ -144,9 +160,41 @@ SINGLE_SUITE_SPECS = (
 )
 
 
+def _run_suite_spec_in_subprocess(suite_key: str) -> None:
+    """Run one parametrized suite in an isolated pytest child process."""
+
+    nodeid = (
+        f"{Path(__file__).resolve()}::"
+        "test_llama3_2_transformers_single_suite_spec_full_model_eval"
+        f"[{suite_key}]"
+    )
+    env = dict(os.environ)
+    env[_SUBPROCESS_SUITE_ENV] = "1"
+    completed = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", nodeid],
+        cwd=_REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode == 0:
+        return
+    raise AssertionError(
+        f"subprocess suite {suite_key!r} failed with exit code {completed.returncode}\n"
+        f"stdout:\n{completed.stdout}\n"
+        f"stderr:\n{completed.stderr}"
+    )
+
+
 @pytest.mark.parametrize("suite_key", SINGLE_SUITE_SPECS, ids=SINGLE_SUITE_SPECS)
 def test_llama3_2_transformers_single_suite_spec_full_model_eval(
     capsys: pytest.CaptureFixture[str],
     suite_key: str,
 ) -> None:
+    """Exercise each single-suite spec against the full Llama 3.2 transformer path."""
+
+    if _USE_SUBPROCESS_SUITE_ISOLATION:
+        _run_suite_spec_in_subprocess(suite_key)
+        return
     run_suite_spec(capsys, suite_key)

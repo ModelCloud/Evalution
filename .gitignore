@@ -2,6 +2,7 @@
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+.cache/
 .venv/
 build/
 dist/
