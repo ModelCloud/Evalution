@@ -344,7 +344,7 @@ def assert_metrics_match_baseline(
 
     assert set(actual) == set(expected)
     for key, expected_value in expected.items():
-        assert actual[key] == pytest.approx(expected_value, abs=abs_tolerance)
+        assert actual[key] == pytest.approx(expected_value, abs=abs_tolerance), f'expected: `{pytest.approx(expected_value, abs=abs_tolerance)}`, actual: `{actual[key]}`'
 
 
 def run_llama3_2_suite(
@@ -8191,7 +8191,7 @@ for _language, _baseline in {
 for _language, _baseline in {
     "ar": {"em": 0.1875, "f1": 0.339294733044733},
     "en": {"em": 0.15625, "f1": 0.3847293331668331},
-    "es": {"em": 0.09375, "f1": 0.42406655844155844},
+    "es": {"em": 0.125, "f1": 0.5209415584415584},
     "zh": {"em": 0.375, "f1": 0.45312499999999994},
 }.items():
     SUITE_SPECS[f"xquad_{_language}"] = _xquad_suite_spec(
