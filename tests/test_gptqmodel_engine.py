@@ -41,7 +41,9 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.gptqmodel_path == expected_gptqmodel_path
     assert engine.manual_eviction is False
     assert engine.allow_block_sharing is True
+    assert engine.max_blocks_per_request is None
     assert engine.use_async_batching is None
+    assert engine.use_cuda_graph is None
     assert engine.q_padding_interval_size == 0
     assert engine.kv_padding_interval_size == 0
     assert engine.max_cached_graphs == 0
@@ -51,7 +53,9 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["gptqmodel_path"] == expected_gptqmodel_path
     assert engine.to_dict()["manual_eviction"] is False
     assert engine.to_dict()["allow_block_sharing"] is True
+    assert engine.to_dict()["max_blocks_per_request"] is None
     assert engine.to_dict()["use_async_batching"] is None
+    assert engine.to_dict()["use_cuda_graph"] is None
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0

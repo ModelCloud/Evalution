@@ -35,7 +35,9 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.manual_eviction is False
     assert engine.continuous_batching is True
     assert engine.allow_block_sharing is True
+    assert engine.max_blocks_per_request is None
     assert engine.use_async_batching is None
+    assert engine.use_cuda_graph is None
     assert engine.q_padding_interval_size == 0
     assert engine.kv_padding_interval_size == 0
     assert engine.max_cached_graphs == 0
@@ -44,7 +46,9 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["manual_eviction"] is False
     assert engine.to_dict()["continuous_batching"] is True
     assert engine.to_dict()["allow_block_sharing"] is True
+    assert engine.to_dict()["max_blocks_per_request"] is None
     assert engine.to_dict()["use_async_batching"] is None
+    assert engine.to_dict()["use_cuda_graph"] is None
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
@@ -832,6 +836,164 @@ def test_transformer_monkey_patch_skips_manager_without_generation_loop(monkeypa
     assert "_run_generation_loop" not in FakeContinuousBatchingManager.__dict__
 
 
+@pytest.mark.parametrize(
+    ("attn_implementation", "max_batch_tokens", "expected_blocks"),
+    [
+        ("flash_attention_2", 2048, 1),
+        ("flash_attention_2", 8192, 16),
+        ("flash_attention_3", 2048, 1),
+    ],
+)
+def test_transformer_monkey_patch_seeds_flash_attention_cb_defaults(
+    monkeypatch,
+    attn_implementation: str,
+    max_batch_tokens: int,
+    expected_blocks: int,
+) -> None:
+    import evalution.engines.transformers as transformer_module
+    from transformers import ContinuousBatchingConfig
+    from transformers.generation.continuous_batching import continuous_api
+
+    manager_cls = continuous_api.ContinuousBatchingManager
+    processor_cls = continuous_api.ContinuousBatchProcessor
+
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: False)
+    monkeypatch.setattr(manager_cls, "_create_batch_processor", lambda self: self.continuous_batching_config)
+    monkeypatch.setattr(processor_cls, "_ensure_decode_fast_path_is_available", lambda self: None)
+
+    transformer_module._patch_continuous_batching_flash_attention_decode_once()
+
+    manager = SimpleNamespace(
+        continuous_batching_config=ContinuousBatchingConfig(
+            max_batch_tokens=max_batch_tokens,
+            max_blocks_per_request=None,
+            use_cuda_graph=None,
+        ),
+        model=SimpleNamespace(
+            config=SimpleNamespace(_attn_implementation=attn_implementation),
+        ),
+    )
+
+    cb_config = manager_cls._create_batch_processor(manager)
+
+    assert cb_config.use_cuda_graph is False
+    assert cb_config.max_blocks_per_request == expected_blocks
+
+
+def test_transformer_monkey_patch_preserves_explicit_flash_attention_cb_settings(monkeypatch) -> None:
+    import evalution.engines.transformers as transformer_module
+    from transformers import ContinuousBatchingConfig
+    from transformers.generation.continuous_batching import continuous_api
+
+    manager_cls = continuous_api.ContinuousBatchingManager
+    processor_cls = continuous_api.ContinuousBatchProcessor
+
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: False)
+    monkeypatch.setattr(manager_cls, "_create_batch_processor", lambda self: self.continuous_batching_config)
+    monkeypatch.setattr(processor_cls, "_ensure_decode_fast_path_is_available", lambda self: None)
+
+    transformer_module._patch_continuous_batching_flash_attention_decode_once()
+
+    manager = SimpleNamespace(
+        continuous_batching_config=ContinuousBatchingConfig(
+            max_batch_tokens=4096,
+            max_blocks_per_request=0,
+            use_cuda_graph=True,
+        ),
+        model=SimpleNamespace(
+            config=SimpleNamespace(_attn_implementation="flash_attention_2"),
+        ),
+    )
+
+    cb_config = manager_cls._create_batch_processor(manager)
+
+    assert cb_config.use_cuda_graph is True
+    assert cb_config.max_blocks_per_request == 0
+
+
+def test_transformer_monkey_patch_accepts_fa2_decode_fast_path(monkeypatch) -> None:
+    import evalution.engines.transformers as transformer_module
+    from transformers.generation.continuous_batching import continuous_api
+
+    processor_cls = continuous_api.ContinuousBatchProcessor
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: False)
+    monkeypatch.setattr(processor_cls, "_ensure_decode_fast_path_is_available", lambda self: setattr(self.cache, "max_blocks_per_request", 0))
+    monkeypatch.setattr(
+        "transformers.utils.generic.is_flash_attention_requested",
+        lambda config, version=None: version == 2 and config._attn_implementation == "flash_attention_2",
+    )
+    monkeypatch.setattr(
+        "transformers.modeling_flash_attention_utils.lazy_import_paged_flash_attention",
+        lambda *_args, **_kwargs: (None, object()),
+    )
+
+    transformer_module._patch_continuous_batching_flash_attention_decode_once()
+
+    cache = SimpleNamespace(max_blocks_per_request=4, num_sliding_attention_groups=0)
+    processor = SimpleNamespace(
+        cache=cache,
+        config=SimpleNamespace(_attn_implementation="flash_attention_2"),
+    )
+
+    processor_cls._ensure_decode_fast_path_is_available(processor)
+
+    assert cache.max_blocks_per_request == 4
+
+
+def test_transformer_monkey_patch_skips_when_transformers_has_native_flash_attention_support(monkeypatch) -> None:
+    import evalution.engines.transformers as transformer_module
+    from transformers.generation.continuous_batching import continuous_api
+
+    manager_cls = continuous_api.ContinuousBatchingManager
+    processor_cls = continuous_api.ContinuousBatchProcessor
+
+    original_create_batch_processor = manager_cls._create_batch_processor
+    original_ensure_fast_path = processor_cls._ensure_decode_fast_path_is_available
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: True)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: True)
+
+    transformer_module._patch_continuous_batching_flash_attention_decode_once()
+
+    assert manager_cls._create_batch_processor is original_create_batch_processor
+    assert processor_cls._ensure_decode_fast_path_is_available is original_ensure_fast_path
+
+
+def test_transformer_monkey_patch_keeps_defaults_patch_when_only_native_decode_support_exists(monkeypatch) -> None:
+    import evalution.engines.transformers as transformer_module
+    from transformers import ContinuousBatchingConfig
+    from transformers.generation.continuous_batching import continuous_api
+
+    manager_cls = continuous_api.ContinuousBatchingManager
+    processor_cls = continuous_api.ContinuousBatchProcessor
+    original_ensure_fast_path = processor_cls._ensure_decode_fast_path_is_available
+
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: True)
+    monkeypatch.setattr(manager_cls, "_create_batch_processor", lambda self: self.continuous_batching_config)
+
+    transformer_module._patch_continuous_batching_flash_attention_decode_once()
+
+    manager = SimpleNamespace(
+        continuous_batching_config=ContinuousBatchingConfig(
+            max_batch_tokens=2048,
+            max_blocks_per_request=None,
+            use_cuda_graph=None,
+        ),
+        model=SimpleNamespace(
+            config=SimpleNamespace(_attn_implementation="flash_attention_2"),
+        ),
+    )
+
+    cb_config = manager_cls._create_batch_processor(manager)
+
+    assert cb_config.use_cuda_graph is False
+    assert cb_config.max_blocks_per_request == 1
+    assert processor_cls._ensure_decode_fast_path_is_available is original_ensure_fast_path
+
+
 def test_transformer_session_prepare_requests_batches_tokenization() -> None:
     class FakePrepareTokenizer:
         def __init__(self) -> None:
@@ -1347,7 +1509,9 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             self,
             *,
             allow_block_sharing=True,
+            max_blocks_per_request=None,
             use_async_batching=None,
+            use_cuda_graph=None,
             q_padding_interval_size=0,
             kv_padding_interval_size=0,
             max_cached_graphs=0,
@@ -1356,7 +1520,9 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             if torch_compile:
                 torch_module.compile(SimpleNamespace())
             self.allow_block_sharing = allow_block_sharing
+            self.max_blocks_per_request = max_blocks_per_request
             self.use_async_batching = use_async_batching
+            self.use_cuda_graph = use_cuda_graph
             self.q_padding_interval_size = q_padding_interval_size
             self.kv_padding_interval_size = kv_padding_interval_size
             self.max_cached_graphs = max_cached_graphs
@@ -1409,7 +1575,9 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             attn_implementation="paged|flash_attention_2",
             manual_eviction=True,
             allow_block_sharing=False,
+            max_blocks_per_request=32,
             use_async_batching=False,
+            use_cuda_graph=True,
             q_padding_interval_size=128,
             kv_padding_interval_size=4096,
             max_cached_graphs=8,
@@ -1432,7 +1600,9 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
     assert manager.started is True
     assert manager.generation_config.stop_strings == ["Q:"]
     assert manager.continuous_batching_config.allow_block_sharing is False
+    assert manager.continuous_batching_config.max_blocks_per_request == 32
     assert manager.continuous_batching_config.use_async_batching is False
+    assert manager.continuous_batching_config.use_cuda_graph is True
     assert manager.continuous_batching_config.q_padding_interval_size == 128
     assert manager.continuous_batching_config.kv_padding_interval_size == 4096
     assert manager.continuous_batching_config.max_cached_graphs == 8

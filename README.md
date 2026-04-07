@@ -56,7 +56,9 @@ result = (
         device="cuda:0",
         batch_size="auto",
         allow_block_sharing=True,
+        max_blocks_per_request=None,
         use_async_batching=None,
+        use_cuda_graph=None,
         max_new_tokens=256,
     )
     .model(path="meta-llama/Llama-3.2-1B-Instruct")
@@ -117,6 +119,8 @@ engine:
   dtype: bfloat16
   attn_implementation: paged|flash_attention_2
   device: cuda:0
+  max_blocks_per_request: null
+  use_cuda_graph: null
 
 model:
   path: meta-llama/Llama-3.2-1B-Instruct

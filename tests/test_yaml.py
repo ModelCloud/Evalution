@@ -932,7 +932,9 @@ def test_repeated_engine_keys_live_on_dedicated_base_configs() -> None:
     assert {field.name for field in fields(BaseEnginePagedBatchingConfig)} == {
         "manual_eviction",
         "allow_block_sharing",
+        "max_blocks_per_request",
         "use_async_batching",
+        "use_cuda_graph",
         "q_padding_interval_size",
         "kv_padding_interval_size",
         "max_cached_graphs",
