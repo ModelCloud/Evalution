@@ -857,7 +857,8 @@ def test_transformer_monkey_patch_seeds_flash_attention_cb_defaults(
     manager_cls = continuous_api.ContinuousBatchingManager
     processor_cls = continuous_api.ContinuousBatchProcessor
 
-    monkeypatch.setattr(transformer_module, "_transformers_has_native_flash_attention_decode_fix", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: False)
     monkeypatch.setattr(manager_cls, "_create_batch_processor", lambda self: self.continuous_batching_config)
     monkeypatch.setattr(processor_cls, "_ensure_decode_fast_path_is_available", lambda self: None)
 
@@ -888,7 +889,8 @@ def test_transformer_monkey_patch_preserves_explicit_flash_attention_cb_settings
     manager_cls = continuous_api.ContinuousBatchingManager
     processor_cls = continuous_api.ContinuousBatchProcessor
 
-    monkeypatch.setattr(transformer_module, "_transformers_has_native_flash_attention_decode_fix", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: False)
     monkeypatch.setattr(manager_cls, "_create_batch_processor", lambda self: self.continuous_batching_config)
     monkeypatch.setattr(processor_cls, "_ensure_decode_fast_path_is_available", lambda self: None)
 
@@ -916,7 +918,8 @@ def test_transformer_monkey_patch_accepts_fa2_decode_fast_path(monkeypatch) -> N
     from transformers.generation.continuous_batching import continuous_api
 
     processor_cls = continuous_api.ContinuousBatchProcessor
-    monkeypatch.setattr(transformer_module, "_transformers_has_native_flash_attention_decode_fix", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: False)
     monkeypatch.setattr(processor_cls, "_ensure_decode_fast_path_is_available", lambda self: setattr(self.cache, "max_blocks_per_request", 0))
     monkeypatch.setattr(
         "transformers.utils.generic.is_flash_attention_requested",
@@ -940,7 +943,7 @@ def test_transformer_monkey_patch_accepts_fa2_decode_fast_path(monkeypatch) -> N
     assert cache.max_blocks_per_request == 4
 
 
-def test_transformer_monkey_patch_skips_when_transformers_has_native_flash_attention_decode_fix(monkeypatch) -> None:
+def test_transformer_monkey_patch_skips_when_transformers_has_native_flash_attention_support(monkeypatch) -> None:
     import evalution.engines.transformers as transformer_module
     from transformers.generation.continuous_batching import continuous_api
 
@@ -949,11 +952,45 @@ def test_transformer_monkey_patch_skips_when_transformers_has_native_flash_atten
 
     original_create_batch_processor = manager_cls._create_batch_processor
     original_ensure_fast_path = processor_cls._ensure_decode_fast_path_is_available
-    monkeypatch.setattr(transformer_module, "_transformers_has_native_flash_attention_decode_fix", lambda: True)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: True)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: True)
 
     transformer_module._patch_continuous_batching_flash_attention_decode_once()
 
     assert manager_cls._create_batch_processor is original_create_batch_processor
+    assert processor_cls._ensure_decode_fast_path_is_available is original_ensure_fast_path
+
+
+def test_transformer_monkey_patch_keeps_defaults_patch_when_only_native_decode_support_exists(monkeypatch) -> None:
+    import evalution.engines.transformers as transformer_module
+    from transformers import ContinuousBatchingConfig
+    from transformers.generation.continuous_batching import continuous_api
+
+    manager_cls = continuous_api.ContinuousBatchingManager
+    processor_cls = continuous_api.ContinuousBatchProcessor
+    original_ensure_fast_path = processor_cls._ensure_decode_fast_path_is_available
+
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: True)
+    monkeypatch.setattr(manager_cls, "_create_batch_processor", lambda self: self.continuous_batching_config)
+
+    transformer_module._patch_continuous_batching_flash_attention_decode_once()
+
+    manager = SimpleNamespace(
+        continuous_batching_config=ContinuousBatchingConfig(
+            max_batch_tokens=2048,
+            max_blocks_per_request=None,
+            use_cuda_graph=None,
+        ),
+        model=SimpleNamespace(
+            config=SimpleNamespace(_attn_implementation="flash_attention_2"),
+        ),
+    )
+
+    cb_config = manager_cls._create_batch_processor(manager)
+
+    assert cb_config.use_cuda_graph is False
+    assert cb_config.max_blocks_per_request == 1
     assert processor_cls._ensure_decode_fast_path_is_available is original_ensure_fast_path
 
 

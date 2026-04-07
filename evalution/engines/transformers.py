@@ -165,18 +165,13 @@ def _is_supported_flash_attention(attn_implementation: str | None) -> bool:
     return attn_implementation in {"flash_attention_2", "flash_attention_3"}
 
 
-def _transformers_has_native_flash_attention_decode_fix() -> bool:
+def _transformers_supports_fa2_decode_fast_path() -> bool:
     """Detect whether the installed transformers build already enables FA2 decode-fast-path support."""
 
     try:
         import torch
-        from transformers import ContinuousBatchingConfig
         from transformers.generation.continuous_batching import continuous_api
     except Exception:
-        return False
-
-    max_blocks_field = ContinuousBatchingConfig.__dataclass_fields__.get("max_blocks_per_request")
-    if max_blocks_field is None or max_blocks_field.default is not None:
         return False
 
     ensure_fast_path = getattr(continuous_api.ContinuousBatchProcessor, "_ensure_decode_fast_path_is_available", None)
@@ -204,6 +199,18 @@ def _transformers_has_native_flash_attention_decode_fix() -> bool:
         torch.cuda.is_available = original_is_available
 
 
+def _transformers_supports_flash_attention_auto_max_blocks() -> bool:
+    """Detect whether the installed transformers build auto-enables FlashAttention block-table sizing."""
+
+    try:
+        from transformers import ContinuousBatchingConfig
+    except Exception:
+        return False
+
+    max_blocks_field = ContinuousBatchingConfig.__dataclass_fields__.get("max_blocks_per_request")
+    return max_blocks_field is not None and max_blocks_field.default is None
+
+
 def _patch_continuous_batching_flash_attention_decode_once() -> None:
     """Apply Evalution's generic paged FlashAttention decode fast-path compat patch once."""
 
@@ -221,12 +228,14 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
     cb_logger = getattr(continuous_api, "logger", get_logger())
     if manager_cls is None or processor_cls is None:
         return
-    if _transformers_has_native_flash_attention_decode_fix():
+    needs_defaults_patch = not _transformers_supports_flash_attention_auto_max_blocks()
+    needs_decode_patch = not _transformers_supports_fa2_decode_fast_path()
+    if not needs_defaults_patch and not needs_decode_patch:
         return
 
     with _CONTINUOUS_BATCHING_FA_DECODE_PATCH_LOCK:
         current_create_batch_processor = getattr(manager_cls, "_create_batch_processor", None)
-        if callable(current_create_batch_processor) and not getattr(
+        if needs_defaults_patch and callable(current_create_batch_processor) and not getattr(
             current_create_batch_processor,
             "__evalution_flash_attention_defaults_patch__",
             False,
@@ -249,7 +258,7 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
             manager_cls._create_batch_processor = _create_batch_processor_with_flash_attention_defaults
 
         current_ensure_fast_path = getattr(processor_cls, "_ensure_decode_fast_path_is_available", None)
-        if callable(current_ensure_fast_path) and not getattr(
+        if needs_decode_patch and callable(current_ensure_fast_path) and not getattr(
             current_ensure_fast_path,
             "__evalution_flash_attention_decode_patch__",
             False,
