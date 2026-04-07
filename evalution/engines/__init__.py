@@ -16,6 +16,7 @@ from .base import (
 from .gptqmodel_engine import GPTQModel
 from .openvino_engine import OpenVINO
 from .sglang_engine import SGLang
+from .tensorrt_llm_engine import TensorRTLLM
 from .transformers import Transformers
 from .transformers_compat import TransformersCompat
 from .vllm_engine import VLLM
@@ -32,6 +33,7 @@ __all__ = [
     "OpenVINO",
     "SGLang",
     "SharedEngineConfig",
+    "TensorRTLLM",
     "Transformers",
     "TransformersCompat",
     "VLLM",

@@ -9,3 +9,5 @@ dist/
 *.egg-info/
 uv.lock
 AGENTS.MD
+
+.codex

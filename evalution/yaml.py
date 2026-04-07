@@ -20,6 +20,7 @@ from evalution.engines import (
     GPTQModel,
     OpenVINO,
     SGLang,
+    TensorRTLLM,
     Transformers,
     TransformersCompat,
     VLLM,
@@ -43,6 +44,7 @@ _ENGINE_REGISTRY: dict[str, _EngineRegistryEntry] = {
     "transformerscompat": _EngineSpec(factory=TransformersCompat, emit_alias="TransformersCompat"),
     "gptqmodel": _EngineSpec(factory=GPTQModel, emit_alias="GPTQModel"),
     "openvino": _EngineSpec(factory=OpenVINO, emit_alias="OpenVINO"),
+    "tensorrtllm": _EngineSpec(factory=TensorRTLLM, emit_alias="TensorRTLLM"),
     "vllm": _EngineSpec(factory=VLLM, emit_alias="VLLM"),
     "sglang": _EngineSpec(factory=SGLang, emit_alias="SGLang"),
 }
@@ -456,6 +458,7 @@ def _load_yaml_spec(source: str | Path) -> dict[str, Any]:
             if maybe_path.exists():
                 path = maybe_path
         except OSError:
+            # Treat long or multiline strings as inline YAML instead of filesystem paths.
             path = None
     if path is not None:
         text = path.read_text(encoding="utf-8")
