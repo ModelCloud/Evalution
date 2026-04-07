@@ -809,6 +809,28 @@ def _resolve_runtime_tokenizer_name(model_config: Model) -> str:
 def _import_tensorrt_llm(tensorrt_llm_path: str | None) -> Any:
     """Import TensorRT-LLM, optionally retrying through common local checkout locations."""
 
+    def _ensure_transformers_compat() -> None:
+        """Patch known import-surface drift between TensorRT-LLM and newer transformers builds."""
+
+        try:
+            transformers_module = importlib.import_module("transformers")
+        except Exception:
+            return
+
+        if hasattr(transformers_module, "AutoModelForVision2Seq"):
+            return
+
+        class _MissingAutoModelForVision2Seq:
+            """Fallback placeholder for TensorRT-LLM imports on text-only workloads."""
+
+            def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+                raise RuntimeError(
+                    "transformers.AutoModelForVision2Seq is unavailable in this environment"
+                )
+
+        setattr(transformers_module, "AutoModelForVision2Seq", _MissingAutoModelForVision2Seq)
+
+    _ensure_transformers_compat()
     try:
         return importlib.import_module("tensorrt_llm")
     except ModuleNotFoundError as exc:
@@ -824,6 +846,7 @@ def _import_tensorrt_llm(tensorrt_llm_path: str | None) -> Any:
             if root not in sys.path:
                 sys.path.insert(0, root)
             try:
+                _ensure_transformers_compat()
                 return importlib.import_module("tensorrt_llm")
             except ModuleNotFoundError:
                 continue
