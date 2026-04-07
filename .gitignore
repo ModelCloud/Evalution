@@ -8,6 +8,6 @@ build/
 dist/
 *.egg-info/
 uv.lock
-AGENTS.MD
+/AGENTS.md
 
 .codex

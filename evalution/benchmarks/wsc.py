@@ -13,6 +13,8 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+_DETOKENIZE_TRAILING_PUNCTUATION_RE = pcre.compile(r" (['.,])")
+
 
 def _general_detokenize(text: str) -> str:
     text = text.replace(" n't", "n't")
@@ -20,7 +22,7 @@ def _general_detokenize(text: str) -> str:
     text = text.replace("( ", "(")
     text = text.replace('" ', '"')
     text = text.replace(' "', '"')
-    return pcre.sub(r" (['.,])", r"\1", text)
+    return _DETOKENIZE_TRAILING_PUNCTUATION_RE.sub(r"\1", text)
 
 
 def _wsc_prompt(doc: dict[str, Any]) -> str:

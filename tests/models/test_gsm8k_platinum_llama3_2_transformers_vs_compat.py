@@ -34,6 +34,7 @@ _GSM8K_PLATINUM_SUITE_KWARGS = {
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 # Allow small score drift while still catching engine-level regressions.
 _DUAL_ENGINE_SCORE_ABS_TOLERANCE = 3 / 128
+_RESULT_JSON_RE = pcre.compile(r"RESULT_JSON_START\n(.*?)\nRESULT_JSON_END", pcre.DOTALL)
 
 
 def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
@@ -95,11 +96,7 @@ def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
         text=True,
         check=True,
     )
-    match = pcre.search(
-        r"RESULT_JSON_START\n(.*?)\nRESULT_JSON_END",
-        completed.stdout,
-        pcre.DOTALL,
-    )
+    match = _RESULT_JSON_RE.search(completed.stdout)
     assert match is not None, completed.stdout
     return json.loads(match.group(1))
 

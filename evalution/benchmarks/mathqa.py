@@ -26,6 +26,7 @@ _MATHQA_SPLIT_FILES = {
 }
 _MATHQA_CHOICE_LABELS = ["A", "B", "C", "D", "E"]
 _MATHQA_ANSWER_LABELS = ["a", "b", "c", "d", "e"]
+_MATHQA_OPTION_RE = pcre.compile(r"[abcd] \) .*?, |e \) .*?$")
 
 
 def _mathqa_prompt(problem: str) -> str:
@@ -51,7 +52,7 @@ def _ensure_mathqa_archive(*, cache_dir: str | None) -> Path:
 def _parse_mathqa_options(options_text: str) -> list[str]:
     return [
         choice[4:].rstrip(" ,")
-        for choice in pcre.findall(r"[abcd] \) .*?, |e \) .*?$", options_text)
+        for choice in _MATHQA_OPTION_RE.findall(options_text)
     ]
 
 
