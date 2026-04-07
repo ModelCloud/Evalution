@@ -9,11 +9,13 @@ import pcre
 
 
 CHOICE_LABELS = ("A", "B", "C")
+_CAMEL_BOUNDARY_RE = pcre.compile(r"(?<!^)(?=[A-Z])")
+_NON_ALNUM_RE = pcre.compile(r"[^a-z0-9]+")
 
 
 def slugify_config_name(name: str) -> str:
-    slug = pcre.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
-    return pcre.sub(r"[^a-z0-9]+", "_", slug).strip("_")
+    slug = _CAMEL_BOUNDARY_RE.sub("_", name).lower()
+    return _NON_ALNUM_RE.sub("_", slug).strip("_")
 
 
 def bbq_prompt(context: str, question: str, choices: list[str]) -> str:

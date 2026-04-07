@@ -17,11 +17,19 @@ from evalution.benchmarks.rolling_perplexity import (
     preview_text,
 )
 
+_SLASH_NUMBER_RE = pcre.compile(r"/' [0-9]/")
+_PAREN_SPACING_RE = pcre.compile(r"\(\s*([^\)]*?)\s*\)")
+_BRACKET_SPACING_RE = pcre.compile(r"\[\s*([^\]]*?)\s*\]")
+_BRACE_SPACING_RE = pcre.compile(r"{\s*([^}]*?)\s*}")
+_DOUBLE_QUOTE_SPACING_RE = pcre.compile(r"\"\s*([^\"]*?)\s*\"")
+_SINGLE_QUOTE_SPACING_RE = pcre.compile(r"'\s*([^']*?)\s*'")
+_WHITESPACE_SPLIT_RE = pcre.compile(r"\s+")
+
 
 def _wikitext_detokenizer(doc: dict[str, Any]) -> str:
     string = str(doc["page"])
     string = string.replace("s '", "s'")
-    string = pcre.sub(r"/' [0-9]/", r"/'[0-9]/", string)
+    string = _SLASH_NUMBER_RE.sub(r"/'[0-9]/", string)
     string = string.replace(" @-@ ", "-")
     string = string.replace(" @,@ ", ",")
     string = string.replace(" @.@ ", ".")
@@ -31,11 +39,11 @@ def _wikitext_detokenizer(doc: dict[str, Any]) -> str:
     string = string.replace(" ! ", "! ")
     string = string.replace(" ? ", "? ")
     string = string.replace(" , ", ", ")
-    string = pcre.sub(r"\(\s*([^\)]*?)\s*\)", r"(\1)", string)
-    string = pcre.sub(r"\[\s*([^\]]*?)\s*\]", r"[\1]", string)
-    string = pcre.sub(r"{\s*([^}]*?)\s*}", r"{\1}", string)
-    string = pcre.sub(r"\"\s*([^\"]*?)\s*\"", r'"\1"', string)
-    string = pcre.sub(r"'\s*([^']*?)\s*'", r"'\1'", string)
+    string = _PAREN_SPACING_RE.sub(r"(\1)", string)
+    string = _BRACKET_SPACING_RE.sub(r"[\1]", string)
+    string = _BRACE_SPACING_RE.sub(r"{\1}", string)
+    string = _DOUBLE_QUOTE_SPACING_RE.sub(r'"\1"', string)
+    string = _SINGLE_QUOTE_SPACING_RE.sub(r"'\1'", string)
     string = string.replace("= = = =", "====")
     string = string.replace("= = =", "===")
     string = string.replace("= =", "==")
@@ -48,7 +56,7 @@ def _wikitext_detokenizer(doc: dict[str, Any]) -> str:
 
 
 def _wikitext_word_count(page: str) -> int:
-    return len(pcre.split(r"\s+", page))
+    return len(_WHITESPACE_SPLIT_RE.split(page))
 
 
 def _wikitext_byte_count(page: str) -> int:

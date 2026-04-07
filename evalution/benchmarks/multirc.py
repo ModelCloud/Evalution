@@ -18,6 +18,7 @@ from evalution.results import SampleResult
 MULTIRC_DATASET_PATH = "super_glue"
 MULTIRC_DATASET_NAME = "multirc"
 MULTIRC_SPLIT = "validation"
+_MULTIRC_INTEGER_RE = pcre.compile(r"\d+")
 
 
 def _group_questions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -45,7 +46,7 @@ def _extract_indices(text: str, num_answers: int) -> set[int]:
     # Pull out all integers and clamp to valid range; allow "none".
     if "none" in text.lower():
         return set()
-    matches = {int(m) for m in pcre.findall(r"\d+", text)}
+    matches = {int(m) for m in _MULTIRC_INTEGER_RE.findall(text)}
     return {m for m in matches if 0 <= m < num_answers}
 
 

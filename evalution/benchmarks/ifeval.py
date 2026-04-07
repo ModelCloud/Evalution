@@ -41,6 +41,7 @@ _LAST_LINE_RE = pcre.compile(r"\n[^\n]*$")
 _FIRST_WORD_RE = pcre.compile(r"^\W*([\w\p{L}']+)")
 _ALPHANUM_RE = pcre.compile(r"[A-Za-z\p{L}]+")
 _PUNCTUATION_NO_COMMA_RE = pcre.compile(r",|،")
+_PARAGRAPH_SPLIT_RE = pcre.compile(r"\n\s*\n")
 
 
 def _load_ifeval_dataset(dataset_path: str, dataset_name: str | None = None, **kwargs: Any) -> Any:
@@ -139,7 +140,7 @@ def _count_sentences(text: str) -> int:
 def _count_paragraphs(text: str) -> int:
     if not text.strip():
         return 0
-    return len([chunk.strip() for chunk in pcre.split(r"\n\s*\n", text.strip()) if chunk.strip()])
+    return len([chunk.strip() for chunk in _PARAGRAPH_SPLIT_RE.split(text.strip()) if chunk.strip()])
 
 
 def _strip_thought(text: str) -> str:
@@ -194,12 +195,13 @@ def _build_instruction_checker(
 ) -> Callable[[str], bool]:
     if instruction_id == "keywords:existence":
         keywords = _build_keyword_list(kwargs.get("keywords"))
+        keyword_patterns = [pcre.compile(pcre.escape(keyword), pcre.IGNORECASE) for keyword in keywords]
 
         def _check(value: str) -> bool:
-            if not keywords:
+            if not keyword_patterns:
                 return False
-            for keyword in keywords:
-                if not pcre.search(pcre.escape(keyword), value, pcre.IGNORECASE):
+            for pattern in keyword_patterns:
+                if pattern.search(value) is None:
                     return False
             return True
 
@@ -221,11 +223,12 @@ def _build_instruction_checker(
         keyword = str(kwargs.get("keyword", "")).strip()
         frequency = _coerce_int(kwargs.get("frequency"), fallback=1)
         relation = _coerce_str(kwargs.get("relation")) or "at least"
+        keyword_pattern = pcre.compile(pcre.escape(keyword), pcre.IGNORECASE) if keyword else None
 
         def _check(value: str) -> bool:
-            if not keyword:
+            if keyword_pattern is None:
                 return False
-            count = len(pcre.findall(pcre.escape(keyword), value, pcre.IGNORECASE))
+            count = len(keyword_pattern.findall(value))
             return _relation_check(count, threshold=frequency, relation=relation)
 
         return _check
@@ -294,7 +297,7 @@ def _build_instruction_checker(
         first_word = _coerce_str(kwargs.get("first_word")) or ""
 
         def _check(value: str) -> bool:
-            paragraphs = [chunk.strip() for chunk in pcre.split(r"\n\s*\n", value) if chunk.strip()]
+            paragraphs = [chunk.strip() for chunk in _PARAGRAPH_SPLIT_RE.split(value) if chunk.strip()]
             if nth_paragraph < 1 or nth_paragraph > len(paragraphs):
                 return False
             if num_paragraphs and len(paragraphs) != num_paragraphs:
