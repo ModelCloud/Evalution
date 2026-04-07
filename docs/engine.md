@@ -142,9 +142,11 @@ The modern `engines.Transformers(...)` engine also exposes the upstream continuo
 knobs `manual_eviction`, `allow_block_sharing`, `max_blocks_per_request`, `use_async_batching`,
 `use_cuda_graph`, `q_padding_interval_size`, `kv_padding_interval_size`, and `max_cached_graphs`.
 When `attn_implementation` resolves to paged FlashAttention and `max_blocks_per_request` is left
-unset, Evalution enables the block-table decode fast path automatically and defaults
-`use_cuda_graph=False`. Evalution keeps a session-owned manager alive while stop strings and
-sampling settings stay compatible, then tears it down on `gc()` between suites or on `close()`.
+unset, modern `transformers` builds can enable the block-table decode fast path automatically.
+Evalution keeps a compatibility monkeypatch for older builds that still need it; that fallback
+also defaults `use_cuda_graph=False`. Evalution keeps a session-owned manager alive while stop
+strings and sampling settings stay compatible, then tears it down on `gc()` between suites or on
+`close()`.
 
 `engines.GPTQModel()` loads quantized checkpoints through GPTQModel's native loader, then reuses
 the same shared generation, scoring, and paged continuous-batching path as the built-in

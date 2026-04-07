@@ -165,6 +165,45 @@ def _is_supported_flash_attention(attn_implementation: str | None) -> bool:
     return attn_implementation in {"flash_attention_2", "flash_attention_3"}
 
 
+def _transformers_has_native_flash_attention_decode_fix() -> bool:
+    """Detect whether the installed transformers build already enables FA2 decode-fast-path support."""
+
+    try:
+        import torch
+        from transformers import ContinuousBatchingConfig
+        from transformers.generation.continuous_batching import continuous_api
+    except Exception:
+        return False
+
+    max_blocks_field = ContinuousBatchingConfig.__dataclass_fields__.get("max_blocks_per_request")
+    if max_blocks_field is None or max_blocks_field.default is not None:
+        return False
+
+    ensure_fast_path = getattr(continuous_api.ContinuousBatchProcessor, "_ensure_decode_fast_path_is_available", None)
+    if not callable(ensure_fast_path):
+        return False
+
+    original_lazy_import = getattr(continuous_api, "lazy_import_paged_flash_attention", None)
+    original_is_available = torch.cuda.is_available
+    try:
+        continuous_api.lazy_import_paged_flash_attention = lambda *_args, **_kwargs: (None, object())
+        torch.cuda.is_available = lambda: True
+        cache = type("Cache", (), {"max_blocks_per_request": 4, "num_sliding_attention_groups": 0})()
+        processor = type(
+            "Processor",
+            (),
+            {"cache": cache, "config": type("Config", (), {"_attn_implementation": "flash_attention_2"})()},
+        )()
+        ensure_fast_path(processor)
+        return cache.max_blocks_per_request == 4
+    except Exception:
+        return False
+    finally:
+        if original_lazy_import is not None:
+            continuous_api.lazy_import_paged_flash_attention = original_lazy_import
+        torch.cuda.is_available = original_is_available
+
+
 def _patch_continuous_batching_flash_attention_decode_once() -> None:
     """Apply Evalution's generic paged FlashAttention decode fast-path compat patch once."""
 
@@ -181,6 +220,8 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
     processor_cls = getattr(continuous_api, "ContinuousBatchProcessor", None)
     cb_logger = getattr(continuous_api, "logger", get_logger())
     if manager_cls is None or processor_cls is None:
+        return
+    if _transformers_has_native_flash_attention_decode_fix():
         return
 
     with _CONTINUOUS_BATCHING_FA_DECODE_PATCH_LOCK:
