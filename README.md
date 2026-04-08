@@ -533,7 +533,7 @@ built-in suite names covered by that row.
 | `agieval` | Multiple-choice log-likelihood across supported AGIEval subject subsets, raw + length-normalized accuracy | AGIEval `zhong2023agieval` |
 | `afrimgsm` | Generated numeric exact match across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/vai/wol/xho/yor/zul` translated grade-school math subsets | IrokoBench AfriMGSM `adelani2025irokobench` |
 | `afrimmlu` | Multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` translated MMLU subsets, raw + length-normalized accuracy | IrokoBench AfriMMLU `adelani2025irokobench` |
-| `aime`, `aime24`, `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024`, `aime_2024`, `aime_2025` |
+| `aime`, `aime24`, `aime25`, `aime26` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024`, `aime_2024`, `aime_2025`, `aime_2026` |
 | `afrixnli` | Three-way NLI multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` language subsets, raw + length-normalized accuracy | IrokoBench AfriXNLI `adelani2025irokobench` |
 | `anli_{r1,r2,r3}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `arabicmmlu` | Multiple-choice log-likelihood across configurable ArabicMMLU subject subsets, raw + length-normalized accuracy | ArabicMMLU `koto2024arabicmmlu` |
@@ -716,7 +716,7 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   doi = {10.18653/v1/2020.emnlp-main.438},
 }
 
-% AIME suites: aime -> aime_1983_2024, aime24 -> aime_2024, aime25 -> aime_2025.
+% AIME suites: aime -> aime_1983_2024, aime24 -> aime_2024, aime25 -> aime_2025, aime26 -> aime_2026.
 @dataset{aime_1983_2024,
   author = {Hemish Veeraboina},
   title = {AIME Problem Set 1983-2024},
@@ -745,6 +745,14 @@ Comments inside the BibTeX block below note which built-in suites each citation 
 @article{zhong2023agieval,
   title = {AGIEval: A Human-Centric Benchmark for Evaluating Foundation Models},
   author = {Wanjun Zhong and Zijie Huang and Shirong Ma and Angelica Chen and Yuxin Wang and Li Dong and Jie Tang and Nan Duan},
+@dataset{aime_2026,
+  author = {math-ai},
+  title = {AIME Problem Set 2026},
+  year = {2026},
+  publisher = {Hugging Face},
+  url = {https://huggingface.co/datasets/math-ai/aime26},
+}
+
   journal = {arXiv preprint arXiv:2304.06364},
   year = {2023},
   url = {https://arxiv.org/abs/2304.06364},

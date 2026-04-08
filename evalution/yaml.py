@@ -81,6 +81,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "aime": benchmarks.aime,
     "aime24": benchmarks.aime24,
     "aime25": benchmarks.aime25,
+    "aime26": benchmarks.aime26,
     "anli_r1": benchmarks.anli_r1,
     "anli_r2": benchmarks.anli_r2,
     "anli_r3": benchmarks.anli_r3,

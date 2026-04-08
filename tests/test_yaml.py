@@ -30,7 +30,7 @@ from evalution.engines import (
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
-_AIME_TASKS = ["aime", "aime24", "aime25"]
+_AIME_TASKS = ["aime", "aime24", "aime25", "aime26"]
 _HENDRYCKS_MATH_TASKS = [
     "hendrycks_math_algebra",
     "hendrycks_math_counting_and_probability",
@@ -766,6 +766,22 @@ tests:
     assert ".run(benchmarks.wsc273(" in script
     assert ".run(benchmarks.wnli(" in script
     assert ".run(benchmarks.winogrande(" in script
+
+
+def test_python_from_yaml_emits_aime26_factory() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: aime26
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.aime26(" in script
 
 
 def test_python_from_yaml_emits_arithmetic_variants() -> None:

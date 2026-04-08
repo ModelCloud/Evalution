@@ -131,7 +131,8 @@ ARABICMMLU_TASKS = (
     "arabicmmlu_computer_science_high_school",
     "arabicmmlu_driving_test",
 )
-AIME_TASKS = ("aime", "aime24", "aime25")
+# AIME integration coverage tracks the legacy set plus the new 2026 release.
+AIME_TASKS = ("aime", "aime24", "aime25", "aime26")
 HENDRYCKS_MATH_TASKS = (
     "hendrycks_math_algebra",
 )
@@ -3821,6 +3822,11 @@ SUITE_SPECS = {
             "split": "test",
             "generation_submission_mode": "continuous_refill",
             "scoring_mode": "generated_exact_match",
+    "aime26": _aime_suite_spec(
+        "aime26",
+        dataset_path="math-ai/aime26",
+        split="test",
+        baseline=0.0,
             "primary_metric": "em",
         },
         expected_sample_count=128,

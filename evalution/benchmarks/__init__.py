@@ -13,7 +13,7 @@ from . import afrimmlu as _afrimmlu_module
 from .afrimmlu import AFRIMMLU_LANGUAGES, AFRIMMLU_TASKS, AfriMMLU, afrimmlu
 from .afrixnli import AFRIXNLI_LANGUAGES, AFRIXNLI_TASKS, AfriXNLI, afrixnli, afrixnli_amh, afrixnli_eng, afrixnli_ewe, afrixnli_fra, afrixnli_hau, afrixnli_ibo, afrixnli_kin, afrixnli_lin, afrixnli_lug, afrixnli_orm, afrixnli_sna, afrixnli_sot, afrixnli_swa, afrixnli_twi, afrixnli_wol, afrixnli_xho, afrixnli_yor, afrixnli_zul
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
-from .aime import AIME, aime, aime24, aime25
+from .aime import AIME, aime, aime24, aime25, aime26
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
 from . import arabicmmlu as _arabicmmlu_module
 from .arabicmmlu import ARABICMMLU_SUBSETS, ARABICMMLU_TASKS, ArabicMMLU, arabicmmlu
@@ -544,6 +544,7 @@ __all__ = [
     "afrixnli_xho",
     "afrixnli_yor",
     "afrixnli_zul",
+    "aime26",
     "anli_r1",
     "anli_r2",
     "anli_r3",

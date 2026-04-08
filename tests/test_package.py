@@ -80,6 +80,7 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.aime)
     assert callable(evalution.benchmarks.aime24)
     assert callable(evalution.benchmarks.aime25)
+    assert callable(evalution.benchmarks.aime26)
     assert evalution.benchmarks.ANLI is not None
     assert callable(evalution.benchmarks.anli_r1)
     assert callable(evalution.benchmarks.anli_r2)
