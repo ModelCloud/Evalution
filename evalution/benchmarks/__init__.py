@@ -170,6 +170,8 @@ from .mc_taco import MCTACO, mc_taco
 from . import mgsm as _mgsm_module
 from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
 from .mmlu import MMLU, mmlu
+from . import mmlu_cf as _mmlu_cf_module
+from .mmlu_cf import MMLUCF, MMLU_CF_SUBJECTS, MMLU_CF_TASKS, mmlu_cf
 from .mmlu_pro import MMLUPro, mmlu_pro
 from .mnli import MNLI, mnli
 from .mrpc import MRPC, mrpc
@@ -299,6 +301,11 @@ for _mgsm_task in MGSM_TASKS:
     globals()[_mgsm_task] = getattr(_mgsm_module, _mgsm_task)
 
 del _mgsm_task
+
+for _mmlu_cf_task in MMLU_CF_TASKS:
+    globals()[_mmlu_cf_task] = getattr(_mmlu_cf_module, _mmlu_cf_task)
+
+del _mmlu_cf_task
 
 for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
@@ -715,6 +722,10 @@ __all__ = [
     "MGSM_LANGUAGES",
     "MGSM_TASKS",
     "mgsm",
+    "MMLUCF",
+    "MMLU_CF_SUBJECTS",
+    "MMLU_CF_TASKS",
+    "mmlu_cf",
     "mastermind_24_easy",
     "mastermind_24_hard",
     "mastermind_35_easy",
@@ -836,6 +847,7 @@ __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(CMMLU_TASKS)
 __all__.extend(KMMLU_TASKS)
 __all__.extend(MGSM_TASKS)
+__all__.extend(MMLU_CF_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
 __all__.extend(WMDP_TASKS)

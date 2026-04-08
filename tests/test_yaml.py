@@ -844,6 +844,26 @@ tests:
     assert ".run(benchmarks.mgsm_direct_en(" in script
 
 
+def test_python_from_yaml_emits_mmlu_cf_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: mmlu_cf
+    subject: biology
+    max_rows: 8
+  - type: mmlu_cf_biology
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.mmlu_cf(" in script
+    assert ".run(benchmarks.mmlu_cf_biology(" in script
+
+
 def test_python_from_yaml_emits_arithmetic_variants() -> None:
     task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _ARITHMETIC_TASKS)
     script = evalution.python_from_yaml(

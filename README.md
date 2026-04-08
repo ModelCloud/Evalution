@@ -610,6 +610,7 @@ built-in suite names covered by that row.
 | `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
 | `medqa_4options` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
 | `mmlu` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
+| `mmlu_cf` | Multiple-choice log-likelihood across configurable contamination-free subject subsets, raw + length-normalized accuracy | MMLU-CF `zhao2024mmlucf` |
 | `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
@@ -1200,6 +1201,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   author = {Yubo Wang and Xueguang Ma and Ge Zhang and Yuansheng Ni and Abhranil Chandra and Shiguang Guo and Weiming Ren and Aaran Arulraj and Xuan He and Ziyan Jiang and Tianle Li and Max Ku and Kai Wang and Alex Zhuang and Rongqi Fan and Xiang Yue and Wenhu Chen},
   journal = {arXiv preprint arXiv:2406.01574},
   year = {2024},
+}
+
+% MMLU-CF. Suites: mmlu_cf_<subject>.
+@article{zhao2024mmlucf,
+  title = {MMLU-CF: A Contamination-free Multi-task Language Understanding Benchmark},
+  author = {Qihao Zhao and Yangyu Huang and Tengchao Lv and Lei Cui and Qinzheng Sun and Shaoguang Mao and Xin Zhang and Ying Xin and Qiufeng Yin and Scarlett Li and Furu Wei},
+  journal = {arXiv preprint arXiv:2412.15194},
+  year = {2024},
+  url = {https://arxiv.org/abs/2412.15194},
 }
 
 % ArabicMMLU. Suites: arabicmmlu_<subset>.

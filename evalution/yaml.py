@@ -224,6 +224,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "medmcqa": benchmarks.medmcqa,
     "medqa_4options": benchmarks.medqa_4options,
     "mmlu": benchmarks.mmlu,
+    "mmlu_cf": benchmarks.mmlu_cf,
     "mmlu_pro": benchmarks.mmlu_pro,
     "mnli": benchmarks.mnli,
     "mrpc": benchmarks.mrpc,
@@ -420,6 +421,11 @@ for _task_name in benchmarks.KMMLU_TASKS:
 del _task_name
 
 for _task_name in benchmarks.MGSM_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.MMLU_CF_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

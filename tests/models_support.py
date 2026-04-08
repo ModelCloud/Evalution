@@ -139,6 +139,8 @@ CMMLU_TASKS = ("cmmlu_agronomy",)
 KMMLU_TASKS = ("kmmlu_accounting",)
 # MGSM integration coverage uses one representative direct-answer language.
 MGSM_TASKS = ("mgsm_direct_en",)
+# MMLU-CF integration coverage uses one representative contamination-free subject.
+MMLU_CF_TASKS = ("mmlu_cf_biology",)
 HENDRYCKS_MATH_TASKS = (
     "hendrycks_math_algebra",
 )
@@ -1575,6 +1577,14 @@ def _metadata_kmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_mmlu_cf_subject(subject: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subject"] == subject
+        assert metadata["question"]
+
+    return validate
+
+
 def _metadata_afrimmlu_language(language: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["language"] == language
@@ -2843,6 +2853,46 @@ def _mgsm_suite_spec(
     )
 
 
+def _mmlu_cf_suite_spec(
+    task_name: str,
+    *,
+    subject: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subject=subject: evalution.benchmarks.mmlu_cf(
+            subject=subject,
+            num_fewshot=5,
+            batch_size=24,
+            max_rows=32,
+            stream=False,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "microsoft/MMLU-CF",
+            "dataset_name": subject,
+            "split": "val",
+            "fewshot_split": "dev",
+            "num_fewshot": 5,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subject=subject: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="There is a single choice question (with answers). Answer the question by replying A, B, C or D.",
+            prompt_suffix="Answer:",
+            metadata_validator=_metadata_mmlu_cf_subject(subject),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 def _agieval_suite_spec(
     task_name: str,
     *,
@@ -3799,6 +3849,14 @@ SUITE_SPECS = {
         "mgsm_direct_en",
         language="en",
         baseline=0.0625,
+    ),
+    "mmlu_cf_biology": _mmlu_cf_suite_spec(
+        "mmlu_cf_biology",
+        subject="biology",
+        baseline={
+            "acc,ll": 0.53125,
+            "acc,ll_avg": 0.53125,
+        },
     ),
     "hendrycks_math_algebra": _hendrycks_math_suite_spec(
         "hendrycks_math_algebra",
