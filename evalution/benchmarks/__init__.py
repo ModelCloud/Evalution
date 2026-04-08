@@ -96,6 +96,7 @@ from .eus_trivia import EusTrivia, eus_trivia
 from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
 from .graphwalks import GraphWalks, graphwalks_128k, graphwalks_1M
 from .gsm8k import GSM8K, gsm8k
+from .gsm8k_fr import GSM8KFR, gsm8k_fr
 from . import haerae as _haerae_module
 from .haerae import HAERAE_SUBSETS, HAERAE_TASKS, Haerae, haerae
 from .gsm_plus import GSM_PLUS_TASKS, GSMPlus, GSMPlusMini, gsm_plus, gsm_plus_mini
@@ -676,6 +677,8 @@ __all__ = [
     "choice_index_from_labels",
     "f1_for_label",
     "gsm8k",
+    "GSM8KFR",
+    "gsm8k_fr",
     "haerae",
     "gsm_plus",
     "gsm_plus_mini",

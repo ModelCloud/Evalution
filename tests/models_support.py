@@ -821,6 +821,18 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert set(sample.scores) == {"acc,num"}
 
 
+# Validate the translated direct-answer GSM8K prompts without assuming chat-template wrapping.
+def _assert_gsm8k_translated_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.count("Question: ") >= 1
+    assert sample.prompt.endswith("\nAnswer:")
+    assert "<|start_header_id|>" not in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert set(sample.scores) == {"acc,num"}
+
+
 def _assert_afrimgsm_sample(sample: Any, index: int, *, language: str) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Question: ")
@@ -4152,6 +4164,33 @@ SUITE_SPECS = {
         },
         expected_sample_count=128,
         sample_validator=_assert_gsm8k_sample,
+        result_validator=_validate_gsm8k_like_result,
+    ),
+    "gsm8k_fr": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.gsm8k_fr(
+            batch_size=24,
+            max_new_tokens=96,
+            stream=True,
+            max_rows=128,
+        ),
+        expected_name="gsm8k_fr",
+        baseline={
+            "acc,num": 0.109375,
+        },
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "stream": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 5,
+            "dataset_path": "cmh/gsm8k_fr",
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_gsm8k_translated_sample,
         result_validator=_validate_gsm8k_like_result,
     ),
     "gsm8k_platinum": SuiteSpec(

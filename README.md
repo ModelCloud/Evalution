@@ -584,6 +584,7 @@ built-in suite names covered by that row.
 | `gsm_plus`, `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` and `testmini` splits | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
 | `ethics_{cm,deontology,justice,utilitarianism,virtue}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
+| `gsm8k_fr` | Format-insensitive numeric accuracy on the French GSM8K translation | GSM8K `cobbe2021trainingverifierssolvemath`, French translation dataset `cmh2025gsm8kfr` |
 | `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
 | `mgsm` | Format-insensitive numeric accuracy across configurable multilingual direct-answer subsets | MGSM `shi2022multilingualchainofthought` |
 | `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `son-etal-2024-hae` |
@@ -892,6 +893,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
   journal = {arXiv preprint arXiv:2110.14168},
   year = {2021},
+}
+
+% GSM8K French. Suites: gsm8k_fr.
+@misc{cmh2025gsm8kfr,
+  title = {gsm8k\_fr},
+  author = {cmh},
+  year = {2025},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/cmh/gsm8k_fr},
 }
 
 % MGSM. Suites: mgsm_direct_{bn,de,en,es,fr,ja,ru,sw,te,th,zh}.
