@@ -213,6 +213,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "humaneval": benchmarks.humaneval,
     "mbpp": benchmarks.mbpp,
     "mathqa": benchmarks.mathqa,
+    "mgsm": benchmarks.mgsm,
     "mastermind_24_easy": benchmarks.mastermind_24_easy,
     "mastermind_24_hard": benchmarks.mastermind_24_hard,
     "mastermind_35_easy": benchmarks.mastermind_35_easy,
@@ -414,6 +415,11 @@ for _task_name in benchmarks.CMMLU_TASKS:
 del _task_name
 
 for _task_name in benchmarks.KMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.MGSM_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

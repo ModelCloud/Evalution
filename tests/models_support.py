@@ -137,6 +137,8 @@ AIME_TASKS = ("aime", "aime24", "aime25", "aime26")
 CMMLU_TASKS = ("cmmlu_agronomy",)
 # KMMLU integration coverage uses one representative subject from the new family.
 KMMLU_TASKS = ("kmmlu_accounting",)
+# MGSM integration coverage uses one representative direct-answer language.
+MGSM_TASKS = ("mgsm_direct_en",)
 HENDRYCKS_MATH_TASKS = (
     "hendrycks_math_algebra",
 )
@@ -2799,6 +2801,48 @@ def _kmmlu_suite_spec(
     )
 
 
+def _mgsm_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.mgsm(
+            language=language,
+            batch_size=24,
+            max_new_tokens=96,
+            stream=True,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline={"acc,num": baseline},
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "stream": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 0,
+            "dataset_path": "juletxara/mgsm",
+            "dataset_name": language,
+            "split": "test",
+            "language": language,
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_afrimgsm_sample(
+            sample,
+            index,
+            language=language,
+        ),
+        result_validator=_validate_gsm8k_like_result,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 def _agieval_suite_spec(
     task_name: str,
     *,
@@ -3750,6 +3794,11 @@ SUITE_SPECS = {
             "acc,ll": 0.21875,
             "acc,ll_avg": 0.21875,
         },
+    ),
+    "mgsm_direct_en": _mgsm_suite_spec(
+        "mgsm_direct_en",
+        language="en",
+        baseline=0.0625,
     ),
     "hendrycks_math_algebra": _hendrycks_math_suite_spec(
         "hendrycks_math_algebra",

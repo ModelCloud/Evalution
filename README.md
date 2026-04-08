@@ -582,6 +582,7 @@ built-in suite names covered by that row.
 | `french_bench_arc_challenge` | Multiple-choice log-likelihood over the French ARC-Challenge split, with raw and length-normalized accuracy | FrenchBench ARC-Challenge |
 | `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
 | `gsm_plus`, `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` and `testmini` splits | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
+| `mgsm` | Format-insensitive numeric accuracy across configurable multilingual direct-answer subsets | MGSM `shi2022multilingualchainofthought` |
 | `ethics_{cm,deontology,justice,utilitarianism,virtue}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
@@ -901,6 +902,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
   url = {https://arxiv.org/abs/2402.19255},
+}
+
+% MGSM. Suites: mgsm_direct_{bn,de,en,es,fr,ja,ru,sw,te,th,zh}.
+@article{shi2022multilingualchainofthought,
+  title = {Language Models are Multilingual Chain-of-Thought Reasoners},
+  author = {Freda Shi and Mirac Suzgun and Markus Freitag and Xuezhi Wang and Suraj Srivats and Soroush Vosoughi and Hyung Won Chung and Yi Tay and Sebastian Ruder and Denny Zhou and Dipanjan Das and Jason Wei},
+  journal = {arXiv preprint arXiv:2210.03057},
+  year = {2022},
+  url = {https://arxiv.org/abs/2210.03057},
 }
 
 % Histoires Morales

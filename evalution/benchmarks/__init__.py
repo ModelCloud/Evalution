@@ -167,6 +167,8 @@ from .mastermind import (
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mc_taco import MCTACO, mc_taco
+from . import mgsm as _mgsm_module
+from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
 from .mmlu import MMLU, mmlu
 from .mmlu_pro import MMLUPro, mmlu_pro
 from .mnli import MNLI, mnli
@@ -292,6 +294,11 @@ for _kmmlu_task in KMMLU_TASKS:
     globals()[_kmmlu_task] = getattr(_kmmlu_module, _kmmlu_task)
 
 del _kmmlu_task
+
+for _mgsm_task in MGSM_TASKS:
+    globals()[_mgsm_task] = getattr(_mgsm_module, _mgsm_task)
+
+del _mgsm_task
 
 for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
@@ -704,6 +711,10 @@ __all__ = [
     "mbpp",
     "mathqa",
     "mastermind",
+    "MGSM",
+    "MGSM_LANGUAGES",
+    "MGSM_TASKS",
+    "mgsm",
     "mastermind_24_easy",
     "mastermind_24_hard",
     "mastermind_35_easy",
@@ -824,6 +835,7 @@ __all__.extend(BBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(CMMLU_TASKS)
 __all__.extend(KMMLU_TASKS)
+__all__.extend(MGSM_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
 __all__.extend(WMDP_TASKS)
