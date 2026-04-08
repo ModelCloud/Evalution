@@ -5118,6 +5118,33 @@ SUITE_SPECS = {
         sample_validator=_assert_ifeval_sample,
         abs_tolerance=2 / 64,
     ),
+    "ifeval_pt": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ifeval_pt(batch_size=8, max_rows=64),
+        expected_name="ifeval_pt",
+        baseline={
+            "prompt_level_strict_acc": 0.203125,
+            "prompt_level_loose_acc": 0.25,
+            "inst_level_strict_acc": 0.38,
+            "inst_level_loose_acc": 0.41,
+        },
+        expected_metrics=frozenset({
+            "prompt_level_strict_acc",
+            "prompt_level_loose_acc",
+            "inst_level_strict_acc",
+            "inst_level_loose_acc",
+        }),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "Polygl0t/IFEval-PT",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "instruction_following",
+            "primary_metric": "prompt_level_strict_acc",
+        },
+        expected_sample_count=64,
+        sample_validator=_assert_ifeval_sample,
+        abs_tolerance=2 / 64,
+    ),
     "multirc": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.multirc(batch_size=8, max_rows=16),
         expected_name="multirc",

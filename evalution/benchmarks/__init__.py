@@ -119,6 +119,7 @@ from .histoires_morales import HistoiresMorales, histoires_morales
 from .moral_stories import MoralStories, moral_stories
 from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
 from .ifeval import IFEval, ifeval
+from .ifeval_pt import IFEvalPT, ifeval_pt
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
 from . import kmmlu as _kmmlu_module
@@ -694,6 +695,8 @@ __all__ = [
     "histoires_morales",
     "moral_stories",
     "icelandic_winogrande",
+    "IFEvalPT",
+    "ifeval_pt",
     "inverse_scaling",
     "KMMLU",
     "KMMLU_DATASET_NAMES",

@@ -790,6 +790,22 @@ tests:
     assert ".run(benchmarks.aime26(" in script
 
 
+def test_python_from_yaml_emits_ifeval_pt_factory() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: ifeval_pt
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.ifeval_pt(" in script
+
+
 def test_python_from_yaml_emits_cmmlu_factories() -> None:
     script = evalution.python_from_yaml(
         """

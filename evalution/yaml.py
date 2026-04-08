@@ -186,6 +186,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "moral_stories": benchmarks.moral_stories,
     "icelandic_winogrande": benchmarks.icelandic_winogrande,
     "ifeval": benchmarks.ifeval,
+    "ifeval_pt": benchmarks.ifeval_pt,
     "inverse_scaling": benchmarks.inverse_scaling,
     "kmmlu": benchmarks.kmmlu,
     "kobest": benchmarks.kobest,

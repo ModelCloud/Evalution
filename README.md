@@ -592,6 +592,7 @@ built-in suite names covered by that row.
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_{en,es}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `ifeval` | Instruction-following generation scoring across up to 4 instruction checks per prompt | IFEval `zhou2023instruction` |
+| `ifeval_pt` | Instruction-following generation scoring across the Portuguese IFEval translation | IFEval `zhou2023instruction`, Tucano 2 Cool `klugecorrea2026tucano2cool` |
 | `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
 | `moral_stories` | Multiple-choice log-likelihood over moral versus immoral actions, raw + length-normalized accuracy | Moral Stories `emelin-etal-2021-moral` |
@@ -1589,6 +1590,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   journal = {arXiv preprint arXiv:2311.07911},
   year = {2023},
   url = {https://arxiv.org/abs/2311.07911},
+}
+
+% IFEval-PT. Suites: ifeval_pt.
+@article{klugecorrea2026tucano2cool,
+  title = {Tucano 2 Cool: Better Open Source LLMs for Portuguese},
+  author = {Nicholas Kluge Correa and Aniket Sen and Shiza Fatimah and Sophia Falk and Lennard Landgraf and Julia Kastner and Lucie Flek},
+  journal = {arXiv preprint arXiv:2603.03543},
+  year = {2026},
+  url = {https://arxiv.org/abs/2603.03543},
 }
 
 % CLIcK. Suites: click, click_lang, click_lang_{text,grammar,function}, click_cul, click_cul_{economy,geography,history,kpop,law,politics,society,tradition}.
