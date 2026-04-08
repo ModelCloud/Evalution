@@ -79,3 +79,7 @@ def test_math_exact_match_handles_boxed_and_fraction_normalization() -> None:
 
 def test_math_exact_match_extracts_simple_dollar_delimited_answer() -> None:
     assert extract_math_answer("Final answer is $42$") == "42"
+
+
+def test_math_normalizer_strips_text_units_without_asserting() -> None:
+    assert normalize_math_string("12\\text{ cm}\\text{ squared}") == "12"
