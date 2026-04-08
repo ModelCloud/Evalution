@@ -393,6 +393,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mbpp)
     assert evalution.benchmarks.MathQA is not None
     assert callable(evalution.benchmarks.mathqa)
+    assert evalution.benchmarks.MGSM is not None
+    assert evalution.benchmarks.MGSM_LANGUAGES
+    assert evalution.benchmarks.MGSM_TASKS
+    assert callable(evalution.benchmarks.mgsm)
+    for factory_name in evalution.benchmarks.MGSM_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.Mastermind is not None
     assert evalution.benchmarks.MASTERMIND_VARIANTS == (
         "mastermind_24_easy",
@@ -409,12 +415,6 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mastermind_35_hard)
     assert callable(evalution.benchmarks.mastermind_46_easy)
     assert callable(evalution.benchmarks.mastermind_46_hard)
-    assert evalution.benchmarks.MGSM is not None
-    assert evalution.benchmarks.MGSM_LANGUAGES
-    assert evalution.benchmarks.MGSM_TASKS
-    assert callable(evalution.benchmarks.mgsm)
-    for factory_name in evalution.benchmarks.MGSM_TASKS:
-        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.MCTACO is not None
     assert callable(evalution.benchmarks.mc_taco)
     assert evalution.benchmarks.MedMCQA is not None
@@ -422,13 +422,13 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.MedQA is not None
     assert callable(evalution.benchmarks.medqa_4options)
     assert evalution.benchmarks.MMLU is not None
-    assert callable(evalution.benchmarks.mmlu)
     assert evalution.benchmarks.MMLUCF is not None
     assert evalution.benchmarks.MMLU_CF_SUBJECTS
     assert evalution.benchmarks.MMLU_CF_TASKS
     assert callable(evalution.benchmarks.mmlu_cf)
     for factory_name in evalution.benchmarks.MMLU_CF_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert callable(evalution.benchmarks.mmlu)
     assert evalution.benchmarks.MMLUPro is not None
     assert callable(evalution.benchmarks.mmlu_pro)
     assert evalution.benchmarks.MNLI is not None

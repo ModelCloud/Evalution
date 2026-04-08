@@ -164,11 +164,11 @@ from .mastermind import (
     mastermind_46_easy,
     mastermind_46_hard,
 )
+from . import mgsm as _mgsm_module
+from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mc_taco import MCTACO, mc_taco
-from . import mgsm as _mgsm_module
-from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
 from .mmlu import MMLU, mmlu
 from . import mmlu_cf as _mmlu_cf_module
 from .mmlu_cf import MMLUCF, MMLU_CF_SUBJECTS, MMLU_CF_TASKS, mmlu_cf
@@ -544,6 +544,7 @@ __all__ = [
     "aime",
     "aime24",
     "aime25",
+    "aime26",
     "aexams",
     "aexams_biology",
     "aexams_islamic_studies",
@@ -572,7 +573,6 @@ __all__ = [
     "afrixnli_xho",
     "afrixnli_yor",
     "afrixnli_zul",
-    "aime26",
     "anli_r1",
     "anli_r2",
     "anli_r3",
@@ -693,8 +693,8 @@ __all__ = [
     "KMMLU_DATASET_NAMES",
     "KMMLU_SUBSETS",
     "KMMLU_TASKS",
-    "kobest",
     "kmmlu",
+    "kobest",
     "kormedmcqa",
     "kobest_boolq",
     "kobest_copa",
@@ -718,14 +718,6 @@ __all__ = [
     "mbpp",
     "mathqa",
     "mastermind",
-    "MGSM",
-    "MGSM_LANGUAGES",
-    "MGSM_TASKS",
-    "mgsm",
-    "MMLUCF",
-    "MMLU_CF_SUBJECTS",
-    "MMLU_CF_TASKS",
-    "mmlu_cf",
     "mastermind_24_easy",
     "mastermind_24_hard",
     "mastermind_35_easy",
@@ -737,7 +729,15 @@ __all__ = [
     "mc_taco",
     "macro_f1",
     "matthews_corrcoef",
+    "MGSM",
+    "MGSM_LANGUAGES",
+    "MGSM_TASKS",
+    "mgsm",
     "mmlu",
+    "MMLUCF",
+    "MMLU_CF_SUBJECTS",
+    "MMLU_CF_TASKS",
+    "mmlu_cf",
     "mmlu_pro",
     "mnli",
     "mrpc",

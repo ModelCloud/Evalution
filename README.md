@@ -582,10 +582,10 @@ built-in suite names covered by that row.
 | `french_bench_arc_challenge` | Multiple-choice log-likelihood over the French ARC-Challenge split, with raw and length-normalized accuracy | FrenchBench ARC-Challenge |
 | `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
 | `gsm_plus`, `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` and `testmini` splits | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
-| `mgsm` | Format-insensitive numeric accuracy across configurable multilingual direct-answer subsets | MGSM `shi2022multilingualchainofthought` |
 | `ethics_{cm,deontology,justice,utilitarianism,virtue}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| `mgsm` | Format-insensitive numeric accuracy across configurable multilingual direct-answer subsets | MGSM `shi2022multilingualchainofthought` |
 | `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `son-etal-2024-hae` |
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_{en,es}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
@@ -594,8 +594,8 @@ built-in suite names covered by that row.
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
 | `moral_stories` | Multiple-choice log-likelihood over moral versus immoral actions, raw + length-normalized accuracy | Moral Stories `emelin-etal-2021-moral` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
-| `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `kweon2024kormedmcqa` |
 | `kmmlu` | Multiple-choice log-likelihood across configurable KMMLU subject subsets, raw + length-normalized accuracy | KMMLU `son2024kmmlu` |
+| `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `kweon2024kormedmcqa` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_{openai,openai_cloze,standard,standard_cloze}` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_openai_mt_{de,en,es,fr,it}`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}` | Single-continuation log-likelihood, greedy accuracy + perplexity over multilingual LAMBADA translations | LAMBADA-MT |
@@ -745,6 +745,14 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   url = {https://huggingface.co/datasets/math-ai/aime25},
 }
 
+@dataset{aime_2026,
+  author = {math-ai},
+  title = {AIME Problem Set 2026},
+  year = {2026},
+  publisher = {Hugging Face},
+  url = {https://huggingface.co/datasets/math-ai/aime26},
+}
+
 % CMMLU. Suites: cmmlu_<subset>.
 @article{li2023cmmlu,
   title = {CMMLU: Measuring massive multitask language understanding in Chinese},
@@ -758,14 +766,6 @@ Comments inside the BibTeX block below note which built-in suites each citation 
 @article{zhong2023agieval,
   title = {AGIEval: A Human-Centric Benchmark for Evaluating Foundation Models},
   author = {Wanjun Zhong and Zijie Huang and Shirong Ma and Angelica Chen and Yuxin Wang and Li Dong and Jie Tang and Nan Duan},
-@dataset{aime_2026,
-  author = {math-ai},
-  title = {AIME Problem Set 2026},
-  year = {2026},
-  publisher = {Hugging Face},
-  url = {https://huggingface.co/datasets/math-ai/aime26},
-}
-
   journal = {arXiv preprint arXiv:2304.06364},
   year = {2023},
   url = {https://arxiv.org/abs/2304.06364},
@@ -894,6 +894,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   year = {2021},
 }
 
+% MGSM. Suites: mgsm_direct_{bn,de,en,es,fr,ja,ru,sw,te,th,zh}.
+@article{shi2022multilingualchainofthought,
+  title = {Language Models are Multilingual Chain-of-Thought Reasoners},
+  author = {Freda Shi and Mirac Suzgun and Markus Freitag and Xuezhi Wang and Suraj Srivats and Soroush Vosoughi and Hyung Won Chung and Yi Tay and Sebastian Ruder and Denny Zhou and Dipanjan Das and Jason Wei},
+  journal = {arXiv preprint arXiv:2210.03057},
+  year = {2022},
+  url = {https://arxiv.org/abs/2210.03057},
+}
+
 % GSM-Plus. Suites: gsm_plus, gsm_plus_mini.
 @misc{li2024gsmpluscomprehensivebenchmarkevaluating,
   title = {GSM-Plus: A Comprehensive Benchmark for Evaluating the Robustness of LLMs as Mathematical Problem Solvers},
@@ -903,15 +912,6 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
   url = {https://arxiv.org/abs/2402.19255},
-}
-
-% MGSM. Suites: mgsm_direct_{bn,de,en,es,fr,ja,ru,sw,te,th,zh}.
-@article{shi2022multilingualchainofthought,
-  title = {Language Models are Multilingual Chain-of-Thought Reasoners},
-  author = {Freda Shi and Mirac Suzgun and Markus Freitag and Xuezhi Wang and Suraj Srivats and Soroush Vosoughi and Hyung Won Chung and Yi Tay and Sebastian Ruder and Denny Zhou and Dipanjan Das and Jason Wei},
-  journal = {arXiv preprint arXiv:2210.03057},
-  year = {2022},
-  url = {https://arxiv.org/abs/2210.03057},
 }
 
 % Histoires Morales
@@ -1195,14 +1195,6 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   year = {2021},
 }
 
-% MMLU-Pro
-@article{wang2024mmlupro,
-  title = {MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark},
-  author = {Yubo Wang and Xueguang Ma and Ge Zhang and Yuansheng Ni and Abhranil Chandra and Shiguang Guo and Weiming Ren and Aaran Arulraj and Xuan He and Ziyan Jiang and Tianle Li and Max Ku and Kai Wang and Alex Zhuang and Rongqi Fan and Xiang Yue and Wenhu Chen},
-  journal = {arXiv preprint arXiv:2406.01574},
-  year = {2024},
-}
-
 % MMLU-CF. Suites: mmlu_cf_<subject>.
 @article{zhao2024mmlucf,
   title = {MMLU-CF: A Contamination-free Multi-task Language Understanding Benchmark},
@@ -1210,6 +1202,14 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   journal = {arXiv preprint arXiv:2412.15194},
   year = {2024},
   url = {https://arxiv.org/abs/2412.15194},
+}
+
+% MMLU-Pro
+@article{wang2024mmlupro,
+  title = {MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark},
+  author = {Yubo Wang and Xueguang Ma and Ge Zhang and Yuansheng Ni and Abhranil Chandra and Shiguang Guo and Weiming Ren and Aaran Arulraj and Xuan He and Ziyan Jiang and Tianle Li and Max Ku and Kai Wang and Alex Zhuang and Rongqi Fan and Xiang Yue and Wenhu Chen},
+  journal = {arXiv preprint arXiv:2406.01574},
+  year = {2024},
 }
 
 % ArabicMMLU. Suites: arabicmmlu_<subset>.
@@ -1287,6 +1287,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   url = {https://arxiv.org/abs/2204.04541},
 }
 
+% KMMLU. Suites: kmmlu_<subset>.
+@article{son2024kmmlu,
+  title = {KMMLU: Measuring Massive Multitask Language Understanding in Korean},
+  author = {Guijin Son and Hanwool Lee and Sungdong Kim and Seungone Kim and Niklas Muennighoff and Taekyoon Choi and Cheonbok Park and Kang Min Yoo and Stella Biderman},
+  journal = {arXiv preprint arXiv:2402.11548},
+  year = {2024},
+  url = {https://arxiv.org/abs/2402.11548},
+}
+
 % IrokoBench. Suites: afrimgsm_<language>, afrimmlu_<language>, afrixnli_<language>.
 @inproceedings{adelani2025irokobench,
   title = {IrokoBench: A New Benchmark for African Languages in the Age of Large Language Models},
@@ -1313,15 +1322,6 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   year = {2023},
   journal = {arXiv preprint arXiv:2306.09479},
   url = {https://arxiv.org/abs/2306.09479},
-}
-
-% KMMLU. Suites: kmmlu_<subset>.
-@article{son2024kmmlu,
-  title = {KMMLU: Measuring Massive Multitask Language Understanding in Korean},
-  author = {Guijin Son and Hanwool Lee and Sungdong Kim and Seungone Kim and Niklas Muennighoff and Taekyoon Choi and Cheonbok Park and Kang Min Yoo and Stella Biderman},
-  journal = {arXiv preprint arXiv:2402.11548},
-  year = {2024},
-  url = {https://arxiv.org/abs/2402.11548},
 }
 
 % LogiQA. Suites: logiqa.
