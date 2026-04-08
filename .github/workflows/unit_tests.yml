@@ -161,7 +161,7 @@ jobs:
             uv pip show flash-attn
           fi
           echo "== installing gptqmodel =="
-          uv pip install gptqmodel -U
+          uv pip install gptqmodel accelerate -U
           uv pip show gptqmodel
       #          uv pip uninstall flash_attn
 
