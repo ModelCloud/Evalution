@@ -560,6 +560,7 @@ built-in suite names covered by that row.
 | `cabbq` | Multiple-choice log-likelihood across Catalan BBQ bias categories, raw + length-normalized accuracy | CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
 | `esbbq` | Multiple-choice log-likelihood across Spanish BBQ bias categories, raw + length-normalized accuracy | EsBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
+| `cmmlu` | Multiple-choice log-likelihood across configurable CMMLU subject subsets, raw + length-normalized accuracy | CMMLU `li2023cmmlu` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `multirc` | Multi-answer reading comprehension with per-question exact match and F1a over selected answer indices | SuperGLUE `wang2019superglue` |
@@ -739,6 +740,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   year = {2025},
   publisher = {Hugging Face},
   url = {https://huggingface.co/datasets/math-ai/aime25},
+}
+
+% CMMLU. Suites: cmmlu_<subset>.
+@article{li2023cmmlu,
+  title = {CMMLU: Measuring massive multitask language understanding in Chinese},
+  author = {Haonan Li and Yixuan Zhang and Fajri Koto and Yifei Yang and Hai Zhao and Yeyun Gong and Nan Duan and Timothy Baldwin},
+  journal = {arXiv preprint arXiv:2306.09212},
+  year = {2023},
+  url = {https://arxiv.org/abs/2306.09212},
 }
 
 % AGIEval. Suites: agieval_<subset>.

@@ -133,6 +133,8 @@ ARABICMMLU_TASKS = (
 )
 # AIME integration coverage tracks the legacy set plus the new 2026 release.
 AIME_TASKS = ("aime", "aime24", "aime25", "aime26")
+# CMMLU integration coverage uses one representative subject from the new family.
+CMMLU_TASKS = ("cmmlu_agronomy",)
 HENDRYCKS_MATH_TASKS = (
     "hendrycks_math_algebra",
 )
@@ -1551,6 +1553,14 @@ def _metadata_afrimgsm_language(language: str) -> Callable[[dict[str, Any]], Non
     return validate
 
 
+def _metadata_cmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["question"]
+
+    return validate
+
+
 def _metadata_afrimmlu_language(language: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["language"] == language
@@ -2696,6 +2706,46 @@ def _aime_suite_spec(
     )
 
 
+def _cmmlu_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.cmmlu(
+            subset=subset,
+            num_fewshot=5,
+            batch_size=24,
+            max_rows=32,
+            stream=False,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "haonan-li/cmmlu",
+            "dataset_name": subset,
+            "split": "test",
+            "fewshot_split": "dev",
+            "num_fewshot": 5,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="以下是单项选择题，请直接给出正确答案的选项。",
+            prompt_suffix="答案：",
+            metadata_validator=_metadata_cmmlu_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 def _agieval_suite_spec(
     task_name: str,
     *,
@@ -3630,6 +3680,14 @@ SUITE_SPECS = {
         dataset_path="math-ai/aime26",
         split="test",
         baseline=0.0,
+    ),
+    "cmmlu_agronomy": _cmmlu_suite_spec(
+        "cmmlu_agronomy",
+        subset="agronomy",
+        baseline={
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.28125,
+        },
     ),
     "hendrycks_math_algebra": _hendrycks_math_suite_spec(
         "hendrycks_math_algebra",

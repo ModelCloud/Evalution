@@ -138,6 +138,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "cb": benchmarks.cb,
     "cola": benchmarks.cola,
     "cnn_dailymail": benchmarks.cnn_dailymail,
+    "cmmlu": benchmarks.cmmlu,
     "code2text_go": benchmarks.code2text_go,
     "code2text_java": benchmarks.code2text_java,
     "code2text_javascript": benchmarks.code2text_javascript,
@@ -405,6 +406,11 @@ for _hendrycks_math_task in benchmarks.HENDRYCKS_MATH_TASKS:
     _TEST_FACTORIES[_hendrycks_math_task] = getattr(benchmarks, _hendrycks_math_task)
 
 del _hendrycks_math_task
+
+for _task_name in benchmarks.CMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
 
 
 def run_yaml(source: str | Path) -> EvaluationRun:

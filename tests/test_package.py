@@ -213,6 +213,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.cola)
     assert evalution.benchmarks.CNNDailyMail is not None
     assert callable(evalution.benchmarks.cnn_dailymail)
+    assert evalution.benchmarks.CMMLU is not None
+    assert evalution.benchmarks.CMMLU_SUBSETS
+    assert evalution.benchmarks.CMMLU_TASKS
+    assert callable(evalution.benchmarks.cmmlu)
+    for factory_name in evalution.benchmarks.CMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.CodeXGLUECodeToText is not None
     assert evalution.benchmarks.CODE_X_GLUE_LANGUAGES
     assert callable(evalution.benchmarks.code_x_glue)

@@ -784,6 +784,26 @@ tests:
     assert ".run(benchmarks.aime26(" in script
 
 
+def test_python_from_yaml_emits_cmmlu_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: cmmlu
+    subset: agronomy
+    max_rows: 8
+  - type: cmmlu_agronomy
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.cmmlu(" in script
+    assert ".run(benchmarks.cmmlu_agronomy(" in script
+
+
 def test_python_from_yaml_emits_arithmetic_variants() -> None:
     task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _ARITHMETIC_TASKS)
     script = evalution.python_from_yaml(

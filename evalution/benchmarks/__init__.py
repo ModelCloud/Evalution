@@ -59,6 +59,8 @@ from . import click as _click_module
 from .click import CLICK_CUL_SUBSETS, CLICK_LANG_SUBSETS, CLICK_TASKS, Click
 from .cola import CoLA, cola
 from .cnn_dailymail import CNNDailyMail, cnn_dailymail
+from . import cmmlu as _cmmlu_module
+from .cmmlu import CMMLU_SUBSETS, CMMLU_TASKS, CMMLU, cmmlu
 from .code_x_glue import (
     CODE_X_GLUE_LANGUAGES,
     CodeXGLUECodeToText,
@@ -278,6 +280,11 @@ for _bbh_task in BBH_TASKS:
     globals()[_bbh_task] = getattr(_bbh_module, _bbh_task)
 
 del _bbh_task
+
+for _cmmlu_task in CMMLU_TASKS:
+    globals()[_cmmlu_task] = getattr(_cmmlu_module, _cmmlu_task)
+
+del _cmmlu_task
 
 for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
@@ -596,10 +603,14 @@ __all__ = [
     "careqa",
     "careqa_en",
     "careqa_es",
+    "CMMLU",
+    "CMMLU_SUBSETS",
+    "CMMLU_TASKS",
     "ceval",
     "boolq",
     "cb",
     "cola",
+    "cmmlu",
     "cnn_dailymail",
     "code_x_glue",
     "code2text_go",
@@ -799,6 +810,7 @@ __all__.extend(CAREQA_TASKS)
 __all__.extend(CABBQ_TASKS)
 __all__.extend(BBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
+__all__.extend(CMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
 __all__.extend(WMDP_TASKS)
