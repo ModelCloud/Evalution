@@ -3625,6 +3625,12 @@ SUITE_SPECS = {
         split="test",
         baseline=0.0,
     ),
+    "aime26": _aime_suite_spec(
+        "aime26",
+        dataset_path="math-ai/aime26",
+        split="test",
+        baseline=0.0,
+    ),
     "hendrycks_math_algebra": _hendrycks_math_suite_spec(
         "hendrycks_math_algebra",
         subset="algebra",
@@ -3822,11 +3828,6 @@ SUITE_SPECS = {
             "split": "test",
             "generation_submission_mode": "continuous_refill",
             "scoring_mode": "generated_exact_match",
-    "aime26": _aime_suite_spec(
-        "aime26",
-        dataset_path="math-ai/aime26",
-        split="test",
-        baseline=0.0,
             "primary_metric": "em",
         },
         expected_sample_count=128,
