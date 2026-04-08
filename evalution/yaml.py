@@ -185,6 +185,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "icelandic_winogrande": benchmarks.icelandic_winogrande,
     "ifeval": benchmarks.ifeval,
     "inverse_scaling": benchmarks.inverse_scaling,
+    "kmmlu": benchmarks.kmmlu,
     "kobest": benchmarks.kobest,
     "kobest_boolq": benchmarks.kobest_boolq,
     "kobest_copa": benchmarks.kobest_copa,
@@ -408,6 +409,11 @@ for _hendrycks_math_task in benchmarks.HENDRYCKS_MATH_TASKS:
 del _hendrycks_math_task
 
 for _task_name in benchmarks.CMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.KMMLU_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

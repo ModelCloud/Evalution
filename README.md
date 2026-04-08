@@ -594,6 +594,7 @@ built-in suite names covered by that row.
 | `moral_stories` | Multiple-choice log-likelihood over moral versus immoral actions, raw + length-normalized accuracy | Moral Stories `emelin-etal-2021-moral` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
 | `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `kweon2024kormedmcqa` |
+| `kmmlu` | Multiple-choice log-likelihood across configurable KMMLU subject subsets, raw + length-normalized accuracy | KMMLU `son2024kmmlu` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_{openai,openai_cloze,standard,standard_cloze}` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
 | `lambada_openai_mt_{de,en,es,fr,it}`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}` | Single-continuation log-likelihood, greedy accuracy + perplexity over multilingual LAMBADA translations | LAMBADA-MT |
@@ -1292,6 +1293,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   year = {2023},
   journal = {arXiv preprint arXiv:2306.09479},
   url = {https://arxiv.org/abs/2306.09479},
+}
+
+% KMMLU. Suites: kmmlu_<subset>.
+@article{son2024kmmlu,
+  title = {KMMLU: Measuring Massive Multitask Language Understanding in Korean},
+  author = {Guijin Son and Hanwool Lee and Sungdong Kim and Seungone Kim and Niklas Muennighoff and Taekyoon Choi and Cheonbok Park and Kang Min Yoo and Stella Biderman},
+  journal = {arXiv preprint arXiv:2402.11548},
+  year = {2024},
+  url = {https://arxiv.org/abs/2402.11548},
 }
 
 % LogiQA. Suites: logiqa.

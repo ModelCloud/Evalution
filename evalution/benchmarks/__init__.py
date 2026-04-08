@@ -119,6 +119,8 @@ from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
 from .ifeval import IFEval, ifeval
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
+from . import kmmlu as _kmmlu_module
+from .kmmlu import KMMLU_DATASET_NAMES, KMMLU_SUBSETS, KMMLU_TASKS, KMMLU, kmmlu
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic
 from . import kormedmcqa as _kormedmcqa_module
 from .kormedmcqa import KORMEDMCQA_SUBSETS, KORMEDMCQA_TASKS, KorMedMCQA, kormedmcqa
@@ -285,6 +287,11 @@ for _cmmlu_task in CMMLU_TASKS:
     globals()[_cmmlu_task] = getattr(_cmmlu_module, _cmmlu_task)
 
 del _cmmlu_task
+
+for _kmmlu_task in KMMLU_TASKS:
+    globals()[_kmmlu_task] = getattr(_kmmlu_module, _kmmlu_task)
+
+del _kmmlu_task
 
 for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
@@ -668,7 +675,12 @@ __all__ = [
     "moral_stories",
     "icelandic_winogrande",
     "inverse_scaling",
+    "KMMLU",
+    "KMMLU_DATASET_NAMES",
+    "KMMLU_SUBSETS",
+    "KMMLU_TASKS",
     "kobest",
+    "kmmlu",
     "kormedmcqa",
     "kobest_boolq",
     "kobest_copa",
@@ -811,6 +823,7 @@ __all__.extend(CABBQ_TASKS)
 __all__.extend(BBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
 __all__.extend(CMMLU_TASKS)
+__all__.extend(KMMLU_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
 __all__.extend(WMDP_TASKS)

@@ -315,6 +315,13 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.inverse_scaling)
     for factory_name in evalution.benchmarks.INVERSE_SCALING_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.KMMLU is not None
+    assert evalution.benchmarks.KMMLU_DATASET_NAMES
+    assert evalution.benchmarks.KMMLU_SUBSETS
+    assert evalution.benchmarks.KMMLU_TASKS
+    assert callable(evalution.benchmarks.kmmlu)
+    for factory_name in evalution.benchmarks.KMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.KoBEST is not None
     assert evalution.benchmarks.KOBEST_SUBSETS
     assert evalution.benchmarks.KOBEST_TASKS

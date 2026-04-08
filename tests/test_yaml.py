@@ -804,6 +804,26 @@ tests:
     assert ".run(benchmarks.cmmlu_agronomy(" in script
 
 
+def test_python_from_yaml_emits_kmmlu_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: kmmlu
+    subset: accounting
+    max_rows: 8
+  - type: kmmlu_accounting
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.kmmlu(" in script
+    assert ".run(benchmarks.kmmlu_accounting(" in script
+
+
 def test_python_from_yaml_emits_arithmetic_variants() -> None:
     task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _ARITHMETIC_TASKS)
     script = evalution.python_from_yaml(

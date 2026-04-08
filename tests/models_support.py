@@ -135,6 +135,8 @@ ARABICMMLU_TASKS = (
 AIME_TASKS = ("aime", "aime24", "aime25", "aime26")
 # CMMLU integration coverage uses one representative subject from the new family.
 CMMLU_TASKS = ("cmmlu_agronomy",)
+# KMMLU integration coverage uses one representative subject from the new family.
+KMMLU_TASKS = ("kmmlu_accounting",)
 HENDRYCKS_MATH_TASKS = (
     "hendrycks_math_algebra",
 )
@@ -1561,6 +1563,16 @@ def _metadata_cmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
     return validate
 
 
+def _metadata_kmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["category"]
+        assert metadata["question"]
+        assert metadata["human_accuracy"] >= 0.0
+
+    return validate
+
+
 def _metadata_afrimmlu_language(language: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["language"] == language
@@ -2746,6 +2758,47 @@ def _cmmlu_suite_spec(
     )
 
 
+def _kmmlu_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    dataset_name: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.kmmlu(
+            subset=subset,
+            num_fewshot=5,
+            batch_size=24,
+            max_rows=32,
+            stream=False,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HAERAE-HUB/KMMLU",
+            "dataset_name": dataset_name,
+            "split": "test",
+            "fewshot_split": "dev",
+            "num_fewshot": 5,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="정답：",
+            prompt_substrings=("\nA. ", "\nD. "),
+            metadata_validator=_metadata_kmmlu_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 def _agieval_suite_spec(
     task_name: str,
     *,
@@ -3687,6 +3740,15 @@ SUITE_SPECS = {
         baseline={
             "acc,ll": 0.28125,
             "acc,ll_avg": 0.28125,
+        },
+    ),
+    "kmmlu_accounting": _kmmlu_suite_spec(
+        "kmmlu_accounting",
+        subset="accounting",
+        dataset_name="Accounting",
+        baseline={
+            "acc,ll": 0.21875,
+            "acc,ll_avg": 0.21875,
         },
     ),
     "hendrycks_math_algebra": _hendrycks_math_suite_spec(
