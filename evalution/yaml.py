@@ -174,6 +174,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "ethics_virtue": benchmarks.ethics_virtue,
     "gsm8k": benchmarks.gsm8k,
     "gsm8k_fr": benchmarks.gsm8k_fr,
+    "gsm8k_ko": benchmarks.gsm8k_ko,
     "gsm_plus": benchmarks.gsm_plus,
     "gsm_plus_mini": benchmarks.gsm_plus_mini,
     "gsm8k_platinum": benchmarks.gsm8k_platinum,

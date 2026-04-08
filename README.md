@@ -585,6 +585,7 @@ built-in suite names covered by that row.
 | `ethics_{cm,deontology,justice,utilitarianism,virtue}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_fr` | Format-insensitive numeric accuracy on the French GSM8K translation | GSM8K `cobbe2021trainingverifierssolvemath`, French translation dataset `cmh2025gsm8kfr` |
+| `gsm8k_ko` | Format-insensitive numeric accuracy on the Korean GSM8K translation | GSM8K `cobbe2021trainingverifierssolvemath`, Korean translation dataset `kuotient2024gsm8kko` |
 | `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
 | `mgsm` | Format-insensitive numeric accuracy across configurable multilingual direct-answer subsets | MGSM `shi2022multilingualchainofthought` |
 | `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `son-etal-2024-hae` |
@@ -902,6 +903,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   year = {2025},
   howpublished = {Hugging Face dataset},
   url = {https://huggingface.co/datasets/cmh/gsm8k_fr},
+}
+
+% GSM8K Korean. Suites: gsm8k_ko.
+@misc{kuotient2024gsm8kko,
+  title = {gsm8k-ko},
+  author = {kuotient},
+  year = {2024},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/kuotient/gsm8k-ko},
 }
 
 % MGSM. Suites: mgsm_direct_{bn,de,en,es,fr,ja,ru,sw,te,th,zh}.

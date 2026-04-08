@@ -4193,6 +4193,33 @@ SUITE_SPECS = {
         sample_validator=_assert_gsm8k_translated_sample,
         result_validator=_validate_gsm8k_like_result,
     ),
+    "gsm8k_ko": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.gsm8k_ko(
+            batch_size=24,
+            max_new_tokens=96,
+            stream=True,
+            max_rows=128,
+        ),
+        expected_name="gsm8k_ko",
+        baseline={
+            "acc,num": 0.078125,
+        },
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "stream": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 5,
+            "dataset_path": "kuotient/gsm8k-ko",
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_gsm8k_translated_sample,
+        result_validator=_validate_gsm8k_like_result,
+    ),
     "gsm8k_platinum": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.gsm8k_platinum(
             variant="cot",
