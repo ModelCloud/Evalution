@@ -123,8 +123,14 @@ jobs:
           test_file="${{ matrix.test-file }}"
           safe_name="${test_file//\//__}"
           safe_name="${safe_name//./_}"
+          requires_gpu="true"
+          if grep -q '^# GPU=-1$' "$test_file"; then
+            requires_gpu="false"
+          fi
           echo "SAFE_NAME=$safe_name" >> "$GITHUB_ENV"
+          echo "TEST_REQUIRES_GPU=$requires_gpu" >> "$GITHUB_ENV"
           echo "safe-name=$safe_name" >> "$GITHUB_OUTPUT"
+          echo "requires-gpu=$requires_gpu" >> "$GITHUB_OUTPUT"
 
       - name: Activate uv env
         run: |
@@ -197,6 +203,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Find suitable GPU
+        if: ${{ steps.meta.outputs.requires-gpu == 'true' }}
         env:
           BASE_URL: http://10.0.14.249
         run: |
@@ -233,7 +240,7 @@ jobs:
             --artifacts-dir artifacts
 
       - name: Release GPU
-        if: always()
+        if: ${{ always() && steps.meta.outputs.requires-gpu == 'true' }}
         env:
           BASE_URL: http://10.0.14.249
         run: |
