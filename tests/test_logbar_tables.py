@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
 # SPDX-License-Identifier: Apache-2.0
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
-
+# GPU=-1
 from __future__ import annotations
 
 from evalution.logbar import render_compare_result_table, render_compare_summary_table, render_test_result_table, render_test_summary_table
