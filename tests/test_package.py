@@ -509,9 +509,32 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.race)
     assert evalution.benchmarks.ReCoRD is not None
     assert callable(evalution.benchmarks.record)
+    assert evalution.benchmarks.RULER is not None
+    assert evalution.benchmarks.RULER_TASKS == (
+        "niah_single_1",
+        "niah_single_2",
+        "niah_single_3",
+        "niah_multikey_1",
+        "niah_multikey_2",
+        "niah_multikey_3",
+        "niah_multiquery",
+        "niah_multivalue",
+        "ruler_vt",
+        "ruler_cwe",
+        "ruler_fwe",
+        "ruler_qa_squad",
+        "ruler_qa_hotpot",
+    )
+    assert callable(evalution.benchmarks.ruler)
+    for factory_name in evalution.benchmarks.RULER_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.RollingPerplexitySample is not None
     assert evalution.benchmarks.RTE is not None
     assert callable(evalution.benchmarks.rte)
+    assert evalution.benchmarks.SCROLLS_TASKS
+    assert callable(evalution.benchmarks.scrolls)
+    for factory_name in evalution.benchmarks.SCROLLS_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.SciQ is not None
     assert callable(evalution.benchmarks.sciq)
     assert evalution.benchmarks.SIQA is not None

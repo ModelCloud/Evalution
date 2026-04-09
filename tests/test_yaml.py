@@ -895,6 +895,8 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
             {"type": "qasper_freeform", "max_rows": 1},
             {"type": "mmlu_redux", "subsets": "stem.abstract_algebra", "max_rows": 1},
             {"type": "mmlu_pro_plus", "subsets": "stem.math", "max_rows": 1},
+            {"type": "scrolls_contractnli", "max_rows": 1},
+            {"type": "ruler_cwe", "max_rows": 1},
         ]
     )
 
@@ -905,6 +907,8 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
         "qasper_freeform",
         "mmlu_redux_stem_abstract_algebra",
         "mmlu_pro_plus_stem_math",
+        "scrolls_contractnli",
+        "ruler_cwe",
     ]
 
 
@@ -932,6 +936,16 @@ tests:
   - type: mmlu_pro_plus
     subsets: stem.math
     max_rows: 8
+  - type: scrolls
+    subset: contractnli
+    max_rows: 8
+  - type: scrolls_contractnli
+    max_rows: 8
+  - type: ruler
+    variant: ruler_cwe
+    max_rows: 8
+  - type: ruler_cwe
+    max_rows: 8
 """
     )
 
@@ -941,6 +955,11 @@ tests:
     assert ".run(benchmarks.qasper(" in script
     assert ".run(benchmarks.mmlu_redux(" in script
     assert ".run(benchmarks.mmlu_pro_plus(" in script
+    assert ".run(benchmarks.scrolls(" in script
+    assert ".run(benchmarks.scrolls_contractnli(" in script
+    assert ".run(benchmarks.ruler(" in script
+    assert ".run(benchmarks.ruler_cwe(" in script
+
 
 
 def test_python_from_yaml_emits_arithmetic_variants() -> None:

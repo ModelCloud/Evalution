@@ -204,7 +204,11 @@ from .race import RACE, race
 from .record import ReCoRD, record
 from .rolling_perplexity import BaseRollingPerplexitySuite, RollingPerplexitySample
 from .rte import RTE, rte
+from . import ruler as _ruler_module
+from .ruler import RULER, RULER_TASKS, ruler
 from .sciq import SciQ, sciq
+from . import scrolls as _scrolls_module
+from .scrolls import SCROLLS_TASKS, scrolls
 from .siqa import SIQA, siqa
 from .single_continuation import BaseSingleContinuationSuite, SingleContinuationSample
 from . import storycloze as _storycloze_module
@@ -333,6 +337,16 @@ for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
 
 del _bbq_task
+
+for _scrolls_task in SCROLLS_TASKS:
+    globals()[_scrolls_task] = getattr(_scrolls_module, _scrolls_task)
+
+del _scrolls_task
+
+for _ruler_task in RULER_TASKS:
+    globals()[_ruler_task] = getattr(_ruler_module, _ruler_task)
+
+del _ruler_task
 
 for _babilong_task in BABILONG_TASKS:
     globals()[_babilong_task] = getattr(_babilong_module, _babilong_task)
@@ -546,7 +560,10 @@ __all__ = [
     "RACE",
     "ReCoRD",
     "RollingPerplexitySample",
+    "RULER",
+    "RULER_TASKS",
     "RTE",
+    "SCROLLS_TASKS",
     "SciQ",
     "SIQA",
     "SingleContinuationSample",
@@ -824,7 +841,9 @@ __all__ = [
     "qqp",
     "race",
     "record",
+    "ruler",
     "rte",
+    "scrolls",
     "sciq",
     "siqa",
     "storycloze",
@@ -909,6 +928,8 @@ __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
 __all__.extend(PALOMA_TASKS)
 __all__.extend(QASPER_TASKS)
+__all__.extend(RULER_TASKS)
+__all__.extend(SCROLLS_TASKS)
 __all__.extend(STORYCLOZE_TASKS)
 __all__.extend(WMDP_TASKS)
 __all__.extend(XNLI_TASKS)

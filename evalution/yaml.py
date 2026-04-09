@@ -263,8 +263,10 @@ _TEST_FACTORIES: dict[str, Any] = {
     "qqp": benchmarks.qqp,
     "race": benchmarks.race,
     "record": benchmarks.record,
+    "ruler": benchmarks.ruler,
     "rte": benchmarks.rte,
     "sciq": benchmarks.sciq,
+    "scrolls": benchmarks.scrolls,
     "siqa": benchmarks.siqa,
     "storycloze": benchmarks.storycloze,
     "swag": benchmarks.swag,
@@ -452,6 +454,16 @@ for _task_name in benchmarks.PALOMA_TASKS:
 del _task_name
 
 for _task_name in benchmarks.STORYCLOZE_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.SCROLLS_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.RULER_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name
