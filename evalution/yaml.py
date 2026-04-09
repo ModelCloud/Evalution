@@ -195,6 +195,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "kobest_hellaswag": benchmarks.kobest_hellaswag,
     "kobest_sentineg": benchmarks.kobest_sentineg,
     "kobest_wic": benchmarks.kobest_wic,
+    "longbench2": benchmarks.longbench2,
     "lambada_openai": benchmarks.lambada_openai,
     "lambada_openai_mt_de": benchmarks.lambada_openai_mt_de,
     "lambada_openai_mt_en": benchmarks.lambada_openai_mt_en,
@@ -449,6 +450,11 @@ for _task_name in benchmarks.MLQA_TASKS:
 del _task_name
 
 for _task_name in benchmarks.PALOMA_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.LONG_BENCH2_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

@@ -389,6 +389,32 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.lambada_openai_cloze)
     assert callable(evalution.benchmarks.lambada_standard)
     assert callable(evalution.benchmarks.lambada_standard_cloze)
+    assert evalution.benchmarks.LongBench2 is not None
+    assert evalution.benchmarks.LONG_BENCH2_TASKS == (
+        "longbench2_academic_multi",
+        "longbench2_academic_single",
+        "longbench2_agent_history",
+        "longbench2_code",
+        "longbench2_detective",
+        "longbench2_dialogue_history",
+        "longbench2_event_order",
+        "longbench2_fin_multi",
+        "longbench2_fin_single",
+        "longbench2_govt_multi",
+        "longbench2_govt_single",
+        "longbench2_graph",
+        "longbench2_legal_multi",
+        "longbench2_legal_single",
+        "longbench2_lit_single",
+        "longbench2_many_shot",
+        "longbench2_news_multi",
+        "longbench2_table",
+        "longbench2_translate",
+        "longbench2_user_guide",
+    )
+    assert callable(evalution.benchmarks.longbench2)
+    for factory_name in evalution.benchmarks.LONG_BENCH2_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.LogiQA is not None
     assert callable(evalution.benchmarks.logiqa)
     assert evalution.benchmarks.LogiQA2 is not None

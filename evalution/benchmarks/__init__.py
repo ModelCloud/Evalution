@@ -151,6 +151,8 @@ from .lambada_multilingual_stablelm import (
     lambada_openai_mt_stablelm_nl,
     lambada_openai_mt_stablelm_pt,
 )
+from . import longbench2 as _longbench2_module
+from .longbench2 import LONG_BENCH2_TASKS, LongBench2, longbench2
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
 from .mbpp import MBPP, mbpp
@@ -332,6 +334,11 @@ for _paloma_task in PALOMA_TASKS:
     globals()[_paloma_task] = getattr(_paloma_module, _paloma_task)
 
 del _paloma_task
+
+for _longbench2_task in LONG_BENCH2_TASKS:
+    globals()[_longbench2_task] = getattr(_longbench2_module, _longbench2_task)
+
+del _longbench2_task
 
 for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
@@ -516,6 +523,8 @@ __all__ = [
     "KorMedMCQA",
     "LAMBADA",
     "LAMBADACloze",
+    "LongBench2",
+    "LONG_BENCH2_TASKS",
     "LogiQA",
     "LogiQA2",
     "MBPP",
@@ -778,6 +787,7 @@ __all__ = [
     "lambada_openai_cloze",
     "lambada_standard",
     "lambada_standard_cloze",
+    "longbench2",
     "logiqa",
     "logiqa2",
     "mbpp",
@@ -927,6 +937,7 @@ __all__.extend(MLQA_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
 __all__.extend(PALOMA_TASKS)
+__all__.extend(LONG_BENCH2_TASKS)
 __all__.extend(QASPER_TASKS)
 __all__.extend(RULER_TASKS)
 __all__.extend(SCROLLS_TASKS)

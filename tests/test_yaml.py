@@ -891,6 +891,7 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
         [
             {"type": "storycloze_2016", "max_rows": 1},
             {"type": "paloma_dolma_v1_5", "max_rows": 1},
+            {"type": "longbench2_academic_single", "max_rows": 1},
             {"type": "mlqa_en_en", "max_rows": 1},
             {"type": "qasper_freeform", "max_rows": 1},
             {"type": "mmlu_redux", "subsets": "stem.abstract_algebra", "max_rows": 1},
@@ -903,6 +904,7 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
     assert [suite.task_name() for suite in suites] == [
         "storycloze_2016",
         "paloma_dolma_v1_5",
+        "longbench2_academic_single",
         "mlqa_en_en",
         "qasper_freeform",
         "mmlu_redux_stem_abstract_algebra",
@@ -924,6 +926,11 @@ tests:
     year: "2016"
     max_rows: 8
   - type: paloma_dolma_v1_5
+    max_rows: 8
+  - type: longbench2
+    subset: academic_single
+    max_rows: 8
+  - type: longbench2_academic_single
     max_rows: 8
   - type: mlqa_en_en
     max_rows: 8
@@ -951,6 +958,8 @@ tests:
 
     assert ".run(benchmarks.storycloze(" in script
     assert ".run(benchmarks.paloma_dolma_v1_5(" in script
+    assert ".run(benchmarks.longbench2(" in script
+    assert ".run(benchmarks.longbench2_academic_single(" in script
     assert ".run(benchmarks.mlqa_en_en(" in script
     assert ".run(benchmarks.qasper(" in script
     assert ".run(benchmarks.mmlu_redux(" in script
