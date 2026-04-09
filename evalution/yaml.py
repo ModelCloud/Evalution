@@ -81,6 +81,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "aime": benchmarks.aime,
     "aime24": benchmarks.aime24,
     "aime25": benchmarks.aime25,
+    "aime26": benchmarks.aime26,
     "anli_r1": benchmarks.anli_r1,
     "anli_r2": benchmarks.anli_r2,
     "anli_r3": benchmarks.anli_r3,
@@ -137,6 +138,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "cb": benchmarks.cb,
     "cola": benchmarks.cola,
     "cnn_dailymail": benchmarks.cnn_dailymail,
+    "cmmlu": benchmarks.cmmlu,
     "code2text_go": benchmarks.code2text_go,
     "code2text_java": benchmarks.code2text_java,
     "code2text_javascript": benchmarks.code2text_javascript,
@@ -171,6 +173,8 @@ _TEST_FACTORIES: dict[str, Any] = {
     "ethics_utilitarianism": benchmarks.ethics_utilitarianism,
     "ethics_virtue": benchmarks.ethics_virtue,
     "gsm8k": benchmarks.gsm8k,
+    "gsm8k_fr": benchmarks.gsm8k_fr,
+    "gsm8k_ko": benchmarks.gsm8k_ko,
     "gsm_plus": benchmarks.gsm_plus,
     "gsm_plus_mini": benchmarks.gsm_plus_mini,
     "gsm8k_platinum": benchmarks.gsm8k_platinum,
@@ -182,7 +186,9 @@ _TEST_FACTORIES: dict[str, Any] = {
     "moral_stories": benchmarks.moral_stories,
     "icelandic_winogrande": benchmarks.icelandic_winogrande,
     "ifeval": benchmarks.ifeval,
+    "ifeval_pt": benchmarks.ifeval_pt,
     "inverse_scaling": benchmarks.inverse_scaling,
+    "kmmlu": benchmarks.kmmlu,
     "kobest": benchmarks.kobest,
     "kobest_boolq": benchmarks.kobest_boolq,
     "kobest_copa": benchmarks.kobest_copa,
@@ -210,6 +216,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "humaneval": benchmarks.humaneval,
     "mbpp": benchmarks.mbpp,
     "mathqa": benchmarks.mathqa,
+    "mgsm": benchmarks.mgsm,
     "mastermind_24_easy": benchmarks.mastermind_24_easy,
     "mastermind_24_hard": benchmarks.mastermind_24_hard,
     "mastermind_35_easy": benchmarks.mastermind_35_easy,
@@ -220,6 +227,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "medmcqa": benchmarks.medmcqa,
     "medqa_4options": benchmarks.medqa_4options,
     "mmlu": benchmarks.mmlu,
+    "mmlu_cf": benchmarks.mmlu_cf,
     "mmlu_pro": benchmarks.mmlu_pro,
     "mnli": benchmarks.mnli,
     "mrpc": benchmarks.mrpc,
@@ -404,6 +412,26 @@ for _hendrycks_math_task in benchmarks.HENDRYCKS_MATH_TASKS:
     _TEST_FACTORIES[_hendrycks_math_task] = getattr(benchmarks, _hendrycks_math_task)
 
 del _hendrycks_math_task
+
+for _task_name in benchmarks.CMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.KMMLU_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.MGSM_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.MMLU_CF_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
 
 
 def run_yaml(source: str | Path) -> EvaluationRun:

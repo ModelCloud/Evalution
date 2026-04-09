@@ -131,7 +131,16 @@ ARABICMMLU_TASKS = (
     "arabicmmlu_computer_science_high_school",
     "arabicmmlu_driving_test",
 )
-AIME_TASKS = ("aime", "aime24", "aime25")
+# AIME integration coverage tracks the legacy set plus the new 2026 release.
+AIME_TASKS = ("aime", "aime24", "aime25", "aime26")
+# CMMLU integration coverage uses one representative subject from the new family.
+CMMLU_TASKS = ("cmmlu_agronomy",)
+# KMMLU integration coverage uses one representative subject from the new family.
+KMMLU_TASKS = ("kmmlu_accounting",)
+# MGSM integration coverage uses one representative direct-answer language.
+MGSM_TASKS = ("mgsm_direct_en",)
+# MMLU-CF integration coverage uses one representative contamination-free subject.
+MMLU_CF_TASKS = ("mmlu_cf_biology",)
 HENDRYCKS_MATH_TASKS = (
     "hendrycks_math_algebra",
 )
@@ -808,6 +817,18 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert "<|start_header_id|>user<|end_header_id|>" in sample.prompt
     assert "Q:" in sample.prompt
     assert "A:" in sample.prompt
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert set(sample.scores) == {"acc,num"}
+
+
+# Validate the translated direct-answer GSM8K prompts without assuming chat-template wrapping.
+def _assert_gsm8k_translated_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.count("Question: ") >= 1
+    assert sample.prompt.endswith("\nAnswer:")
+    assert "<|start_header_id|>" not in sample.prompt
+    assert sample.target
+    assert sample.prediction
     assert set(sample.extracted) == {"numeric-extract"}
     assert set(sample.scores) == {"acc,num"}
 
@@ -1546,6 +1567,32 @@ def _metadata_afrimgsm_language(language: str) -> Callable[[dict[str, Any]], Non
         assert metadata["language"] == language
         assert metadata["question"]
         assert metadata["answer_number"]
+
+    return validate
+
+
+def _metadata_cmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["question"]
+
+    return validate
+
+
+def _metadata_kmmlu_subset(subset: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subset"] == subset
+        assert metadata["category"]
+        assert metadata["question"]
+        assert metadata["human_accuracy"] >= 0.0
+
+    return validate
+
+
+def _metadata_mmlu_cf_subject(subject: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subject"] == subject
+        assert metadata["question"]
 
     return validate
 
@@ -2695,6 +2742,169 @@ def _aime_suite_spec(
     )
 
 
+def _cmmlu_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.cmmlu(
+            subset=subset,
+            num_fewshot=5,
+            batch_size=24,
+            max_rows=32,
+            stream=False,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "haonan-li/cmmlu",
+            "dataset_name": subset,
+            "split": "test",
+            "fewshot_split": "dev",
+            "num_fewshot": 5,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="以下是单项选择题，请直接给出正确答案的选项。",
+            prompt_suffix="答案：",
+            metadata_validator=_metadata_cmmlu_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _kmmlu_suite_spec(
+    task_name: str,
+    *,
+    subset: str,
+    dataset_name: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subset=subset: evalution.benchmarks.kmmlu(
+            subset=subset,
+            num_fewshot=5,
+            batch_size=24,
+            max_rows=32,
+            stream=False,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "HAERAE-HUB/KMMLU",
+            "dataset_name": dataset_name,
+            "split": "test",
+            "fewshot_split": "dev",
+            "num_fewshot": 5,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subset=subset: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_suffix="정답：",
+            prompt_substrings=("\nA. ", "\nD. "),
+            metadata_validator=_metadata_kmmlu_subset(subset),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _mgsm_suite_spec(
+    task_name: str,
+    *,
+    language: str,
+    baseline: float,
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda language=language: evalution.benchmarks.mgsm(
+            language=language,
+            batch_size=24,
+            max_new_tokens=96,
+            stream=True,
+            max_rows=32,
+        ),
+        expected_name=task_name,
+        baseline={"acc,num": baseline},
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "stream": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 0,
+            "dataset_path": "juletxara/mgsm",
+            "dataset_name": language,
+            "split": "test",
+            "language": language,
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, language=language: _assert_afrimgsm_sample(
+            sample,
+            index,
+            language=language,
+        ),
+        result_validator=_validate_gsm8k_like_result,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
+def _mmlu_cf_suite_spec(
+    task_name: str,
+    *,
+    subject: str,
+    baseline: dict[str, float],
+) -> SuiteSpec:
+    return SuiteSpec(
+        suite_factory=lambda subject=subject: evalution.benchmarks.mmlu_cf(
+            subject=subject,
+            num_fewshot=5,
+            batch_size=24,
+            max_rows=32,
+            stream=False,
+        ),
+        expected_name=task_name,
+        baseline=baseline,
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "microsoft/MMLU-CF",
+            "dataset_name": subject,
+            "split": "val",
+            "fewshot_split": "dev",
+            "num_fewshot": 5,
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index, subject=subject: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="There is a single choice question (with answers). Answer the question by replying A, B, C or D.",
+            prompt_suffix="Answer:",
+            metadata_validator=_metadata_mmlu_cf_subject(subject),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    )
+
+
 def _agieval_suite_spec(
     task_name: str,
     *,
@@ -3624,6 +3834,42 @@ SUITE_SPECS = {
         split="test",
         baseline=0.0,
     ),
+    "aime26": _aime_suite_spec(
+        "aime26",
+        dataset_path="math-ai/aime26",
+        split="test",
+        baseline=0.0,
+    ),
+    "cmmlu_agronomy": _cmmlu_suite_spec(
+        "cmmlu_agronomy",
+        subset="agronomy",
+        baseline={
+            "acc,ll": 0.28125,
+            "acc,ll_avg": 0.28125,
+        },
+    ),
+    "kmmlu_accounting": _kmmlu_suite_spec(
+        "kmmlu_accounting",
+        subset="accounting",
+        dataset_name="Accounting",
+        baseline={
+            "acc,ll": 0.21875,
+            "acc,ll_avg": 0.21875,
+        },
+    ),
+    "mgsm_direct_en": _mgsm_suite_spec(
+        "mgsm_direct_en",
+        language="en",
+        baseline=0.0625,
+    ),
+    "mmlu_cf_biology": _mmlu_cf_suite_spec(
+        "mmlu_cf_biology",
+        subject="biology",
+        baseline={
+            "acc,ll": 0.53125,
+            "acc,ll_avg": 0.53125,
+        },
+    ),
     "hendrycks_math_algebra": _hendrycks_math_suite_spec(
         "hendrycks_math_algebra",
         subset="algebra",
@@ -3918,6 +4164,60 @@ SUITE_SPECS = {
         },
         expected_sample_count=128,
         sample_validator=_assert_gsm8k_sample,
+        result_validator=_validate_gsm8k_like_result,
+    ),
+    "gsm8k_fr": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.gsm8k_fr(
+            batch_size=24,
+            max_new_tokens=96,
+            stream=True,
+            max_rows=128,
+        ),
+        expected_name="gsm8k_fr",
+        baseline={
+            "acc,num": 0.109375,
+        },
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "stream": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 5,
+            "dataset_path": "cmh/gsm8k_fr",
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_gsm8k_translated_sample,
+        result_validator=_validate_gsm8k_like_result,
+    ),
+    "gsm8k_ko": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.gsm8k_ko(
+            batch_size=24,
+            max_new_tokens=96,
+            stream=True,
+            max_rows=128,
+        ),
+        expected_name="gsm8k_ko",
+        baseline={
+            "acc,num": 0.078125,
+        },
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "stream": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 5,
+            "dataset_path": "kuotient/gsm8k-ko",
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_gsm8k_translated_sample,
         result_validator=_validate_gsm8k_like_result,
     ),
     "gsm8k_platinum": SuiteSpec(
@@ -4809,6 +5109,33 @@ SUITE_SPECS = {
         expected_metadata={
             "stream": False,
             "dataset_path": "google/IFEval",
+            "dataset_name": None,
+            "split": "train",
+            "scoring_mode": "instruction_following",
+            "primary_metric": "prompt_level_strict_acc",
+        },
+        expected_sample_count=64,
+        sample_validator=_assert_ifeval_sample,
+        abs_tolerance=2 / 64,
+    ),
+    "ifeval_pt": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.ifeval_pt(batch_size=8, max_rows=64),
+        expected_name="ifeval_pt",
+        baseline={
+            "prompt_level_strict_acc": 0.203125,
+            "prompt_level_loose_acc": 0.25,
+            "inst_level_strict_acc": 0.38,
+            "inst_level_loose_acc": 0.41,
+        },
+        expected_metrics=frozenset({
+            "prompt_level_strict_acc",
+            "prompt_level_loose_acc",
+            "inst_level_strict_acc",
+            "inst_level_loose_acc",
+        }),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "Polygl0t/IFEval-PT",
             "dataset_name": None,
             "split": "train",
             "scoring_mode": "instruction_following",

@@ -13,7 +13,7 @@ from . import afrimmlu as _afrimmlu_module
 from .afrimmlu import AFRIMMLU_LANGUAGES, AFRIMMLU_TASKS, AfriMMLU, afrimmlu
 from .afrixnli import AFRIXNLI_LANGUAGES, AFRIXNLI_TASKS, AfriXNLI, afrixnli, afrixnli_amh, afrixnli_eng, afrixnli_ewe, afrixnli_fra, afrixnli_hau, afrixnli_ibo, afrixnli_kin, afrixnli_lin, afrixnli_lug, afrixnli_orm, afrixnli_sna, afrixnli_sot, afrixnli_swa, afrixnli_twi, afrixnli_wol, afrixnli_xho, afrixnli_yor, afrixnli_zul
 from .alghafa import COPAArabic, PIQAArabic, copa_ar, piqa_ar
-from .aime import AIME, aime, aime24, aime25
+from .aime import AIME, aime, aime24, aime25, aime26
 from .anli import ANLI, anli_r1, anli_r2, anli_r3
 from . import arabicmmlu as _arabicmmlu_module
 from .arabicmmlu import ARABICMMLU_SUBSETS, ARABICMMLU_TASKS, ArabicMMLU, arabicmmlu
@@ -59,6 +59,8 @@ from . import click as _click_module
 from .click import CLICK_CUL_SUBSETS, CLICK_LANG_SUBSETS, CLICK_TASKS, Click
 from .cola import CoLA, cola
 from .cnn_dailymail import CNNDailyMail, cnn_dailymail
+from . import cmmlu as _cmmlu_module
+from .cmmlu import CMMLU_SUBSETS, CMMLU_TASKS, CMMLU, cmmlu
 from .code_x_glue import (
     CODE_X_GLUE_LANGUAGES,
     CodeXGLUECodeToText,
@@ -94,6 +96,8 @@ from .eus_trivia import EusTrivia, eus_trivia
 from .gpqa import GPQA, GPQA_SUBSETS, GPQA_TASKS, gpqa, gpqa_diamond, gpqa_extended, gpqa_main
 from .graphwalks import GraphWalks, graphwalks_128k, graphwalks_1M
 from .gsm8k import GSM8K, gsm8k
+from .gsm8k_fr import GSM8KFR, gsm8k_fr
+from .gsm8k_ko import GSM8KKO, gsm8k_ko
 from . import haerae as _haerae_module
 from .haerae import HAERAE_SUBSETS, HAERAE_TASKS, Haerae, haerae
 from .gsm_plus import GSM_PLUS_TASKS, GSMPlus, GSMPlusMini, gsm_plus, gsm_plus_mini
@@ -115,8 +119,11 @@ from .histoires_morales import HistoiresMorales, histoires_morales
 from .moral_stories import MoralStories, moral_stories
 from .icelandic_winogrande import IcelandicWinoGrande, icelandic_winogrande
 from .ifeval import IFEval, ifeval
+from .ifeval_pt import IFEvalPT, ifeval_pt
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
+from . import kmmlu as _kmmlu_module
+from .kmmlu import KMMLU_DATASET_NAMES, KMMLU_SUBSETS, KMMLU_TASKS, KMMLU, kmmlu
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic
 from . import kormedmcqa as _kormedmcqa_module
 from .kormedmcqa import KORMEDMCQA_SUBSETS, KORMEDMCQA_TASKS, KorMedMCQA, kormedmcqa
@@ -160,10 +167,14 @@ from .mastermind import (
     mastermind_46_easy,
     mastermind_46_hard,
 )
+from . import mgsm as _mgsm_module
+from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mc_taco import MCTACO, mc_taco
 from .mmlu import MMLU, mmlu
+from . import mmlu_cf as _mmlu_cf_module
+from .mmlu_cf import MMLUCF, MMLU_CF_SUBJECTS, MMLU_CF_TASKS, mmlu_cf
 from .mmlu_pro import MMLUPro, mmlu_pro
 from .mnli import MNLI, mnli
 from .mrpc import MRPC, mrpc
@@ -278,6 +289,26 @@ for _bbh_task in BBH_TASKS:
     globals()[_bbh_task] = getattr(_bbh_module, _bbh_task)
 
 del _bbh_task
+
+for _cmmlu_task in CMMLU_TASKS:
+    globals()[_cmmlu_task] = getattr(_cmmlu_module, _cmmlu_task)
+
+del _cmmlu_task
+
+for _kmmlu_task in KMMLU_TASKS:
+    globals()[_kmmlu_task] = getattr(_kmmlu_module, _kmmlu_task)
+
+del _kmmlu_task
+
+for _mgsm_task in MGSM_TASKS:
+    globals()[_mgsm_task] = getattr(_mgsm_module, _mgsm_task)
+
+del _mgsm_task
+
+for _mmlu_cf_task in MMLU_CF_TASKS:
+    globals()[_mmlu_cf_task] = getattr(_mmlu_cf_module, _mmlu_cf_task)
+
+del _mmlu_cf_task
 
 for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
@@ -516,6 +547,7 @@ __all__ = [
     "aime",
     "aime24",
     "aime25",
+    "aime26",
     "aexams",
     "aexams_biology",
     "aexams_islamic_studies",
@@ -595,10 +627,14 @@ __all__ = [
     "careqa",
     "careqa_en",
     "careqa_es",
+    "CMMLU",
+    "CMMLU_SUBSETS",
+    "CMMLU_TASKS",
     "ceval",
     "boolq",
     "cb",
     "cola",
+    "cmmlu",
     "cnn_dailymail",
     "code_x_glue",
     "code2text_go",
@@ -643,6 +679,10 @@ __all__ = [
     "choice_index_from_labels",
     "f1_for_label",
     "gsm8k",
+    "GSM8KFR",
+    "gsm8k_fr",
+    "GSM8KKO",
+    "gsm8k_ko",
     "haerae",
     "gsm_plus",
     "gsm_plus_mini",
@@ -655,7 +695,14 @@ __all__ = [
     "histoires_morales",
     "moral_stories",
     "icelandic_winogrande",
+    "IFEvalPT",
+    "ifeval_pt",
     "inverse_scaling",
+    "KMMLU",
+    "KMMLU_DATASET_NAMES",
+    "KMMLU_SUBSETS",
+    "KMMLU_TASKS",
+    "kmmlu",
     "kobest",
     "kormedmcqa",
     "kobest_boolq",
@@ -691,7 +738,15 @@ __all__ = [
     "mc_taco",
     "macro_f1",
     "matthews_corrcoef",
+    "MGSM",
+    "MGSM_LANGUAGES",
+    "MGSM_TASKS",
+    "mgsm",
     "mmlu",
+    "MMLUCF",
+    "MMLU_CF_SUBJECTS",
+    "MMLU_CF_TASKS",
+    "mmlu_cf",
     "mmlu_pro",
     "mnli",
     "mrpc",
@@ -798,6 +853,10 @@ __all__.extend(CAREQA_TASKS)
 __all__.extend(CABBQ_TASKS)
 __all__.extend(BBQ_TASKS)
 __all__.extend(AFRIMMLU_TASKS)
+__all__.extend(CMMLU_TASKS)
+__all__.extend(KMMLU_TASKS)
+__all__.extend(MGSM_TASKS)
+__all__.extend(MMLU_CF_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
 __all__.extend(WMDP_TASKS)

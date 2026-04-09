@@ -80,6 +80,7 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.aime)
     assert callable(evalution.benchmarks.aime24)
     assert callable(evalution.benchmarks.aime25)
+    assert callable(evalution.benchmarks.aime26)
     assert evalution.benchmarks.ANLI is not None
     assert callable(evalution.benchmarks.anli_r1)
     assert callable(evalution.benchmarks.anli_r2)
@@ -212,6 +213,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.cola)
     assert evalution.benchmarks.CNNDailyMail is not None
     assert callable(evalution.benchmarks.cnn_dailymail)
+    assert evalution.benchmarks.CMMLU is not None
+    assert evalution.benchmarks.CMMLU_SUBSETS
+    assert evalution.benchmarks.CMMLU_TASKS
+    assert callable(evalution.benchmarks.cmmlu)
+    for factory_name in evalution.benchmarks.CMMLU_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.CodeXGLUECodeToText is not None
     assert evalution.benchmarks.CODE_X_GLUE_LANGUAGES
     assert callable(evalution.benchmarks.code_x_glue)
@@ -266,6 +273,10 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.gpqa_main)
     assert callable(evalution.benchmarks.gpqa_diamond)
     assert callable(evalution.benchmarks.gpqa_extended)
+    assert evalution.benchmarks.GSM8KFR is not None
+    assert callable(evalution.benchmarks.gsm8k_fr)
+    assert evalution.benchmarks.GSM8KKO is not None
+    assert callable(evalution.benchmarks.gsm8k_ko)
     assert evalution.benchmarks.GSM_PLUS_TASKS == ("gsm_plus", "gsm_plus_mini")
     assert evalution.benchmarks.GSMPlus is not None
     assert evalution.benchmarks.GSMPlusMini is not None
@@ -300,6 +311,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.moral_stories)
     assert evalution.benchmarks.IFEval is not None
     assert callable(evalution.benchmarks.ifeval)
+    assert evalution.benchmarks.IFEvalPT is not None
+    assert callable(evalution.benchmarks.ifeval_pt)
     assert evalution.benchmarks.IcelandicWinoGrande is not None
     assert callable(evalution.benchmarks.icelandic_winogrande)
     assert evalution.benchmarks.InverseScaling is not None
@@ -307,6 +320,13 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.INVERSE_SCALING_TASKS
     assert callable(evalution.benchmarks.inverse_scaling)
     for factory_name in evalution.benchmarks.INVERSE_SCALING_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.KMMLU is not None
+    assert evalution.benchmarks.KMMLU_DATASET_NAMES
+    assert evalution.benchmarks.KMMLU_SUBSETS
+    assert evalution.benchmarks.KMMLU_TASKS
+    assert callable(evalution.benchmarks.kmmlu)
+    for factory_name in evalution.benchmarks.KMMLU_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.KoBEST is not None
     assert evalution.benchmarks.KOBEST_SUBSETS
@@ -379,6 +399,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mbpp)
     assert evalution.benchmarks.MathQA is not None
     assert callable(evalution.benchmarks.mathqa)
+    assert evalution.benchmarks.MGSM is not None
+    assert evalution.benchmarks.MGSM_LANGUAGES
+    assert evalution.benchmarks.MGSM_TASKS
+    assert callable(evalution.benchmarks.mgsm)
+    for factory_name in evalution.benchmarks.MGSM_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.Mastermind is not None
     assert evalution.benchmarks.MASTERMIND_VARIANTS == (
         "mastermind_24_easy",
@@ -402,6 +428,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.MedQA is not None
     assert callable(evalution.benchmarks.medqa_4options)
     assert evalution.benchmarks.MMLU is not None
+    assert evalution.benchmarks.MMLUCF is not None
+    assert evalution.benchmarks.MMLU_CF_SUBJECTS
+    assert evalution.benchmarks.MMLU_CF_TASKS
+    assert callable(evalution.benchmarks.mmlu_cf)
+    for factory_name in evalution.benchmarks.MMLU_CF_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert callable(evalution.benchmarks.mmlu)
     assert evalution.benchmarks.MMLUPro is not None
     assert callable(evalution.benchmarks.mmlu_pro)

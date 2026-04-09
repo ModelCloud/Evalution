@@ -116,10 +116,9 @@ def fix_a_slash_b(text: str) -> str:
 
 
 def remove_right_units(text: str) -> str:
+    # Trim trailing unit annotations without assuming the marker appears only once.
     if "\\text{ " in text:
-        parts = text.split("\\text{ ")
-        assert len(parts) == 2
-        return parts[0]
+        return text.split("\\text{ ", 1)[0]
     return text
 
 

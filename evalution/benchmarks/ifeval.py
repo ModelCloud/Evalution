@@ -442,6 +442,32 @@ def _build_instruction_checker(
 
         return _check
 
+    if instruction_id == "change_case:portuguese_capital":
+        def _check(value: str) -> bool:
+            if not value.strip() or not value.isupper():
+                return False
+            if _detect_language is not None:
+                try:
+                    return _detect_language(value) == "pt"
+                except _LangDetectException:
+                    return True
+            return _is_language_ok(value, language="pt")
+
+        return _check
+
+    if instruction_id == "change_case:portuguese_lowercase":
+        def _check(value: str) -> bool:
+            if not value.strip() or not value.islower():
+                return False
+            if _detect_language is not None:
+                try:
+                    return _detect_language(value) == "pt"
+                except _LangDetectException:
+                    return True
+            return _is_language_ok(value, language="pt")
+
+        return _check
+
     if instruction_id == "punctuation:no_comma":
         def _check(value: str) -> bool:
             return _PUNCTUATION_NO_COMMA_RE.search(value) is None

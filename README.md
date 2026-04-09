@@ -533,7 +533,7 @@ built-in suite names covered by that row.
 | `agieval` | Multiple-choice log-likelihood across supported AGIEval subject subsets, raw + length-normalized accuracy | AGIEval `zhong2023agieval` |
 | `afrimgsm` | Generated numeric exact match across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/vai/wol/xho/yor/zul` translated grade-school math subsets | IrokoBench AfriMGSM `adelani2025irokobench` |
 | `afrimmlu` | Multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` translated MMLU subsets, raw + length-normalized accuracy | IrokoBench AfriMMLU `adelani2025irokobench` |
-| `aime`, `aime24`, `aime25` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024`, `aime_2024`, `aime_2025` |
+| `aime`, `aime24`, `aime25`, `aime26` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024`, `aime_2024`, `aime_2025`, `aime_2026` |
 | `afrixnli` | Three-way NLI multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` language subsets, raw + length-normalized accuracy | IrokoBench AfriXNLI `adelani2025irokobench` |
 | `anli_{r1,r2,r3}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
 | `arabicmmlu` | Multiple-choice log-likelihood across configurable ArabicMMLU subject subsets, raw + length-normalized accuracy | ArabicMMLU `koto2024arabicmmlu` |
@@ -560,6 +560,7 @@ built-in suite names covered by that row.
 | `cabbq` | Multiple-choice log-likelihood across Catalan BBQ bias categories, raw + length-normalized accuracy | CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
 | `esbbq` | Multiple-choice log-likelihood across Spanish BBQ bias categories, raw + length-normalized accuracy | EsBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
 | `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
+| `cmmlu` | Multiple-choice log-likelihood across configurable CMMLU subject subsets, raw + length-normalized accuracy | CMMLU `li2023cmmlu` |
 | `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
 | `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
 | `multirc` | Multi-answer reading comprehension with per-question exact match and F1a over selected answer indices | SuperGLUE `wang2019superglue` |
@@ -583,15 +584,20 @@ built-in suite names covered by that row.
 | `gsm_plus`, `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` and `testmini` splits | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
 | `ethics_{cm,deontology,justice,utilitarianism,virtue}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
+| `gsm8k_fr` | Format-insensitive numeric accuracy on the French GSM8K translation | GSM8K `cobbe2021trainingverifierssolvemath`, French translation dataset `cmh2025gsm8kfr` |
+| `gsm8k_ko` | Format-insensitive numeric accuracy on the Korean GSM8K translation | GSM8K `cobbe2021trainingverifierssolvemath`, Korean translation dataset `kuotient2024gsm8kko` |
 | `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| `mgsm` | Format-insensitive numeric accuracy across configurable multilingual direct-answer subsets | MGSM `shi2022multilingualchainofthought` |
 | `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `son-etal-2024-hae` |
 | `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
 | `headqa_{en,es}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
 | `ifeval` | Instruction-following generation scoring across up to 4 instruction checks per prompt | IFEval `zhou2023instruction` |
+| `ifeval_pt` | Instruction-following generation scoring across the Portuguese IFEval translation | IFEval `zhou2023instruction`, Tucano 2 Cool `klugecorrea2026tucano2cool` |
 | `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
 | `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
 | `moral_stories` | Multiple-choice log-likelihood over moral versus immoral actions, raw + length-normalized accuracy | Moral Stories `emelin-etal-2021-moral` |
 | `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
+| `kmmlu` | Multiple-choice log-likelihood across configurable KMMLU subject subsets, raw + length-normalized accuracy | KMMLU `son2024kmmlu` |
 | `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `kweon2024kormedmcqa` |
 | `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | `lambada_{openai,openai_cloze,standard,standard_cloze}` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
@@ -607,6 +613,7 @@ built-in suite names covered by that row.
 | `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
 | `medqa_4options` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
 | `mmlu` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
+| `mmlu_cf` | Multiple-choice log-likelihood across configurable contamination-free subject subsets, raw + length-normalized accuracy | MMLU-CF `zhao2024mmlucf` |
 | `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
 | `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
 | `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
@@ -716,7 +723,7 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   doi = {10.18653/v1/2020.emnlp-main.438},
 }
 
-% AIME suites: aime -> aime_1983_2024, aime24 -> aime_2024, aime25 -> aime_2025.
+% AIME suites: aime -> aime_1983_2024, aime24 -> aime_2024, aime25 -> aime_2025, aime26 -> aime_2026.
 @dataset{aime_1983_2024,
   author = {Hemish Veeraboina},
   title = {AIME Problem Set 1983-2024},
@@ -739,6 +746,23 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   year = {2025},
   publisher = {Hugging Face},
   url = {https://huggingface.co/datasets/math-ai/aime25},
+}
+
+@dataset{aime_2026,
+  author = {math-ai},
+  title = {AIME Problem Set 2026},
+  year = {2026},
+  publisher = {Hugging Face},
+  url = {https://huggingface.co/datasets/math-ai/aime26},
+}
+
+% CMMLU. Suites: cmmlu_<subset>.
+@article{li2023cmmlu,
+  title = {CMMLU: Measuring massive multitask language understanding in Chinese},
+  author = {Haonan Li and Yixuan Zhang and Fajri Koto and Yifei Yang and Hai Zhao and Yeyun Gong and Nan Duan and Timothy Baldwin},
+  journal = {arXiv preprint arXiv:2306.09212},
+  year = {2023},
+  url = {https://arxiv.org/abs/2306.09212},
 }
 
 % AGIEval. Suites: agieval_<subset>.
@@ -871,6 +895,33 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   author = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
   journal = {arXiv preprint arXiv:2110.14168},
   year = {2021},
+}
+
+% GSM8K French. Suites: gsm8k_fr.
+@misc{cmh2025gsm8kfr,
+  title = {gsm8k\_fr},
+  author = {cmh},
+  year = {2025},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/cmh/gsm8k_fr},
+}
+
+% GSM8K Korean. Suites: gsm8k_ko.
+@misc{kuotient2024gsm8kko,
+  title = {gsm8k-ko},
+  author = {kuotient},
+  year = {2024},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/kuotient/gsm8k-ko},
+}
+
+% MGSM. Suites: mgsm_direct_{bn,de,en,es,fr,ja,ru,sw,te,th,zh}.
+@article{shi2022multilingualchainofthought,
+  title = {Language Models are Multilingual Chain-of-Thought Reasoners},
+  author = {Freda Shi and Mirac Suzgun and Markus Freitag and Xuezhi Wang and Suraj Srivats and Soroush Vosoughi and Hyung Won Chung and Yi Tay and Sebastian Ruder and Denny Zhou and Dipanjan Das and Jason Wei},
+  journal = {arXiv preprint arXiv:2210.03057},
+  year = {2022},
+  url = {https://arxiv.org/abs/2210.03057},
 }
 
 % GSM-Plus. Suites: gsm_plus, gsm_plus_mini.
@@ -1165,6 +1216,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   year = {2021},
 }
 
+% MMLU-CF. Suites: mmlu_cf_<subject>.
+@article{zhao2024mmlucf,
+  title = {MMLU-CF: A Contamination-free Multi-task Language Understanding Benchmark},
+  author = {Qihao Zhao and Yangyu Huang and Tengchao Lv and Lei Cui and Qinzheng Sun and Shaoguang Mao and Xin Zhang and Ying Xin and Qiufeng Yin and Scarlett Li and Furu Wei},
+  journal = {arXiv preprint arXiv:2412.15194},
+  year = {2024},
+  url = {https://arxiv.org/abs/2412.15194},
+}
+
 % MMLU-Pro
 @article{wang2024mmlupro,
   title = {MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark},
@@ -1246,6 +1306,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   archivePrefix = {arXiv},
   primaryClass = {cs.CL},
   url = {https://arxiv.org/abs/2204.04541},
+}
+
+% KMMLU. Suites: kmmlu_<subset>.
+@article{son2024kmmlu,
+  title = {KMMLU: Measuring Massive Multitask Language Understanding in Korean},
+  author = {Guijin Son and Hanwool Lee and Sungdong Kim and Seungone Kim and Niklas Muennighoff and Taekyoon Choi and Cheonbok Park and Kang Min Yoo and Stella Biderman},
+  journal = {arXiv preprint arXiv:2402.11548},
+  year = {2024},
+  url = {https://arxiv.org/abs/2402.11548},
 }
 
 % IrokoBench. Suites: afrimgsm_<language>, afrimmlu_<language>, afrixnli_<language>.
@@ -1521,6 +1590,15 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   journal = {arXiv preprint arXiv:2311.07911},
   year = {2023},
   url = {https://arxiv.org/abs/2311.07911},
+}
+
+% IFEval-PT. Suites: ifeval_pt.
+@article{klugecorrea2026tucano2cool,
+  title = {Tucano 2 Cool: Better Open Source LLMs for Portuguese},
+  author = {Nicholas Kluge Correa and Aniket Sen and Shiza Fatimah and Sophia Falk and Lennard Landgraf and Julia Kastner and Lucie Flek},
+  journal = {arXiv preprint arXiv:2603.03543},
+  year = {2026},
+  url = {https://arxiv.org/abs/2603.03543},
 }
 
 % CLIcK. Suites: click, click_lang, click_lang_{text,grammar,function}, click_cul, click_cul_{economy,geography,history,kpop,law,politics,society,tradition}.

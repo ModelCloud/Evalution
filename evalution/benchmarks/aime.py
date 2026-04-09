@@ -42,6 +42,14 @@ _AIME_VARIANTS = {
         "id_field": "id",
         "metadata_fields": (),
     },
+    "aime26": {
+        "dataset_path": "math-ai/aime26",
+        "split": "test",
+        "question_field": "problem",
+        "answer_field": "answer",
+        "id_field": "id",
+        "metadata_fields": (),
+    },
 }
 
 
@@ -149,3 +157,8 @@ def aime24(**kwargs: Any) -> AIME:
 
 def aime25(**kwargs: Any) -> AIME:
     return _aime_variant("aime25", **kwargs)
+
+
+def aime26(**kwargs: Any) -> AIME:
+    # Expose the standalone AIME 2026 dataset variant shipped in the recent lm-eval PR.
+    return _aime_variant("aime26", **kwargs)

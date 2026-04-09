@@ -30,7 +30,7 @@ from evalution.engines import (
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
-_AIME_TASKS = ["aime", "aime24", "aime25"]
+_AIME_TASKS = ["aime", "aime24", "aime25", "aime26"]
 _HENDRYCKS_MATH_TASKS = [
     "hendrycks_math_algebra",
     "hendrycks_math_counting_and_probability",
@@ -450,6 +450,10 @@ tests:
     max_rows: 16
   - type: xquad_es
     max_rows: 16
+  - type: gsm8k_fr
+    max_rows: 16
+  - type: gsm8k_ko
+    max_rows: 16
   - type: xstorycloze_ar
     max_rows: 16
   - type: xstorycloze_en
@@ -714,6 +718,8 @@ tests:
     assert ".run(benchmarks.xcopa_zh(" in script
     assert ".run(benchmarks.xquad(" in script
     assert ".run(benchmarks.xquad_es(" in script
+    assert ".run(benchmarks.gsm8k_fr(" in script
+    assert ".run(benchmarks.gsm8k_ko(" in script
     assert ".run(benchmarks.xstorycloze_ar(" in script
     assert ".run(benchmarks.xstorycloze_en(" in script
     assert ".run(benchmarks.xstorycloze_es(" in script
@@ -766,6 +772,118 @@ tests:
     assert ".run(benchmarks.wsc273(" in script
     assert ".run(benchmarks.wnli(" in script
     assert ".run(benchmarks.winogrande(" in script
+
+
+def test_python_from_yaml_emits_aime26_factory() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: aime26
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.aime26(" in script
+
+
+def test_python_from_yaml_emits_ifeval_pt_factory() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: ifeval_pt
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.ifeval_pt(" in script
+
+
+def test_python_from_yaml_emits_cmmlu_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: cmmlu
+    subset: agronomy
+    max_rows: 8
+  - type: cmmlu_agronomy
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.cmmlu(" in script
+    assert ".run(benchmarks.cmmlu_agronomy(" in script
+
+
+def test_python_from_yaml_emits_kmmlu_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: kmmlu
+    subset: accounting
+    max_rows: 8
+  - type: kmmlu_accounting
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.kmmlu(" in script
+    assert ".run(benchmarks.kmmlu_accounting(" in script
+
+
+def test_python_from_yaml_emits_mgsm_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: mgsm
+    language: en
+    max_rows: 8
+  - type: mgsm_direct_en
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.mgsm(" in script
+    assert ".run(benchmarks.mgsm_direct_en(" in script
+
+
+def test_python_from_yaml_emits_mmlu_cf_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: mmlu_cf
+    subject: biology
+    max_rows: 8
+  - type: mmlu_cf_biology
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.mmlu_cf(" in script
+    assert ".run(benchmarks.mmlu_cf_biology(" in script
 
 
 def test_python_from_yaml_emits_arithmetic_variants() -> None:

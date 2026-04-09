@@ -120,3 +120,13 @@ def test_aime25_factory_uses_test_split_and_lowercase_fields() -> None:
     assert suite.question_field == "problem"
     assert suite.answer_field == "answer"
     assert suite.id_field == "id"
+
+
+def test_aime26_factory_uses_test_split_and_lowercase_fields() -> None:
+    suite = evalution.benchmarks.aime26()
+
+    assert suite.dataset_path == "math-ai/aime26"
+    assert suite.split == "test"
+    assert suite.question_field == "problem"
+    assert suite.answer_field == "answer"
+    assert suite.id_field == "id"
