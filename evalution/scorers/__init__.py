@@ -37,6 +37,17 @@ from .multiple_choice import (
     normalized_logprob,
 )
 from .math_exact_match import extract_math_answer, math_exact_match, math_strings_equivalent, normalize_math_string
+from .longbench import (
+    longbench_classification_score,
+    longbench_code_sim_score,
+    longbench_count_score,
+    longbench_qa_f1_score,
+    longbench_qa_f1_zh_score,
+    longbench_retrieval_score,
+    longbench_retrieval_zh_score,
+    longbench_rouge_score,
+    longbench_rouge_zh_score,
+)
 from .summary_rouge import summary_rouge_scores
 
 __all__ = [
@@ -66,6 +77,15 @@ __all__ = [
     "label_permutation_metric_name",
     "label_permutation_outcome",
     "label_permutations_for_mode",
+    "longbench_classification_score",
+    "longbench_code_sim_score",
+    "longbench_count_score",
+    "longbench_qa_f1_score",
+    "longbench_qa_f1_zh_score",
+    "longbench_retrieval_score",
+    "longbench_retrieval_zh_score",
+    "longbench_rouge_score",
+    "longbench_rouge_zh_score",
     "macro_f1",
     "math_exact_match",
     "math_strings_equivalent",

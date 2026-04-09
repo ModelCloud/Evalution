@@ -389,6 +389,46 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.lambada_openai_cloze)
     assert callable(evalution.benchmarks.lambada_standard)
     assert callable(evalution.benchmarks.lambada_standard_cloze)
+    assert evalution.benchmarks.LongBench is not None
+    assert evalution.benchmarks.LONG_BENCH_TASKS == (
+        "longbench_narrativeqa",
+        "longbench_qasper",
+        "longbench_multifieldqa_en",
+        "longbench_multifieldqa_zh",
+        "longbench_hotpotqa",
+        "longbench_2wikimqa",
+        "longbench_musique",
+        "longbench_dureader",
+        "longbench_gov_report",
+        "longbench_qmsum",
+        "longbench_multi_news",
+        "longbench_vcsum",
+        "longbench_trec",
+        "longbench_triviaqa",
+        "longbench_samsum",
+        "longbench_lsht",
+        "longbench_passage_count",
+        "longbench_passage_retrieval_en",
+        "longbench_passage_retrieval_zh",
+        "longbench_lcc",
+        "longbench_repobench_p",
+        "longbench_qasper_e",
+        "longbench_multifieldqa_en_e",
+        "longbench_hotpotqa_e",
+        "longbench_2wikimqa_e",
+        "longbench_gov_report_e",
+        "longbench_multi_news_e",
+        "longbench_trec_e",
+        "longbench_triviaqa_e",
+        "longbench_samsum_e",
+        "longbench_passage_count_e",
+        "longbench_passage_retrieval_en_e",
+        "longbench_lcc_e",
+        "longbench_repobench_p_e",
+    )
+    assert callable(evalution.benchmarks.longbench)
+    for factory_name in evalution.benchmarks.LONG_BENCH_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.LongBench2 is not None
     assert evalution.benchmarks.LONG_BENCH2_TASKS == (
         "longbench2_academic_multi",
