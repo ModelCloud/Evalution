@@ -101,6 +101,9 @@ _TEST_FACTORIES: dict[str, Any] = {
     "arc_mt_pl": benchmarks.arc_mt_pl,
     "arc_mt_pt": benchmarks.arc_mt_pt,
     "arc_mt_sv": benchmarks.arc_mt_sv,
+    "assin": benchmarks.assin,
+    "assin_entailment": benchmarks.assin_entailment,
+    "assin_paraphrase": benchmarks.assin_paraphrase,
     "arithmetic_1dc": benchmarks.arithmetic_1dc,
     "arithmetic_2da": benchmarks.arithmetic_2da,
     "arithmetic_2dm": benchmarks.arithmetic_2dm,
@@ -125,6 +128,8 @@ _TEST_FACTORIES: dict[str, Any] = {
     "bear": benchmarks.bear,
     "bear_big": benchmarks.bear_big,
     "belebele": benchmarks.belebele,
+    "belebele_por_Latn": benchmarks.belebele_por_Latn,
+    "belebele_spa_Latn": benchmarks.belebele_spa_Latn,
     "bbq": benchmarks.bbq,
     "blimp": benchmarks.blimp,
     "c4": benchmarks.c4,
@@ -156,6 +161,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "drop": benchmarks.drop,
     "fld": benchmarks.fld,
     "fda": benchmarks.fda,
+    "flores_pt": benchmarks.flores_pt,
     "french_bench_arc_challenge": benchmarks.french_bench_arc_challenge,
     "darijammlu": benchmarks.darijammlu,
     "egymmlu": benchmarks.egymmlu,
@@ -269,6 +275,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "rte": benchmarks.rte,
     "sciq": benchmarks.sciq,
     "scrolls": benchmarks.scrolls,
+    "spanish_bench": benchmarks.spanish_bench,
     "siqa": benchmarks.siqa,
     "storycloze": benchmarks.storycloze,
     "swag": benchmarks.swag,
@@ -721,3 +728,13 @@ for _kormedmcqa_task in benchmarks.KORMEDMCQA_TASKS:
     _TEST_FACTORIES[_kormedmcqa_task] = getattr(benchmarks, _kormedmcqa_task)
 
 del _kormedmcqa_task
+
+for _spanish_bench_task in benchmarks.SPANISH_BENCH_TASKS:
+    _TEST_FACTORIES[_spanish_bench_task] = getattr(benchmarks, _spanish_bench_task)
+
+del _spanish_bench_task
+
+for _flores_pt_task in benchmarks.FLORES_PT_TASKS:
+    _TEST_FACTORIES[_flores_pt_task] = getattr(benchmarks, _flores_pt_task)
+
+del _flores_pt_task

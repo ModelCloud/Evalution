@@ -20,6 +20,7 @@ from .arabicmmlu import ARABICMMLU_SUBSETS, ARABICMMLU_TASKS, ArabicMMLU, arabic
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .arc_mt import ARCMT, ARC_MT_LANGUAGES, ARC_MT_TASKS, arc_mt, arc_mt_da, arc_mt_de, arc_mt_el, arc_mt_es, arc_mt_fi, arc_mt_hu, arc_mt_is, arc_mt_it, arc_mt_nb, arc_mt_pl, arc_mt_pt, arc_mt_sv
+from .assin import ASSIN, ASSIN_VARIANTS, assin, assin_entailment, assin_paraphrase
 from .arithmetic import (
     Arithmetic,
     arithmetic_1dc,
@@ -41,7 +42,7 @@ from . import bbh as _bbh_module
 from .bbh import BBH, BBH_SUBSETS, BBH_TASKS, bbh
 from .bangla import BANGLA_SUBSETS, BANGLA_TASKS, Bangla, bangla, bangla_boolqa, bangla_commonsenseqa, bangla_mmlu, bangla_openbookqa, bangla_piqa
 from .bear import BEAR, bear, bear_big
-from .belebele import Belebele, belebele
+from .belebele import BELEBELE_LANGUAGE_TASKS, Belebele, belebele, belebele_por_Latn, belebele_spa_Latn
 from . import bbq as _bbq_module
 from .bbq import BBQ, BBQ_CATEGORIES, BBQ_TASKS, bbq
 from .base import BaseTestSuite, TestSuite
@@ -87,6 +88,8 @@ from .copa import COPA, copa
 from .drop import DROP, drop
 from .fld import FLD, FLD_LABELS, fld
 from .fda import FDA, fda
+from . import flores_pt as _flores_pt_module
+from .flores_pt import FLORES_PT_DIRECTIONS, FLORES_PT_TASKS, FloresPT, flores_pt
 from .french_bench_arc_challenge import FrenchBenchARCChallenge, french_bench_arc_challenge
 from . import eus_exams as _eus_exams_module
 from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
@@ -215,6 +218,8 @@ from . import scrolls as _scrolls_module
 from .scrolls import SCROLLS_TASKS, scrolls
 from .siqa import SIQA, siqa
 from .single_continuation import BaseSingleContinuationSuite, SingleContinuationSample
+from . import spanish_bench as _spanish_bench_module
+from .spanish_bench import SPANISH_BENCH_TASKS, SpanishBench, spanish_bench
 from . import storycloze as _storycloze_module
 from .storycloze import STORYCLOZE_TASKS, STORYCLOZE_YEARS, StoryCloze, storycloze
 from .swag import SWAG, swag
@@ -401,6 +406,16 @@ for _storycloze_task in STORYCLOZE_TASKS:
     globals()[_storycloze_task] = getattr(_storycloze_module, _storycloze_task)
 
 del _storycloze_task
+
+for _spanish_bench_task in SPANISH_BENCH_TASKS:
+    globals()[_spanish_bench_task] = getattr(_spanish_bench_module, _spanish_bench_task)
+
+del _spanish_bench_task
+
+for _flores_pt_task in FLORES_PT_TASKS:
+    globals()[_flores_pt_task] = getattr(_flores_pt_module, _flores_pt_task)
+
+del _flores_pt_task
 
 __all__ = [
     "ANLI",
@@ -692,6 +707,9 @@ __all__ = [
     "bear",
     "bear_big",
     "belebele",
+    "BELEBELE_LANGUAGE_TASKS",
+    "belebele_por_Latn",
+    "belebele_spa_Latn",
     "bbq",
     "blimp",
     "cabbq",
@@ -705,6 +723,11 @@ __all__ = [
     "ceval",
     "boolq",
     "cb",
+    "ASSIN",
+    "ASSIN_VARIANTS",
+    "assin",
+    "assin_entailment",
+    "assin_paraphrase",
     "cola",
     "cmmlu",
     "cnn_dailymail",
@@ -731,8 +754,13 @@ __all__ = [
     "FLD",
     "FLD_LABELS",
     "FDA",
+    "FLORES_PT_DIRECTIONS",
+    "FLORES_PT_TASKS",
     "fda",
     "fld",
+    "FloresPT",
+    "flores_pt",
+    *FLORES_PT_TASKS,
     "FrenchBenchARCChallenge",
     "french_bench_arc_challenge",
     "eus_exams",
@@ -866,6 +894,10 @@ __all__ = [
     "ruler",
     "rte",
     "scrolls",
+    "SPANISH_BENCH_TASKS",
+    "SpanishBench",
+    "spanish_bench",
+    *SPANISH_BENCH_TASKS,
     "sciq",
     "siqa",
     "storycloze",

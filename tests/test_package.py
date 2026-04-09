@@ -137,6 +137,22 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.arc_mt)
     for factory_name in evalution.benchmarks.ARC_MT_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.ASSIN is not None
+    assert evalution.benchmarks.ASSIN_VARIANTS == ("assin_entailment", "assin_paraphrase")
+    assert callable(evalution.benchmarks.assin)
+    assert callable(evalution.benchmarks.assin_entailment)
+    assert callable(evalution.benchmarks.assin_paraphrase)
+    assert evalution.benchmarks.SpanishBench is not None
+    assert evalution.benchmarks.SPANISH_BENCH_TASKS == (
+        "copa_es",
+        "escola",
+        "openbookqa_es",
+        "paws_es_spanish_bench",
+        "xnli_es_spanish_bench",
+    )
+    assert callable(evalution.benchmarks.spanish_bench)
+    for factory_name in evalution.benchmarks.SPANISH_BENCH_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.Arithmetic is not None
     for factory_name in (
         "arithmetic_1dc",
@@ -184,6 +200,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.bear_big)
     assert evalution.benchmarks.Belebele is not None
     assert callable(evalution.benchmarks.belebele)
+    assert evalution.benchmarks.BELEBELE_LANGUAGE_TASKS == (
+        "belebele_por_Latn",
+        "belebele_spa_Latn",
+    )
+    assert callable(evalution.benchmarks.belebele_por_Latn)
+    assert callable(evalution.benchmarks.belebele_spa_Latn)
     assert evalution.benchmarks.BBQ is not None
     assert evalution.benchmarks.BBQ_CATEGORIES
     assert evalution.benchmarks.BBQ_TASKS
@@ -258,6 +280,29 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.fld)
     assert evalution.benchmarks.FDA is not None
     assert callable(evalution.benchmarks.fda)
+    assert evalution.benchmarks.FloresPT is not None
+    assert evalution.benchmarks.FLORES_PT_DIRECTIONS == (
+        "ca-pt",
+        "de-pt",
+        "en-pt",
+        "es-pt",
+        "eu-pt",
+        "fr-pt",
+        "gl-pt",
+        "it-pt",
+        "pt-ca",
+        "pt-de",
+        "pt-en",
+        "pt-es",
+        "pt-eu",
+        "pt-fr",
+        "pt-gl",
+        "pt-it",
+    )
+    assert evalution.benchmarks.FLORES_PT_TASKS
+    assert callable(evalution.benchmarks.flores_pt)
+    for factory_name in evalution.benchmarks.FLORES_PT_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.FrenchBenchARCChallenge is not None
     assert callable(evalution.benchmarks.french_bench_arc_challenge)
     assert evalution.benchmarks.EusReading is not None

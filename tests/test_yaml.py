@@ -886,11 +886,78 @@ tests:
     assert ".run(benchmarks.mmlu_cf_biology(" in script
 
 
+def test_yaml_supports_belebele_language_aliases() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "belebele_por_Latn", "max_rows": 1},
+            {"type": "belebele_spa_Latn", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "belebele_por_Latn",
+        "belebele_spa_Latn",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: belebele_por_Latn
+    max_rows: 8
+  - type: belebele_spa_Latn
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.belebele_por_Latn(" in script
+    assert ".run(benchmarks.belebele_spa_Latn(" in script
+
+
+def test_yaml_supports_flores_pt_factories() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "flores_pt", "direction": "en-pt", "max_rows": 1},
+            {"type": "flores_pt_pt_en", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "flores_pt_en_pt",
+        "flores_pt_pt_en",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: flores_pt
+    direction: en-pt
+    max_rows: 8
+  - type: flores_pt_pt_en
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.flores_pt(" in script
+    assert ".run(benchmarks.flores_pt_pt_en(" in script
+
+
 def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
     suites = evalution_yaml._build_tests(
         [
             {"type": "storycloze_2016", "max_rows": 1},
             {"type": "paloma_dolma_v1_5", "max_rows": 1},
+            {"type": "assin", "variant": "assin_paraphrase", "max_rows": 1},
+            {"type": "assin_entailment", "max_rows": 1},
+            {"type": "spanish_bench", "task": "copa_es", "max_rows": 1},
+            {"type": "openbookqa_es", "max_rows": 1},
             {"type": "longbench", "subset": "repobench-p_e", "max_rows": 1},
             {"type": "longbench_repobench_p", "max_rows": 1},
             {"type": "longbench2_academic_single", "max_rows": 1},
@@ -906,6 +973,10 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
     assert [suite.task_name() for suite in suites] == [
         "storycloze_2016",
         "paloma_dolma_v1_5",
+        "assin_paraphrase",
+        "assin_entailment",
+        "copa_es",
+        "openbookqa_es",
         "longbench_repobench_p_e",
         "longbench_repobench_p",
         "longbench2_academic_single",
@@ -930,6 +1001,16 @@ tests:
     year: "2016"
     max_rows: 8
   - type: paloma_dolma_v1_5
+    max_rows: 8
+  - type: assin
+    variant: assin_paraphrase
+    max_rows: 8
+  - type: assin_entailment
+    max_rows: 8
+  - type: spanish_bench
+    task: copa_es
+    max_rows: 8
+  - type: openbookqa_es
     max_rows: 8
   - type: longbench
     subset: repobench-p_e
@@ -967,6 +1048,10 @@ tests:
 
     assert ".run(benchmarks.storycloze(" in script
     assert ".run(benchmarks.paloma_dolma_v1_5(" in script
+    assert ".run(benchmarks.assin(" in script
+    assert ".run(benchmarks.assin_entailment(" in script
+    assert ".run(benchmarks.spanish_bench(" in script
+    assert ".run(benchmarks.openbookqa_es(" in script
     assert ".run(benchmarks.longbench(" in script
     assert ".run(benchmarks.longbench_repobench_p(" in script
     assert ".run(benchmarks.longbench2(" in script

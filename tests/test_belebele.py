@@ -99,3 +99,15 @@ def test_belebele_rejects_empty_language() -> None:
 def test_belebele_rejects_dataset_name_mismatch() -> None:
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.belebele(language="eng_Latn", dataset_name="fra_Latn")
+
+
+def test_belebele_language_aliases_bind_expected_dataset_configs() -> None:
+    portuguese = evalution.benchmarks.belebele_por_Latn(max_rows=1)
+    spanish = evalution.benchmarks.belebele_spa_Latn(max_rows=1)
+
+    assert portuguese.task_name() == "belebele_por_Latn"
+    assert portuguese.language == "por_Latn"
+    assert portuguese.dataset_name == "por_Latn"
+    assert spanish.task_name() == "belebele_spa_Latn"
+    assert spanish.language == "spa_Latn"
+    assert spanish.dataset_name == "spa_Latn"

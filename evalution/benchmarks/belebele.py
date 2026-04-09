@@ -13,6 +13,11 @@ from datasets import load_dataset
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
 _BELEBELE_LABELS = ("A", "B", "C", "D")
+# Add the explicit regional-suite aliases that upstream family bundles reference directly.
+BELEBELE_LANGUAGE_TASKS = (
+    "belebele_por_Latn",
+    "belebele_spa_Latn",
+)
 
 
 def _belebele_prompt(doc: dict[str, Any]) -> str:
@@ -72,3 +77,17 @@ class Belebele(BaseMultipleChoiceSuite):
 def belebele(*, language: str, **kwargs: Any) -> Belebele:
     kwargs.setdefault("dataset_name", language)
     return Belebele(language=language, **kwargs)
+
+
+def _make_belebele_language_factory(language: str) -> Any:
+    def factory(**kwargs: Any) -> Belebele:
+        return belebele(language=language, **kwargs)
+
+    factory.__name__ = f"belebele_{language}"
+    return factory
+
+
+for _language in ("por_Latn", "spa_Latn"):
+    globals()[f"belebele_{_language}"] = _make_belebele_language_factory(_language)
+
+del _language
