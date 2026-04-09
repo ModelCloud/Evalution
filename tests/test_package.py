@@ -148,6 +148,7 @@ def test_package_exports_benchmarks_namespace() -> None:
         "escola",
         "openbookqa_es",
         "paws_es_spanish_bench",
+        "wnli_es",
         "xnli_es_spanish_bench",
     )
     assert callable(evalution.benchmarks.spanish_bench)
@@ -233,6 +234,8 @@ def test_package_exports_benchmarks_namespace() -> None:
         assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.CoLA is not None
     assert callable(evalution.benchmarks.cola)
+    assert evalution.benchmarks.CocoterosES is not None
+    assert callable(evalution.benchmarks.cocoteros_es)
     assert evalution.benchmarks.CNNDailyMail is not None
     assert callable(evalution.benchmarks.cnn_dailymail)
     assert evalution.benchmarks.CMMLU is not None
@@ -302,6 +305,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.FLORES_PT_TASKS
     assert callable(evalution.benchmarks.flores_pt)
     for factory_name in evalution.benchmarks.FLORES_PT_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.FloresES is not None
+    assert evalution.benchmarks.FLORES_ES_DIRECTIONS
+    assert evalution.benchmarks.FLORES_ES_TASKS
+    assert callable(evalution.benchmarks.flores_es)
+    for factory_name in evalution.benchmarks.FLORES_ES_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.FrenchBenchARCChallenge is not None
     assert callable(evalution.benchmarks.french_bench_arc_challenge)
@@ -514,6 +523,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.MGSM_LANGUAGES
     assert evalution.benchmarks.MGSM_TASKS
     assert callable(evalution.benchmarks.mgsm)
+    assert evalution.benchmarks.MGSMDirectESSpanishBench is not None
+    assert callable(evalution.benchmarks.mgsm_direct_es_spanish_bench)
     for factory_name in evalution.benchmarks.MGSM_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.MLQA is not None
@@ -698,6 +709,7 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.wsc273)
     assert evalution.benchmarks.WNLI is not None
     assert callable(evalution.benchmarks.wnli)
+    assert callable(evalution.benchmarks.wnli_es)
     assert evalution.benchmarks.XCOPA is not None
     assert callable(evalution.benchmarks.xcopa)
     assert callable(evalution.benchmarks.xcopa_et)

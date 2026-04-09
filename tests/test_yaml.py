@@ -949,6 +949,93 @@ tests:
     assert ".run(benchmarks.flores_pt_pt_en(" in script
 
 
+def test_yaml_supports_flores_es_factories() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "flores_es", "direction": "en-es", "max_rows": 1},
+            {"type": "flores_es_es_pt", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "flores_es_en_es",
+        "flores_es_es_pt",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: flores_es
+    direction: en-es
+    max_rows: 8
+  - type: flores_es_es_pt
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.flores_es(" in script
+    assert ".run(benchmarks.flores_es_es_pt(" in script
+
+
+def test_yaml_supports_remaining_spanish_bench_suite_factories() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "wnli_es", "max_rows": 1},
+            {"type": "mgsm_direct_es_spanish_bench", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "wnli_es",
+        "mgsm_direct_es_spanish_bench",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: wnli_es
+    max_rows: 8
+  - type: mgsm_direct_es_spanish_bench
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.wnli_es(" in script
+    assert ".run(benchmarks.mgsm_direct_es_spanish_bench(" in script
+
+
+def test_yaml_supports_cocoteros_es_factory() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "cocoteros_es", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == ["cocoteros_es"]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: cocoteros_es
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.cocoteros_es(" in script
+
+
 def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
     suites = evalution_yaml._build_tests(
         [
@@ -958,6 +1045,10 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
             {"type": "assin_entailment", "max_rows": 1},
             {"type": "spanish_bench", "task": "copa_es", "max_rows": 1},
             {"type": "openbookqa_es", "max_rows": 1},
+            {"type": "wnli_es", "max_rows": 1},
+            {"type": "mgsm_direct_es_spanish_bench", "max_rows": 1},
+            {"type": "flores_es_en_es", "max_rows": 1},
+            {"type": "cocoteros_es", "max_rows": 1},
             {"type": "longbench", "subset": "repobench-p_e", "max_rows": 1},
             {"type": "longbench_repobench_p", "max_rows": 1},
             {"type": "longbench2_academic_single", "max_rows": 1},
@@ -977,6 +1068,10 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
         "assin_entailment",
         "copa_es",
         "openbookqa_es",
+        "wnli_es",
+        "mgsm_direct_es_spanish_bench",
+        "flores_es_en_es",
+        "cocoteros_es",
         "longbench_repobench_p_e",
         "longbench_repobench_p",
         "longbench2_academic_single",
@@ -1011,6 +1106,14 @@ tests:
     task: copa_es
     max_rows: 8
   - type: openbookqa_es
+    max_rows: 8
+  - type: wnli_es
+    max_rows: 8
+  - type: mgsm_direct_es_spanish_bench
+    max_rows: 8
+  - type: flores_es_en_es
+    max_rows: 8
+  - type: cocoteros_es
     max_rows: 8
   - type: longbench
     subset: repobench-p_e
@@ -1052,6 +1155,10 @@ tests:
     assert ".run(benchmarks.assin_entailment(" in script
     assert ".run(benchmarks.spanish_bench(" in script
     assert ".run(benchmarks.openbookqa_es(" in script
+    assert ".run(benchmarks.wnli_es(" in script
+    assert ".run(benchmarks.mgsm_direct_es_spanish_bench(" in script
+    assert ".run(benchmarks.flores_es_en_es(" in script
+    assert ".run(benchmarks.cocoteros_es(" in script
     assert ".run(benchmarks.longbench(" in script
     assert ".run(benchmarks.longbench_repobench_p(" in script
     assert ".run(benchmarks.longbench2(" in script

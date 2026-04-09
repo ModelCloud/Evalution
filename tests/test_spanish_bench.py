@@ -227,6 +227,59 @@ def test_paws_es_scores_full_sentence_choices_without_leading_space(monkeypatch)
     assert result.samples[0].target.endswith("Sí, la excepción se dio entre fines del 2005 y 2009.")
 
 
+def test_wnli_es_scores_true_false_multiple_choice_accuracy(monkeypatch) -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "index": 0,
+                "sentence1": "El desagüe se ha atascado con pelo. Hay que limpiarlo.",
+                "sentence2": "Hay que limpiar el pelo.",
+                "label": 0,
+            },
+            {
+                "index": 1,
+                "sentence1": "Jane llamó a la puerta de Susan, pero no respondió.",
+                "sentence2": "Susan no respondió.",
+                "label": 1,
+            },
+        ]
+    )
+    monkeypatch.setattr(spanish_bench_module, "load_wnli_es_dataset", lambda *args, **kwargs: dataset)
+
+    class FakeSession:
+        def loglikelihood(self, requests, *, batch_size=None):
+            assert batch_size == 4
+            assert len(requests) == 4
+            assert requests[0].context == (
+                "El desagüe se ha atascado con pelo. Hay que limpiarlo.\n"
+                "Pregunta: Hay que limpiar el pelo. ¿Verdadero o Falso?\n"
+                "Respuesta:"
+            )
+            assert requests[0].continuation == " Falso"
+            assert requests[1].continuation == " Verdadero"
+            return [
+                LoglikelihoodOutput(logprob=-0.1, is_greedy=True, token_count=1),
+                LoglikelihoodOutput(logprob=-2.0, is_greedy=False, token_count=1),
+                LoglikelihoodOutput(logprob=-3.0, is_greedy=False, token_count=1),
+                LoglikelihoodOutput(logprob=-0.2, is_greedy=True, token_count=1),
+            ]
+
+    result = evalution.benchmarks.wnli_es(max_rows=2, batch_size=4).evaluate(FakeSession())
+
+    assert result.name == "wnli_es"
+    assert result.metrics == {
+        "acc,ll": 1.0,
+        "acc,ll_avg": 1.0,
+    }
+    assert result.metadata["dataset_path"] == "PlanTL-GOB-ES/wnli-es"
+    assert result.metadata["dataset_name"] is None
+    assert result.metadata["split"] == "validation"
+    assert result.samples[0].target == "Falso"
+    assert result.samples[0].prediction == "Falso"
+    assert result.samples[0].metadata["idx"] == 0
+    assert result.samples[1].target == "Verdadero"
+
+
 def test_xnli_es_scores_full_sentence_choices_without_leading_space(monkeypatch) -> None:
     dataset = Dataset.from_list(
         [
@@ -283,8 +336,14 @@ def test_spanish_bench_dispatch_and_validation() -> None:
     assert suite.dataset_name is None
     assert suite.split == "test"
 
+    wnli_suite = evalution.benchmarks.spanish_bench(task="wnli_es", max_rows=1)
+    assert wnli_suite.task_name() == "wnli_es"
+    assert wnli_suite.dataset_path == "PlanTL-GOB-ES/wnli-es"
+    assert wnli_suite.dataset_name is None
+    assert wnli_suite.split == "validation"
+
     with pytest.raises(ValueError, match="unsupported spanish_bench task"):
-        evalution.benchmarks.spanish_bench(task="wnli_es")
+        evalution.benchmarks.spanish_bench(task="cocoteros_es")
 
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.spanish_bench(task="paws_es_spanish_bench", dataset_name="en")

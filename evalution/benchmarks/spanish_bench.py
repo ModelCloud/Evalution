@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from evalution.benchmarks.multiple_choice_utils import choice_index_from_labels
+from evalution.datasets.wnli_es import load_wnli_es_dataset
 from evalution.scorers.classification import matthews_corrcoef
 
 # Keep the supported SpanishBench task names explicit so registry wiring and validation
@@ -21,6 +22,7 @@ SPANISH_BENCH_TASKS = (
     "escola",
     "openbookqa_es",
     "paws_es_spanish_bench",
+    "wnli_es",
     "xnli_es_spanish_bench",
 )
 
@@ -53,6 +55,11 @@ _SPANISH_BENCH_CONFIGS = {
         dataset_path="paws-x",
         dataset_name="es",
         split="test",
+    ),
+    "wnli_es": _SpanishBenchConfig(
+        dataset_path="PlanTL-GOB-ES/wnli-es",
+        dataset_name=None,
+        split="validation",
     ),
     "xnli_es_spanish_bench": _SpanishBenchConfig(
         dataset_path="xnli",
@@ -124,6 +131,11 @@ def _xnli_es_choices(premise: str, hypothesis: str) -> list[str]:
     ]
 
 
+def _wnli_es_prompt(sentence1: str, sentence2: str) -> str:
+    # Match the public SpanishBench prompt wording for the translated Winograd NLI task.
+    return f"{sentence1.strip()}\nPregunta: {sentence2.strip()} ¿Verdadero o Falso?\nRespuesta:"
+
+
 @dataclass(slots=True)
 class SpanishBench(BaseMultipleChoiceSuite):
     # Evaluate the currently implementable SpanishBench multiple-choice tasks with task-specific prompts.
@@ -153,6 +165,8 @@ class SpanishBench(BaseMultipleChoiceSuite):
             raise ValueError("spanish_bench split must match the configured task")
 
     def dataset_loader(self) -> Any:
+        if self.task == "wnli_es":
+            return load_wnli_es_dataset
         return load_dataset
 
     def task_name(self) -> str:
@@ -221,6 +235,15 @@ class SpanishBench(BaseMultipleChoiceSuite):
                     "sentence1": _normalize_inline_text(sentence1).strip(),
                     "sentence2": _normalize_inline_text(sentence2).strip(),
                 },
+            )
+
+        if self.task == "wnli_es":
+            return MultipleChoiceSample(
+                index=index,
+                prompt=_wnli_es_prompt(str(doc["sentence1"]), str(doc["sentence2"])),
+                choices=["Falso", "Verdadero"],
+                gold_index=int(doc["label"]),
+                metadata={"idx": int(doc["index"])},
             )
 
         if self.task == "xnli_es_spanish_bench":

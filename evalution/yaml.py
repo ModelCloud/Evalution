@@ -150,6 +150,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "code2text_php": benchmarks.code2text_php,
     "code2text_python": benchmarks.code2text_python,
     "code2text_ruby": benchmarks.code2text_ruby,
+    "cocoteros_es": benchmarks.cocoteros_es,
     "commonsense_qa": benchmarks.commonsense_qa,
     "copa_ar": benchmarks.copa_ar,
     "copal_id_colloquial": benchmarks.copal_id_colloquial,
@@ -161,6 +162,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "drop": benchmarks.drop,
     "fld": benchmarks.fld,
     "fda": benchmarks.fda,
+    "flores_es": benchmarks.flores_es,
     "flores_pt": benchmarks.flores_pt,
     "french_bench_arc_challenge": benchmarks.french_bench_arc_challenge,
     "darijammlu": benchmarks.darijammlu,
@@ -225,6 +227,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "mbpp": benchmarks.mbpp,
     "mathqa": benchmarks.mathqa,
     "mgsm": benchmarks.mgsm,
+    "mgsm_direct_es_spanish_bench": benchmarks.mgsm_direct_es_spanish_bench,
     "mlqa": benchmarks.mlqa,
     "mastermind_24_easy": benchmarks.mastermind_24_easy,
     "mastermind_24_hard": benchmarks.mastermind_24_hard,
@@ -733,6 +736,11 @@ for _spanish_bench_task in benchmarks.SPANISH_BENCH_TASKS:
     _TEST_FACTORIES[_spanish_bench_task] = getattr(benchmarks, _spanish_bench_task)
 
 del _spanish_bench_task
+
+for _flores_es_task in benchmarks.FLORES_ES_TASKS:
+    _TEST_FACTORIES[_flores_es_task] = getattr(benchmarks, _flores_es_task)
+
+del _flores_es_task
 
 for _flores_pt_task in benchmarks.FLORES_PT_TASKS:
     _TEST_FACTORIES[_flores_pt_task] = getattr(benchmarks, _flores_pt_task)

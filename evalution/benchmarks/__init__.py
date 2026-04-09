@@ -73,6 +73,7 @@ from .code_x_glue import (
     code2text_python,
     code2text_ruby,
 )
+from .cocoteros_es import CocoterosES, cocoteros_es
 from . import crows_pairs as _crows_pairs_module
 from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .crows_pairs import CROWS_PAIRS_BIAS_TYPES, CROWS_PAIRS_LANGUAGES, CROWS_PAIRS_TASKS, CrowSPairs, crows_pairs
@@ -88,6 +89,8 @@ from .copa import COPA, copa
 from .drop import DROP, drop
 from .fld import FLD, FLD_LABELS, fld
 from .fda import FDA, fda
+from . import flores_es as _flores_es_module
+from .flores_es import FLORES_ES_DIRECTIONS, FLORES_ES_TASKS, FloresES, flores_es
 from . import flores_pt as _flores_pt_module
 from .flores_pt import FLORES_PT_DIRECTIONS, FLORES_PT_TASKS, FloresPT, flores_pt
 from .french_bench_arc_challenge import FrenchBenchARCChallenge, french_bench_arc_challenge
@@ -176,6 +179,7 @@ from .mastermind import (
 )
 from . import mgsm as _mgsm_module
 from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
+from .mgsm_direct_es_spanish_bench import MGSMDirectESSpanishBench, mgsm_direct_es_spanish_bench
 from . import mlqa as _mlqa_module
 from .mlqa import MLQA, MLQA_LANGUAGES, MLQA_TASKS, mlqa
 from .medmcqa import MedMCQA, medmcqa
@@ -411,6 +415,11 @@ for _spanish_bench_task in SPANISH_BENCH_TASKS:
     globals()[_spanish_bench_task] = getattr(_spanish_bench_module, _spanish_bench_task)
 
 del _spanish_bench_task
+
+for _flores_es_task in FLORES_ES_TASKS:
+    globals()[_flores_es_task] = getattr(_flores_es_module, _flores_es_task)
+
+del _flores_es_task
 
 for _flores_pt_task in FLORES_PT_TASKS:
     globals()[_flores_pt_task] = getattr(_flores_pt_module, _flores_pt_task)
@@ -738,6 +747,8 @@ __all__ = [
     "code2text_php",
     "code2text_python",
     "code2text_ruby",
+    "CocoterosES",
+    "cocoteros_es",
     "commonsense_qa",
     "crows_pairs",
     *CROWS_PAIRS_TASKS,
@@ -754,10 +765,15 @@ __all__ = [
     "FLD",
     "FLD_LABELS",
     "FDA",
+    "FLORES_ES_DIRECTIONS",
+    "FLORES_ES_TASKS",
     "FLORES_PT_DIRECTIONS",
     "FLORES_PT_TASKS",
     "fda",
     "fld",
+    "FloresES",
+    "flores_es",
+    *FLORES_ES_TASKS,
     "FloresPT",
     "flores_pt",
     *FLORES_PT_TASKS,
@@ -845,9 +861,11 @@ __all__ = [
     "macro_f1",
     "matthews_corrcoef",
     "MGSM",
+    "MGSMDirectESSpanishBench",
     "MGSM_LANGUAGES",
     "MGSM_TASKS",
     "mgsm",
+    "mgsm_direct_es_spanish_bench",
     "mlqa",
     "mmlu",
     "MMLUCF",
