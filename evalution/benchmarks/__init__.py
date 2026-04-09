@@ -249,6 +249,7 @@ from .xstorycloze import XSTORYCLOZE_LANGUAGES, XStoryCloze, xstorycloze, xstory
 from . import xnli as _xnli_module
 from .xnli import XNLI, XNLI_LANGUAGES, XNLI_TASKS, xnli
 from .xnli_eu import XNLIEU, xnli_eu
+from .xlsum_es import XLSUMES, xlsum_es
 from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinograd_jp, xwinograd_pt, xwinograd_ru, xwinograd_zh
 
 for _crows_pairs_task in CROWS_PAIRS_TASKS:
@@ -971,6 +972,8 @@ __all__ = [
     "xstorycloze_zh",
     "xnli",
     "xnli_eu",
+    "XLSUMES",
+    "xlsum_es",
     "xwinograd",
     "xwinograd_en",
     "xwinograd_fr",

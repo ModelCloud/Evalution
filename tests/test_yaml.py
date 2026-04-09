@@ -1036,6 +1036,30 @@ tests:
     assert ".run(benchmarks.cocoteros_es(" in script
 
 
+def test_yaml_supports_xlsum_es_factory() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "xlsum_es", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == ["xlsum_es"]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: xlsum_es
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.xlsum_es(" in script
+
+
 def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
     suites = evalution_yaml._build_tests(
         [
@@ -1049,6 +1073,7 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
             {"type": "mgsm_direct_es_spanish_bench", "max_rows": 1},
             {"type": "flores_es_en_es", "max_rows": 1},
             {"type": "cocoteros_es", "max_rows": 1},
+            {"type": "xlsum_es", "max_rows": 1},
             {"type": "longbench", "subset": "repobench-p_e", "max_rows": 1},
             {"type": "longbench_repobench_p", "max_rows": 1},
             {"type": "longbench2_academic_single", "max_rows": 1},
@@ -1072,6 +1097,7 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
         "mgsm_direct_es_spanish_bench",
         "flores_es_en_es",
         "cocoteros_es",
+        "xlsum_es",
         "longbench_repobench_p_e",
         "longbench_repobench_p",
         "longbench2_academic_single",
@@ -1114,6 +1140,8 @@ tests:
   - type: flores_es_en_es
     max_rows: 8
   - type: cocoteros_es
+    max_rows: 8
+  - type: xlsum_es
     max_rows: 8
   - type: longbench
     subset: repobench-p_e
@@ -1159,6 +1187,7 @@ tests:
     assert ".run(benchmarks.mgsm_direct_es_spanish_bench(" in script
     assert ".run(benchmarks.flores_es_en_es(" in script
     assert ".run(benchmarks.cocoteros_es(" in script
+    assert ".run(benchmarks.xlsum_es(" in script
     assert ".run(benchmarks.longbench(" in script
     assert ".run(benchmarks.longbench_repobench_p(" in script
     assert ".run(benchmarks.longbench2(" in script

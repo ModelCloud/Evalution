@@ -710,6 +710,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert evalution.benchmarks.WNLI is not None
     assert callable(evalution.benchmarks.wnli)
     assert callable(evalution.benchmarks.wnli_es)
+    assert evalution.benchmarks.XLSUMES is not None
+    assert callable(evalution.benchmarks.xlsum_es)
     assert evalution.benchmarks.XCOPA is not None
     assert callable(evalution.benchmarks.xcopa)
     assert callable(evalution.benchmarks.xcopa_et)

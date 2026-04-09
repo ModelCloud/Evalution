@@ -329,6 +329,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "xstorycloze_zh": benchmarks.xstorycloze_zh,
     "xnli": benchmarks.xnli,
     "xnli_eu": benchmarks.xnli_eu,
+    "xlsum_es": benchmarks.xlsum_es,
     "xwinograd_en": benchmarks.xwinograd_en,
     "xwinograd_fr": benchmarks.xwinograd_fr,
     "xwinograd_jp": benchmarks.xwinograd_jp,
