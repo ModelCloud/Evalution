@@ -405,6 +405,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mgsm)
     for factory_name in evalution.benchmarks.MGSM_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.MLQA is not None
+    assert evalution.benchmarks.MLQA_LANGUAGES
+    assert evalution.benchmarks.MLQA_TASKS
+    assert callable(evalution.benchmarks.mlqa)
+    for factory_name in evalution.benchmarks.MLQA_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.Mastermind is not None
     assert evalution.benchmarks.MASTERMIND_VARIANTS == (
         "mastermind_24_easy",
@@ -437,6 +443,10 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mmlu)
     assert evalution.benchmarks.MMLUPro is not None
     assert callable(evalution.benchmarks.mmlu_pro)
+    assert evalution.benchmarks.MMLUProPlus is not None
+    assert callable(evalution.benchmarks.mmlu_pro_plus)
+    assert evalution.benchmarks.MMLURedux is not None
+    assert callable(evalution.benchmarks.mmlu_redux)
     assert evalution.benchmarks.MNLI is not None
     assert callable(evalution.benchmarks.mnli)
     assert evalution.benchmarks.MRPC is not None
@@ -449,6 +459,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.nq_open)
     assert evalution.benchmarks.OpenBookQA is not None
     assert callable(evalution.benchmarks.openbookqa)
+    assert evalution.benchmarks.PALOMA_SUBSETS
+    assert evalution.benchmarks.PALOMA_TASKS
+    assert evalution.benchmarks.Paloma is not None
+    assert callable(evalution.benchmarks.paloma)
+    for factory_name in evalution.benchmarks.PALOMA_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.PAWSX is not None
     assert callable(evalution.benchmarks.paws_x)
     assert callable(evalution.benchmarks.paws_x_de)
@@ -473,6 +489,13 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.prost)
     assert evalution.benchmarks.PubMedQA is not None
     assert callable(evalution.benchmarks.pubmedqa)
+    assert evalution.benchmarks.QASPER_TASKS
+    assert evalution.benchmarks.QASPER_VARIANTS == ("bool", "freeform")
+    assert evalution.benchmarks.QASPERBool is not None
+    assert evalution.benchmarks.QASPERFreeform is not None
+    assert callable(evalution.benchmarks.qasper)
+    assert callable(evalution.benchmarks.qasper_bool)
+    assert callable(evalution.benchmarks.qasper_freeform)
     assert evalution.benchmarks.QA4MRE is not None
     assert callable(evalution.benchmarks.qa4mre)
     assert callable(evalution.benchmarks.qa4mre_2011)
@@ -493,6 +516,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.sciq)
     assert evalution.benchmarks.SIQA is not None
     assert callable(evalution.benchmarks.siqa)
+    assert evalution.benchmarks.StoryCloze is not None
+    assert evalution.benchmarks.STORYCLOZE_YEARS == ("2016", "2018")
+    assert evalution.benchmarks.STORYCLOZE_TASKS == ("storycloze_2016", "storycloze_2018")
+    assert callable(evalution.benchmarks.storycloze)
+    for factory_name in evalution.benchmarks.STORYCLOZE_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.SWAG is not None
     assert callable(evalution.benchmarks.swag)
     assert evalution.benchmarks.SST2 is not None

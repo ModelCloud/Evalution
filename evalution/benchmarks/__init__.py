@@ -169,6 +169,8 @@ from .mastermind import (
 )
 from . import mgsm as _mgsm_module
 from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
+from . import mlqa as _mlqa_module
+from .mlqa import MLQA, MLQA_LANGUAGES, MLQA_TASKS, mlqa
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mc_taco import MCTACO, mc_taco
@@ -176,6 +178,8 @@ from .mmlu import MMLU, mmlu
 from . import mmlu_cf as _mmlu_cf_module
 from .mmlu_cf import MMLUCF, MMLU_CF_SUBJECTS, MMLU_CF_TASKS, mmlu_cf
 from .mmlu_pro import MMLUPro, mmlu_pro
+from .mmlu_pro_plus import MMLUProPlus, mmlu_pro_plus
+from .mmlu_redux import MMLURedux, mmlu_redux
 from .mnli import MNLI, mnli
 from .mrpc import MRPC, mrpc
 from .multirc import MultiRC, multirc
@@ -184,12 +188,15 @@ from .nq_open import NQOpen, nq_open
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
+from . import paloma as _paloma_module
+from .paloma import PALOMA_SUBSETS, PALOMA_TASKS, Paloma, paloma
 from .paws_x import PAWSX, paws_x, paws_x_de, paws_x_en, paws_x_es, paws_x_fr, paws_x_ja, paws_x_ko, paws_x_zh
 from .piqa import PIQA, piqa
 from .pile_10k import Pile10K, pile_10k
 from .polemo2 import POLEMO2_VARIANTS, Polemo2, polemo2, polemo2_in, polemo2_out
 from .prost import Prost, prost
 from .pubmedqa import PubMedQA, pubmedqa
+from .qasper import QASPER_TASKS, QASPER_VARIANTS, QASPERBool, QASPERFreeform, qasper, qasper_bool, qasper_freeform
 from .qa4mre import QA4MRE, qa4mre, qa4mre_2011, qa4mre_2012, qa4mre_2013
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
@@ -200,6 +207,8 @@ from .rte import RTE, rte
 from .sciq import SciQ, sciq
 from .siqa import SIQA, siqa
 from .single_continuation import BaseSingleContinuationSuite, SingleContinuationSample
+from . import storycloze as _storycloze_module
+from .storycloze import STORYCLOZE_TASKS, STORYCLOZE_YEARS, StoryCloze, storycloze
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .squadv2 import SQuADV2, squadv2
@@ -310,6 +319,16 @@ for _mmlu_cf_task in MMLU_CF_TASKS:
 
 del _mmlu_cf_task
 
+for _mlqa_task in MLQA_TASKS:
+    globals()[_mlqa_task] = getattr(_mlqa_module, _mlqa_task)
+
+del _mlqa_task
+
+for _paloma_task in PALOMA_TASKS:
+    globals()[_paloma_task] = getattr(_paloma_module, _paloma_task)
+
+del _paloma_task
+
 for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
 
@@ -349,6 +368,11 @@ for _wmdp_task in WMDP_TASKS:
     globals()[_wmdp_task] = getattr(_wmdp_module, _wmdp_task)
 
 del _wmdp_task
+
+for _storycloze_task in STORYCLOZE_TASKS:
+    globals()[_storycloze_task] = getattr(_storycloze_module, _storycloze_task)
+
+del _storycloze_task
 
 __all__ = [
     "ANLI",
@@ -488,7 +512,12 @@ __all__ = [
     "MedQA",
     "MCTACO",
     "MMLU",
+    "MLQA",
+    "MLQA_LANGUAGES",
+    "MLQA_TASKS",
     "MMLUPro",
+    "MMLUProPlus",
+    "MMLURedux",
     "MNLI",
     "MRPC",
     "MultiRC",
@@ -497,6 +526,9 @@ __all__ = [
     "MultipleChoiceSample",
     "OpenBookQA",
     "PAWSX",
+    "PALOMA_SUBSETS",
+    "PALOMA_TASKS",
+    "Paloma",
     "PIQAArabic",
     "PIQA",
     "Pile10K",
@@ -504,6 +536,10 @@ __all__ = [
     "Polemo2",
     "Prost",
     "PubMedQA",
+    "QASPER_TASKS",
+    "QASPER_VARIANTS",
+    "QASPERBool",
+    "QASPERFreeform",
     "QA4MRE",
     "QNLI",
     "QQP",
@@ -514,6 +550,9 @@ __all__ = [
     "SciQ",
     "SIQA",
     "SingleContinuationSample",
+    "StoryCloze",
+    "STORYCLOZE_TASKS",
+    "STORYCLOZE_YEARS",
     "SWAG",
     "SQuADV2",
     "SST2",
@@ -742,18 +781,22 @@ __all__ = [
     "MGSM_LANGUAGES",
     "MGSM_TASKS",
     "mgsm",
+    "mlqa",
     "mmlu",
     "MMLUCF",
     "MMLU_CF_SUBJECTS",
     "MMLU_CF_TASKS",
     "mmlu_cf",
     "mmlu_pro",
+    "mmlu_pro_plus",
+    "mmlu_redux",
     "mnli",
     "mrpc",
     "multirc",
     "mutual",
     "nq_open",
     "openbookqa",
+    "paloma",
     "paws_x",
     "paws_x_de",
     "paws_x_en",
@@ -770,6 +813,9 @@ __all__ = [
     "polemo2_out",
     "prost",
     "pubmedqa",
+    "qasper",
+    "qasper_bool",
+    "qasper_freeform",
     "qa4mre",
     "qa4mre_2011",
     "qa4mre_2012",
@@ -781,6 +827,7 @@ __all__ = [
     "rte",
     "sciq",
     "siqa",
+    "storycloze",
     "swag",
     "squadv2",
     "toxigen",
@@ -857,8 +904,12 @@ __all__.extend(CMMLU_TASKS)
 __all__.extend(KMMLU_TASKS)
 __all__.extend(MGSM_TASKS)
 __all__.extend(MMLU_CF_TASKS)
+__all__.extend(MLQA_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
+__all__.extend(PALOMA_TASKS)
+__all__.extend(QASPER_TASKS)
+__all__.extend(STORYCLOZE_TASKS)
 __all__.extend(WMDP_TASKS)
 __all__.extend(XNLI_TASKS)
 __all__.extend(XQUAD_TASKS)

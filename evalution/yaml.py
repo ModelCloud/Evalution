@@ -217,6 +217,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "mbpp": benchmarks.mbpp,
     "mathqa": benchmarks.mathqa,
     "mgsm": benchmarks.mgsm,
+    "mlqa": benchmarks.mlqa,
     "mastermind_24_easy": benchmarks.mastermind_24_easy,
     "mastermind_24_hard": benchmarks.mastermind_24_hard,
     "mastermind_35_easy": benchmarks.mastermind_35_easy,
@@ -229,12 +230,15 @@ _TEST_FACTORIES: dict[str, Any] = {
     "mmlu": benchmarks.mmlu,
     "mmlu_cf": benchmarks.mmlu_cf,
     "mmlu_pro": benchmarks.mmlu_pro,
+    "mmlu_pro_plus": benchmarks.mmlu_pro_plus,
+    "mmlu_redux": benchmarks.mmlu_redux,
     "mnli": benchmarks.mnli,
     "mrpc": benchmarks.mrpc,
     "multirc": benchmarks.multirc,
     "mutual": benchmarks.mutual,
     "nq_open": benchmarks.nq_open,
     "openbookqa": benchmarks.openbookqa,
+    "paloma": benchmarks.paloma,
     "paws_x_de": benchmarks.paws_x_de,
     "paws_x_en": benchmarks.paws_x_en,
     "paws_x_es": benchmarks.paws_x_es,
@@ -249,6 +253,9 @@ _TEST_FACTORIES: dict[str, Any] = {
     "polemo2_out": benchmarks.polemo2_out,
     "prost": benchmarks.prost,
     "pubmedqa": benchmarks.pubmedqa,
+    "qasper": benchmarks.qasper,
+    "qasper_bool": benchmarks.qasper_bool,
+    "qasper_freeform": benchmarks.qasper_freeform,
     "qa4mre_2011": benchmarks.qa4mre_2011,
     "qa4mre_2012": benchmarks.qa4mre_2012,
     "qa4mre_2013": benchmarks.qa4mre_2013,
@@ -259,6 +266,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "rte": benchmarks.rte,
     "sciq": benchmarks.sciq,
     "siqa": benchmarks.siqa,
+    "storycloze": benchmarks.storycloze,
     "swag": benchmarks.swag,
     "sst2": benchmarks.sst2,
     "squadv2": benchmarks.squadv2,
@@ -429,6 +437,21 @@ for _task_name in benchmarks.MGSM_TASKS:
 del _task_name
 
 for _task_name in benchmarks.MMLU_CF_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.MLQA_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.PALOMA_TASKS:
+    _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
+
+del _task_name
+
+for _task_name in benchmarks.STORYCLOZE_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
 del _task_name

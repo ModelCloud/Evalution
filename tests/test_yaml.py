@@ -886,6 +886,63 @@ tests:
     assert ".run(benchmarks.mmlu_cf_biology(" in script
 
 
+def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "storycloze_2016", "max_rows": 1},
+            {"type": "paloma_dolma_v1_5", "max_rows": 1},
+            {"type": "mlqa_en_en", "max_rows": 1},
+            {"type": "qasper_freeform", "max_rows": 1},
+            {"type": "mmlu_redux", "subsets": "stem.abstract_algebra", "max_rows": 1},
+            {"type": "mmlu_pro_plus", "subsets": "stem.math", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "storycloze_2016",
+        "paloma_dolma_v1_5",
+        "mlqa_en_en",
+        "qasper_freeform",
+        "mmlu_redux_stem_abstract_algebra",
+        "mmlu_pro_plus_stem_math",
+    ]
+
+
+def test_python_from_yaml_emits_new_suite_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: storycloze
+    year: "2016"
+    max_rows: 8
+  - type: paloma_dolma_v1_5
+    max_rows: 8
+  - type: mlqa_en_en
+    max_rows: 8
+  - type: qasper
+    variant: freeform
+    max_rows: 8
+  - type: mmlu_redux
+    subsets: stem.abstract_algebra
+    max_rows: 8
+  - type: mmlu_pro_plus
+    subsets: stem.math
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.storycloze(" in script
+    assert ".run(benchmarks.paloma_dolma_v1_5(" in script
+    assert ".run(benchmarks.mlqa_en_en(" in script
+    assert ".run(benchmarks.qasper(" in script
+    assert ".run(benchmarks.mmlu_redux(" in script
+    assert ".run(benchmarks.mmlu_pro_plus(" in script
+
+
 def test_python_from_yaml_emits_arithmetic_variants() -> None:
     task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _ARITHMETIC_TASKS)
     script = evalution.python_from_yaml(
