@@ -155,9 +155,14 @@ jobs:
             uv pip install tensorrt_llm -U
             uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp312-cp312-linux_x86_64.whl
           else
+            echo "== installing flash-attn =="
             uv pip install flash-attn
+            uv pip show flash-attn
           fi
+          uv pip install accelerate -U
+          echo "== installing gptqmodel =="
           uv pip install gptqmodel -U
+          uv pip show gptqmodel
       #          uv pip uninstall flash_attn
 
       - name: Print uv env
