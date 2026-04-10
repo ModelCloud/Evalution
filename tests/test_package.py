@@ -559,6 +559,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.mastermind_35_hard)
     assert callable(evalution.benchmarks.mastermind_46_easy)
     assert callable(evalution.benchmarks.mastermind_46_hard)
+    assert evalution.benchmarks.MeQSum is not None
+    assert callable(evalution.benchmarks.meqsum)
     assert evalution.benchmarks.MCTACO is not None
     assert callable(evalution.benchmarks.mc_taco)
     assert evalution.benchmarks.MedMCQA is not None

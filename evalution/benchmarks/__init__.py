@@ -178,6 +178,7 @@ from .mastermind import (
     mastermind_46_easy,
     mastermind_46_hard,
 )
+from .meqsum import MeQSum, meqsum
 from . import mgsm as _mgsm_module
 from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
 from .mgsm_direct_es_spanish_bench import MGSMDirectESSpanishBench, mgsm_direct_es_spanish_bench
@@ -576,6 +577,7 @@ __all__ = [
     "MASTERMIND_VARIANTS",
     "MathQA",
     "Mastermind",
+    "MeQSum",
     "MedMCQA",
     "MedQA",
     "MCTACO",
@@ -874,6 +876,7 @@ __all__ = [
     "mastermind_35_hard",
     "mastermind_46_easy",
     "mastermind_46_hard",
+    "meqsum",
     "medmcqa",
     "medqa_4options",
     "mc_taco",

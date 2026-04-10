@@ -1098,6 +1098,7 @@ def test_yaml_supports_small_backlog_suite_factories() -> None:
             {"type": "noticia", "max_rows": 1},
             {"type": "simple_cooccurrence_bias", "max_rows": 1},
             {"type": "groundcocoa", "max_rows": 1},
+            {"type": "meqsum", "max_rows": 1},
             {"type": "squad_completion", "max_rows": 1},
             {"type": "swde", "max_rows": 1},
         ]
@@ -1107,6 +1108,7 @@ def test_yaml_supports_small_backlog_suite_factories() -> None:
         "noticia",
         "simple_cooccurrence_bias",
         "groundcocoa",
+        "meqsum",
         "squad_completion",
         "swde",
     ]
@@ -1124,6 +1126,8 @@ tests:
     max_rows: 8
   - type: groundcocoa
     max_rows: 8
+  - type: meqsum
+    max_rows: 8
   - type: squad_completion
     max_rows: 8
   - type: swde
@@ -1134,6 +1138,7 @@ tests:
     assert ".run(benchmarks.noticia(" in script
     assert ".run(benchmarks.simple_cooccurrence_bias(" in script
     assert ".run(benchmarks.groundcocoa(" in script
+    assert ".run(benchmarks.meqsum(" in script
     assert ".run(benchmarks.squad_completion(" in script
     assert ".run(benchmarks.swde(" in script
 
@@ -1156,6 +1161,7 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
             {"type": "noticia", "max_rows": 1},
             {"type": "simple_cooccurrence_bias", "max_rows": 1},
             {"type": "groundcocoa", "max_rows": 1},
+            {"type": "meqsum", "max_rows": 1},
             {"type": "squad_completion", "max_rows": 1},
             {"type": "swde", "max_rows": 1},
             {"type": "longbench", "subset": "repobench-p_e", "max_rows": 1},
@@ -1186,6 +1192,7 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
         "noticia",
         "simple_cooccurrence_bias",
         "groundcocoa",
+        "meqsum",
         "squad_completion",
         "swde",
         "longbench_repobench_p_e",
@@ -1241,6 +1248,8 @@ tests:
     max_rows: 8
   - type: groundcocoa
     max_rows: 8
+  - type: meqsum
+    max_rows: 8
   - type: squad_completion
     max_rows: 8
   - type: swde
@@ -1294,6 +1303,7 @@ tests:
     assert ".run(benchmarks.noticia(" in script
     assert ".run(benchmarks.simple_cooccurrence_bias(" in script
     assert ".run(benchmarks.groundcocoa(" in script
+    assert ".run(benchmarks.meqsum(" in script
     assert ".run(benchmarks.squad_completion(" in script
     assert ".run(benchmarks.swde(" in script
     assert ".run(benchmarks.longbench(" in script
