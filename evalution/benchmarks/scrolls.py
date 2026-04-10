@@ -5,11 +5,14 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Any
+import zipfile
 
-from datasets import Dataset, load_dataset
+from datasets import Dataset
+from huggingface_hub import hf_hub_download
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -105,16 +108,37 @@ def _load_scrolls_dataset(
     cache_dir: str | None = None,
     stream: bool = False,
 ) -> Dataset:
-    # Materialize SCROLLS splits so duplicate reference rows can be grouped deterministically.
+    # Materialize SCROLLS splits from the repo-hosted zip archives so no remote dataset scripts execute.
     if stream:
         raise ValueError("scrolls requires stream=False to group duplicate reference rows")
-    dataset = load_dataset(
-        dataset_path,
-        dataset_name,
-        split=split,
+    if dataset_name is None:
+        raise ValueError("scrolls dataset_name cannot be None")
+    archive_path = hf_hub_download(
+        repo_id=dataset_path,
+        filename=f"{dataset_name}.zip",
+        repo_type="dataset",
         cache_dir=cache_dir,
-        streaming=False,
     )
+    rows: list[dict[str, Any]] = []
+    with zipfile.ZipFile(archive_path) as archive:
+        member_name = next(
+            (
+                name
+                for name in archive.namelist()
+                if name.endswith(f"/{split}.jsonl") and not name.startswith("__MACOSX/")
+            ),
+            None,
+        )
+        if member_name is None:
+            raise ValueError(
+                f"scrolls archive {dataset_name!r} does not contain split {split!r}"
+            )
+        with archive.open(member_name) as handle:
+            for raw_line in handle:
+                line = raw_line.decode("utf-8").strip()
+                if line:
+                    rows.append(json.loads(line))
+    dataset = Dataset.from_list(rows)
     return _group_scrolls_outputs(dataset)
 
 

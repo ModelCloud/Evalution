@@ -161,6 +161,7 @@ SINGLE_SUITE_SPECS = (
     "record",
     "rte",
     "sciq",
+    "scrolls_qasper",
     "siqa",
     "simple_cooccurrence_bias",
     "swde",

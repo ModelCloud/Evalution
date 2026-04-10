@@ -1587,6 +1587,23 @@ def _assert_nq_open_sample(sample: Any, index: int) -> None:
     assert sample.metadata["answer_aliases"]
 
 
+def _assert_scrolls_qa_sample(sample: Any, index: int, *, variant: str) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert "\n\nQuestion: " in sample.prompt
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["id"]
+    assert sample.metadata["pid"]
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["question"]
+    assert sample.metadata["text"]
+    assert sample.metadata["outputs"]
+
+
 def _assert_coqa_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Story: ")
@@ -8118,6 +8135,33 @@ SUITE_SPECS = {
             prompt_substrings=("Question: ", "\nAnswer:"),
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
+    ),
+    "scrolls_qasper": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.scrolls_qasper(batch_size=4, max_rows=32),
+        expected_name="scrolls_qasper",
+        baseline={
+            "em": 0.03125,
+            "f1": 0.22782614469615695,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "tau/scrolls",
+            "dataset_name": "qasper",
+            "split": "validation",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "variant": "qasper",
+            "scoring_mode": "generated_qa_exact_match_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_scrolls_qa_sample(
+            sample,
+            index,
+            variant="qasper",
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "siqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.siqa(batch_size=24, max_rows=128),

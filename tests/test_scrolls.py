@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import importlib
+import json
+import zipfile
 
 import pytest
 from datasets import Dataset
@@ -63,6 +65,53 @@ def test_scrolls_groups_duplicate_reference_rows() -> None:
     assert rows == [
         {"id": "a", "pid": "p1", "input": "Question\n\nText", "outputs": ["first", "second"]},
         {"id": "b", "pid": "p2", "input": "Another\n\nText", "outputs": ["only"]},
+    ]
+
+
+def test_scrolls_loads_repo_zip_without_executing_dataset_script(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pytest.TempPathFactory,
+) -> None:
+    archive_path = tmp_path / "contract_nli.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr(
+            "contract_nli/validation.jsonl",
+            "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "id": "row-1",
+                            "pid": "pid-1",
+                            "input": "Question\n\nText",
+                            "output": "first",
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "id": "row-1",
+                            "pid": "pid-1",
+                            "input": "Question\n\nText",
+                            "output": "second",
+                        }
+                    ),
+                ]
+            ),
+        )
+    monkeypatch.setattr(scrolls_module, "hf_hub_download", lambda **_: str(archive_path))
+
+    dataset = scrolls_module._load_scrolls_dataset(
+        "tau/scrolls",
+        "contract_nli",
+        split="validation",
+    )
+
+    assert list(dataset) == [
+        {
+            "id": "row-1",
+            "pid": "pid-1",
+            "input": "Question\n\nText",
+            "outputs": ["first", "second"],
+        }
     ]
 
 
