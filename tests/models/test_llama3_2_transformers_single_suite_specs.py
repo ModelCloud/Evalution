@@ -34,6 +34,8 @@ SINGLE_SUITE_SPECS = (
     "arc_challenge_label_perm_0_25",
     "arc_challenge",
     "arc_easy",
+    "assin_entailment",
+    "assin_paraphrase",
     "asdiv_cot_llama",
     "asdiv",
     "babi",
@@ -55,6 +57,7 @@ SINGLE_SUITE_SPECS = (
     "click_lang_text",
     "click",
     "cnn_dailymail",
+    "cocoteros_es",
     "cola",
     "commonsense_qa",
     "copa",
@@ -128,6 +131,7 @@ SINGLE_SUITE_SPECS = (
     "medqa_4options",
     "mediqa_qa2019",
     "meqsum",
+    "mgsm_direct_es_spanish_bench",
     "mnli",
     "moral_stories",
     "mrpc",
@@ -165,6 +169,7 @@ SINGLE_SUITE_SPECS = (
     "wnli",
     "wsc273",
     "wsc",
+    "xlsum_es",
     "xnli_eu",
 )
 

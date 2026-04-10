@@ -479,7 +479,7 @@ def assert_single_test_serialization(result: Any, test_result: Any) -> None:
     assert serialized_test["name"] == test_result.name
     assert len(serialized_test["samples"]) == len(test_result.samples)
     if test_result.samples:
-        assert serialized_test["samples"][0]["prediction"]
+        assert serialized_test["samples"][0]["prediction"] is not None
 
 
 def _assert_multiple_choice_loglikelihood_sample(
@@ -643,6 +643,35 @@ def _assert_blimp_sample(sample: Any, index: int, *, subset: str) -> None:
     assert sample.metadata["pair_id"] >= 0
     assert "choice_logprobs" in sample.metadata
     assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_assin_sample(sample: Any, index: int, *, variant: str) -> None:
+    assert sample.index == index
+    assert sample.prompt == ""
+    assert sample.target
+    assert sample.prediction
+    assert sample.target.startswith(sample.metadata["premise"])
+    assert sample.prediction.startswith(sample.metadata["premise"])
+    assert ", certo? " in sample.target
+    assert ", certo? " in sample.prediction
+    assert sample.metadata["hypothesis"] in sample.target
+    assert sample.metadata["hypothesis"] in sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["sentence_pair_id"]
+    assert sample.metadata["premise"]
+    assert sample.metadata["hypothesis"]
+    assert isinstance(sample.metadata["relatedness_score"], float)
+    assert len(sample.metadata["choice_logprobs"]) == 2
+    assert len(sample.metadata["choice_logprobs_norm"]) == 2
 
 
 def _assert_bear_sample(
@@ -1150,6 +1179,7 @@ def _assert_generated_summary_sample(
     prompt_suffix: str | None = None,
     prompt_substrings: tuple[str, ...] = (),
     metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+    allow_empty_prediction: bool = False,
 ) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -1160,7 +1190,10 @@ def _assert_generated_summary_sample(
     for expected in prompt_substrings:
         assert expected in sample.prompt
     assert sample.target
-    assert sample.prediction
+    if allow_empty_prediction:
+        assert sample.prediction is not None
+    else:
+        assert sample.prediction
     assert set(sample.extracted) == {
         "prediction-stripped",
         "reference-stripped",
@@ -1246,6 +1279,24 @@ def _assert_noticia_sample(sample: Any, index: int) -> None:
     assert sample.metadata["web_url"].startswith("http")
     assert sample.metadata["web_headline"]
     assert sample.metadata["web_text_chars"] > 0
+
+
+def _assert_cocoteros_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Genera una frase corta con estas palabras: ")
+    assert sample.prompt.endswith("\n\nRespuesta:")
+    assert " El contexto es: " in sample.prompt
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "reference-stripped",
+    }
+    assert sample.scores == {}
+    assert sample.metadata["keywords"]
+    assert sample.metadata["context"]
+    assert sample.metadata["keywords"] in sample.prompt
+    assert sample.metadata["context"] in sample.prompt
 
 
 def _assert_simple_cooccurrence_bias_sample(sample: Any, index: int) -> None:
@@ -1996,6 +2047,14 @@ def _metadata_has_meqsum_fields(metadata: dict[str, Any]) -> None:
     assert metadata["file"]
     assert metadata["question_chars"] > 0
     assert metadata["summary_words"] > 0
+
+
+def _metadata_has_xlsum_es_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["id"]
+    assert metadata["url"].startswith("http")
+    assert metadata["title"]
+    assert metadata["article_chars"] > 0
+    assert metadata["reference_lines"] >= 1
 
 
 def _metadata_has_mediqa_qa2019_fields(metadata: dict[str, Any]) -> None:
@@ -4112,6 +4171,39 @@ SUITE_SPECS = {
         language="en",
         baseline=0.0625,
     ),
+    "mgsm_direct_es_spanish_bench": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mgsm_direct_es_spanish_bench(
+            batch_size=24,
+            max_new_tokens=96,
+            stream=True,
+            max_rows=32,
+        ),
+        expected_name="mgsm_direct_es_spanish_bench",
+        baseline={"acc,num": 0.0625},
+        expected_metrics=frozenset({"acc,num"}),
+        expected_metadata={
+            "variant": "base",
+            "apply_chat_template": False,
+            "fewshot_as_multiturn": False,
+            "stream": True,
+            "generation_submission_mode": "continuous_refill",
+            "num_fewshot": 0,
+            "dataset_path": "juletxara/mgsm",
+            "dataset_name": "es",
+            "split": "test",
+            "language": "es",
+            "scoring_mode": "numeric_format_insensitive",
+            "primary_metric": "acc,num",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_afrimgsm_sample(
+            sample,
+            index,
+            language="es",
+        ),
+        result_validator=_validate_gsm8k_like_result,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "mmlu_cf_biology": _mmlu_cf_suite_spec(
         "mmlu_cf_biology",
         subject="biology",
@@ -4154,6 +4246,60 @@ SUITE_SPECS = {
             expected_scores=frozenset({"acc,ll"}),
             require_leading_space_target=False,
         ),
+    ),
+    "assin_entailment": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.assin_entailment(
+            batch_size=24,
+            stream=True,
+            max_rows=32,
+        ),
+        expected_name="assin_entailment",
+        baseline={
+            "acc,ll": 0.3125,
+            "acc,ll_avg": 0.34375,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "nilc-nlp/assin",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_assin_sample(
+            sample,
+            index,
+            variant="assin_entailment",
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "assin_paraphrase": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.assin_paraphrase(
+            batch_size=24,
+            stream=True,
+            max_rows=32,
+        ),
+        expected_name="assin_paraphrase",
+        baseline={
+            "acc,ll": 0.40625,
+            "acc,ll_avg": 0.40625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "nilc-nlp/assin",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_assin_sample(
+            sample,
+            index,
+            variant="assin_paraphrase",
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "asdiv_cot_llama": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.asdiv_cot_llama(
@@ -4693,6 +4839,31 @@ SUITE_SPECS = {
             prompt_suffix="\n\nSummary:",
             metadata_validator=_assert_cnn_dailymail_metadata,
         ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "cocoteros_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.cocoteros_es(
+            batch_size=8,
+            max_new_tokens=40,
+            max_rows=32,
+        ),
+        expected_name="cocoteros_es",
+        baseline={
+            "bleu": 0.4089394499961097,
+            "rouge1": 0.051929660753190166,
+        },
+        expected_metrics=frozenset({"bleu", "rouge1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "gplsi/cocoteros",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_corpus_bleu_mean_rouge1",
+            "primary_metric": "bleu",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_cocoteros_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "code2text_go": SuiteSpec(
@@ -7810,6 +7981,41 @@ SUITE_SPECS = {
         sample_validator=_assert_noticia_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
+    "xlsum_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.xlsum_es(
+            batch_size=4,
+            max_new_tokens=128,
+            max_rows=32,
+        ),
+        expected_name="xlsum_es",
+        baseline={
+            "rouge1": 0.12894381902528843,
+            "rouge2": 0.031865469410523234,
+            "rougeLsum": 0.08805611967197531,
+        },
+        expected_metrics=frozenset({"rouge1", "rouge2", "rougeLsum"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "csebuetnlp/xlsum",
+            "dataset_name": "spanish",
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_summary_rouge",
+            "primary_metric": "rougeLsum",
+            "archive_filename": "data/spanish_XLSum_v2.0.tar.bz2",
+            "archive_sha256": "70499154fe1d1c8df3b4667921d2c8c7b508da5473aa9387c4330b3b22288360",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_generated_summary_sample(
+            sample,
+            index,
+            prompt_prefix="Texto: ",
+            prompt_suffix="\n\nResumen:",
+            metadata_validator=_metadata_has_xlsum_es_fields,
+            allow_empty_prediction=True,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "coqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.coqa(batch_size=16, max_rows=32),
         expected_name="coqa",
@@ -9179,7 +9385,7 @@ def run_suite_specs(
         assert serialized_test["name"] == test_result.name
         assert len(serialized_test["samples"]) == len(test_result.samples)
         if test_result.samples:
-            assert serialized_test["samples"][0]["prediction"]
+            assert serialized_test["samples"][0]["prediction"] is not None
     return result, test_results
 
 
