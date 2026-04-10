@@ -1094,6 +1094,23 @@ def _assert_generated_contains_sample(sample: Any, index: int) -> None:
     assert sample.extracted["target"] == sample.target
 
 
+def _assert_ruler_sample(sample: Any, index: int, *, variant: str, max_length: int) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "prediction-normalized",
+        "outputs",
+        "matched_outputs",
+    }
+    assert set(sample.scores) == {"contains_fraction"}
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["gen_prefix"]
+    assert sample.metadata["max_length"] == max_length
+    assert sample.metadata["length"] > 0
+
+
 def _metadata_has_moral_stories_fields(metadata: dict[str, Any]) -> None:
     assert metadata["guid"]
     assert metadata["norm"]
@@ -8217,6 +8234,35 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=_assert_triviaqa_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "niah_single_1": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.niah_single_1(
+            batch_size=4,
+            max_rows=32,
+        ),
+        expected_name="niah_single_1",
+        baseline={"contains_fraction": 1.0},
+        expected_metrics=frozenset({"contains_fraction"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "NVIDIA/RULER",
+            "dataset_name": "niah_single_1",
+            "split": "test",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "variant": "niah_single_1",
+            "max_length": 4096,
+            "scoring_mode": "generated_contains_fraction",
+            "primary_metric": "contains_fraction",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_ruler_sample(
+            sample,
+            index,
+            variant="niah_single_1",
+            max_length=4096,
+        ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "nq_open": SuiteSpec(

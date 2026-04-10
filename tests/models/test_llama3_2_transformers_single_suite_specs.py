@@ -141,6 +141,7 @@ SINGLE_SUITE_SPECS = (
     "mnli",
     "moral_stories",
     "mrpc",
+    "niah_single_1",
     "nq_open",
     "noticia",
     "openbookqa_label_perm_0_25",
