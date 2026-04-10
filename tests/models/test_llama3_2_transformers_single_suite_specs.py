@@ -65,6 +65,7 @@ SINGLE_SUITE_SPECS = (
     "coqa",
     "darijahellaswag",
     "drop",
+    "escola",
     "egyhellaswag",
     "ethics_cm",
     "ethics_deontology",

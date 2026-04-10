@@ -2085,6 +2085,13 @@ def _metadata_has_groundcocoa_fields(metadata: dict[str, Any]) -> None:
     assert isinstance(metadata["is_typical"], bool)
 
 
+def _metadata_has_escola_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["id"]
+    assert metadata["source"]
+    assert metadata["category"] >= 0
+    assert metadata["split_name"]
+
+
 def _metadata_has_meqsum_fields(metadata: dict[str, Any]) -> None:
     assert metadata["file"]
     assert metadata["question_chars"] > 0
@@ -5004,6 +5011,39 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=_assert_cocoteros_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "escola": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.escola(
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name="escola",
+        baseline={
+            "acc,ll": 0.375,
+            "acc,ll_avg": 0.375,
+            "mcc,ll": 0.0,
+            "mcc,ll_avg": 0.0,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg", "mcc,ll", "mcc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "nbel/EsCoLA",
+            "dataset_name": None,
+            "split": "validation",
+            "order": "native",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"no", "sí"},
+            prediction_values={"no", "sí"},
+            prompt_suffix="Respuesta:",
+            prompt_substrings=("\nPregunta: ¿Tiene sentido esta frase?\n",),
+            metadata_validator=_metadata_has_escola_fields,
+        ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "code2text_go": SuiteSpec(
