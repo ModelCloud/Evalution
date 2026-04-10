@@ -237,6 +237,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "mastermind_46_easy": benchmarks.mastermind_46_easy,
     "mastermind_46_hard": benchmarks.mastermind_46_hard,
     "meqsum": benchmarks.meqsum,
+    "mediqa_qa2019": benchmarks.mediqa_qa2019,
     "mc_taco": benchmarks.mc_taco,
     "medmcqa": benchmarks.medmcqa,
     "medqa_4options": benchmarks.medqa_4options,
