@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import importlib
+import json
+import zipfile
 
 import pytest
 from datasets import Dataset
@@ -41,7 +43,7 @@ def test_mlqa_scores_language_paired_extractable_answers(monkeypatch) -> None:
             }
         ]
     )
-    monkeypatch.setattr(mlqa_module, "load_dataset", lambda *args, **kwargs: dataset)
+    monkeypatch.setattr(mlqa_module, "_load_mlqa_dataset", lambda *args, **kwargs: dataset)
 
     result = evalution.benchmarks.mlqa_en_en(max_rows=1, batch_size=4).evaluate(FakeSession())
 
@@ -71,3 +73,57 @@ def test_mlqa_normalization_and_dataset_name_validation() -> None:
             question_language="es",
             dataset_name="mlqa.en.en",
         )
+
+
+def test_mlqa_loads_public_zip_without_dataset_scripts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    archive_path = tmp_path / "MLQA_V1.zip"
+    payload = {
+        "version": "1.0",
+        "data": [
+            {
+                "title": "Sample article",
+                "paragraphs": [
+                    {
+                        "context": "The answer is 308.",
+                        "qas": [
+                            {
+                                "id": "sample-1",
+                                "question": "What is the answer?",
+                                "answers": [
+                                    {
+                                        "text": "308",
+                                        "answer_start": 14,
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    data_bytes = json.dumps(payload).encode("utf-8")
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("MLQA_V1/test/test-context-en-question-en.json", data_bytes)
+    monkeypatch.setattr(mlqa_module, "_download_mlqa_archive", lambda cache_dir: archive_path)
+
+    dataset = mlqa_module._load_mlqa_dataset(
+        "facebook/mlqa",
+        "mlqa.en.en",
+        split="test",
+        context_language="en",
+        question_language="en",
+    )
+
+    assert list(dataset) == [
+        {
+            "id": "sample-1",
+            "title": "Sample article",
+            "context": "The answer is 308.",
+            "question": "What is the answer?",
+            "answers": {"text": ["308"], "answer_start": [14]},
+        }
+    ]

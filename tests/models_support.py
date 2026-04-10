@@ -1560,6 +1560,23 @@ def _assert_xquad_sample(sample: Any, index: int, *, language: str) -> None:
     assert sample.metadata["answer_texts"]
 
 
+def _assert_mlqa_sample(sample: Any, index: int, *, context_language: str, question_language: str) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("Context: ")
+    assert "\n\nQuestion: " in sample.prompt
+    assert sample.prompt.endswith("\n\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "best_answer_index", "best_answer"}
+    assert set(sample.scores) == {"em", "f1"}
+    assert sample.metadata["id"]
+    assert sample.metadata["context_language"] == context_language
+    assert sample.metadata["question_language"] == question_language
+    assert sample.metadata["question"]
+    assert sample.metadata["context"]
+    assert sample.metadata["answer_texts"]
+
+
 def _assert_truthfulqa_sample(sample: Any, index: int, *, variant: str) -> None:
     assert sample.index == index
     assert sample.prompt.startswith("Q: What is human life expectancy in the United States?")
@@ -7512,6 +7529,38 @@ SUITE_SPECS = {
             ),
             metadata_validator=_metadata_has_meqsum_fields,
             allow_empty_prediction=True,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "mlqa_en_en": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mlqa_en_en(
+            batch_size=4,
+            max_rows=32,
+        ),
+        expected_name="mlqa_en_en",
+        baseline={
+            "em": 0.21875,
+            "f1": 0.41679615383717333,
+        },
+        expected_metrics=frozenset({"em", "f1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "facebook/mlqa",
+            "dataset_name": "mlqa.en.en",
+            "split": "test",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_mlqa_exact_match_f1",
+            "primary_metric": "f1",
+            "context_language": "en",
+            "question_language": "en",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_mlqa_sample(
+            sample,
+            index,
+            context_language="en",
+            question_language="en",
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),

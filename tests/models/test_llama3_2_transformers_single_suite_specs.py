@@ -137,6 +137,7 @@ SINGLE_SUITE_SPECS = (
     "mediqa_qa2019",
     "meqsum",
     "mgsm_direct_es_spanish_bench",
+    "mlqa_en_en",
     "mmlu_pro_plus_stem_math",
     "mmlu_redux_stem_abstract_algebra",
     "mnli",

@@ -7,13 +7,18 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from functools import partial
+import json
+from pathlib import Path
 import re
 import string
 import sys
 from typing import Any
 import unicodedata
+from urllib.request import urlopen
+import zipfile
 
-from datasets import load_dataset
+from datasets import Dataset
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -27,6 +32,12 @@ MLQA_TASKS = tuple(
     for context_language in MLQA_LANGUAGES
     for question_language in MLQA_LANGUAGES
 )
+_MLQA_URL = "https://dl.fbaipublicfiles.com/MLQA/MLQA_V1.zip"
+_MLQA_SPLIT_DIRECTORY = {
+    "test": "test",
+    "validation": "dev",
+    "dev": "dev",
+}
 _STOP_STRINGS = ("\n", "\nQuestion:", "\nContext:")
 # Mirror MLQA's language-aware punctuation stripping once at import so per-sample scoring stays cheap.
 _MLQA_PUNCT = {
@@ -36,6 +47,84 @@ _MLQA_PUNCT = {
 }.union(string.punctuation)
 _WHITESPACE_LANGS = frozenset({"ar", "de", "en", "es", "hi", "vi"})
 _MIXED_SEGMENTATION_LANGS = frozenset({"zh"})
+
+
+def _mlqa_cache_dir(cache_dir: str | None) -> Path:
+    base_dir = Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "evalution" / "datasets"
+    target_dir = base_dir / "mlqa"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    return target_dir
+
+
+def _download_mlqa_archive(cache_dir: str | None) -> Path:
+    archive_path = _mlqa_cache_dir(cache_dir) / "MLQA_V1.zip"
+    if archive_path.exists():
+        return archive_path
+    with urlopen(_MLQA_URL) as response, archive_path.open("wb") as output_file:
+        output_file.write(response.read())
+    return archive_path
+
+
+def _flatten_mlqa_payload(payload: dict[str, Any]) -> Dataset:
+    # Flatten the official SQuAD-style archive into Evalution's one-row-per-question schema.
+    rows: list[dict[str, Any]] = []
+    for article in payload["data"]:
+        title = str(article.get("title", "")).strip()
+        for paragraph in article["paragraphs"]:
+            context = str(paragraph["context"])
+            for qa in paragraph["qas"]:
+                answer_texts: list[str] = []
+                answer_starts: list[int] = []
+                for answer in qa["answers"]:
+                    text = str(answer["text"]).strip()
+                    if not text:
+                        continue
+                    answer_texts.append(text)
+                    answer_starts.append(int(answer["answer_start"]))
+                if not answer_texts:
+                    raise ValueError("mlqa requires at least one non-empty answer")
+                rows.append(
+                    {
+                        "id": str(qa["id"]),
+                        "title": title,
+                        "context": context,
+                        "question": str(qa["question"]).strip(),
+                        "answers": {
+                            "text": answer_texts,
+                            "answer_start": answer_starts,
+                        },
+                    }
+                )
+    return Dataset.from_list(rows)
+
+
+def _load_mlqa_dataset(
+    dataset_path: str,
+    dataset_name: str | None = None,
+    *,
+    split: str,
+    cache_dir: str | None = None,
+    stream: bool = False,
+    context_language: str,
+    question_language: str,
+) -> Dataset:
+    if stream:
+        raise ValueError("mlqa does not support stream=True")
+    expected_dataset_name = f"mlqa.{context_language}.{question_language}"
+    if dataset_name not in {None, expected_dataset_name}:
+        raise ValueError("mlqa dataset_name must match the configured language pair")
+    split_directory = _MLQA_SPLIT_DIRECTORY.get(split)
+    if split_directory is None:
+        raise ValueError(f"unsupported mlqa split: {split!r}")
+    archive_path = _download_mlqa_archive(cache_dir)
+    member_name = f"MLQA_V1/{split_directory}/{split_directory}-context-{context_language}-question-{question_language}.json"
+    with zipfile.ZipFile(archive_path) as archive:
+        try:
+            with archive.open(member_name) as handle:
+                payload = json.load(handle)
+        except KeyError as error:
+            raise ValueError(f"mlqa archive missing member {member_name!r}") from error
+    return _flatten_mlqa_payload(payload)
 
 
 def _mlqa_prompt(*, context: str, question: str) -> str:
@@ -165,7 +254,11 @@ class MLQA(BaseTestSuite):
         raise ValueError("mlqa dataset_name must match the configured language pair")
 
     def dataset_loader(self) -> Any:
-        return load_dataset
+        return partial(
+            _load_mlqa_dataset,
+            context_language=self.context_language,
+            question_language=self.question_language,
+        )
 
     def task_name(self) -> str:
         return f"mlqa_{self.context_language}_{self.question_language}"
