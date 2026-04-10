@@ -29,6 +29,7 @@ LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE = os.environ.get(
 )
 # Baseline tolerances track the maximum accepted score drift for each benchmark sample size.
 SCORE_BASELINE_ABS_TOLERANCE = 2 / 128
+SCORE_BASELINE_ABS_TOLERANCE_9 = 2 / 9
 SCORE_BASELINE_ABS_TOLERANCE_32 = 2 / 32
 SCORE_BASELINE_ABS_TOLERANCE_35 = 2 / 35
 SCORE_BASELINE_ABS_TOLERANCE_42 = 2 / 42
@@ -6447,6 +6448,41 @@ SUITE_SPECS = {
             language="en",
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "longbench2_legal_single": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.longbench2_legal_single(batch_size=1, max_rows=9),
+        expected_name="longbench2_legal_single",
+        baseline={
+            "acc,ll": 0.5555555555555556,
+            "acc,ll_avg": 0.5555555555555556,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "recursal/longbench-v2",
+            "dataset_name": "legal_single",
+            "split": "train",
+            "order": "native",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=9,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Please read the following text and answer the question below.\n\n<text>\n",
+            prompt_substrings=(
+                "\n</text>\n\nWhat is the correct answer to this question: ",
+                "\nChoices:\n(A) ",
+                "\n(B) ",
+                "\n(C) ",
+                "\n(D) ",
+            ),
+            prompt_suffix="\n\nAnswer:",
+            metadata_validator=_metadata_fields_truthy("dataset_name", "domain", "difficulty", "length", "choice_texts"),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_9,
     ),
     "mathqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.mathqa(batch_size=24, max_rows=128),
