@@ -183,6 +183,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "gsm8k": benchmarks.gsm8k,
     "gsm8k_fr": benchmarks.gsm8k_fr,
     "gsm8k_ko": benchmarks.gsm8k_ko,
+    "groundcocoa": benchmarks.groundcocoa,
     "gsm_plus": benchmarks.gsm_plus,
     "gsm_plus_mini": benchmarks.gsm_plus_mini,
     "gsm8k_platinum": benchmarks.gsm8k_platinum,
@@ -248,6 +249,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "multirc": benchmarks.multirc,
     "mutual": benchmarks.mutual,
     "nq_open": benchmarks.nq_open,
+    "noticia": benchmarks.noticia,
     "openbookqa": benchmarks.openbookqa,
     "paloma": benchmarks.paloma,
     "paws_x_de": benchmarks.paws_x_de,
@@ -257,6 +259,7 @@ _TEST_FACTORIES: dict[str, Any] = {
     "paws_x_ja": benchmarks.paws_x_ja,
     "paws_x_ko": benchmarks.paws_x_ko,
     "paws_x_zh": benchmarks.paws_x_zh,
+    "phrases_es": benchmarks.phrases_es,
     "piqa": benchmarks.piqa,
     "piqa_ar": benchmarks.piqa_ar,
     "pile_10k": benchmarks.pile_10k,
@@ -280,9 +283,12 @@ _TEST_FACTORIES: dict[str, Any] = {
     "scrolls": benchmarks.scrolls,
     "spanish_bench": benchmarks.spanish_bench,
     "siqa": benchmarks.siqa,
+    "simple_cooccurrence_bias": benchmarks.simple_cooccurrence_bias,
     "storycloze": benchmarks.storycloze,
     "swag": benchmarks.swag,
     "sst2": benchmarks.sst2,
+    "swde": benchmarks.swde,
+    "squad_completion": benchmarks.squad_completion,
     "squadv2": benchmarks.squadv2,
     "toxigen": benchmarks.toxigen,
     "truthfulqa": benchmarks.truthfulqa,
@@ -742,6 +748,11 @@ for _flores_es_task in benchmarks.FLORES_ES_TASKS:
     _TEST_FACTORIES[_flores_es_task] = getattr(benchmarks, _flores_es_task)
 
 del _flores_es_task
+
+for _phrases_es_task in benchmarks.PHRASES_ES_TASKS:
+    _TEST_FACTORIES[_phrases_es_task] = getattr(benchmarks, _phrases_es_task)
+
+del _phrases_es_task
 
 for _flores_pt_task in benchmarks.FLORES_PT_TASKS:
     _TEST_FACTORIES[_flores_pt_task] = getattr(benchmarks, _flores_pt_task)

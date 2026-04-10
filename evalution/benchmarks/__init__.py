@@ -104,6 +104,7 @@ from .graphwalks import GraphWalks, graphwalks_128k, graphwalks_1M
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_fr import GSM8KFR, gsm8k_fr
 from .gsm8k_ko import GSM8KKO, gsm8k_ko
+from .groundcocoa import GroundCocoa, groundcocoa
 from . import haerae as _haerae_module
 from .haerae import HAERAE_SUBSETS, HAERAE_TASKS, Haerae, haerae
 from .gsm_plus import GSM_PLUS_TASKS, GSMPlus, GSMPlusMini, gsm_plus, gsm_plus_mini
@@ -196,6 +197,7 @@ from .mrpc import MRPC, mrpc
 from .multirc import MultiRC, multirc
 from .mutual import MuTual, mutual
 from .nq_open import NQOpen, nq_open
+from .noticia import Noticia, noticia
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
@@ -204,6 +206,8 @@ from .paloma import PALOMA_SUBSETS, PALOMA_TASKS, Paloma, paloma
 from .paws_x import PAWSX, paws_x, paws_x_de, paws_x_en, paws_x_es, paws_x_fr, paws_x_ja, paws_x_ko, paws_x_zh
 from .piqa import PIQA, piqa
 from .pile_10k import Pile10K, pile_10k
+from . import phrases_es as _phrases_es_module
+from .phrases_es import PHRASES_ES_DIRECTIONS, PHRASES_ES_TASKS, PhrasesES, phrases_es
 from .polemo2 import POLEMO2_VARIANTS, Polemo2, polemo2, polemo2_in, polemo2_out
 from .prost import Prost, prost
 from .pubmedqa import PubMedQA, pubmedqa
@@ -221,6 +225,7 @@ from .sciq import SciQ, sciq
 from . import scrolls as _scrolls_module
 from .scrolls import SCROLLS_TASKS, scrolls
 from .siqa import SIQA, siqa
+from .simple_cooccurrence_bias import SimpleCooccurrenceBias, simple_cooccurrence_bias
 from .single_continuation import BaseSingleContinuationSuite, SingleContinuationSample
 from . import spanish_bench as _spanish_bench_module
 from .spanish_bench import SPANISH_BENCH_TASKS, SpanishBench, spanish_bench
@@ -228,7 +233,9 @@ from . import storycloze as _storycloze_module
 from .storycloze import STORYCLOZE_TASKS, STORYCLOZE_YEARS, StoryCloze, storycloze
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
+from .squad_completion import SQuADCompletion, squad_completion
 from .squadv2 import SQuADV2, squadv2
+from .swde import SWDE, swde
 from .toxigen import ToxiGen, toxigen
 from .truthfulqa import TRUTHFULQA_TASKS, TruthfulQAMC, truthfulqa, truthfulqa_mc1, truthfulqa_mc2
 from .triviaqa import TriviaQA, triviaqa
@@ -422,6 +429,11 @@ for _flores_es_task in FLORES_ES_TASKS:
 
 del _flores_es_task
 
+for _phrases_es_task in PHRASES_ES_TASKS:
+    globals()[_phrases_es_task] = getattr(_phrases_es_module, _phrases_es_task)
+
+del _phrases_es_task
+
 for _flores_pt_task in FLORES_PT_TASKS:
     globals()[_flores_pt_task] = getattr(_flores_pt_module, _flores_pt_task)
 
@@ -528,6 +540,7 @@ __all__ = [
     "GPQA_SUBSETS",
     "GPQA_TASKS",
     "GSM8K",
+    "GroundCocoa",
     "HAERAE_SUBSETS",
     "HAERAE_TASKS",
     "Haerae",
@@ -578,6 +591,7 @@ __all__ = [
     "MultiRC",
     "MuTual",
     "NQOpen",
+    "Noticia",
     "MultipleChoiceSample",
     "OpenBookQA",
     "PAWSX",
@@ -607,13 +621,16 @@ __all__ = [
     "SCROLLS_TASKS",
     "SciQ",
     "SIQA",
+    "SimpleCooccurrenceBias",
     "SingleContinuationSample",
     "StoryCloze",
     "STORYCLOZE_TASKS",
     "STORYCLOZE_YEARS",
     "SWAG",
     "SQuADV2",
+    "SQuADCompletion",
     "SST2",
+    "SWDE",
     "TestSuite",
     "ToxiGen",
     "TRUTHFULQA_TASKS",
@@ -800,6 +817,7 @@ __all__ = [
     "gsm8k_fr",
     "GSM8KKO",
     "gsm8k_ko",
+    "groundcocoa",
     "haerae",
     "gsm_plus",
     "gsm_plus_mini",
@@ -881,6 +899,7 @@ __all__ = [
     "multirc",
     "mutual",
     "nq_open",
+    "noticia",
     "openbookqa",
     "paloma",
     "paws_x",
@@ -894,6 +913,11 @@ __all__ = [
     "piqa",
     "piqa_ar",
     "pile_10k",
+    "PHRASES_ES_DIRECTIONS",
+    "PHRASES_ES_TASKS",
+    "PhrasesES",
+    "phrases_es",
+    *PHRASES_ES_TASKS,
     "polemo2",
     "polemo2_in",
     "polemo2_out",
@@ -919,8 +943,11 @@ __all__ = [
     *SPANISH_BENCH_TASKS,
     "sciq",
     "siqa",
+    "simple_cooccurrence_bias",
     "storycloze",
     "swag",
+    "swde",
+    "squad_completion",
     "squadv2",
     "toxigen",
     "question_answer_prompt",

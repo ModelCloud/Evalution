@@ -283,6 +283,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.fld)
     assert evalution.benchmarks.FDA is not None
     assert callable(evalution.benchmarks.fda)
+    assert evalution.benchmarks.Noticia is not None
+    assert callable(evalution.benchmarks.noticia)
     assert evalution.benchmarks.FloresPT is not None
     assert evalution.benchmarks.FLORES_PT_DIRECTIONS == (
         "ca-pt",
@@ -312,6 +314,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.flores_es)
     for factory_name in evalution.benchmarks.FLORES_ES_TASKS:
         assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.PhrasesES is not None
+    assert evalution.benchmarks.PHRASES_ES_DIRECTIONS == ("es-va", "va-es")
+    assert evalution.benchmarks.PHRASES_ES_TASKS == ("phrases_es_va", "phrases_va_es")
+    assert callable(evalution.benchmarks.phrases_es)
+    for factory_name in evalution.benchmarks.PHRASES_ES_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
     assert evalution.benchmarks.FrenchBenchARCChallenge is not None
     assert callable(evalution.benchmarks.french_bench_arc_challenge)
     assert evalution.benchmarks.EusReading is not None
@@ -327,6 +335,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.gpqa_main)
     assert callable(evalution.benchmarks.gpqa_diamond)
     assert callable(evalution.benchmarks.gpqa_extended)
+    assert evalution.benchmarks.GroundCocoa is not None
+    assert callable(evalution.benchmarks.groundcocoa)
     assert evalution.benchmarks.GSM8KFR is not None
     assert callable(evalution.benchmarks.gsm8k_fr)
     assert evalution.benchmarks.GSM8KKO is not None
@@ -661,6 +671,8 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.sciq)
     assert evalution.benchmarks.SIQA is not None
     assert callable(evalution.benchmarks.siqa)
+    assert evalution.benchmarks.SimpleCooccurrenceBias is not None
+    assert callable(evalution.benchmarks.simple_cooccurrence_bias)
     assert evalution.benchmarks.StoryCloze is not None
     assert evalution.benchmarks.STORYCLOZE_YEARS == ("2016", "2018")
     assert evalution.benchmarks.STORYCLOZE_TASKS == ("storycloze_2016", "storycloze_2018")
@@ -671,8 +683,12 @@ def test_package_exports_benchmarks_namespace() -> None:
     assert callable(evalution.benchmarks.swag)
     assert evalution.benchmarks.SST2 is not None
     assert callable(evalution.benchmarks.sst2)
+    assert evalution.benchmarks.SQuADCompletion is not None
+    assert callable(evalution.benchmarks.squad_completion)
     assert evalution.benchmarks.SQuADV2 is not None
     assert callable(evalution.benchmarks.squadv2)
+    assert evalution.benchmarks.SWDE is not None
+    assert callable(evalution.benchmarks.swde)
     assert evalution.benchmarks.ToxiGen is not None
     assert callable(evalution.benchmarks.toxigen)
     assert evalution.benchmarks.TruthfulQAMC is not None
