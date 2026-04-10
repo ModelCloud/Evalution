@@ -134,6 +134,7 @@ SINGLE_SUITE_SPECS = (
     "mediqa_qa2019",
     "meqsum",
     "mgsm_direct_es_spanish_bench",
+    "mmlu_redux_stem_abstract_algebra",
     "mnli",
     "moral_stories",
     "mrpc",

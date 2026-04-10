@@ -2084,6 +2084,18 @@ def _metadata_has_mediqa_qa2019_fields(metadata: dict[str, Any]) -> None:
     assert metadata["first_answer_reference_score"] >= 0
 
 
+def _metadata_has_mmlu_redux_fields(*, subset: str, subject: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["subject"] == subject
+        assert metadata["subset"] == subset
+        assert metadata["subset_path"] == subset.split(".")
+        assert metadata["subset_kind"] == "leaf"
+        assert metadata["question"]
+        assert len(metadata["choice_texts"]) == 4
+
+    return validate
+
+
 def _metadata_has_haerae_fields(*, subset: str) -> Callable[[dict[str, Any]], None]:
     def validate(metadata: dict[str, Any]) -> None:
         assert metadata["subset"] == subset
@@ -7295,6 +7307,50 @@ SUITE_SPECS = {
             ),
             metadata_validator=_metadata_has_meqsum_fields,
             allow_empty_prediction=True,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "mmlu_redux_stem_abstract_algebra": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mmlu_redux(
+            subsets="stem.abstract_algebra",
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name="mmlu_redux_stem_abstract_algebra",
+        baseline={
+            "acc,ll": 0.15625,
+            "acc,ll_avg": 0.15625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "fxmarty/mmlu-redux-2.0-ok",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "subsets": ["stem.abstract_algebra"],
+            "subset_paths": [["stem", "abstract_algebra"]],
+            "subset_kinds": ["leaf"],
+            "selection_mode": "single",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_substrings=(
+                "\nA. ",
+                "\nB. ",
+                "\nC. ",
+                "\nD. ",
+                "\nPlease respond with the correct letter (A, B, C or D) without any additional comments, only the correct letter:",
+            ),
+            prompt_suffix="only the correct letter:",
+            metadata_validator=_metadata_has_mmlu_redux_fields(
+                subset="stem.abstract_algebra",
+                subject="abstract_algebra",
+            ),
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
