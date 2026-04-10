@@ -2037,6 +2037,25 @@ def _metadata_has_phrases_es_fields(
     return validate
 
 
+def _metadata_has_flores_fields(
+    *,
+    direction: str,
+    source_language: str,
+    target_language: str,
+) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["direction"] == direction
+        assert metadata["source_language"] == source_language
+        assert metadata["target_language"] == target_language
+        assert isinstance(metadata["id"], int)
+        assert metadata["URL"].startswith("http")
+        assert metadata["domain"]
+        assert isinstance(metadata["has_image"], bool)
+        assert isinstance(metadata["has_hyperlink"], bool)
+
+    return validate
+
+
 def _metadata_has_groundcocoa_fields(metadata: dict[str, Any]) -> None:
     assert metadata["id"]
     assert metadata["query_pos"]
@@ -3997,6 +4016,92 @@ SUITE_SPECS = {
                 direction="va-es",
                 source_language="va",
                 target_language="es",
+            ),
+        ),
+        abs_tolerance=0.05,
+    ),
+    "flores_es_en_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.flores_es(
+            direction="en-es",
+            batch_size=8,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name="flores_es_en_es",
+        baseline={
+            "bleu": 18.66326164399768,
+            "chrf": 48.82934054129723,
+            "ter": 67.41682974559687,
+        },
+        expected_metrics=frozenset({"bleu", "chrf", "ter"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "facebook/flores",
+            "dataset_name": "all",
+            "split": "devtest",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_translation_corpus_metrics",
+            "primary_metric": "bleu",
+            "direction": "en-es",
+            "source_language": "en",
+            "target_language": "es",
+            "upstream_task": "spanish_bench_flores_en-es",
+            "archive_url": "https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz",
+            "archive_sha256": "b8b0b76783024b85797e5cc75064eb83fc5288b41e9654dabc7be6ae944011f6",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_translation_corpus_sample(
+            sample,
+            index,
+            prompt_prefix="English sentence: ",
+            prompt_suffix="\nSpanish sentence:",
+            metadata_validator=_metadata_has_flores_fields(
+                direction="en-es",
+                source_language="en",
+                target_language="es",
+            ),
+        ),
+        abs_tolerance=0.05,
+    ),
+    "flores_pt_en_pt": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.flores_pt(
+            direction="en-pt",
+            batch_size=8,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name="flores_pt_en_pt",
+        baseline={
+            "bleu": 29.342202780864405,
+            "chrf": 59.30497881186596,
+            "ter": 54.3646408839779,
+        },
+        expected_metrics=frozenset({"bleu", "chrf", "ter"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "facebook/flores",
+            "dataset_name": "all",
+            "split": "devtest",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_translation_corpus_metrics",
+            "primary_metric": "bleu",
+            "direction": "en-pt",
+            "source_language": "en",
+            "target_language": "pt",
+            "upstream_task": "portuguese_bench_flores_en-pt",
+            "archive_url": "https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz",
+            "archive_sha256": "b8b0b76783024b85797e5cc75064eb83fc5288b41e9654dabc7be6ae944011f6",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_translation_corpus_sample(
+            sample,
+            index,
+            prompt_prefix="English sentence: ",
+            prompt_suffix="\nPortuguese sentence:",
+            metadata_validator=_metadata_has_flores_fields(
+                direction="en-pt",
+                source_language="en",
+                target_language="pt",
             ),
         ),
         abs_tolerance=0.05,

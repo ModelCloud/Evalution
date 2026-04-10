@@ -75,6 +75,8 @@ SINGLE_SUITE_SPECS = (
     "eus_trivia",
     "fda",
     "fld",
+    "flores_es_en_es",
+    "flores_pt_en_pt",
     "french_bench_arc_challenge",
     "graphwalks_128k",
     "groundcocoa",
