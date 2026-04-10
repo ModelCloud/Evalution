@@ -155,6 +155,8 @@ SINGLE_SUITE_SPECS = (
     "phrases_va_es",
     "prost",
     "pubmedqa",
+    "qasper_bool",
+    "qasper_freeform",
     "qnli",
     "qqp",
     "race",

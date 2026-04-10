@@ -8,11 +8,15 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from functools import partial
+import json
+from pathlib import Path
 import re
 import string
+import tarfile
 from typing import Any
+from urllib.request import urlopen
 
-from datasets import Dataset, load_dataset
+from datasets import Dataset
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -25,6 +29,55 @@ from evalution.scorers.classification import f1_for_label
 QASPER_VARIANTS = ("bool", "freeform")
 QASPER_TASKS = ("qasper_bool", "qasper_freeform")
 _STOP_STRINGS = ("\n",)
+_QASPER_URL_TRAIN_DEV = "https://qasper-dataset.s3.us-west-2.amazonaws.com/qasper-train-dev-v0.3.tgz"
+_QASPER_URL_TEST = "https://qasper-dataset.s3.us-west-2.amazonaws.com/qasper-test-and-evaluator-v0.3.tgz"
+_QASPER_DATA_FILES = {
+    "train": "qasper-train-v0.3.json",
+    "validation": "qasper-dev-v0.3.json",
+    "test": "qasper-test-v0.3.json",
+}
+
+
+def _qasper_cache_dir(cache_dir: str | None) -> Path:
+    base_dir = Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "evalution" / "datasets"
+    target_dir = base_dir / "qasper"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    return target_dir
+
+
+def _download_qasper_archive(split: str, cache_dir: str | None) -> Path:
+    archive_url = _QASPER_URL_TEST if split == "test" else _QASPER_URL_TRAIN_DEV
+    archive_path = _qasper_cache_dir(cache_dir) / archive_url.rsplit("/", 1)[-1]
+    if archive_path.exists():
+        return archive_path
+    with urlopen(archive_url) as response, archive_path.open("wb") as output_file:
+        output_file.write(response.read())
+    return archive_path
+
+
+def _load_qasper_source_dataset(
+    *,
+    split: str,
+    cache_dir: str | None = None,
+) -> Dataset:
+    data_file = _QASPER_DATA_FILES.get(split)
+    if data_file is None:
+        raise ValueError(f"unsupported qasper split: {split!r}")
+    archive_path = _download_qasper_archive(split, cache_dir)
+    with tarfile.open(archive_path, mode="r:gz") as archive:
+        member = next((item for item in archive.getmembers() if item.name.endswith(data_file)), None)
+        if member is None:
+            raise ValueError(f"qasper archive missing data file {data_file!r}")
+        handle = archive.extractfile(member)
+        if handle is None:
+            raise ValueError(f"qasper archive member {data_file!r} could not be read")
+        raw_dataset = json.load(handle)
+    rows = []
+    for paper_id, paper in raw_dataset.items():
+        row = dict(paper)
+        row["id"] = paper_id
+        rows.append(row)
+    return Dataset.from_list(rows)
 
 
 def _qasper_prompt(*, title: str, abstract: str, question: str) -> str:
@@ -65,6 +118,28 @@ def _categorize_qasper_answer(answer_blob: dict[str, Any]) -> tuple[str, str]:
     raise ValueError(f"unsupported qasper answer blob: {answer_blob!r}")
 
 
+def _iter_qasper_annotations(doc: dict[str, Any]) -> Any:
+    # Accept both the Hub-native list-of-question rows and the older script-style dict-of-columns rows.
+    qas = doc["qas"]
+    if isinstance(qas, list):
+        for qa in qas:
+            question = str(qa["question"]).strip()
+            for annotation in qa.get("answers", []):
+                answer_blob = annotation.get("answer", annotation)
+                if not isinstance(answer_blob, dict):
+                    raise TypeError(f"unsupported qasper answer annotation: {annotation!r}")
+                yield question, answer_blob
+        return
+    if isinstance(qas, dict):
+        for question, answer_list in zip(qas["question"], qas["answers"], strict=True):
+            for annotation in answer_list["answer"]:
+                if not isinstance(annotation, dict):
+                    raise TypeError(f"unsupported qasper answer annotation: {annotation!r}")
+                yield str(question).strip(), annotation
+        return
+    raise TypeError(f"unsupported qasper qas payload: {type(qas).__name__}")
+
+
 def _flatten_qasper_dataset(
     dataset: list[dict[str, Any]] | Dataset,
     *,
@@ -75,26 +150,25 @@ def _flatten_qasper_dataset(
     for doc in dataset:
         title = str(doc["title"]).strip()
         abstract = str(doc["abstract"]).strip()
-        for question, answer_list in zip(doc["qas"]["question"], doc["qas"]["answers"], strict=True):
-            for answer_blob in answer_list["answer"]:
-                answer, parsed_answer_type = _categorize_qasper_answer(answer_blob)
-                if parsed_answer_type != answer_type:
-                    continue
-                rows.append(
-                    {
-                        "title": title,
-                        "abstract": abstract,
-                        "question": str(question).strip(),
-                        "answer": answer,
-                        "answer_type": parsed_answer_type,
-                    }
-                )
+        for question, answer_blob in _iter_qasper_annotations(doc):
+            answer, parsed_answer_type = _categorize_qasper_answer(answer_blob)
+            if parsed_answer_type != answer_type:
+                continue
+            rows.append(
+                {
+                    "title": title,
+                    "abstract": abstract,
+                    "question": question,
+                    "answer": answer,
+                    "answer_type": parsed_answer_type,
+                }
+            )
     return Dataset.from_list(rows)
 
 
 def _load_qasper_dataset(
     dataset_path: str,
-    dataset_name: str | None,
+    dataset_name: str | None = None,
     *,
     split: str,
     cache_dir: str | None = None,
@@ -103,12 +177,11 @@ def _load_qasper_dataset(
 ) -> Dataset:
     if stream:
         raise ValueError("qasper does not support stream=True")
-    dataset = load_dataset(
-        dataset_path,
-        dataset_name,
+    if dataset_name is not None:
+        raise ValueError("qasper does not use dataset_name")
+    dataset = _load_qasper_source_dataset(
         split=split,
         cache_dir=cache_dir,
-        streaming=stream,
     )
     return _flatten_qasper_dataset(dataset, answer_type=answer_type)
 

@@ -1587,6 +1587,19 @@ def _assert_nq_open_sample(sample: Any, index: int) -> None:
     assert sample.metadata["answer_aliases"]
 
 
+def _assert_qasper_freeform_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith("TITLE: ")
+    assert "\nABSTRACT: " in sample.prompt
+    assert "\n\nQ: " in sample.prompt
+    assert sample.prompt.endswith("\n\nA:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"prediction-normalized", "answer-normalized"}
+    assert set(sample.scores) == {"f1"}
+    _metadata_has_qasper_fields(answer_type="free form answer")(sample.metadata)
+
+
 def _assert_scrolls_qa_sample(sample: Any, index: int, *, variant: str) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -2174,6 +2187,16 @@ def _metadata_has_mediqa_qa2019_fields(metadata: dict[str, Any]) -> None:
     assert metadata["first_answer_aid"]
     assert metadata["first_answer_reference_rank"] >= 0
     assert metadata["first_answer_reference_score"] >= 0
+
+
+def _metadata_has_qasper_fields(*, answer_type: str) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["title"]
+        assert metadata["abstract"]
+        assert metadata["question"]
+        assert metadata["answer_type"] == answer_type
+
+    return validate
 
 
 def _metadata_has_mmlu_redux_fields(*, subset: str, subject: str) -> Callable[[dict[str, Any]], None]:
@@ -7975,6 +7998,60 @@ SUITE_SPECS = {
                 "year", "topic_id", "topic_name", "test_id", "document_id", "question_id", "question", "correct_answer_id"
             ),
         ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "qasper_bool": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.qasper_bool(batch_size=8, max_rows=32),
+        expected_name="qasper_bool",
+        baseline={
+            "acc,ll": 0.59375,
+            "acc,ll_avg": 0.59375,
+            "f1,ll_boolean": 0.7450980392156863,
+            "f1,ll_avg_boolean": 0.7450980392156863,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg", "f1,ll_boolean", "f1,ll_avg_boolean"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "allenai/qasper",
+            "dataset_name": None,
+            "split": "validation",
+            "order": "native",
+            "variant": "bool",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"yes", "no"},
+            prediction_values={"yes", "no"},
+            prompt_prefix="TITLE: ",
+            prompt_substrings=("\nABSTRACT: ", "\n\nQ: "),
+            prompt_suffix="\n\nA:",
+            metadata_validator=_metadata_has_qasper_fields(answer_type="bool"),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "qasper_freeform": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.qasper_freeform(batch_size=4, max_rows=32, max_new_tokens=64),
+        expected_name="qasper_freeform",
+        baseline={
+            "f1": 0.09263123828222714,
+        },
+        expected_metrics=frozenset({"f1"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "allenai/qasper",
+            "dataset_name": None,
+            "split": "validation",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "variant": "freeform",
+            "scoring_mode": "generated_qasper_abstractive_f1",
+            "primary_metric": "f1",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_qasper_freeform_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "qnli": SuiteSpec(

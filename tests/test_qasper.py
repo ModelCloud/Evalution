@@ -6,6 +6,9 @@
 from __future__ import annotations
 
 import importlib
+import io
+import json
+import tarfile
 
 import pytest
 from datasets import Dataset
@@ -86,6 +89,100 @@ def test_qasper_freeform_scores_abstractive_rows(monkeypatch) -> None:
     assert result.metadata["variant"] == "freeform"
     assert result.metadata["scoring_mode"] == "generated_qasper_abstractive_f1"
     assert result.samples[0].metadata["answer_type"] == "free form answer"
+
+
+def test_qasper_loads_public_tarballs_without_dataset_scripts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    archive_path = tmp_path / "qasper-train-dev-v0.3.tgz"
+    payload = {
+        "paper-1": {
+            "title": "Paper",
+            "abstract": "Summary",
+            "qas": [
+                {
+                    "question": "Is the answer yes?",
+                    "answers": [
+                        {
+                            "annotation_id": "ann-1",
+                            "answer": {
+                                "unanswerable": False,
+                                "extractive_spans": [],
+                                "yes_no": True,
+                                "free_form_answer": "",
+                                "evidence": [],
+                                "highlighted_evidence": [],
+                            },
+                            "worker_id": "worker-1",
+                        }
+                    ],
+                }
+            ],
+        }
+    }
+    data_bytes = json.dumps(payload).encode("utf-8")
+    with tarfile.open(archive_path, "w:gz") as archive:
+        info = tarfile.TarInfo("qasper-dev-v0.3.json")
+        info.size = len(data_bytes)
+        archive.addfile(info, io.BytesIO(data_bytes))
+    monkeypatch.setattr(qasper_module, "_download_qasper_archive", lambda split, cache_dir: archive_path)
+
+    dataset = qasper_module._load_qasper_dataset(
+        "allenai/qasper",
+        split="validation",
+        answer_type="bool",
+    )
+
+    assert list(dataset) == [
+        {
+            "title": "Paper",
+            "abstract": "Summary",
+            "question": "Is the answer yes?",
+            "answer": "yes",
+            "answer_type": "bool",
+        }
+    ]
+
+
+def test_qasper_flatten_supports_legacy_script_style_rows() -> None:
+    dataset = Dataset.from_list(
+        [
+            {
+                "title": "Paper",
+                "abstract": "Summary",
+                "qas": {
+                    "question": ["What is the answer?"],
+                    "answers": [
+                        {
+                            "answer": [
+                                {
+                                    "unanswerable": False,
+                                    "extractive_spans": [],
+                                    "yes_no": None,
+                                    "free_form_answer": "A concise answer",
+                                    "evidence": [],
+                                    "highlighted_evidence": [],
+                                }
+                            ]
+                        }
+                    ],
+                },
+            }
+        ]
+    )
+
+    flattened = qasper_module._flatten_qasper_dataset(dataset, answer_type="free form answer")
+
+    assert list(flattened) == [
+        {
+            "title": "Paper",
+            "abstract": "Summary",
+            "question": "What is the answer?",
+            "answer": "A concise answer",
+            "answer_type": "free form answer",
+        }
+    ]
 
 
 def test_qasper_dispatcher_rejects_unknown_variant() -> None:
