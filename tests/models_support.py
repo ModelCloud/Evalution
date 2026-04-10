@@ -1561,6 +1561,7 @@ def _assert_mmlu_pro_sample(
     index: int,
     *,
     allowed_subsets: set[str] | None = None,
+    max_choice_count: int = 10,
 ) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -1582,7 +1583,7 @@ def _assert_mmlu_pro_sample(
     assert sample.metadata["question_id"] is not None
     assert sample.metadata["src"]
     assert 0 <= int(sample.metadata["fewshot_count"]) <= 5
-    assert 3 <= len(sample.metadata["choice_texts"]) <= 10
+    assert 3 <= len(sample.metadata["choice_texts"]) <= max_choice_count
 
 
 def _assert_gpqa_sample(sample: Any, index: int, *, subset: str) -> None:
@@ -7352,6 +7353,43 @@ SUITE_SPECS = {
                 subject="abstract_algebra",
             ),
         ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "mmlu_pro_plus_stem_math": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mmlu_pro_plus(
+            subsets="stem.math",
+            num_fewshot=5,
+            batch_size=1,
+            max_new_tokens=128,
+            stream=True,
+            max_rows=32,
+        ),
+        expected_name="mmlu_pro_plus_stem_math",
+        baseline={"em,choice_label": 0.1875},
+        expected_metrics=frozenset({"em,choice_label"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "saeidasgari/mmlu-pro-plus",
+            "dataset_name": None,
+            "split": "test",
+            "fewshot_split": "validation",
+            "num_fewshot": 5,
+            "subsets": ["stem.math"],
+            "subset_paths": [["stem", "math"]],
+            "subset_kinds": ["leaf"],
+            "selection_mode": "single",
+            "apply_chat_template": False,
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_choice_label_exact_match",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_mmlu_pro_sample(
+            sample,
+            index,
+            allowed_subsets={"stem.math"},
+            max_choice_count=16,
+        ),
+        result_validator=_validate_mmlu_pro_result,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "mmlu_all": SuiteSpec(
