@@ -886,6 +886,451 @@ tests:
     assert ".run(benchmarks.mmlu_cf_biology(" in script
 
 
+def test_yaml_supports_belebele_language_aliases() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "belebele_por_Latn", "max_rows": 1},
+            {"type": "belebele_spa_Latn", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "belebele_por_Latn",
+        "belebele_spa_Latn",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: belebele_por_Latn
+    max_rows: 8
+  - type: belebele_spa_Latn
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.belebele_por_Latn(" in script
+    assert ".run(benchmarks.belebele_spa_Latn(" in script
+
+
+def test_yaml_supports_flores_pt_factories() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "flores_pt", "direction": "en-pt", "max_rows": 1},
+            {"type": "flores_pt_pt_en", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "flores_pt_en_pt",
+        "flores_pt_pt_en",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: flores_pt
+    direction: en-pt
+    max_rows: 8
+  - type: flores_pt_pt_en
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.flores_pt(" in script
+    assert ".run(benchmarks.flores_pt_pt_en(" in script
+
+
+def test_yaml_supports_flores_es_factories() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "flores_es", "direction": "en-es", "max_rows": 1},
+            {"type": "flores_es_es_pt", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "flores_es_en_es",
+        "flores_es_es_pt",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: flores_es
+    direction: en-es
+    max_rows: 8
+  - type: flores_es_es_pt
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.flores_es(" in script
+    assert ".run(benchmarks.flores_es_es_pt(" in script
+
+
+def test_yaml_supports_phrases_es_factories() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "phrases_es", "direction": "es-va", "max_rows": 1},
+            {"type": "phrases_va_es", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "phrases_es_va",
+        "phrases_va_es",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: phrases_es
+    direction: es-va
+    max_rows: 8
+  - type: phrases_va_es
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.phrases_es(" in script
+    assert ".run(benchmarks.phrases_va_es(" in script
+
+
+def test_yaml_supports_remaining_spanish_bench_suite_factories() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "wnli_es", "max_rows": 1},
+            {"type": "mgsm_direct_es_spanish_bench", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "wnli_es",
+        "mgsm_direct_es_spanish_bench",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: wnli_es
+    max_rows: 8
+  - type: mgsm_direct_es_spanish_bench
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.wnli_es(" in script
+    assert ".run(benchmarks.mgsm_direct_es_spanish_bench(" in script
+
+
+def test_yaml_supports_cocoteros_es_factory() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "cocoteros_es", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == ["cocoteros_es"]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: cocoteros_es
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.cocoteros_es(" in script
+
+
+def test_yaml_supports_xlsum_es_factory() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "xlsum_es", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == ["xlsum_es"]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: xlsum_es
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.xlsum_es(" in script
+
+
+def test_yaml_supports_small_backlog_suite_factories() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "noticia", "max_rows": 1},
+            {"type": "simple_cooccurrence_bias", "max_rows": 1},
+            {"type": "groundcocoa", "max_rows": 1},
+            {"type": "meqsum", "max_rows": 1},
+            {"type": "mediqa_qa2019", "max_rows": 1},
+            {"type": "squad_completion", "max_rows": 1},
+            {"type": "swde", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "noticia",
+        "simple_cooccurrence_bias",
+        "groundcocoa",
+        "meqsum",
+        "mediqa_qa2019",
+        "squad_completion",
+        "swde",
+    ]
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: noticia
+    max_rows: 8
+  - type: simple_cooccurrence_bias
+    max_rows: 8
+  - type: groundcocoa
+    max_rows: 8
+  - type: meqsum
+    max_rows: 8
+  - type: mediqa_qa2019
+    max_rows: 8
+  - type: squad_completion
+    max_rows: 8
+  - type: swde
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.noticia(" in script
+    assert ".run(benchmarks.simple_cooccurrence_bias(" in script
+    assert ".run(benchmarks.groundcocoa(" in script
+    assert ".run(benchmarks.meqsum(" in script
+    assert ".run(benchmarks.mediqa_qa2019(" in script
+    assert ".run(benchmarks.squad_completion(" in script
+    assert ".run(benchmarks.swde(" in script
+
+
+def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
+    suites = evalution_yaml._build_tests(
+        [
+            {"type": "storycloze_2016", "max_rows": 1},
+            {"type": "paloma_dolma_v1_5", "max_rows": 1},
+            {"type": "assin", "variant": "assin_paraphrase", "max_rows": 1},
+            {"type": "assin_entailment", "max_rows": 1},
+            {"type": "spanish_bench", "task": "copa_es", "max_rows": 1},
+            {"type": "openbookqa_es", "max_rows": 1},
+            {"type": "wnli_es", "max_rows": 1},
+            {"type": "mgsm_direct_es_spanish_bench", "max_rows": 1},
+            {"type": "flores_es_en_es", "max_rows": 1},
+            {"type": "cocoteros_es", "max_rows": 1},
+            {"type": "xlsum_es", "max_rows": 1},
+            {"type": "phrases_es_va", "max_rows": 1},
+            {"type": "noticia", "max_rows": 1},
+            {"type": "simple_cooccurrence_bias", "max_rows": 1},
+            {"type": "groundcocoa", "max_rows": 1},
+            {"type": "meqsum", "max_rows": 1},
+            {"type": "mediqa_qa2019", "max_rows": 1},
+            {"type": "squad_completion", "max_rows": 1},
+            {"type": "swde", "max_rows": 1},
+            {"type": "longbench", "subset": "repobench-p_e", "max_rows": 1},
+            {"type": "longbench_repobench_p", "max_rows": 1},
+            {"type": "longbench2_academic_single", "max_rows": 1},
+            {"type": "mlqa_en_en", "max_rows": 1},
+            {"type": "qasper_freeform", "max_rows": 1},
+            {"type": "mmlu_redux", "subsets": "stem.abstract_algebra", "max_rows": 1},
+            {"type": "mmlu_pro_plus", "subsets": "stem.math", "max_rows": 1},
+            {"type": "scrolls_contractnli", "max_rows": 1},
+            {"type": "ruler_cwe", "max_rows": 1},
+        ]
+    )
+
+    assert [suite.task_name() for suite in suites] == [
+        "storycloze_2016",
+        "paloma_dolma_v1_5",
+        "assin_paraphrase",
+        "assin_entailment",
+        "copa_es",
+        "openbookqa_es",
+        "wnli_es",
+        "mgsm_direct_es_spanish_bench",
+        "flores_es_en_es",
+        "cocoteros_es",
+        "xlsum_es",
+        "phrases_es_va",
+        "noticia",
+        "simple_cooccurrence_bias",
+        "groundcocoa",
+        "meqsum",
+        "mediqa_qa2019",
+        "squad_completion",
+        "swde",
+        "longbench_repobench_p_e",
+        "longbench_repobench_p",
+        "longbench2_academic_single",
+        "mlqa_en_en",
+        "qasper_freeform",
+        "mmlu_redux_stem_abstract_algebra",
+        "mmlu_pro_plus_stem_math",
+        "scrolls_contractnli",
+        "ruler_cwe",
+    ]
+
+
+def test_python_from_yaml_emits_new_suite_factories() -> None:
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Transformers
+model:
+  path: /tmp/model
+tests:
+  - type: storycloze
+    year: "2016"
+    max_rows: 8
+  - type: paloma_dolma_v1_5
+    max_rows: 8
+  - type: assin
+    variant: assin_paraphrase
+    max_rows: 8
+  - type: assin_entailment
+    max_rows: 8
+  - type: spanish_bench
+    task: copa_es
+    max_rows: 8
+  - type: openbookqa_es
+    max_rows: 8
+  - type: wnli_es
+    max_rows: 8
+  - type: mgsm_direct_es_spanish_bench
+    max_rows: 8
+  - type: flores_es_en_es
+    max_rows: 8
+  - type: cocoteros_es
+    max_rows: 8
+  - type: xlsum_es
+    max_rows: 8
+  - type: phrases_es_va
+    max_rows: 8
+  - type: noticia
+    max_rows: 8
+  - type: simple_cooccurrence_bias
+    max_rows: 8
+  - type: groundcocoa
+    max_rows: 8
+  - type: meqsum
+    max_rows: 8
+  - type: mediqa_qa2019
+    max_rows: 8
+  - type: squad_completion
+    max_rows: 8
+  - type: swde
+    max_rows: 8
+  - type: longbench
+    subset: repobench-p_e
+    max_rows: 8
+  - type: longbench_repobench_p
+    max_rows: 8
+  - type: longbench2
+    subset: academic_single
+    max_rows: 8
+  - type: longbench2_academic_single
+    max_rows: 8
+  - type: mlqa_en_en
+    max_rows: 8
+  - type: qasper
+    variant: freeform
+    max_rows: 8
+  - type: mmlu_redux
+    subsets: stem.abstract_algebra
+    max_rows: 8
+  - type: mmlu_pro_plus
+    subsets: stem.math
+    max_rows: 8
+  - type: scrolls
+    subset: contractnli
+    max_rows: 8
+  - type: scrolls_contractnli
+    max_rows: 8
+  - type: ruler
+    variant: ruler_cwe
+    max_rows: 8
+  - type: ruler_cwe
+    max_rows: 8
+"""
+    )
+
+    assert ".run(benchmarks.storycloze(" in script
+    assert ".run(benchmarks.paloma_dolma_v1_5(" in script
+    assert ".run(benchmarks.assin(" in script
+    assert ".run(benchmarks.assin_entailment(" in script
+    assert ".run(benchmarks.spanish_bench(" in script
+    assert ".run(benchmarks.openbookqa_es(" in script
+    assert ".run(benchmarks.wnli_es(" in script
+    assert ".run(benchmarks.mgsm_direct_es_spanish_bench(" in script
+    assert ".run(benchmarks.flores_es_en_es(" in script
+    assert ".run(benchmarks.cocoteros_es(" in script
+    assert ".run(benchmarks.xlsum_es(" in script
+    assert ".run(benchmarks.phrases_es_va(" in script
+    assert ".run(benchmarks.noticia(" in script
+    assert ".run(benchmarks.simple_cooccurrence_bias(" in script
+    assert ".run(benchmarks.groundcocoa(" in script
+    assert ".run(benchmarks.meqsum(" in script
+    assert ".run(benchmarks.mediqa_qa2019(" in script
+    assert ".run(benchmarks.squad_completion(" in script
+    assert ".run(benchmarks.swde(" in script
+    assert ".run(benchmarks.longbench(" in script
+    assert ".run(benchmarks.longbench_repobench_p(" in script
+    assert ".run(benchmarks.longbench2(" in script
+    assert ".run(benchmarks.longbench2_academic_single(" in script
+    assert ".run(benchmarks.mlqa_en_en(" in script
+    assert ".run(benchmarks.qasper(" in script
+    assert ".run(benchmarks.mmlu_redux(" in script
+    assert ".run(benchmarks.mmlu_pro_plus(" in script
+    assert ".run(benchmarks.scrolls(" in script
+    assert ".run(benchmarks.scrolls_contractnli(" in script
+    assert ".run(benchmarks.ruler(" in script
+    assert ".run(benchmarks.ruler_cwe(" in script
+
+
+
 def test_python_from_yaml_emits_arithmetic_variants() -> None:
     task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _ARITHMETIC_TASKS)
     script = evalution.python_from_yaml(

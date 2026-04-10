@@ -20,6 +20,7 @@ from .arabicmmlu import ARABICMMLU_SUBSETS, ARABICMMLU_TASKS, ArabicMMLU, arabic
 from .arc_easy import ARCEasy, arc_easy
 from .arc_challenge import ARCChallenge, arc_challenge
 from .arc_mt import ARCMT, ARC_MT_LANGUAGES, ARC_MT_TASKS, arc_mt, arc_mt_da, arc_mt_de, arc_mt_el, arc_mt_es, arc_mt_fi, arc_mt_hu, arc_mt_is, arc_mt_it, arc_mt_nb, arc_mt_pl, arc_mt_pt, arc_mt_sv
+from .assin import ASSIN, ASSIN_VARIANTS, assin, assin_entailment, assin_paraphrase
 from .arithmetic import (
     Arithmetic,
     arithmetic_1dc,
@@ -41,7 +42,7 @@ from . import bbh as _bbh_module
 from .bbh import BBH, BBH_SUBSETS, BBH_TASKS, bbh
 from .bangla import BANGLA_SUBSETS, BANGLA_TASKS, Bangla, bangla, bangla_boolqa, bangla_commonsenseqa, bangla_mmlu, bangla_openbookqa, bangla_piqa
 from .bear import BEAR, bear, bear_big
-from .belebele import Belebele, belebele
+from .belebele import BELEBELE_LANGUAGE_TASKS, Belebele, belebele, belebele_por_Latn, belebele_spa_Latn
 from . import bbq as _bbq_module
 from .bbq import BBQ, BBQ_CATEGORIES, BBQ_TASKS, bbq
 from .base import BaseTestSuite, TestSuite
@@ -72,6 +73,7 @@ from .code_x_glue import (
     code2text_python,
     code2text_ruby,
 )
+from .cocoteros_es import CocoterosES, cocoteros_es
 from . import crows_pairs as _crows_pairs_module
 from .commonsense_qa import CommonsenseQA, commonsense_qa
 from .crows_pairs import CROWS_PAIRS_BIAS_TYPES, CROWS_PAIRS_LANGUAGES, CROWS_PAIRS_TASKS, CrowSPairs, crows_pairs
@@ -87,6 +89,10 @@ from .copa import COPA, copa
 from .drop import DROP, drop
 from .fld import FLD, FLD_LABELS, fld
 from .fda import FDA, fda
+from . import flores_es as _flores_es_module
+from .flores_es import FLORES_ES_DIRECTIONS, FLORES_ES_TASKS, FloresES, flores_es
+from . import flores_pt as _flores_pt_module
+from .flores_pt import FLORES_PT_DIRECTIONS, FLORES_PT_TASKS, FloresPT, flores_pt
 from .french_bench_arc_challenge import FrenchBenchARCChallenge, french_bench_arc_challenge
 from . import eus_exams as _eus_exams_module
 from .eus_exams import EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, EusExams, eus_exams
@@ -98,6 +104,7 @@ from .graphwalks import GraphWalks, graphwalks_128k, graphwalks_1M
 from .gsm8k import GSM8K, gsm8k
 from .gsm8k_fr import GSM8KFR, gsm8k_fr
 from .gsm8k_ko import GSM8KKO, gsm8k_ko
+from .groundcocoa import GroundCocoa, groundcocoa
 from . import haerae as _haerae_module
 from .haerae import HAERAE_SUBSETS, HAERAE_TASKS, Haerae, haerae
 from .gsm_plus import GSM_PLUS_TASKS, GSMPlus, GSMPlusMini, gsm_plus, gsm_plus_mini
@@ -151,6 +158,10 @@ from .lambada_multilingual_stablelm import (
     lambada_openai_mt_stablelm_nl,
     lambada_openai_mt_stablelm_pt,
 )
+from . import longbench as _longbench_module
+from .longbench import LONG_BENCH_TASKS, LongBench, longbench
+from . import longbench2 as _longbench2_module
+from .longbench2 import LONG_BENCH2_TASKS, LongBench2, longbench2
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
 from .mbpp import MBPP, mbpp
@@ -167,8 +178,13 @@ from .mastermind import (
     mastermind_46_easy,
     mastermind_46_hard,
 )
+from .meqsum import MeQSum, meqsum
+from .mediqa_qa2019 import MediqaQA2019, mediqa_qa2019
 from . import mgsm as _mgsm_module
 from .mgsm import MGSM_LANGUAGES, MGSM_TASKS, MGSM, mgsm
+from .mgsm_direct_es_spanish_bench import MGSMDirectESSpanishBench, mgsm_direct_es_spanish_bench
+from . import mlqa as _mlqa_module
+from .mlqa import MLQA, MLQA_LANGUAGES, MLQA_TASKS, mlqa
 from .medmcqa import MedMCQA, medmcqa
 from .medqa import MedQA, medqa_4options
 from .mc_taco import MCTACO, mc_taco
@@ -176,20 +192,28 @@ from .mmlu import MMLU, mmlu
 from . import mmlu_cf as _mmlu_cf_module
 from .mmlu_cf import MMLUCF, MMLU_CF_SUBJECTS, MMLU_CF_TASKS, mmlu_cf
 from .mmlu_pro import MMLUPro, mmlu_pro
+from .mmlu_pro_plus import MMLUProPlus, mmlu_pro_plus
+from .mmlu_redux import MMLURedux, mmlu_redux
 from .mnli import MNLI, mnli
 from .mrpc import MRPC, mrpc
 from .multirc import MultiRC, multirc
 from .mutual import MuTual, mutual
 from .nq_open import NQOpen, nq_open
+from .noticia import Noticia, noticia
 from .multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from .multiple_choice_utils import choice_index_from_labels, question_answer_prompt
 from .openbookqa import OpenBookQA, openbookqa
+from . import paloma as _paloma_module
+from .paloma import PALOMA_SUBSETS, PALOMA_TASKS, Paloma, paloma
 from .paws_x import PAWSX, paws_x, paws_x_de, paws_x_en, paws_x_es, paws_x_fr, paws_x_ja, paws_x_ko, paws_x_zh
 from .piqa import PIQA, piqa
 from .pile_10k import Pile10K, pile_10k
+from . import phrases_es as _phrases_es_module
+from .phrases_es import PHRASES_ES_DIRECTIONS, PHRASES_ES_TASKS, PhrasesES, phrases_es
 from .polemo2 import POLEMO2_VARIANTS, Polemo2, polemo2, polemo2_in, polemo2_out
 from .prost import Prost, prost
 from .pubmedqa import PubMedQA, pubmedqa
+from .qasper import QASPER_TASKS, QASPER_VARIANTS, QASPERBool, QASPERFreeform, qasper, qasper_bool, qasper_freeform
 from .qa4mre import QA4MRE, qa4mre, qa4mre_2011, qa4mre_2012, qa4mre_2013
 from .qnli import QNLI, qnli
 from .qqp import QQP, qqp
@@ -197,12 +221,23 @@ from .race import RACE, race
 from .record import ReCoRD, record
 from .rolling_perplexity import BaseRollingPerplexitySuite, RollingPerplexitySample
 from .rte import RTE, rte
+from . import ruler as _ruler_module
+from .ruler import RULER, RULER_TASKS, ruler
 from .sciq import SciQ, sciq
+from . import scrolls as _scrolls_module
+from .scrolls import SCROLLS_TASKS, scrolls
 from .siqa import SIQA, siqa
+from .simple_cooccurrence_bias import SimpleCooccurrenceBias, simple_cooccurrence_bias
 from .single_continuation import BaseSingleContinuationSuite, SingleContinuationSample
+from . import spanish_bench as _spanish_bench_module
+from .spanish_bench import SPANISH_BENCH_TASKS, SpanishBench, spanish_bench
+from . import storycloze as _storycloze_module
+from .storycloze import STORYCLOZE_TASKS, STORYCLOZE_YEARS, StoryCloze, storycloze
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
+from .squad_completion import SQuADCompletion, squad_completion
 from .squadv2 import SQuADV2, squadv2
+from .swde import SWDE, swde
 from .toxigen import ToxiGen, toxigen
 from .truthfulqa import TRUTHFULQA_TASKS, TruthfulQAMC, truthfulqa, truthfulqa_mc1, truthfulqa_mc2
 from .triviaqa import TriviaQA, triviaqa
@@ -223,6 +258,7 @@ from .xstorycloze import XSTORYCLOZE_LANGUAGES, XStoryCloze, xstorycloze, xstory
 from . import xnli as _xnli_module
 from .xnli import XNLI, XNLI_LANGUAGES, XNLI_TASKS, xnli
 from .xnli_eu import XNLIEU, xnli_eu
+from .xlsum_es import XLSUMES, xlsum_es
 from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinograd_jp, xwinograd_pt, xwinograd_ru, xwinograd_zh
 
 for _crows_pairs_task in CROWS_PAIRS_TASKS:
@@ -310,10 +346,40 @@ for _mmlu_cf_task in MMLU_CF_TASKS:
 
 del _mmlu_cf_task
 
+for _mlqa_task in MLQA_TASKS:
+    globals()[_mlqa_task] = getattr(_mlqa_module, _mlqa_task)
+
+del _mlqa_task
+
+for _paloma_task in PALOMA_TASKS:
+    globals()[_paloma_task] = getattr(_paloma_module, _paloma_task)
+
+del _paloma_task
+
+for _longbench_task in LONG_BENCH_TASKS:
+    globals()[_longbench_task] = getattr(_longbench_module, _longbench_task)
+
+del _longbench_task
+
+for _longbench2_task in LONG_BENCH2_TASKS:
+    globals()[_longbench2_task] = getattr(_longbench2_module, _longbench2_task)
+
+del _longbench2_task
+
 for _bbq_task in BBQ_TASKS:
     globals()[_bbq_task] = getattr(_bbq_module, _bbq_task)
 
 del _bbq_task
+
+for _scrolls_task in SCROLLS_TASKS:
+    globals()[_scrolls_task] = getattr(_scrolls_module, _scrolls_task)
+
+del _scrolls_task
+
+for _ruler_task in RULER_TASKS:
+    globals()[_ruler_task] = getattr(_ruler_module, _ruler_task)
+
+del _ruler_task
 
 for _babilong_task in BABILONG_TASKS:
     globals()[_babilong_task] = getattr(_babilong_module, _babilong_task)
@@ -349,6 +415,31 @@ for _wmdp_task in WMDP_TASKS:
     globals()[_wmdp_task] = getattr(_wmdp_module, _wmdp_task)
 
 del _wmdp_task
+
+for _storycloze_task in STORYCLOZE_TASKS:
+    globals()[_storycloze_task] = getattr(_storycloze_module, _storycloze_task)
+
+del _storycloze_task
+
+for _spanish_bench_task in SPANISH_BENCH_TASKS:
+    globals()[_spanish_bench_task] = getattr(_spanish_bench_module, _spanish_bench_task)
+
+del _spanish_bench_task
+
+for _flores_es_task in FLORES_ES_TASKS:
+    globals()[_flores_es_task] = getattr(_flores_es_module, _flores_es_task)
+
+del _flores_es_task
+
+for _phrases_es_task in PHRASES_ES_TASKS:
+    globals()[_phrases_es_task] = getattr(_phrases_es_module, _phrases_es_task)
+
+del _phrases_es_task
+
+for _flores_pt_task in FLORES_PT_TASKS:
+    globals()[_flores_pt_task] = getattr(_flores_pt_module, _flores_pt_task)
+
+del _flores_pt_task
 
 __all__ = [
     "ANLI",
@@ -451,6 +542,7 @@ __all__ = [
     "GPQA_SUBSETS",
     "GPQA_TASKS",
     "GSM8K",
+    "GroundCocoa",
     "HAERAE_SUBSETS",
     "HAERAE_TASKS",
     "Haerae",
@@ -478,25 +570,38 @@ __all__ = [
     "KorMedMCQA",
     "LAMBADA",
     "LAMBADACloze",
+    "LongBench2",
+    "LONG_BENCH2_TASKS",
     "LogiQA",
     "LogiQA2",
     "MBPP",
     "MASTERMIND_VARIANTS",
     "MathQA",
     "Mastermind",
+    "MeQSum",
+    "MediqaQA2019",
     "MedMCQA",
     "MedQA",
     "MCTACO",
     "MMLU",
+    "MLQA",
+    "MLQA_LANGUAGES",
+    "MLQA_TASKS",
     "MMLUPro",
+    "MMLUProPlus",
+    "MMLURedux",
     "MNLI",
     "MRPC",
     "MultiRC",
     "MuTual",
     "NQOpen",
+    "Noticia",
     "MultipleChoiceSample",
     "OpenBookQA",
     "PAWSX",
+    "PALOMA_SUBSETS",
+    "PALOMA_TASKS",
+    "Paloma",
     "PIQAArabic",
     "PIQA",
     "Pile10K",
@@ -504,19 +609,32 @@ __all__ = [
     "Polemo2",
     "Prost",
     "PubMedQA",
+    "QASPER_TASKS",
+    "QASPER_VARIANTS",
+    "QASPERBool",
+    "QASPERFreeform",
     "QA4MRE",
     "QNLI",
     "QQP",
     "RACE",
     "ReCoRD",
     "RollingPerplexitySample",
+    "RULER",
+    "RULER_TASKS",
     "RTE",
+    "SCROLLS_TASKS",
     "SciQ",
     "SIQA",
+    "SimpleCooccurrenceBias",
     "SingleContinuationSample",
+    "StoryCloze",
+    "STORYCLOZE_TASKS",
+    "STORYCLOZE_YEARS",
     "SWAG",
     "SQuADV2",
+    "SQuADCompletion",
     "SST2",
+    "SWDE",
     "TestSuite",
     "ToxiGen",
     "TRUTHFULQA_TASKS",
@@ -620,6 +738,9 @@ __all__ = [
     "bear",
     "bear_big",
     "belebele",
+    "BELEBELE_LANGUAGE_TASKS",
+    "belebele_por_Latn",
+    "belebele_spa_Latn",
     "bbq",
     "blimp",
     "cabbq",
@@ -633,6 +754,11 @@ __all__ = [
     "ceval",
     "boolq",
     "cb",
+    "ASSIN",
+    "ASSIN_VARIANTS",
+    "assin",
+    "assin_entailment",
+    "assin_paraphrase",
     "cola",
     "cmmlu",
     "cnn_dailymail",
@@ -643,6 +769,8 @@ __all__ = [
     "code2text_php",
     "code2text_python",
     "code2text_ruby",
+    "CocoterosES",
+    "cocoteros_es",
     "commonsense_qa",
     "crows_pairs",
     *CROWS_PAIRS_TASKS,
@@ -659,8 +787,18 @@ __all__ = [
     "FLD",
     "FLD_LABELS",
     "FDA",
+    "FLORES_ES_DIRECTIONS",
+    "FLORES_ES_TASKS",
+    "FLORES_PT_DIRECTIONS",
+    "FLORES_PT_TASKS",
     "fda",
     "fld",
+    "FloresES",
+    "flores_es",
+    *FLORES_ES_TASKS,
+    "FloresPT",
+    "flores_pt",
+    *FLORES_PT_TASKS,
     "FrenchBenchARCChallenge",
     "french_bench_arc_challenge",
     "eus_exams",
@@ -683,6 +821,7 @@ __all__ = [
     "gsm8k_fr",
     "GSM8KKO",
     "gsm8k_ko",
+    "groundcocoa",
     "haerae",
     "gsm_plus",
     "gsm_plus_mini",
@@ -722,6 +861,12 @@ __all__ = [
     "lambada_openai_cloze",
     "lambada_standard",
     "lambada_standard_cloze",
+    "LONG_BENCH_TASKS",
+    "LongBench",
+    "longbench",
+    "longbench2",
+    "LongBench2",
+    "LONG_BENCH2_TASKS",
     "logiqa",
     "logiqa2",
     "mbpp",
@@ -733,27 +878,36 @@ __all__ = [
     "mastermind_35_hard",
     "mastermind_46_easy",
     "mastermind_46_hard",
+    "meqsum",
+    "mediqa_qa2019",
     "medmcqa",
     "medqa_4options",
     "mc_taco",
     "macro_f1",
     "matthews_corrcoef",
     "MGSM",
+    "MGSMDirectESSpanishBench",
     "MGSM_LANGUAGES",
     "MGSM_TASKS",
     "mgsm",
+    "mgsm_direct_es_spanish_bench",
+    "mlqa",
     "mmlu",
     "MMLUCF",
     "MMLU_CF_SUBJECTS",
     "MMLU_CF_TASKS",
     "mmlu_cf",
     "mmlu_pro",
+    "mmlu_pro_plus",
+    "mmlu_redux",
     "mnli",
     "mrpc",
     "multirc",
     "mutual",
     "nq_open",
+    "noticia",
     "openbookqa",
+    "paloma",
     "paws_x",
     "paws_x_de",
     "paws_x_en",
@@ -765,11 +919,19 @@ __all__ = [
     "piqa",
     "piqa_ar",
     "pile_10k",
+    "PHRASES_ES_DIRECTIONS",
+    "PHRASES_ES_TASKS",
+    "PhrasesES",
+    "phrases_es",
+    *PHRASES_ES_TASKS,
     "polemo2",
     "polemo2_in",
     "polemo2_out",
     "prost",
     "pubmedqa",
+    "qasper",
+    "qasper_bool",
+    "qasper_freeform",
     "qa4mre",
     "qa4mre_2011",
     "qa4mre_2012",
@@ -778,10 +940,20 @@ __all__ = [
     "qqp",
     "race",
     "record",
+    "ruler",
     "rte",
+    "scrolls",
+    "SPANISH_BENCH_TASKS",
+    "SpanishBench",
+    "spanish_bench",
+    *SPANISH_BENCH_TASKS,
     "sciq",
     "siqa",
+    "simple_cooccurrence_bias",
+    "storycloze",
     "swag",
+    "swde",
+    "squad_completion",
     "squadv2",
     "toxigen",
     "question_answer_prompt",
@@ -833,6 +1005,8 @@ __all__ = [
     "xstorycloze_zh",
     "xnli",
     "xnli_eu",
+    "XLSUMES",
+    "xlsum_es",
     "xwinograd",
     "xwinograd_en",
     "xwinograd_fr",
@@ -857,8 +1031,16 @@ __all__.extend(CMMLU_TASKS)
 __all__.extend(KMMLU_TASKS)
 __all__.extend(MGSM_TASKS)
 __all__.extend(MMLU_CF_TASKS)
+__all__.extend(MLQA_TASKS)
 __all__.extend(ARABICMMLU_TASKS)
 __all__.extend(HENDRYCKS_MATH_TASKS)
+__all__.extend(PALOMA_TASKS)
+__all__.extend(LONG_BENCH_TASKS)
+__all__.extend(LONG_BENCH2_TASKS)
+__all__.extend(QASPER_TASKS)
+__all__.extend(RULER_TASKS)
+__all__.extend(SCROLLS_TASKS)
+__all__.extend(STORYCLOZE_TASKS)
 __all__.extend(WMDP_TASKS)
 __all__.extend(XNLI_TASKS)
 __all__.extend(XQUAD_TASKS)
