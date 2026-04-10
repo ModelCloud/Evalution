@@ -29,7 +29,6 @@ env:
   TORCH_VERSION: 2.11.0
   PYTHON_VERSION: 3.14t
   UV_PYTHON: 3.14t
-  UV_INDEX_URL: http://10.0.14.249/simple
   PYTHON_GIL: 0
   RUNNER: 10.0.13.31
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
