@@ -1299,6 +1299,28 @@ def _assert_cocoteros_sample(sample: Any, index: int) -> None:
     assert sample.metadata["context"] in sample.prompt
 
 
+def _assert_copa_es_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.prompt.endswith(("porque", "y por lo tanto"))
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["id"]
+    assert sample.metadata["question"] in {"cause", "effect"}
+    assert sample.metadata["premise"]
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
 def _assert_simple_cooccurrence_bias_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
@@ -5249,6 +5271,29 @@ SUITE_SPECS = {
             metadata_validator=_metadata_field_in("source_benchmark", {"copa"}),
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_89,
+    ),
+    "copa_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.copa_es(
+            batch_size=24,
+            max_rows=32,
+        ),
+        expected_name="copa_es",
+        baseline={
+            "acc,ll": 0.6875,
+            "acc,ll_avg": 0.71875,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "BSC-LT/COPA-es",
+            "dataset_name": None,
+            "split": "test",
+            "order": "native",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_copa_es_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "copal_id_standard": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.copal_id_standard(

@@ -61,6 +61,7 @@ SINGLE_SUITE_SPECS = (
     "cola",
     "commonsense_qa",
     "copa",
+    "copa_es",
     "coqa",
     "darijahellaswag",
     "drop",
