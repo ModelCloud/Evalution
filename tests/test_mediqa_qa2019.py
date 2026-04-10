@@ -181,3 +181,18 @@ def test_mediqa_qa2019_scores_medical_answer_generation(monkeypatch) -> None:
         "first_answer_reference_rank": 3,
         "first_answer_reference_score": 4,
     }
+
+
+def test_mediqa_qa2019_empty_text_scores_zero() -> None:
+    assert mediqa_qa2019_module._mediqa_qa2019_answer_scores("", "reference") == {
+        "bleu": 0.0,
+        "rouge1": 0.0,
+        "rouge2": 0.0,
+        "rougeL": 0.0,
+    }
+    assert mediqa_qa2019_module._mediqa_qa2019_answer_scores("prediction", "") == {
+        "bleu": 0.0,
+        "rouge1": 0.0,
+        "rouge2": 0.0,
+        "rougeL": 0.0,
+    }

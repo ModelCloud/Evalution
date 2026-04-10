@@ -42,13 +42,13 @@ def _mediqa_qa2019_rouge_scorer() -> rouge_scorer.RougeScorer:
     return rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=False)
 
 
-def _nan_summary_scores() -> dict[str, float]:
-    nan_value = float("nan")
+def _zero_summary_scores() -> dict[str, float]:
+    # Empty predictions or references should count as zero overlap instead of poisoning the suite aggregate.
     return {
-        "bleu": nan_value,
-        "rouge1": nan_value,
-        "rouge2": nan_value,
-        "rougeL": nan_value,
+        "bleu": 0.0,
+        "rouge1": 0.0,
+        "rouge2": 0.0,
+        "rougeL": 0.0,
     }
 
 
@@ -56,7 +56,7 @@ def _mediqa_qa2019_answer_scores(prediction: str, reference: str) -> dict[str, f
     prediction_text = prediction.strip()
     reference_text = reference.strip()
     if not prediction_text or not reference_text:
-        return _nan_summary_scores()
+        return _zero_summary_scores()
     rouge_scores = _mediqa_qa2019_rouge_scorer().score(reference_text, prediction_text)
     bleu_score = sacrebleu.sentence_bleu(prediction_text, [reference_text]).score / 100.0
     return {

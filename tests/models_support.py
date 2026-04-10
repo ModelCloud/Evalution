@@ -1170,6 +1170,103 @@ def _assert_generated_summary_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_translation_corpus_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "reference-stripped",
+    }
+    assert sample.scores == {}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
+def _assert_generated_bleu_rouge_sample(
+    sample: Any,
+    index: int,
+    *,
+    prompt_prefix: str | None = None,
+    prompt_suffix: str | None = None,
+    prompt_substrings: tuple[str, ...] = (),
+    metadata_validator: Callable[[dict[str, Any]], None] | None = None,
+    allow_empty_prediction: bool = False,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    if prompt_prefix is not None:
+        assert sample.prompt.startswith(prompt_prefix)
+    if prompt_suffix is not None:
+        assert sample.prompt.endswith(prompt_suffix)
+    for expected in prompt_substrings:
+        assert expected in sample.prompt
+    assert sample.target
+    if allow_empty_prediction:
+        assert sample.prediction is not None
+    else:
+        assert sample.prediction
+    assert set(sample.extracted) == {
+        "prediction-stripped",
+        "reference-stripped",
+    }
+    assert set(sample.scores) == {"bleu", "rouge1", "rouge2", "rougeL"}
+    if metadata_validator is not None:
+        metadata_validator(sample.metadata)
+
+
+def _assert_noticia_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt.startswith(
+        "Ahora eres una Inteligencia Artificial experta en desmontar titulares "
+        "sensacionalistas o clickbait."
+    )
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "prediction-clean",
+        "reference-clean",
+    }
+    assert set(sample.scores) == {"rouge1", "average_len"}
+    assert sample.metadata["web_url"].startswith("http")
+    assert sample.metadata["web_headline"]
+    assert sample.metadata["web_text_chars"] > 0
+
+
+def _assert_simple_cooccurrence_bias_sample(sample: Any, index: int) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target == "female/woman/male/man"
+    assert sample.prediction in {"female", "woman", "male", "man"}
+    assert set(sample.extracted) == {
+        "predicted_index",
+        "predicted_label",
+        "preferred_group",
+    }
+    assert set(sample.scores) == {"likelihood_diff", "pct_male_preferred"}
+    assert sample.extracted["preferred_group"] in {"female", "male"}
+    assert sample.metadata["occupation"]
+    assert sample.metadata["choice_texts"] == ["female", "woman", "male", "man"]
+    assert len(sample.metadata["choice_logprobs"]) == 4
+    assert isinstance(sample.metadata["female_logsumexp"], float)
+    assert isinstance(sample.metadata["male_logsumexp"], float)
+
+
 def _assert_cnn_dailymail_metadata(metadata: dict[str, Any]) -> None:
     assert metadata["id"]
     assert metadata["article_chars"] > 0
@@ -1872,6 +1969,41 @@ def _metadata_has_click_fields(*, subset: str) -> Callable[[dict[str, Any]], Non
         assert len(metadata["choice_labels"]) == len(metadata["raw_choices"])
 
     return validate
+
+
+def _metadata_has_phrases_es_fields(
+    *,
+    direction: str,
+    source_language: str,
+    target_language: str,
+) -> Callable[[dict[str, Any]], None]:
+    def validate(metadata: dict[str, Any]) -> None:
+        assert metadata["direction"] == direction
+        assert metadata["source_language"] == source_language
+        assert metadata["target_language"] == target_language
+        assert isinstance(metadata["id"], int)
+
+    return validate
+
+
+def _metadata_has_groundcocoa_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["id"]
+    assert metadata["query_pos"]
+    assert isinstance(metadata["is_typical"], bool)
+
+
+def _metadata_has_meqsum_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["file"]
+    assert metadata["question_chars"] > 0
+    assert metadata["summary_words"] > 0
+
+
+def _metadata_has_mediqa_qa2019_fields(metadata: dict[str, Any]) -> None:
+    assert metadata["qid"]
+    assert metadata["answer_count"] >= 1
+    assert metadata["first_answer_aid"]
+    assert metadata["first_answer_reference_rank"] >= 0
+    assert metadata["first_answer_reference_score"] >= 0
 
 
 def _metadata_has_haerae_fields(*, subset: str) -> Callable[[dict[str, Any]], None]:
@@ -3491,6 +3623,44 @@ SUITE_SPECS = {
         data_file="graphwalks_128k_and_shorter.parquet",
         baseline={"f1": 0.0, "flexible_f1": 0.0},
     ),
+    "groundcocoa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.groundcocoa(batch_size=8, max_rows=128),
+        expected_name="groundcocoa",
+        baseline={
+            "acc,ll": 0.2265625,
+            "acc,ll_avg": 0.2265625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "harsh147/GroundCocoa",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "multiple_choice_loglikelihood",
+            "prompt_variant": "flight_criteria_with_option_labels",
+        },
+        expected_sample_count=128,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={
+                "The answer is Option A",
+                "The answer is Option B",
+                "The answer is Option C",
+                "The answer is Option D",
+                "The answer is Option E",
+            },
+            prediction_values={
+                "The answer is Option A",
+                "The answer is Option B",
+                "The answer is Option C",
+                "The answer is Option D",
+                "The answer is Option E",
+            },
+            prompt_prefix="A user has specified certain criteria for booking a flight.",
+            metadata_validator=_metadata_has_groundcocoa_fields,
+        ),
+    ),
     "eus_exams_eu_opeosakiadmineu": _eus_exams_suite_spec(
         "eus_exams_eu_opeosakiadmineu",
         subset="eu_opeosakiadmineu",
@@ -3691,6 +3861,86 @@ SUITE_SPECS = {
             prompt_suffix="Prawidłowa odpowiedź:",
             metadata_validator=lambda metadata: _metadata_has_polemo2_fields(metadata, variant="polemo2_out"),
         ),
+    ),
+    "phrases_es_va": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.phrases_es_va(
+            batch_size=8,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name="phrases_es_va",
+        baseline={
+            "bleu": 16.6896306627536,
+            "chrf": 53.013434289807336,
+            "ter": 81.21019108280255,
+        },
+        expected_metrics=frozenset({"bleu", "chrf", "ter"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "gplsi/ES-VA_translation_test",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_translation_corpus_metrics",
+            "primary_metric": "bleu",
+            "direction": "es-va",
+            "source_language": "es",
+            "target_language": "va",
+            "upstream_task": "phrases_es-va",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_translation_corpus_sample(
+            sample,
+            index,
+            prompt_prefix="Oració en espanyol: ",
+            prompt_suffix="\n\nOració en valencià:",
+            metadata_validator=_metadata_has_phrases_es_fields(
+                direction="es-va",
+                source_language="es",
+                target_language="va",
+            ),
+        ),
+        abs_tolerance=0.05,
+    ),
+    "phrases_va_es": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.phrases_va_es(
+            batch_size=8,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name="phrases_va_es",
+        baseline={
+            "bleu": 21.128406347527726,
+            "chrf": 56.634187265519266,
+            "ter": 65.66666666666666,
+        },
+        expected_metrics=frozenset({"bleu", "chrf", "ter"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "gplsi/ES-VA_translation_test",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_translation_corpus_metrics",
+            "primary_metric": "bleu",
+            "direction": "va-es",
+            "source_language": "va",
+            "target_language": "es",
+            "upstream_task": "phrases_va-es",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_translation_corpus_sample(
+            sample,
+            index,
+            prompt_prefix="Oració en valencià: ",
+            prompt_suffix="\n\nOració en espanyol:",
+            metadata_validator=_metadata_has_phrases_es_fields(
+                direction="va-es",
+                source_language="va",
+                target_language="es",
+            ),
+        ),
+        abs_tolerance=0.05,
     ),
     "egymmlu_arabic_language": _egymmlu_suite_spec(
         "egymmlu_arabic_language",
@@ -6690,6 +6940,88 @@ SUITE_SPECS = {
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
     ),
+    "mediqa_qa2019": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.mediqa_qa2019(
+            batch_size=4,
+            max_rows=32,
+            max_new_tokens=256,
+        ),
+        expected_name="mediqa_qa2019",
+        baseline={
+            "bleu": 0.008962710112574834,
+            "rouge1": 0.14323768511539267,
+            "rouge2": 0.030806437286732154,
+            "rougeL": 0.09509368378967327,
+        },
+        expected_metrics=frozenset({"bleu", "rouge1", "rouge2", "rougeL"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "bigbio/mediqa_qa",
+            "dataset_name": "mediqa_qa_source",
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_medical_answer_quality",
+            "primary_metric": "rouge1",
+            "prompt_variant": "instruction_plus_patient_question",
+            "source_url": "https://github.com/abachaa/MEDIQA2019/archive/refs/heads/master.zip",
+            "source_sha256": "c078ff1fe9132cf5eb89234233b1c61edeb39af21444cf5f8d04b737df52c11f",
+            "omitted_upstream_metrics": ["bert_score", "bleurt"],
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_generated_bleu_rouge_sample(
+            sample,
+            index,
+            prompt_prefix=(
+                "Instructions: The following text is a question asked by a patient. "
+                "Answer how a doctor would, while trying to be as informative and helpful "
+                "as possible."
+            ),
+            prompt_substrings=("\n\nQuestion: ", "\n\nAnswer:"),
+            metadata_validator=_metadata_has_mediqa_qa2019_fields,
+            allow_empty_prediction=True,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "meqsum": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.meqsum(
+            batch_size=8,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name="meqsum",
+        baseline={
+            "bleu": 0.007607246198813463,
+            "rouge1": 0.05866326457095538,
+            "rouge2": 0.006186420521077284,
+            "rougeL": 0.055913160793454354,
+        },
+        expected_metrics=frozenset({"bleu", "rouge1", "rouge2", "rougeL"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "bigbio/meqsum",
+            "dataset_name": "meqsum_source",
+            "split": "train",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_medical_question_summary",
+            "primary_metric": "rouge1",
+            "prompt_variant": "instruction_plus_source_question",
+            "source_url": "https://github.com/abachaa/MeQSum/raw/master/MeQSum_ACL2019_BenAbacha_Demner-Fushman.xlsx",
+            "source_sha256": "abedd939d5014306ca576522416bf69103e85dc8fcf1668a4099e8b84a39eeea",
+            "omitted_upstream_metrics": ["bert_score", "bleurt"],
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_generated_bleu_rouge_sample(
+            sample,
+            index,
+            prompt_prefix=(
+                "Instructions: The following text is contains a medical question. "
+                "Extract and summarize the question."
+            ),
+            metadata_validator=_metadata_has_meqsum_fields,
+            allow_empty_prediction=True,
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "mmlu_all": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.mmlu(
             subsets="all",
@@ -7278,6 +7610,29 @@ SUITE_SPECS = {
             prompt_suffix="\nA:",
         ),
     ),
+    "simple_cooccurrence_bias": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.simple_cooccurrence_bias(
+            batch_size=24,
+            max_rows=128,
+        ),
+        expected_name="simple_cooccurrence_bias",
+        baseline={
+            "likelihood_diff": -1.1651831635765997,
+            "pct_male_preferred": 0.8671875,
+        },
+        expected_metrics=frozenset({"likelihood_diff", "pct_male_preferred"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "oskarvanderwal/simple-cooccurrence-bias",
+            "dataset_name": None,
+            "split": "test",
+            "scoring_mode": "grouped_choice_loglikelihood_bias",
+            "primary_metric": "pct_male_preferred",
+            "choice_texts": ["female", "woman", "male", "man"],
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_simple_cooccurrence_bias_sample,
+    ),
     "swag": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.swag(batch_size=24, stream=True, max_rows=128),
         expected_name="swag",
@@ -7299,6 +7654,28 @@ SUITE_SPECS = {
             index,
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
+    ),
+    "swde": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.swde(
+            batch_size=24,
+            max_rows=128,
+            max_new_tokens=48,
+        ),
+        expected_name="swde",
+        baseline={"contains": 0.9296875},
+        expected_metrics=frozenset({"contains"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "hazyresearch/based-swde-v2",
+            "dataset_name": "default",
+            "split": "validation",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_contains_match",
+            "primary_metric": "contains",
+            "prompt_variant": "webpage_attribute_completion",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_generated_contains_sample,
     ),
     "sst2": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.sst2(batch_size=24, stream=True, max_rows=128),
@@ -7323,6 +7700,28 @@ SUITE_SPECS = {
             prediction_values={"negative", "positive"},
             prompt_substrings=("\nQuestion: Is this sentence positive or negative?\nAnswer:",),
         ),
+    ),
+    "squad_completion": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.squad_completion(
+            batch_size=24,
+            max_rows=128,
+            max_new_tokens=48,
+        ),
+        expected_name="squad_completion",
+        baseline={"contains": 0.421875},
+        expected_metrics=frozenset({"contains"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "hazyresearch/based-squad",
+            "dataset_name": "default",
+            "split": "validation",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_contains_match",
+            "primary_metric": "contains",
+            "prompt_variant": "truncated_context_completion",
+        },
+        expected_sample_count=128,
+        sample_validator=_assert_generated_contains_sample,
     ),
     "squadv2": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.squadv2(batch_size=16, max_rows=32),
@@ -7383,6 +7782,32 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=_assert_nq_open_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "noticia": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.noticia(
+            batch_size=8,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name="noticia",
+        baseline={
+            "rouge1": 0.060665674326899545,
+            "average_len": 26.0,
+        },
+        expected_metrics=frozenset({"rouge1", "average_len"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "Iker/NoticIA",
+            "dataset_name": None,
+            "split": "test",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_clickbait_truth_summary",
+            "primary_metric": "rouge1",
+            "prompt_variant": "headline_body_to_truth_summary",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_noticia_sample,
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "coqa": SuiteSpec(
