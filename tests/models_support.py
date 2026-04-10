@@ -268,6 +268,8 @@ BELEBELE_TASKS = (
     "belebele_amh_Ethi",
     "belebele_eng_Latn",
     "belebele_fra_Latn",
+    "belebele_por_Latn",
+    "belebele_spa_Latn",
     "belebele_swh_Latn",
 )
 COPAL_ID_TASKS = (
@@ -9733,6 +9735,8 @@ for _language, _baseline in {
     "amh_Ethi": {"acc,ll": 0.28125, "acc,ll_avg": 0.28125},
     "eng_Latn": {"acc,ll": 0.53125, "acc,ll_avg": 0.53125},
     "fra_Latn": {"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+    "por_Latn": {"acc,ll": 0.5625, "acc,ll_avg": 0.5625},
+    "spa_Latn": {"acc,ll": 0.46875, "acc,ll_avg": 0.46875},
     "swh_Latn": {"acc,ll": 0.25, "acc,ll_avg": 0.25},
 }.items():
     SUITE_SPECS[f"belebele_{_language}"] = _belebele_suite_spec(
