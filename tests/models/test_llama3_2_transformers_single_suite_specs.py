@@ -122,6 +122,7 @@ SINGLE_SUITE_SPECS = (
     "lambada_standard_cloze",
     "lambada_standard",
     "logiqa",
+    "longbench_trec",
     "mastermind_24_easy",
     "mastermind_24_hard",
     "mastermind_35_easy",

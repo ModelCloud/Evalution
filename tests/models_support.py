@@ -1220,6 +1220,34 @@ def _assert_generated_summary_sample(
         metadata_validator(sample.metadata)
 
 
+def _assert_longbench_sample(
+    sample: Any,
+    index: int,
+    *,
+    task_root: str,
+    metric_name: str,
+    language: str,
+) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {
+        "prediction-scored",
+        "best_reference_index",
+        "best_reference",
+    }
+    assert set(sample.scores) == {"score", metric_name}
+    assert sample.metadata["dataset"] == task_root
+    assert sample.metadata["task"] == task_root
+    assert sample.metadata["language"] == language
+    assert sample.metadata["length"]
+    assert sample.metadata["answers"]
+    assert sample.metadata["all_classes"]
+    assert sample.extracted["best_reference"] in sample.metadata["answers"]
+    assert sample.extracted["prediction-scored"]
+
+
 def _assert_translation_corpus_sample(
     sample: Any,
     index: int,
@@ -6328,6 +6356,38 @@ SUITE_SPECS = {
             prompt_substrings=("\nQuestion: ", "\nChoices:\n", "\nAnswer:"),
             metadata_validator=_metadata_has_choice_labels(exact_count=4),
         ),
+    ),
+    "longbench_trec": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.longbench_trec(batch_size=4, max_rows=32),
+        expected_name="longbench_trec",
+        baseline={
+            "score": 0.59375,
+            "classification_score": 0.59375,
+        },
+        expected_metrics=frozenset({"score", "classification_score"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "Xnhyacinth/LongBench",
+            "dataset_name": "trec",
+            "split": "test",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "subset": "longbench_trec",
+            "task_root": "trec",
+            "variant": "base",
+            "scoring_mode": "generated_longbench_classification",
+            "primary_metric": "score",
+            "metric_name": "classification_score",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_longbench_sample(
+            sample,
+            index,
+            task_root="trec",
+            metric_name="classification_score",
+            language="en",
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "mathqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.mathqa(batch_size=24, max_rows=128),
