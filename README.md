@@ -566,8 +566,8 @@ built-in suite names covered by that row.
 | `eus_reading` | EusReading `etxaniz2024latxa` |
 | `eus_proficiency` | EusProficiency `etxaniz2024latxa` |
 | `eus_trivia` | EusTrivia `etxaniz2024latxa` |
-| `arc_challenge`, `arc_easy`, `arc_mt_{da,de,el,es,fi,hu,is,it,nb,pl,pt,sv}` | ARC `clark2018arc` |
-| `arithmetic_{1dc,2da,2dm,2ds,3da,3ds,4da,4ds,5da,5ds}` | GPT-3 arithmetic `brown2020gpt3` |
+| <code>arc_challenge</code>, <code>arc_easy</code>, <code>arc_mt_{da,<wbr>de,<wbr>el,<wbr>es,<wbr>fi,<wbr>hu,<wbr>is,<wbr>it,<wbr>nb,<wbr>pl,<wbr>pt,<wbr>sv}</code> | ARC `clark2018arc` |
+| <code>arithmetic_{1dc,<wbr>2da,<wbr>2dm,<wbr>2ds,<wbr>3da,<wbr>3ds,<wbr>4da,<wbr>4ds,<wbr>5da,<wbr>5ds}</code> | GPT-3 arithmetic `brown2020gpt3` |
 | `asdiv` | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | ASDiv `miao2021diverse` |
 | `babi` | bAbI `weston2015towards` |
@@ -605,7 +605,7 @@ built-in suite names covered by that row.
 | `french_bench_arc_challenge` | FrenchBench ARC-Challenge |
 | `gpqa` | GPQA `rein2024gpqa` |
 | `gsm_plus`, `gsm_plus_mini` | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
-| `ethics_{cm,deontology,justice,utilitarianism,virtue}` | ETHICS `hendrycks2021ethics` |
+| <code>ethics_{cm,<wbr>deontology,<wbr>justice,<wbr>utilitarianism,<wbr>virtue}</code> | ETHICS `hendrycks2021ethics` |
 | `gsm8k` | GSM8K `cobbe2021trainingverifierssolvemath` |
 | `gsm8k_fr` | GSM8K `cobbe2021trainingverifierssolvemath`, French translation dataset `cmh2025gsm8kfr` |
 | `gsm8k_ko` | GSM8K `cobbe2021trainingverifierssolvemath`, Korean translation dataset `kuotient2024gsm8kko` |
@@ -623,8 +623,8 @@ built-in suite names covered by that row.
 | `kmmlu` | KMMLU `son2024kmmlu` |
 | `kormedmcqa` | KorMedMCQA `kweon2024kormedmcqa` |
 | `icelandic_winogrande` | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
-| `lambada_{openai,openai_cloze,standard,standard_cloze}` | LAMBADA `paperno2016lambada` |
-| `lambada_openai_mt_{de,en,es,fr,it}`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}` | LAMBADA-MT |
+| <code>lambada_{openai,<wbr>openai_cloze,<wbr>standard,<wbr>standard_cloze}</code> | LAMBADA `paperno2016lambada` |
+| <code>lambada_openai_mt_{de,<wbr>en,<wbr>es,<wbr>fr,<wbr>it}</code>, <code>lambada_openai_mt_stablelm_{de,<wbr>en,<wbr>es,<wbr>fr,<wbr>it,<wbr>nl,<wbr>pt}</code> | LAMBADA-MT |
 | `inverse_scaling` | Inverse Scaling Prize `mckenzie2023inverse` |
 | `logiqa` | LogiQA `liu2020logiqa` |
 | `logiqa2` | LogiQA 2.0 `liu2022logiqa2` |
