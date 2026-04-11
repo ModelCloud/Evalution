@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 race_module = importlib.import_module("evalution.benchmarks.race")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 4
         assert requests[0].context == (
@@ -36,6 +39,7 @@ class FakeSession:
 
 
 def test_race_scores_flattened_question_accuracy(monkeypatch) -> None:
+    """Verify race scores flattened question accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -92,6 +96,7 @@ def test_race_scores_flattened_question_accuracy(monkeypatch) -> None:
 
 
 def test_race_loader_flattens_article_level_rows(monkeypatch) -> None:
+    """Verify race loader flattens article level rows."""
     article_dataset = Dataset.from_list(
         [
             {
@@ -138,6 +143,7 @@ def test_race_loader_flattens_article_level_rows(monkeypatch) -> None:
 
 
 def test_race_prompt_matches_upstream_cumulative_format() -> None:
+    """Verify race prompt matches upstream cumulative format."""
     prompt = race_module._race_prompt(
         "Liz kept a notebook of bird sightings.",
         [

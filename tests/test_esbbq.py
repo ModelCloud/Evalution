@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 esbbq_module = importlib.import_module("evalution.benchmarks.esbbq")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 3
         assert requests[0].context == (
@@ -37,6 +40,7 @@ class FakeSession:
 
 
 def test_esbbq_scores_three_way_bias_question(monkeypatch) -> None:
+    """Verify esbbq scores three way bias question. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -67,5 +71,6 @@ def test_esbbq_scores_three_way_bias_question(monkeypatch) -> None:
 
 
 def test_esbbq_rejects_unknown_category() -> None:
+    """Verify esbbq rejects unknown category."""
     with pytest.raises(ValueError, match="unsupported esbbq category"):
         evalution.benchmarks.esbbq(category="Unknown")

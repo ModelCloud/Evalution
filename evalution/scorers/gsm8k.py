@@ -10,6 +10,7 @@ from typing import Any
 
 import pcre
 
+# Keep scorer defaults and parser helpers explicit at module scope.
 INVALID_ANSWER = "[invalid]"
 
 # OpenAI's released GSM8K scorer in grade_school_math/dataset.py only accepts
@@ -37,6 +38,7 @@ _TRAILING_ZERO_RE = pcre.compile(r"\.0+$")
 
 
 def extract_gsm8k_reference_answer(text: str) -> str:
+    """Extract GSM8K reference answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     match = _GSM8K_REFERENCE_ANSWER_RE.search(text or "")
     if match is None:
         return INVALID_ANSWER
@@ -44,6 +46,7 @@ def extract_gsm8k_reference_answer(text: str) -> str:
 
 
 def extract_gsm8k_platinum_reference_answer(text: str) -> str:
+    """Extract GSM8K platinum reference answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     output = text or ""
     lowered_without_stars = output.lower().replace("*", "")
     boxed_match = None
@@ -70,6 +73,7 @@ def extract_gsm8k_platinum_reference_answer(text: str) -> str:
 
 
 def extract_format_insensitive_numeric_answer(text: str) -> str:
+    """Extract format insensitive numeric answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     output = text or ""
 
     hash_match = _HASH_ANSWER_RE.search(output)
@@ -98,6 +102,7 @@ def extract_format_insensitive_numeric_answer(text: str) -> str:
 
 
 def canonicalize_numeric_token(token: str) -> str:
+    """Implement canonicalize numeric token for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     cleaned = token.replace(",", "").strip()
     if not cleaned:
         return INVALID_ANSWER
@@ -114,12 +119,14 @@ def canonicalize_numeric_token(token: str) -> str:
 
 
 def numbers_equal(left: str, right: str) -> bool:
+    """Implement numbers equal for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if left == INVALID_ANSWER or right == INVALID_ANSWER:
         return False
     return canonicalize_numeric_token(left) == canonicalize_numeric_token(right)
 
 
 def _extract_first_numeric_token(text: str) -> str:
+    """Extract first numeric token. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     match = _NUMERIC_TOKEN_RE.search(text)
     if match is None:
         return INVALID_ANSWER
@@ -127,6 +134,7 @@ def _extract_first_numeric_token(text: str) -> str:
 
 
 def _extract_last_numeric_token(text: str) -> str:
+    """Extract last numeric token. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     matches = list(_NUMERIC_TOKEN_RE.finditer(text))
     if not matches:
         return INVALID_ANSWER
@@ -134,6 +142,7 @@ def _extract_last_numeric_token(text: str) -> str:
 
 
 def gsm8k_reference_target(doc: dict[str, Any]) -> str:
+    """Implement GSM8K reference target for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     target = extract_gsm8k_reference_answer(str(doc["answer"]))
     if target == INVALID_ANSWER:
         raise ValueError("GSM8K ground-truth answer is missing the official `#### number` marker")
@@ -141,14 +150,17 @@ def gsm8k_reference_target(doc: dict[str, Any]) -> str:
 
 
 def gsm8k_numeric_target(doc: dict[str, Any]) -> str:
+    """Implement GSM8K numeric target for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return canonicalize_numeric_token(gsm8k_reference_target(doc))
 
 
 def gsm8k_platinum_reference_target(doc: dict[str, Any]) -> str:
+    """Implement GSM8K platinum reference target for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return str(doc["answer"]).split("\n#### ")[-1].replace(",", "").strip()
 
 
 def gsm8k_platinum_numeric_target(doc: dict[str, Any]) -> str:
+    """Implement GSM8K platinum numeric target for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     target = canonicalize_numeric_token(gsm8k_platinum_reference_target(doc))
     if target == INVALID_ANSWER:
         raise ValueError("GSM8K-Platinum ground-truth answer could not be parsed into a numeric target")

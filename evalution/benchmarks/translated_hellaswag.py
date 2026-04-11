@@ -14,9 +14,12 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 @dataclass(slots=True)
 class BaseTranslatedHellaSwagSuite(BaseMultipleChoiceSuite):
+    """Implement the base translated hella swag suite benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     split: str = "validation"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         prompt = _clean_hellaswag_text(f"{doc['activity_label']}: {doc['ctx']}")
         choices = [_clean_hellaswag_text(choice) for choice in doc["endings"]]
         return MultipleChoiceSample(
@@ -38,6 +41,7 @@ class BaseTranslatedHellaSwagSuite(BaseMultipleChoiceSuite):
         choice_order: tuple[int, ...],
         labels: tuple[str, ...],
     ) -> str:
+        """Implement label prompt for base translated hella swag suite."""
         lines = [
             f"Context: {sample.prompt}",
             "Question: Which ending best continues the context?",

@@ -33,6 +33,7 @@ _MEQSUM_STOP_STRINGS = ("\n\n",)
 
 
 def _meqsum_question_text(text: str) -> str:
+    """Implement meqsum question text for this module."""
     marker = "MESSAGE"
     index = text.find(marker)
     if index == -1:
@@ -41,16 +42,19 @@ def _meqsum_question_text(text: str) -> str:
 
 
 def _meqsum_prompt(question_text: str) -> str:
+    """Implement meqsum prompt for this module."""
     return f"{_MEQSUM_INSTRUCTION}\n\n{question_text.strip()}"
 
 
 @lru_cache(maxsize=1)
 def _meqsum_rouge_scorer() -> rouge_scorer.RougeScorer:
     # Match the upstream MeQSum task's non-stemmed ROUGE scoring for short question summaries.
+    """Implement meqsum ROUGE scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=False)
 
 
 def _meqsum_summary_scores(prediction: str, reference: str) -> dict[str, float]:
+    """Implement meqsum summary scores for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     rouge_scores = _meqsum_rouge_scorer().score(reference, prediction)
     bleu = sacrebleu.sentence_bleu(prediction, [reference]).score / 100.0
     return {
@@ -64,6 +68,7 @@ def _meqsum_summary_scores(prediction: str, reference: str) -> dict[str, float]:
 @dataclass(slots=True)
 class MeQSum(BaseTestSuite):
     # MeQSum summarizes long consumer-health questions into the minimal medical information need.
+    """Implement the me qsum benchmark suite."""
     dataset_path: str = MEQSUM_DATASET_PATH
     dataset_name: str | None = MEQSUM_DATASET_NAME
     split: str = "train"
@@ -72,9 +77,11 @@ class MeQSum(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_meqsum_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "meqsum"
 
     def result_metadata(
@@ -82,6 +89,7 @@ class MeQSum(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_medical_question_summary",
@@ -93,6 +101,7 @@ class MeQSum(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             question_text = _meqsum_question_text(str(doc["CHQ"]))
             reference = str(doc["Summary"]).strip()
@@ -114,6 +123,7 @@ class MeQSum(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         prediction = output.text.strip()
         reference = prepared_sample.target.strip()
         return SampleResult(
@@ -135,4 +145,5 @@ class MeQSum(BaseTestSuite):
 
 
 def meqsum(**kwargs: Any) -> MeQSum:
+    """Implement meqsum for this module."""
     return MeQSum(**kwargs)

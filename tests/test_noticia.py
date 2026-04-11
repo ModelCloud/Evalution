@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 noticia_module = importlib.import_module("evalution.benchmarks.noticia")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size):
+        """Generate generate."""
         assert batch_size == 1
         assert len(requests) == 1
         assert requests[0].prompt == noticia_module._noticia_prompt(
@@ -33,6 +36,7 @@ class FakeSession:
 
 
 def test_noticia_scores_rouge1_and_average_length(monkeypatch) -> None:
+    """Verify noticia scores rouge1 and average length. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {

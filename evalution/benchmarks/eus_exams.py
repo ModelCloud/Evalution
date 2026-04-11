@@ -94,6 +94,7 @@ _SUBSET_TO_TASK = dict(zip(EUS_EXAMS_SUBSETS, EUS_EXAMS_TASKS, strict=True))
 
 
 def _eus_exams_prompt(question: str, choices: list[str]) -> str:
+    """Implement eus exams prompt for this module."""
     lines = [f"Question: {question.strip()}"]
     lines.extend(
         f"{label}. {choice.strip()}"
@@ -107,12 +108,14 @@ def _eus_exams_prompt(question: str, choices: list[str]) -> str:
 class EusExams(BaseMultipleChoiceSuite):
     """EusExams suite backed by a frozen subset registry to keep imports offline-safe."""
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "HiTZ/EusExams"
     dataset_name: str | None = None
     split: str = "test"
     subset: str = "eu_opeosakiadmineu"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in EUS_EXAMS_SUBSETS:
             raise ValueError(f"unsupported eus_exams subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -121,12 +124,15 @@ class EusExams(BaseMultipleChoiceSuite):
         raise ValueError("eus_exams dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _SUBSET_TO_TASK[self.subset]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(choice).strip() for choice in doc["candidates"]]
         answer_index = int(doc["answer"])
         return MultipleChoiceSample(
@@ -144,6 +150,7 @@ class EusExams(BaseMultipleChoiceSuite):
         )
 
     def evaluate(self, session: Any) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -240,11 +247,14 @@ class EusExams(BaseMultipleChoiceSuite):
 
 
 def eus_exams(*, subset: str, **kwargs: Any) -> EusExams:
+    """Implement eus exams for this module."""
     return EusExams(subset=subset, dataset_name=subset, **kwargs)
 
 
 def _make_eus_exams_factory(subset: str) -> Any:
+    """Make eus exams factory."""
     def factory(**kwargs: Any) -> EusExams:
+        """Implement factory for this module."""
         return eus_exams(subset=subset, **kwargs)
 
     factory.__name__ = _SUBSET_TO_TASK[subset]

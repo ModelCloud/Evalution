@@ -13,14 +13,18 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mgsm_module = importlib.import_module("evalution.benchmarks.mgsm")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self) -> None:
+        """Initialize this object."""
         self.requests = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size in {1, 8}
         self.requests.extend(requests)
         assert len(requests) == 1
@@ -36,10 +40,12 @@ class FakeSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_mgsm_scores_direct_numeric_generation(monkeypatch) -> None:
+    """Verify mgsm scores direct numeric generation. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -67,10 +73,12 @@ def test_mgsm_scores_direct_numeric_generation(monkeypatch) -> None:
 
 
 def test_mgsm_rejects_unknown_language() -> None:
+    """Verify mgsm rejects unknown language."""
     with pytest.raises(ValueError, match="unsupported MGSM language"):
         evalution.benchmarks.mgsm(language="xx")
 
 
 def test_mgsm_rejects_non_base_variants() -> None:
+    """Verify mgsm rejects non base variants."""
     with pytest.raises(ValueError, match="only supports the direct base variant"):
         evalution.benchmarks.mgsm(language="en", variant="cot")

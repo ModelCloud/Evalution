@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import tarfile
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
@@ -17,6 +16,7 @@ from threading import Lock
 from typing import Any
 
 from huggingface_hub import hf_hub_download
+import pcre
 
 # Pin the XLSum archive we audit locally so evaluation never executes the remote dataset script.
 XLSUM_DATASET_PATH = "csebuetnlp/xlsum"
@@ -38,19 +38,24 @@ _XLSUM_SPLIT_ALIASES = {
     "test": "test",
 }
 _XLSUM_EXTRACT_LOCK = Lock()
+# Normalize inline spacing once with a compiled PCRE2 pattern because this loader runs over every row.
+_INLINE_SPACES_RE = pcre.compile(r" +")
 
 
 def _default_cache_root() -> Path:
+    """Implement default cache root for this module."""
     return Path.home() / ".cache" / "evalution" / "datasets"
 
 
 def _cache_root(cache_dir: str | None) -> Path:
+    """Implement cache root for this module."""
     if cache_dir is None:
         return _default_cache_root()
     return Path(cache_dir) / "evalution-vendored-datasets"
 
 
 def _sha256_file(path: Path) -> str:
+    """Implement sha256 file for this module."""
     hasher = hashlib.sha256()
     with path.open("rb") as handle:
         while True:
@@ -62,6 +67,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _resolved_split(split: str) -> str:
+    """Implement resolved split for this module."""
     normalized = split.strip().lower()
     resolved = _XLSUM_SPLIT_ALIASES.get(normalized)
     if resolved is None:
@@ -72,6 +78,7 @@ def _resolved_split(split: str) -> str:
 
 
 def _archive_spec(dataset_name: str) -> dict[str, Any]:
+    """Implement archive spec for this module."""
     spec = XLSUM_ARCHIVES.get(dataset_name)
     if spec is None:
         raise ValueError(f"unsupported xlsum dataset_name: {dataset_name!r}")
@@ -84,6 +91,7 @@ def _download_archive(
     *,
     cache_dir: str | None,
 ) -> Path:
+    """Implement download archive for this module."""
     if dataset_path != XLSUM_DATASET_PATH:
         raise ValueError(f"xlsum dataset_path must be {XLSUM_DATASET_PATH!r}, got {dataset_path!r}")
     spec = _archive_spec(dataset_name)
@@ -106,6 +114,7 @@ def _download_archive(
 
 
 def _safe_extract_archive(archive_path: Path, destination: Path) -> None:
+    """Implement safe extract archive for this module. Preserve the fallback order expected by the surrounding caller."""
     destination.mkdir(parents=True, exist_ok=True)
     with tarfile.open(archive_path, mode="r:bz2") as archive:
         for member in archive.getmembers():
@@ -136,11 +145,13 @@ def _safe_extract_archive(archive_path: Path, destination: Path) -> None:
 
 
 def _extracted_root(dataset_name: str, cache_dir: str | None) -> Path:
+    """Implement extracted root for this module."""
     spec = _archive_spec(dataset_name)
     return _cache_root(cache_dir) / f"xlsum-{dataset_name}-{str(spec['sha256'])[:12]}"
 
 
 def ensure_local_xlsum_archive(dataset_name: str, cache_dir: str | None = None) -> Path:
+    """Ensure local XLSum archive."""
     extracted_root = _extracted_root(dataset_name, cache_dir)
     marker_path = extracted_root / ".complete"
     split_file = extracted_root / str(_archive_spec(dataset_name)["split_files"]["test"])
@@ -165,7 +176,8 @@ def ensure_local_xlsum_archive(dataset_name: str, cache_dir: str | None = None) 
 
 
 def _normalize_inline_spaces(text: str) -> str:
-    return re.sub(r" +", " ", text).strip()
+    """Normalize inline spaces. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
+    return _INLINE_SPACES_RE.sub(" ", text).strip()
 
 
 @lru_cache(maxsize=None)
@@ -175,6 +187,7 @@ def _load_rows_cached(
     split: str,
     cache_root_key: str,
 ) -> tuple[dict[str, Any], ...]:
+    """Load rows cached."""
     dataset_root = ensure_local_xlsum_archive(dataset_name, cache_root_key or None)
     split_file = dataset_root / str(_archive_spec(dataset_name)["split_files"][split])
     rows: list[dict[str, Any]] = []
@@ -201,6 +214,7 @@ def load_xlsum_dataset(
     cache_dir: str | None = None,
     stream: bool = False,
 ) -> list[dict[str, Any]]:
+    """Load XLSum dataset."""
     if dataset_name is None:
         raise ValueError("xlsum dataset_name is required")
     if stream:

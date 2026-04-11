@@ -13,15 +13,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 longbench2_module = importlib.import_module("evalution.benchmarks.longbench2")
 
 
 class MultipleChoiceSession:
+    """Define the multiple choice session helper used by the surrounding tests."""
     def __init__(self, expected_context: str, expected_continuations: list[str]) -> None:
+        """Initialize this object."""
         self.expected_context = expected_context
         self.expected_continuations = expected_continuations
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for multiple choice session."""
         assert batch_size == 8
         request_items = list(requests)
         assert [request.context for request in request_items] == [self.expected_context] * len(request_items)
@@ -35,6 +39,7 @@ class MultipleChoiceSession:
 
 
 def test_longbench2_scores_label_ranked_rows(monkeypatch) -> None:
+    """Verify longbench2 scores label ranked rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -88,6 +93,7 @@ def test_longbench2_scores_label_ranked_rows(monkeypatch) -> None:
 
 
 def test_longbench2_dispatcher_accepts_task_and_dataset_aliases() -> None:
+    """Verify longbench2 dispatcher accepts task and dataset aliases."""
     suite = evalution.benchmarks.longbench2(subset="academic_multi")
     assert suite.dataset_name == "academic_multi"
     assert suite.task_name() == "longbench2_academic_multi"

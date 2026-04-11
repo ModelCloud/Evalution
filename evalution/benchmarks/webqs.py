@@ -18,10 +18,12 @@ from evalution.results import SampleResult, TestResult
 
 
 def _webqs_prompt(question: str) -> str:
+    """Implement webqs prompt for this module."""
     return f"Question: {question.strip()}\nAnswer:"
 
 
 def _remove_prefix_answers(answers: Any) -> list[str]:
+    """Implement remove prefix answers for this module."""
     normalized = sorted(
         str(answer).strip()
         for answer in (answers if isinstance(answers, (list, tuple)) else [answers])
@@ -39,6 +41,8 @@ def _remove_prefix_answers(answers: Any) -> list[str]:
 
 @dataclass(slots=True)
 class WebQS(TestSuite):
+    """Define the web qs helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "web_questions"
     dataset_name: str | None = None
     split: str = "test"
@@ -47,12 +51,15 @@ class WebQS(TestSuite):
     batch_size: int | None = None
     cache_dir: str | None = None
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "webqs"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -63,9 +70,11 @@ class WebQS(TestSuite):
         }
 
     def continuation_for_alias(self, alias: str) -> str:
+        """Implement continuation for alias for web qs."""
         return alias if alias[:1].isspace() else f" {alias}"
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -183,4 +192,5 @@ class WebQS(TestSuite):
 
 
 def webqs(**kwargs: Any) -> WebQS:
+    """Implement webqs for this module."""
     return WebQS(**kwargs)

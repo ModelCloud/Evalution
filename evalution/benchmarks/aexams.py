@@ -17,6 +17,7 @@ from huggingface_hub import hf_hub_download
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from evalution.benchmarks.multiple_choice_utils import choice_index_from_labels
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 AEXAMS_SUBJECTS = (
     "biology",
     "islamic_studies",
@@ -52,6 +53,7 @@ _AEXAMS_SUBJECT_SPECS = {
 
 @lru_cache(maxsize=1)
 def _aexams_archive_path() -> str:
+    """Implement aexams archive path for this module."""
     return hf_hub_download(
         repo_id="Hennara/aexams",
         filename="aexams_v0.zip",
@@ -61,6 +63,7 @@ def _aexams_archive_path() -> str:
 
 @lru_cache(maxsize=None)
 def _aexams_rows(dataset_name: str, split: str) -> tuple[dict[str, Any], ...]:
+    """Implement aexams rows for this module."""
     member_name = f"{split}/{dataset_name}.jsonl"
     rows: list[dict[str, Any]] = []
     with ZipFile(_aexams_archive_path()) as archive:
@@ -78,6 +81,7 @@ def _load_aexams_dataset(
     cache_dir: str | None = None,
     stream: bool = False,
 ) -> Dataset:
+    """Load aexams dataset. Preserve the fallback order expected by the surrounding caller."""
     del cache_dir
     if dataset_path != "Hennara/aexams":
         raise ValueError(f"unsupported AEXAMS dataset path: {dataset_path!r}")
@@ -91,6 +95,7 @@ def _load_aexams_dataset(
 
 
 def _aexams_prompt(description: str, question: str, option_texts: list[str]) -> str:
+    """Implement aexams prompt for this module."""
     lines = [description.strip(), "", question.strip()]
     for label, option_text in zip(_AEXAMS_LABELS, option_texts, strict=True):
         lines.append(f"{label}. {option_text.strip()}")
@@ -100,6 +105,8 @@ def _aexams_prompt(description: str, question: str, option_texts: list[str]) -> 
 
 @dataclass(slots=True)
 class AEXAMS(BaseMultipleChoiceSuite):
+    """Implement the aexams benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "Hennara/aexams"
     dataset_name: str | None = None
     split: str = "test"
@@ -107,6 +114,7 @@ class AEXAMS(BaseMultipleChoiceSuite):
     subject: str = ""
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subject not in AEXAMS_SUBJECTS:
             raise ValueError(f"unsupported aexams subject: {self.subject!r}")
         expected_dataset_name = _AEXAMS_SUBJECT_SPECS[self.subject]["dataset_name"]
@@ -116,12 +124,15 @@ class AEXAMS(BaseMultipleChoiceSuite):
         raise ValueError("aexams dataset_name must match the configured subject")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_aexams_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"aexams_{self.subject}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choice_texts = [str(doc[label]).strip() for label in _AEXAMS_LABELS]
         question = str(doc["question"]).strip()
         description = str(_AEXAMS_SUBJECT_SPECS[self.subject]["description"])
@@ -147,6 +158,7 @@ class AEXAMS(BaseMultipleChoiceSuite):
         choice_order: tuple[int, ...],
         labels: tuple[str, ...],
     ) -> str:
+        """Implement label prompt for aexams."""
         choice_texts = list(sample.metadata["choice_texts"])
         description = str(_AEXAMS_SUBJECT_SPECS[self.subject]["description"])
         lines = [description, "", str(sample.metadata["question"])]
@@ -157,24 +169,30 @@ class AEXAMS(BaseMultipleChoiceSuite):
 
 
 def aexams(*, subject: str, **kwargs: Any) -> AEXAMS:
+    """Implement aexams for this module."""
     return AEXAMS(subject=subject, **kwargs)
 
 
 def aexams_biology(**kwargs: Any) -> AEXAMS:
+    """Implement aexams biology for this module."""
     return aexams(subject="biology", **kwargs)
 
 
 def aexams_islamic_studies(**kwargs: Any) -> AEXAMS:
+    """Implement aexams islamic studies for this module."""
     return aexams(subject="islamic_studies", **kwargs)
 
 
 def aexams_physics(**kwargs: Any) -> AEXAMS:
+    """Implement aexams physics for this module."""
     return aexams(subject="physics", **kwargs)
 
 
 def aexams_science(**kwargs: Any) -> AEXAMS:
+    """Implement aexams science for this module."""
     return aexams(subject="science", **kwargs)
 
 
 def aexams_social(**kwargs: Any) -> AEXAMS:
+    """Implement aexams social for this module."""
     return aexams(subject="social", **kwargs)

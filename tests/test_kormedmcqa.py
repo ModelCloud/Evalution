@@ -12,10 +12,12 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 kormedmcqa_module = importlib.import_module("evalution.benchmarks.kormedmcqa")
 
 
 def _row(*, subset: str, question: str, answer: int) -> dict[str, object]:
+    """Support the surrounding tests with row."""
     return {
         "subject": subset,
         "year": 2022,
@@ -33,11 +35,14 @@ def _row(*, subset: str, question: str, answer: int) -> dict[str, object]:
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, response: str):
+        """Initialize this object."""
         self.response = response
         self.requests = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 1
         self.requests.extend(requests)
         return [
@@ -49,16 +54,19 @@ class FakeSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_kormedmcqa_doctor_builds_fewshot_prompt_and_scores(monkeypatch) -> None:
+    """Verify kormedmcqa doctor builds fewshot prompt and scores. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     test_dataset = Dataset.from_list([_row(subset="doctor", question="실전 질문", answer=2)])
     fewshot_dataset = Dataset.from_list(
         [_row(subset="doctor", question=f"예시 질문 {index}", answer=1) for index in range(5)]
     )
 
     def fake_load_dataset(path, name, split, cache_dir=None, streaming=False):
+        """Support the surrounding tests with fake load dataset."""
         assert path == "sean0042/KorMedMCQA"
         assert streaming is False
         if split == "fewshot":
@@ -88,6 +96,7 @@ def test_kormedmcqa_doctor_builds_fewshot_prompt_and_scores(monkeypatch) -> None
 
 
 def test_kormedmcqa_group_loader_round_robins_subsets(monkeypatch) -> None:
+    """Verify kormedmcqa group loader round robins subsets."""
     datasets = {
         "doctor": Dataset.from_list([_row(subset="doctor", question="d1", answer=1)]),
         "nurse": Dataset.from_list([_row(subset="nurse", question="n1", answer=1), _row(subset="nurse", question="n2", answer=1)]),
@@ -96,6 +105,7 @@ def test_kormedmcqa_group_loader_round_robins_subsets(monkeypatch) -> None:
     }
 
     def fake_load_dataset(path, name, split, cache_dir=None, streaming=False):
+        """Support the surrounding tests with fake load dataset."""
         assert path == "sean0042/KorMedMCQA"
         assert split == "test"
         assert streaming is False

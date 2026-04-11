@@ -16,6 +16,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.choice_label import exact_match
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 BABILONG_CONTEXT_LENGTHS = (
     "0k",
     "1k",
@@ -37,6 +38,7 @@ _STOP_STRINGS = ("\n",)
 
 
 def _babilong_prompt(context: str, question: str) -> str:
+    """Implement babilong prompt for this module."""
     return (
         "Context:\n"
         f"{context.strip()}\n\n"
@@ -47,12 +49,15 @@ def _babilong_prompt(context: str, question: str) -> str:
 
 
 def _normalize_babilong_answer(text: str) -> str:
+    """Normalize babilong answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     first_line = text.strip().splitlines()[0].strip() if text.strip() else ""
     return " ".join(first_line.rstrip(".").lower().split())
 
 
 @dataclass(slots=True)
 class BABILong(BaseTestSuite):
+    """Implement the babilong benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "RMT-team/babilong"
     dataset_name: str | None = "0k"
     split: str = "qa1"
@@ -63,6 +68,7 @@ class BABILong(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization. Preserve the fallback order expected by the surrounding caller."""
         if self.context_length not in BABILONG_CONTEXT_LENGTHS:
             raise ValueError(f"unsupported babilong context length: {self.context_length!r}")
         if self.qa_split not in BABILONG_TASK_SPLITS:
@@ -75,9 +81,11 @@ class BABILong(BaseTestSuite):
             raise ValueError("babilong split must match the configured qa_split")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"babilong_{self.qa_split}"
 
     def result_metadata(
@@ -85,6 +93,7 @@ class BABILong(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_exact_match",
@@ -94,6 +103,7 @@ class BABILong(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             target = _normalize_babilong_answer(str(doc["target"]))
             yield PreparedSample(
@@ -114,6 +124,7 @@ class BABILong(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         normalized_prediction = _normalize_babilong_answer(output.text)
         return SampleResult(
             index=prepared_sample.index,
@@ -134,6 +145,7 @@ class BABILong(BaseTestSuite):
 
 
 def babilong(*, qa_split: str, context_length: str = "0k", **kwargs: Any) -> BABILong:
+    """Implement babilong for this module."""
     return BABILong(
         qa_split=qa_split,
         split=qa_split,
@@ -144,7 +156,9 @@ def babilong(*, qa_split: str, context_length: str = "0k", **kwargs: Any) -> BAB
 
 
 def _make_babilong_factory(qa_split: str) -> Any:
+    """Make babilong factory."""
     def factory(**kwargs: Any) -> BABILong:
+        """Implement factory for this module."""
         return babilong(qa_split=qa_split, **kwargs)
 
     factory.__name__ = f"babilong_{qa_split}"

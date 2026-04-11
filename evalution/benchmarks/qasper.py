@@ -10,13 +10,13 @@ from dataclasses import dataclass
 from functools import partial
 import json
 from pathlib import Path
-import re
 import string
 import tarfile
 from typing import Any
 from urllib.request import urlopen
 
 from datasets import Dataset
+import pcre
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -36,9 +36,11 @@ _QASPER_DATA_FILES = {
     "validation": "qasper-dev-v0.3.json",
     "test": "qasper-test-v0.3.json",
 }
+_QASPER_ARTICLES_RE = pcre.compile(r"\b(a|an|the)\b")
 
 
 def _qasper_cache_dir(cache_dir: str | None) -> Path:
+    """Implement QASPER cache dir for this module."""
     base_dir = Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "evalution" / "datasets"
     target_dir = base_dir / "qasper"
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -46,6 +48,7 @@ def _qasper_cache_dir(cache_dir: str | None) -> Path:
 
 
 def _download_qasper_archive(split: str, cache_dir: str | None) -> Path:
+    """Implement download QASPER archive for this module."""
     archive_url = _QASPER_URL_TEST if split == "test" else _QASPER_URL_TRAIN_DEV
     archive_path = _qasper_cache_dir(cache_dir) / archive_url.rsplit("/", 1)[-1]
     if archive_path.exists():
@@ -60,6 +63,7 @@ def _load_qasper_source_dataset(
     split: str,
     cache_dir: str | None = None,
 ) -> Dataset:
+    """Load QASPER source dataset."""
     data_file = _QASPER_DATA_FILES.get(split)
     if data_file is None:
         raise ValueError(f"unsupported qasper split: {split!r}")
@@ -81,17 +85,20 @@ def _load_qasper_source_dataset(
 
 
 def _qasper_prompt(*, title: str, abstract: str, question: str) -> str:
+    """Implement QASPER prompt for this module."""
     return f"TITLE: {title}\nABSTRACT: {abstract}\n\nQ: {question}\n\nA:"
 
 
 def _normalize_qasper_answer(text: str) -> str:
+    """Normalize QASPER answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     lowered = text.lower()
     stripped_punctuation = "".join(character for character in lowered if character not in set(string.punctuation))
-    stripped_articles = re.sub(r"\b(a|an|the)\b", " ", stripped_punctuation)
+    stripped_articles = _QASPER_ARTICLES_RE.sub(" ", stripped_punctuation)
     return " ".join(stripped_articles.split())
 
 
 def _qasper_abstractive_f1(prediction: str, answer: str) -> float:
+    """Implement QASPER abstractive F1 for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     prediction_tokens = _normalize_qasper_answer(prediction).split()
     answer_tokens = _normalize_qasper_answer(answer).split()
     common = Counter(prediction_tokens) & Counter(answer_tokens)
@@ -104,6 +111,7 @@ def _qasper_abstractive_f1(prediction: str, answer: str) -> float:
 
 
 def _categorize_qasper_answer(answer_blob: dict[str, Any]) -> tuple[str, str]:
+    """Implement categorize QASPER answer for this module. Preserve the fallback order expected by the surrounding caller."""
     if answer_blob["unanswerable"]:
         return "unanswerable", "unanswerable"
     if answer_blob["yes_no"]:
@@ -120,6 +128,7 @@ def _categorize_qasper_answer(answer_blob: dict[str, Any]) -> tuple[str, str]:
 
 def _iter_qasper_annotations(doc: dict[str, Any]) -> Any:
     # Accept both the Hub-native list-of-question rows and the older script-style dict-of-columns rows.
+    """Iterate over QASPER annotations. Preserve the fallback order expected by the surrounding caller."""
     qas = doc["qas"]
     if isinstance(qas, list):
         for qa in qas:
@@ -146,6 +155,7 @@ def _flatten_qasper_dataset(
     answer_type: str,
 ) -> Dataset:
     # Expand each paper/question/answer triple into flat benchmark rows for the shared evaluation pipeline.
+    """Flatten QASPER dataset. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     rows: list[dict[str, Any]] = []
     for doc in dataset:
         title = str(doc["title"]).strip()
@@ -175,6 +185,7 @@ def _load_qasper_dataset(
     stream: bool = False,
     answer_type: str,
 ) -> Dataset:
+    """Load QASPER dataset."""
     if stream:
         raise ValueError("qasper does not support stream=True")
     if dataset_name is not None:
@@ -189,23 +200,28 @@ def _load_qasper_dataset(
 @dataclass(slots=True)
 class QASPERBool(BaseMultipleChoiceSuite):
     # Score QASPER yes/no rows as a strict two-choice loglikelihood benchmark.
+    """Implement the qasperbool benchmark suite."""
     dataset_path: str = "allenai/qasper"
     dataset_name: str | None = None
     split: str = "validation"
     stream: bool = False
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return partial(_load_qasper_dataset, answer_type="bool")
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "qasper_bool"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata()
         metadata["variant"] = "bool"
         return metadata
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         answer = str(doc["answer"]).strip().lower()
         if answer not in {"yes", "no"}:
             raise ValueError(f"unexpected qasper bool answer: {answer!r}")
@@ -233,6 +249,7 @@ class QASPERBool(BaseMultipleChoiceSuite):
         raw_predictions: list[int],
         normalized_predictions: list[int],
     ) -> dict[str, float]:
+        """Compute extra metrics from the collected predictions. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         gold_labels = [sample.gold_index for sample in samples]
         return {
             "f1,ll_boolean": f1_for_label(gold_labels, raw_predictions, label=1),
@@ -243,6 +260,7 @@ class QASPERBool(BaseMultipleChoiceSuite):
 @dataclass(slots=True)
 class QASPERFreeform(BaseTestSuite):
     # Score QASPER abstractive rows with normalized token-overlap F1 against the flattened reference answer.
+    """Implement the qasperfreeform benchmark suite."""
     dataset_path: str = "allenai/qasper"
     dataset_name: str | None = None
     split: str = "validation"
@@ -252,9 +270,11 @@ class QASPERFreeform(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return partial(_load_qasper_dataset, answer_type="free form answer")
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "qasper_freeform"
 
     def result_metadata(
@@ -262,6 +282,7 @@ class QASPERFreeform(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "variant": "freeform",
@@ -270,6 +291,7 @@ class QASPERFreeform(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             answer = str(doc["answer"]).strip()
             yield PreparedSample(
@@ -294,6 +316,7 @@ class QASPERFreeform(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         answer = str(prepared_sample.doc["answer"]).strip()
         f1_score = _qasper_abstractive_f1(output.text, answer)
         return SampleResult(
@@ -317,6 +340,7 @@ class QASPERFreeform(BaseTestSuite):
 
 def qasper(*, variant: str = "bool", **kwargs: Any) -> QASPERBool | QASPERFreeform:
     # Keep one generic constructor for YAML and CLI while still exposing the concrete variants directly.
+    """Implement QASPER for this module."""
     if variant == "bool":
         return QASPERBool(**kwargs)
     if variant == "freeform":
@@ -325,8 +349,10 @@ def qasper(*, variant: str = "bool", **kwargs: Any) -> QASPERBool | QASPERFreefo
 
 
 def qasper_bool(**kwargs: Any) -> QASPERBool:
+    """Implement QASPER bool for this module."""
     return QASPERBool(**kwargs)
 
 
 def qasper_freeform(**kwargs: Any) -> QASPERFreeform:
+    """Implement QASPER freeform for this module."""
     return QASPERFreeform(**kwargs)

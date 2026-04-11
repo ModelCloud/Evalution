@@ -21,6 +21,7 @@ _SIMPLE_COOCCURRENCE_BIAS_CHOICES = ("female", "woman", "male", "man")
 
 
 def _logsumexp_pair(left: float, right: float) -> float:
+    """Implement logsumexp pair for this module."""
     pivot = left if left >= right else right
     return pivot + log(exp(left - pivot) + exp(right - pivot))
 
@@ -28,6 +29,7 @@ def _logsumexp_pair(left: float, right: float) -> float:
 @dataclass(slots=True)
 class SimpleCooccurrenceBias:
     # This suite measures which gendered completion a model prefers for occupation prompts without a gold answer.
+    """Define the simple cooccurrence bias helper class."""
     dataset_path: str = "oskarvanderwal/simple-cooccurrence-bias"
     dataset_name: str | None = None
     split: str = "test"
@@ -37,12 +39,15 @@ class SimpleCooccurrenceBias:
     cache_dir: str | None = None
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "simple_cooccurrence_bias"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -54,6 +59,7 @@ class SimpleCooccurrenceBias:
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -152,4 +158,5 @@ class SimpleCooccurrenceBias:
 
 
 def simple_cooccurrence_bias(**kwargs: Any) -> SimpleCooccurrenceBias:
+    """Implement simple cooccurrence bias for this module."""
     return SimpleCooccurrenceBias(**kwargs)

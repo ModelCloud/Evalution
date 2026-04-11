@@ -28,21 +28,26 @@ from evalution.logbar import get_logger, manual_progress
 from evalution.results import SampleResult, TestResult
 from evalution.scorers.bleu import smoothed_corpus_bleu_4
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 CODE_X_GLUE_LANGUAGES = ("go", "java", "javascript", "php", "python", "ruby")
 
 
 def _normalized_code_text(code_tokens: list[str]) -> str:
+    """Implement normalized code text for this module."""
     text = " ".join(str(token) for token in code_tokens).replace("\n", " ")
     return " ".join(text.strip().split())
 
 
 def _normalized_docstring_text(docstring_tokens: list[str]) -> str:
+    """Implement normalized docstring text for this module."""
     text = " ".join(str(token) for token in docstring_tokens).replace("\n", "")
     return " ".join(text.strip().split())
 
 
 @dataclass(slots=True)
 class CodeXGLUECodeToText(BaseTestSuite):
+    """Implement the code xgluecode to text benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     language: str = "go"
     dataset_path: str = ""
     split: str = "test"
@@ -51,6 +56,7 @@ class CodeXGLUECodeToText(BaseTestSuite):
     stop: tuple[str, ...] = ("</s>",)
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in CODE_X_GLUE_LANGUAGES:
             raise ValueError(
                 f"language must be one of {CODE_X_GLUE_LANGUAGES!r}, got {self.language!r}"
@@ -59,9 +65,11 @@ class CodeXGLUECodeToText(BaseTestSuite):
             self.dataset_path = f"CM/codexglue_code2text_{self.language}"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"code2text_{self.language}"
 
     def result_metadata(
@@ -69,6 +77,7 @@ class CodeXGLUECodeToText(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_docstring_corpus_bleu4",
@@ -78,6 +87,7 @@ class CodeXGLUECodeToText(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             prompt = _normalized_code_text(list(doc["code_tokens"]))
             target = _normalized_docstring_text(list(doc["docstring_tokens"]))
@@ -98,6 +108,7 @@ class CodeXGLUECodeToText(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         prediction = output.text.strip()
         reference = prepared_sample.target.strip()
         return SampleResult(
@@ -124,6 +135,7 @@ class CodeXGLUECodeToText(BaseTestSuite):
         )
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Preserve the fallback order expected by the surrounding caller."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, dataset_load_wall_s = load_suite_dataset(
@@ -195,6 +207,7 @@ class CodeXGLUECodeToText(BaseTestSuite):
         )
 
         def record_output(prepared_sample: PreparedSample, output: GenerationOutput) -> None:
+            """Implement record output for code xgluecode to text."""
             nonlocal processed_count
             nonlocal scoring_wall_s
 
@@ -210,6 +223,7 @@ class CodeXGLUECodeToText(BaseTestSuite):
                 sample_by_request_key: dict[int, PreparedSample] = {}
 
                 def iter_request_stream() -> Any:
+                    """Yield request items for the continuous generation loop."""
                     request_key = 0
                     prefetched_samples = iter_prefetched_samples(
                         session,
@@ -299,28 +313,35 @@ class CodeXGLUECodeToText(BaseTestSuite):
 
 
 def code_x_glue(language: str = "go", **kwargs: Any) -> CodeXGLUECodeToText:
+    """Implement code x glue for this module."""
     return CodeXGLUECodeToText(language=language, **kwargs)
 
 
 def code2text_go(**kwargs: Any) -> CodeXGLUECodeToText:
+    """Implement code2text go for this module."""
     return code_x_glue("go", **kwargs)
 
 
 def code2text_java(**kwargs: Any) -> CodeXGLUECodeToText:
+    """Implement code2text java for this module."""
     return code_x_glue("java", **kwargs)
 
 
 def code2text_javascript(**kwargs: Any) -> CodeXGLUECodeToText:
+    """Implement code2text javascript for this module."""
     return code_x_glue("javascript", **kwargs)
 
 
 def code2text_php(**kwargs: Any) -> CodeXGLUECodeToText:
+    """Implement code2text php for this module."""
     return code_x_glue("php", **kwargs)
 
 
 def code2text_python(**kwargs: Any) -> CodeXGLUECodeToText:
+    """Implement code2text python for this module."""
     return code_x_glue("python", **kwargs)
 
 
 def code2text_ruby(**kwargs: Any) -> CodeXGLUECodeToText:
+    """Implement code2text ruby for this module."""
     return code_x_glue("ruby", **kwargs)

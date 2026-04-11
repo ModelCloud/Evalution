@@ -73,12 +73,14 @@ _SUBSET_TO_TASK = dict(zip(EGYMMLU_SUBSETS, EGYMMLU_TASKS, strict=True))
 class EgyMMLU(BaseMultipleChoiceSuite):
     """EgyMMLU suite backed by a frozen subset registry to keep imports offline-safe."""
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "UBC-NLP/EgyMMLU"
     dataset_name: str | None = None
     split: str = "test"
     subset: str = "accounting"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in EGYMMLU_SUBSETS:
             raise ValueError(f"unsupported egymmlu subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -87,12 +89,15 @@ class EgyMMLU(BaseMultipleChoiceSuite):
         raise ValueError("egymmlu dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _SUBSET_TO_TASK[self.subset]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(choice).strip() for choice in doc["choices"]]
         answer_index = int(doc["answer"])
         return MultipleChoiceSample(
@@ -120,11 +125,14 @@ class EgyMMLU(BaseMultipleChoiceSuite):
 
 
 def egymmlu(*, subset: str, **kwargs: Any) -> EgyMMLU:
+    """Implement egymmlu for this module."""
     return EgyMMLU(subset=subset, dataset_name=subset, **kwargs)
 
 
 def _make_egymmlu_factory(subset: str) -> Any:
+    """Make egymmlu factory."""
     def factory(**kwargs: Any) -> EgyMMLU:
+        """Implement factory for this module."""
         return egymmlu(subset=subset, **kwargs)
 
     factory.__name__ = _SUBSET_TO_TASK[subset]

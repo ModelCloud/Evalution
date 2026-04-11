@@ -16,14 +16,17 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.qa_text import best_qa_scores, canonicalize_no_answer
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _STOP_STRINGS = ("\n", "\nQuestion:")
 
 
 def _triviaqa_prompt(question: str) -> str:
+    """Implement triviaqa prompt for this module."""
     return f"Question: {question.strip()}\nAnswer:"
 
 
 def _answer_aliases(doc: dict[str, Any]) -> list[str]:
+    """Implement answer aliases for this module."""
     answer = doc["answer"]
     aliases = []
     for alias in answer["aliases"]:
@@ -41,6 +44,8 @@ def _answer_aliases(doc: dict[str, Any]) -> list[str]:
 
 @dataclass(slots=True)
 class TriviaQA(BaseTestSuite):
+    """Implement the trivia QA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "trivia_qa"
     dataset_name: str | None = "rc.nocontext"
     split: str = "validation"
@@ -53,9 +58,11 @@ class TriviaQA(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "triviaqa"
 
     def result_metadata(
@@ -63,6 +70,7 @@ class TriviaQA(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_qa_exact_match_f1",
@@ -70,6 +78,7 @@ class TriviaQA(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             aliases = _answer_aliases(doc)
             yield PreparedSample(
@@ -90,6 +99,7 @@ class TriviaQA(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         aliases = _answer_aliases(prepared_sample.doc)
         exact, f1_score, best_index = best_qa_scores(output.text, aliases)
         return SampleResult(
@@ -118,4 +128,5 @@ class TriviaQA(BaseTestSuite):
 
 
 def triviaqa(**kwargs: Any) -> TriviaQA:
+    """Implement triviaqa for this module."""
     return TriviaQA(**kwargs)

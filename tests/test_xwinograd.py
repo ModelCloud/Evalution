@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 xwinograd_module = importlib.import_module("evalution.benchmarks.xwinograd")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 2
         assert requests[0].context == "The city councilmen refused the demonstrators a permit because the demonstrators"
@@ -30,6 +33,7 @@ class FakeSession:
 
 
 def test_xwinograd_scores_partial_evaluation_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify xwinograd scores partial evaluation multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -65,6 +69,7 @@ def test_xwinograd_scores_partial_evaluation_multiple_choice_accuracy(monkeypatc
 
 
 def test_xwinograd_helper_handles_spaced_and_unspaced_blanks() -> None:
+    """Verify xwinograd helper handles spaced and unspaced blanks."""
     assert xwinograd_module._xwinograd_choice_contexts_and_suffix(
         "The city councilmen refused the demonstrators a permit because _ feared violence.",
         "the demonstrators",
@@ -90,5 +95,6 @@ def test_xwinograd_helper_handles_spaced_and_unspaced_blanks() -> None:
 
 
 def test_xwinograd_rejects_unknown_language() -> None:
+    """Verify xwinograd rejects unknown language."""
     with pytest.raises(ValueError, match="unsupported xwinograd language"):
         xwinograd_module.XWinograd(language="de")

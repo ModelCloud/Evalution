@@ -30,11 +30,13 @@ SPANISH_BENCH_TASKS = (
 @dataclass(frozen=True, slots=True)
 class _SpanishBenchConfig:
     # Capture the canonical dataset location and split for each SpanishBench task.
+    """Define the spanish bench config helper class."""
     dataset_path: str
     dataset_name: str | None
     split: str
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _SPANISH_BENCH_CONFIGS = {
     "copa_es": _SpanishBenchConfig(
         dataset_path="BSC-LT/COPA-es",
@@ -71,11 +73,13 @@ _SPANISH_BENCH_CONFIGS = {
 
 def _normalize_inline_text(text: str) -> str:
     # Collapse repeated whitespace so benchmark-specific prompt joins stay stable across dataset rows.
+    """Normalize inline text. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return " ".join(str(text).split())
 
 
 def _lowercase_first_letter(text: str) -> str:
     # Lowercasing the first token preserves the benchmark's natural sentence continuation prompts.
+    """Implement lowercase first letter for this module."""
     normalized = _normalize_inline_text(text).strip()
     if not normalized:
         return normalized
@@ -84,6 +88,7 @@ def _lowercase_first_letter(text: str) -> str:
 
 def _strip_terminal_punctuation(text: str, *, marks: str) -> str:
     # Remove one trailing punctuation mark when the benchmark prompt splices another connector after the text.
+    """Strip terminal punctuation."""
     normalized = _normalize_inline_text(text).strip()
     if normalized.endswith(tuple(marks)):
         return normalized[:-1].rstrip()
@@ -92,6 +97,7 @@ def _strip_terminal_punctuation(text: str, *, marks: str) -> str:
 
 def _copa_es_connector(question: str) -> str:
     # Mirror the Spanish causal connector wording used by the public benchmark prompts.
+    """Implement COPA es connector for this module."""
     return {
         "cause": "porque",
         "effect": "y por lo tanto",
@@ -99,10 +105,12 @@ def _copa_es_connector(question: str) -> str:
 
 
 def _copa_es_prompt(premise: str, question: str) -> str:
+    """Implement COPA es prompt for this module."""
     return f"{_strip_terminal_punctuation(premise, marks='.,!?')} {_copa_es_connector(question)}"
 
 
 def _escola_prompt(sentence: str) -> str:
+    """Implement escola prompt for this module."""
     return (
         f"{_normalize_inline_text(sentence).strip()}\n"
         "Pregunta: ¿Tiene sentido esta frase?\n"
@@ -111,6 +119,7 @@ def _escola_prompt(sentence: str) -> str:
 
 
 def _paws_es_choices(sentence1: str, sentence2: str) -> list[str]:
+    """Implement paws es choices for this module."""
     sentence1_text = _strip_terminal_punctuation(sentence1, marks=".,;")
     sentence2_text = _lowercase_first_letter(sentence2)
     return [
@@ -120,6 +129,7 @@ def _paws_es_choices(sentence1: str, sentence2: str) -> list[str]:
 
 
 def _xnli_es_choices(premise: str, hypothesis: str) -> list[str]:
+    """Implement XNLI es choices for this module."""
     premise_text = _strip_terminal_punctuation(premise, marks=".,!?")
     hypothesis_text = _lowercase_first_letter(hypothesis)
     if hypothesis_text and not hypothesis_text.endswith("."):
@@ -133,18 +143,21 @@ def _xnli_es_choices(premise: str, hypothesis: str) -> list[str]:
 
 def _wnli_es_prompt(sentence1: str, sentence2: str) -> str:
     # Match the public SpanishBench prompt wording for the translated Winograd NLI task.
+    """Implement WNLI es prompt for this module."""
     return f"{sentence1.strip()}\nPregunta: {sentence2.strip()} ¿Verdadero o Falso?\nRespuesta:"
 
 
 @dataclass(slots=True)
 class SpanishBench(BaseMultipleChoiceSuite):
     # Evaluate the currently implementable SpanishBench multiple-choice tasks with task-specific prompts.
+    """Implement the spanish bench benchmark suite."""
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = ""
     task: str = "copa_es"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization. Preserve the fallback order expected by the surrounding caller."""
         if self.task not in SPANISH_BENCH_TASKS:
             raise ValueError(f"unsupported spanish_bench task: {self.task!r}")
 
@@ -165,19 +178,23 @@ class SpanishBench(BaseMultipleChoiceSuite):
             raise ValueError("spanish_bench split must match the configured task")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         if self.task == "wnli_es":
             return load_wnli_es_dataset
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.task
 
     def continuation_for_choice(self, choice: str) -> str:
+        """Implement continuation for choice for spanish bench."""
         if self.task in {"paws_es_spanish_bench", "xnli_es_spanish_bench"}:
             return choice
         return super().continuation_for_choice(choice)
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row. Preserve the fallback order expected by the surrounding caller."""
         if self.task == "copa_es":
             return MultipleChoiceSample(
                 index=index,
@@ -270,6 +287,7 @@ class SpanishBench(BaseMultipleChoiceSuite):
         raw_predictions: list[int],
         normalized_predictions: list[int],
     ) -> dict[str, float]:
+        """Compute extra metrics from the collected predictions. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         if self.task != "escola":
             return {}
         gold_labels = [sample.gold_index for sample in samples]
@@ -280,11 +298,14 @@ class SpanishBench(BaseMultipleChoiceSuite):
 
 
 def spanish_bench(*, task: str, **kwargs: Any) -> SpanishBench:
+    """Implement spanish bench for this module."""
     return SpanishBench(task=task, **kwargs)
 
 
 def _make_spanish_bench_factory(task: str) -> Any:
+    """Make spanish bench factory."""
     def factory(**kwargs: Any) -> SpanishBench:
+        """Implement factory for this module."""
         return spanish_bench(task=task, **kwargs)
 
     factory.__name__ = task

@@ -14,10 +14,12 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 phrases_es_module = importlib.import_module("evalution.benchmarks.phrases_es")
 
 
 def test_phrases_es_scores_translation_metrics(monkeypatch) -> None:
+    """Verify phrases es scores translation metrics. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -35,7 +37,9 @@ def test_phrases_es_scores_translation_metrics(monkeypatch) -> None:
     monkeypatch.setattr(phrases_es_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 2
             assert len(requests) == 2
             assert requests[0].prompt == (
@@ -78,6 +82,7 @@ def test_phrases_es_scores_translation_metrics(monkeypatch) -> None:
 
 
 def test_phrases_es_dispatcher_and_validation() -> None:
+    """Verify phrases es dispatcher and validation."""
     suite = evalution.benchmarks.phrases_es(direction="va-es", max_rows=1)
     alias_suite = evalution.benchmarks.phrases_va_es(max_rows=1)
 

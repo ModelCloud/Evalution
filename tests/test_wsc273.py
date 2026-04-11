@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 wsc273_module = importlib.import_module("evalution.benchmarks.wsc273")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 2
         assert requests[0].context == "The city councilmen refused the demonstrators a permit because the city councilmen"
@@ -29,6 +32,7 @@ class FakeSession:
 
 
 def test_wsc273_scores_partial_evaluation_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify wsc273 scores partial evaluation multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
                 {
@@ -70,6 +74,7 @@ def test_wsc273_scores_partial_evaluation_multiple_choice_accuracy(monkeypatch) 
 
 
 def test_wsc273_normalizes_possessive_options_like_upstream() -> None:
+    """Verify wsc273 normalizes possessive options like upstream."""
     doc = {
         "text": "Anna did not pass the ball to Maria although her hands were free.",
         "pronoun": "her",
@@ -80,6 +85,7 @@ def test_wsc273_normalizes_possessive_options_like_upstream() -> None:
 
 
 def test_wsc273_loader_reads_xml_subset(tmp_path, monkeypatch) -> None:
+    """Verify wsc273 loader reads xml subset."""
     xml_path = tmp_path / "WSCollection.xml"
     xml_path.write_text(
         """<collection>

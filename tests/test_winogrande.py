@@ -12,12 +12,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 winogrande_module = importlib.import_module("evalution.benchmarks.winogrande")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 5
         assert len(requests) == 2
         assert requests[0].context == "Sarah was a much better surgeon than Maria so"
@@ -30,6 +33,7 @@ class FakeSession:
 
 
 def test_winogrande_scores_cloze_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify winogrande scores cloze multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -66,6 +70,7 @@ def test_winogrande_scores_cloze_multiple_choice_accuracy(monkeypatch) -> None:
 
 
 def test_winogrande_sentence_splitter_returns_prefix_and_suffix() -> None:
+    """Verify winogrande sentence splitter returns prefix and suffix."""
     prefix, suffix = winogrande_module._split_winogrande_sentence("The trophy did not fit because _ was too large.")
 
     assert prefix == "The trophy did not fit because"

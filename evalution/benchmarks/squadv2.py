@@ -16,11 +16,13 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.qa_text import best_qa_scores, canonicalize_no_answer
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _NO_ANSWER_TOKEN = "unanswerable"
 _STOP_STRINGS = ("\n", "\nQuestion:", "\nContext:")
 
 
 def _squadv2_prompt(*, title: str, context: str, question: str) -> str:
+    """Implement squadv2 prompt for this module."""
     title_line = f"Title: {title.strip()}\n" if title.strip() else ""
     return (
         f"{title_line}Context: {context.strip()}\n"
@@ -32,6 +34,7 @@ def _squadv2_prompt(*, title: str, context: str, question: str) -> str:
 
 
 def _answer_texts(doc: dict[str, Any]) -> list[str]:
+    """Implement answer texts for this module."""
     answers = doc["answers"]["text"]
     deduped: list[str] = []
     for answer in answers:
@@ -45,6 +48,8 @@ def _answer_texts(doc: dict[str, Any]) -> list[str]:
 
 @dataclass(slots=True)
 class SQuADV2(BaseTestSuite):
+    """Implement the squ adv2 benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "squad_v2"
     dataset_name: str | None = "squad_v2"
     split: str = "validation"
@@ -57,9 +62,11 @@ class SQuADV2(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "squadv2"
 
     def result_metadata(
@@ -67,6 +74,7 @@ class SQuADV2(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_qa_exact_match_f1",
@@ -75,6 +83,7 @@ class SQuADV2(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             answers = _answer_texts(doc)
             yield PreparedSample(
@@ -99,6 +108,7 @@ class SQuADV2(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         answers = _answer_texts(prepared_sample.doc)
         exact, f1_score, best_index = best_qa_scores(output.text, answers)
         canonical_prediction = canonicalize_no_answer(output.text)
@@ -127,4 +137,5 @@ class SQuADV2(BaseTestSuite):
 
 
 def squadv2(**kwargs: Any) -> SQuADV2:
+    """Implement squadv2 for this module."""
     return SQuADV2(**kwargs)

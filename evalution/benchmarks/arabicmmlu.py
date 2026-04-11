@@ -68,6 +68,7 @@ _LEVEL_TEXT = {
 
 
 def _slugify_subset_name(subset: str) -> str:
+    """Implement slugify subset name for this module."""
     slug = subset.lower()
     for old, new in (
         ("(", ""),
@@ -81,11 +82,13 @@ def _slugify_subset_name(subset: str) -> str:
     return slug
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 ARABICMMLU_TASKS = tuple(f"arabicmmlu_{_slugify_subset_name(subset)}" for subset in ARABICMMLU_SUBSETS)
 _SUBSET_TO_TASK = dict(zip(ARABICMMLU_SUBSETS, ARABICMMLU_TASKS, strict=True))
 
 
 def _arabicmmlu_prompt(doc: dict[str, Any]) -> str:
+    """Implement arabicmmlu prompt for this module. Preserve the fallback order expected by the surrounding caller."""
     level = ""
     if doc["Level"]:
         level = f" for {_LEVEL_TEXT[str(doc['Level'])]}"
@@ -117,12 +120,14 @@ def _arabicmmlu_prompt(doc: dict[str, Any]) -> str:
 class ArabicMMLU(BaseMultipleChoiceSuite):
     """ArabicMMLU suite backed by a frozen subset registry to keep imports offline-safe."""
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "MBZUAI/ArabicMMLU"
     dataset_name: str | None = None
     split: str = "test"
     subset: str = ""
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in ARABICMMLU_SUBSETS:
             raise ValueError(f"unsupported arabicmmlu subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -131,12 +136,15 @@ class ArabicMMLU(BaseMultipleChoiceSuite):
         raise ValueError("arabicmmlu dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _SUBSET_TO_TASK[self.subset]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         raw_choices = []
         choice_labels = []
         for option_index, field in enumerate(_OPTION_FIELDS):
@@ -168,11 +176,14 @@ class ArabicMMLU(BaseMultipleChoiceSuite):
 
 
 def arabicmmlu(*, subset: str, **kwargs: Any) -> ArabicMMLU:
+    """Implement arabicmmlu for this module."""
     return ArabicMMLU(subset=subset, dataset_name=subset, **kwargs)
 
 
 def _make_arabicmmlu_factory(subset: str) -> Any:
+    """Make arabicmmlu factory."""
     def factory(**kwargs: Any) -> ArabicMMLU:
+        """Implement factory for this module."""
         return arabicmmlu(subset=subset, **kwargs)
 
     factory.__name__ = _SUBSET_TO_TASK[subset]

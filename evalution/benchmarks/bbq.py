@@ -14,6 +14,7 @@ from huggingface_hub import hf_hub_download
 from evalution.benchmarks.localized_bbq import CHOICE_LABELS, bbq_prompt, slugify_config_name
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 BBQ_CATEGORIES = (
     "Age",
     "Disability_status",
@@ -39,6 +40,7 @@ def _load_bbq_dataset(
     cache_dir: str | None = None,
     stream: bool = True,
 ) -> Any:
+    """Load bbq dataset."""
     if dataset_path != "heegyu/bbq":
         raise ValueError(f"unsupported BBQ dataset path: {dataset_path!r}")
     if split != "test":
@@ -63,12 +65,15 @@ def _load_bbq_dataset(
 
 @dataclass(slots=True)
 class BBQ(BaseMultipleChoiceSuite):
+    """Implement the bbq benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "heegyu/bbq"
     dataset_name: str | None = "Age"
     split: str = "test"
     category: str = "Age"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.category not in BBQ_CATEGORIES:
             raise ValueError(f"unsupported bbq category: {self.category!r}")
         if self.dataset_name in {None, self.category}:
@@ -77,12 +82,15 @@ class BBQ(BaseMultipleChoiceSuite):
         raise ValueError("bbq dataset_name must match the configured category")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_bbq_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _CATEGORY_TO_TASK[self.category]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(doc["ans0"]).strip(), str(doc["ans1"]).strip(), str(doc["ans2"]).strip()]
         additional_metadata = dict(doc.get("additional_metadata", {}))
         return MultipleChoiceSample(
@@ -104,11 +112,14 @@ class BBQ(BaseMultipleChoiceSuite):
 
 
 def bbq(*, category: str, **kwargs: Any) -> BBQ:
+    """Implement bbq for this module."""
     return BBQ(category=category, dataset_name=category, **kwargs)
 
 
 def _make_bbq_factory(category: str) -> Any:
+    """Make bbq factory."""
     def factory(**kwargs: Any) -> BBQ:
+        """Implement factory for this module."""
         return bbq(category=category, **kwargs)
 
     factory.__name__ = _CATEGORY_TO_TASK[category]

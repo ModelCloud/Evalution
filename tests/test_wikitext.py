@@ -13,21 +13,26 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import RollingLoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 wikitext_module = importlib.import_module("evalution.benchmarks.wikitext")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[RollingLoglikelihoodOutput]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
         self.requests = []
 
     def loglikelihood_rolling(self, requests, *, batch_size=None):
+        """Implement loglikelihood rolling for fake session."""
         assert batch_size == 3
         self.requests.extend(requests)
         return list(self.outputs)
 
 
 def test_wikitext_scores_weighted_perplexity_metrics(monkeypatch) -> None:
+    """Verify wikitext scores weighted perplexity metrics. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -72,6 +77,7 @@ def test_wikitext_scores_weighted_perplexity_metrics(monkeypatch) -> None:
 
 
 def test_wikitext_detokenizer_matches_upstream_rules() -> None:
+    """Verify wikitext detokenizer matches upstream rules."""
     doc = {
         "page": " = = Heading = = \n Foo @-@ bar , baz . \" qux \" ( quux )",
     }

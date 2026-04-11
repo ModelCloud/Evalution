@@ -14,6 +14,7 @@ from evalution.benchmarks.mmlu import _MMLU_SUBSETS
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from evalution.benchmarks.subsets import ResolvedSubsets
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _CHOICE_LABELS = ("A", "B", "C", "D")
 # Freeze the full subject list at import so the "all" loader path does not depend on hidden tree helpers.
 _MMLU_REDUX_ALL_SUBJECTS = _MMLU_SUBSETS.resolve("all").leaf_values
@@ -21,6 +22,7 @@ _MMLU_REDUX_ALL_SUBJECTS = _MMLU_SUBSETS.resolve("all").leaf_values
 
 def _mmlu_redux_prompt(*, question: str, choices: list[str]) -> str:
     # Match the benchmark's letter-only answer format while keeping the choice texts in the prompt.
+    """Implement MMLU redux prompt for this module."""
     lines = [question.strip()]
     for label, choice in zip(_CHOICE_LABELS, choices, strict=True):
         lines.append(f"{label}. {choice}")
@@ -32,6 +34,7 @@ def _mmlu_redux_prompt(*, question: str, choices: list[str]) -> str:
 
 
 def _mmlu_redux_gold_index(answer: Any) -> int:
+    """Implement MMLU redux gold index for this module."""
     if isinstance(answer, str):
         stripped = answer.strip().upper()
         if stripped in _CHOICE_LABELS:
@@ -48,6 +51,7 @@ def _load_mmlu_redux_subject_dataset(
     cache_dir: str | None = None,
     stream: bool = False,
 ) -> Any:
+    """Load MMLU redux subject dataset."""
     return load_dataset(
         dataset_path,
         subject,
@@ -61,6 +65,7 @@ def _load_mmlu_redux_subject_dataset(
 @dataclass(slots=True)
 class MMLURedux(BaseMultipleChoiceSuite):
     # Evaluate the MMLU-Redux subject shards through letter-only answer scoring while preserving subset metadata.
+    """Implement the mmluredux benchmark suite."""
     dataset_path: str = "fxmarty/mmlu-redux-2.0-ok"
     dataset_name: str | None = None
     split: str = "test"
@@ -68,11 +73,13 @@ class MMLURedux(BaseMultipleChoiceSuite):
     subsets: str | list[str] = "all"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite. Preserve the fallback order expected by the surrounding caller."""
         selected_subjects = self._selected_subjects()
         dataset_path = self.dataset_path
         split = self.split
 
         def loader(*_args: Any, cache_dir: str | None = None, stream: bool = False, **_kwargs: Any) -> Any:
+            """Implement loader for mmluredux. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             if stream and (selected_subjects is None or len(selected_subjects) != 1):
                 raise ValueError("mmlu_redux only supports stream=True for a single selected subject")
             if selected_subjects is None:
@@ -126,6 +133,7 @@ class MMLURedux(BaseMultipleChoiceSuite):
         return loader
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         resolved_subsets = self._resolved_subsets()
         if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return "mmlu_redux"
@@ -133,6 +141,7 @@ class MMLURedux(BaseMultipleChoiceSuite):
         return f"mmlu_redux_{suffix}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         resolved_subsets = self._resolved_subsets()
         metadata = super().result_metadata()
         metadata.update(
@@ -147,9 +156,11 @@ class MMLURedux(BaseMultipleChoiceSuite):
         return metadata
 
     def continuation_for_choice(self, choice: str) -> str:
+        """Implement continuation for choice for mmluredux."""
         return f" {choice}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(choice).strip() for choice in doc["choices"]]
         if len(choices) != len(_CHOICE_LABELS):
             raise ValueError(f"mmlu_redux expects four answer choices, got {len(choices)}")
@@ -174,9 +185,11 @@ class MMLURedux(BaseMultipleChoiceSuite):
         )
 
     def _resolved_subsets(self) -> ResolvedSubsets:
+        """Implement resolved subsets for mmluredux."""
         return _MMLU_SUBSETS.resolve_many(self.subsets)
 
     def _selected_subjects(self) -> list[str] | None:
+        """Implement selected subjects for mmluredux."""
         resolved_subsets = self._resolved_subsets()
         if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return None
@@ -185,4 +198,5 @@ class MMLURedux(BaseMultipleChoiceSuite):
 
 def mmlu_redux(**kwargs: Any) -> MMLURedux:
     # Publish one generic constructor because subset selection is already encoded in the suite options.
+    """Implement MMLU redux for this module."""
     return MMLURedux(**kwargs)

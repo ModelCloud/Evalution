@@ -25,6 +25,7 @@ _WHITESPACE_RE = pcre.compile(r"\s+")
 
 
 def _fld_prompt(doc: dict[str, Any]) -> str:
+    """Implement fld prompt for this module."""
     return (
         "Based on the provided facts ($context$), either prove or disprove the hypothesis "
         f"or state that it is unknown. {str(doc['prompt_serial']).strip()}"
@@ -32,12 +33,14 @@ def _fld_prompt(doc: dict[str, Any]) -> str:
 
 
 def _normalize_label(text: str) -> str:
+    """Normalize label. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _WHITESPACE_RE.sub("", text).upper()
 
 
 @dataclass(slots=True)
 class FLD(BaseTestSuite):
     # FLD uses direct generation with exact-match label scoring on the world assumption verdict.
+    """Implement the fld benchmark suite."""
     dataset_path: str = "hitachi-nlp/FLD.v2"
     dataset_name: str | None = "default"
     split: str = "test"
@@ -47,12 +50,15 @@ class FLD(BaseTestSuite):
     temperature: float = 0.0
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "fld"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def result_metadata(self, *, generation_submission_mode: str) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_exact_match",
@@ -60,6 +66,7 @@ class FLD(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             target = str(doc["world_assump_label"]).strip().upper()
             yield PreparedSample(
@@ -76,6 +83,7 @@ class FLD(BaseTestSuite):
             )
 
     def score_sample(self, prepared_sample: PreparedSample, output: GenerationOutput) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         normalized_prediction = _normalize_label(output.text)
         return SampleResult(
             index=prepared_sample.index,
@@ -99,4 +107,5 @@ class FLD(BaseTestSuite):
 
 
 def fld(**kwargs: Any) -> FLD:
+    """Implement fld for this module."""
     return FLD(**kwargs)

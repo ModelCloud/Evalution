@@ -20,6 +20,7 @@ LAMBADA_OPENAI_MT_STABLELM_TASKS = tuple(
 
 def lambada_openai_mt_stablelm(language: str, **kwargs: Any) -> LAMBADA:
     # Route each language through the multilingual StableLM-backed LAMBADA dataset.
+    """Implement lambada openai mt stablelm for this module."""
     if language not in LAMBADA_OPENAI_MT_STABLELM_LANGUAGES:
         raise ValueError(f"unsupported lambada_openai_mt_stablelm language: {language!r}")
     return LAMBADA(
@@ -31,28 +32,35 @@ def lambada_openai_mt_stablelm(language: str, **kwargs: Any) -> LAMBADA:
 
 
 def lambada_openai_mt_stablelm_de(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt stablelm de for this module."""
     return lambada_openai_mt_stablelm("de", **kwargs)
 
 
 def lambada_openai_mt_stablelm_en(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt stablelm en for this module."""
     return lambada_openai_mt_stablelm("en", **kwargs)
 
 
 def lambada_openai_mt_stablelm_es(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt stablelm es for this module."""
     return lambada_openai_mt_stablelm("es", **kwargs)
 
 
 def lambada_openai_mt_stablelm_fr(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt stablelm fr for this module."""
     return lambada_openai_mt_stablelm("fr", **kwargs)
 
 
 def lambada_openai_mt_stablelm_it(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt stablelm it for this module."""
     return lambada_openai_mt_stablelm("it", **kwargs)
 
 
 def lambada_openai_mt_stablelm_nl(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt stablelm nl for this module."""
     return lambada_openai_mt_stablelm("nl", **kwargs)
 
 
 def lambada_openai_mt_stablelm_pt(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt stablelm pt for this module."""
     return lambada_openai_mt_stablelm("pt", **kwargs)

@@ -14,23 +14,28 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 
 def _moral_stories_prompt(doc: dict[str, Any]) -> str:
+    """Implement moral stories prompt for this module."""
     return " ".join(str(doc[field]).strip().capitalize() for field in ("norm", "situation", "intention"))
 
 
 @dataclass(slots=True)
 class MoralStories(BaseMultipleChoiceSuite):
     # Moral Stories scores whether the model prefers the normative action over the divergent one.
+    """Implement the moral stories benchmark suite."""
     dataset_path: str = "LabHC/moral_stories"
     split: str = "train"
     stream: bool = True
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "moral_stories"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         moral_action = str(doc["moral_action"]).strip()
         immoral_action = str(doc["immoral_action"]).strip()
         return MultipleChoiceSample(
@@ -52,4 +57,5 @@ class MoralStories(BaseMultipleChoiceSuite):
 
 
 def moral_stories(**kwargs: Any) -> MoralStories:
+    """Implement moral stories for this module."""
     return MoralStories(**kwargs)

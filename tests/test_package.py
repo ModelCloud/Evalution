@@ -7,6 +7,7 @@ import evalution
 
 
 def test_package_import() -> None:
+    """Verify package import."""
     assert evalution is not None
     assert not callable(evalution)
     assert evalution.benchmarks is not None
@@ -28,6 +29,7 @@ def test_package_import() -> None:
 
 
 def test_package_exports_benchmarks_namespace() -> None:
+    """Verify package exports benchmarks namespace."""
     assert evalution.benchmarks.AEXAMS is not None
     assert evalution.benchmarks.AEXAMS_SUBJECTS
     assert evalution.benchmarks.AfriXNLI is not None
@@ -789,6 +791,7 @@ def test_package_exports_benchmarks_namespace() -> None:
 
 
 def test_package_does_not_flatten_benchmarks_into_top_level_namespace() -> None:
+    """Verify package does not flatten benchmarks into top level namespace."""
     assert not hasattr(evalution, "arc_challenge")
     assert not hasattr(evalution, "arc_easy")
     assert not hasattr(evalution, "EngineBuilder")
@@ -802,6 +805,7 @@ def test_package_does_not_flatten_benchmarks_into_top_level_namespace() -> None:
 
 
 def test_package_exports_fluent_runtime_api() -> None:
+    """Verify package exports fluent runtime API."""
     assert callable(evalution.compare)
     assert callable(evalution.run_compare)
     assert callable(evalution.run_yaml)
@@ -809,8 +813,11 @@ def test_package_exports_fluent_runtime_api() -> None:
 
 
 def test_engine_model_starts_evaluation_run() -> None:
+    """Verify engine model starts evaluation run."""
     class DummyEngine(evalution.BaseEngine):
+        """Implement the dummy engine engine adapter."""
         def build(self, model):
+            """Build build."""
             del model
             raise AssertionError("evaluation creation should not build a session")
 
@@ -820,6 +827,7 @@ def test_engine_model_starts_evaluation_run() -> None:
 
 
 def test_package_exposes_cli_entrypoint() -> None:
+    """Verify package exposes CLI entrypoint."""
     from evalution import cli
 
     assert callable(cli.main)

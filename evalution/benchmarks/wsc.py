@@ -13,10 +13,12 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _DETOKENIZE_TRAILING_PUNCTUATION_RE = pcre.compile(r" (['.,])")
 
 
 def _general_detokenize(text: str) -> str:
+    """Implement general detokenize for this module."""
     text = text.replace(" n't", "n't")
     text = text.replace(" )", ")")
     text = text.replace("( ", "(")
@@ -26,6 +28,7 @@ def _general_detokenize(text: str) -> str:
 
 
 def _wsc_prompt(doc: dict[str, Any]) -> str:
+    """Implement WSC prompt for this module."""
     raw_passage = str(doc["text"])
     pronoun = str(doc["span2_text"])
     pronoun_index = int(doc["span2_index"])
@@ -43,17 +46,22 @@ def _wsc_prompt(doc: dict[str, Any]) -> str:
 
 @dataclass(slots=True)
 class WSC(BaseMultipleChoiceSuite):
+    """Implement the WSC benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "super_glue"
     dataset_name: str | None = "wsc.fixed"
     split: str = "validation"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "wsc"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         metadata = {
             "noun": str(doc["span1_text"]),
             "pronoun": str(doc["span2_text"]),
@@ -71,4 +79,5 @@ class WSC(BaseMultipleChoiceSuite):
 
 
 def wsc(**kwargs: Any) -> WSC:
+    """Implement WSC for this module."""
     return WSC(**kwargs)

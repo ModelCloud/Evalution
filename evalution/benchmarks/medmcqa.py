@@ -12,10 +12,12 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _MEDMCQA_LABELS = ["A", "B", "C", "D"]
 
 
 def _medmcqa_prompt(question: str, option_texts: list[str]) -> str:
+    """Implement medmcqa prompt for this module."""
     lines = [f"Question: {question.strip()}", "Choices:"]
     for label, option_text in zip(_MEDMCQA_LABELS, option_texts, strict=True):
         lines.append(f"{label}. {option_text.strip()}")
@@ -26,16 +28,20 @@ def _medmcqa_prompt(question: str, option_texts: list[str]) -> str:
 @dataclass(slots=True)
 class MedMCQA(BaseMultipleChoiceSuite):
     # Evaluate medical entrance-exam questions by ranking answer labels after showing all option texts.
+    """Implement the med mcqa benchmark suite."""
     dataset_path: str = "openlifescienceai/medmcqa"
     split: str = "validation"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "medmcqa"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choice_texts = [
             str(doc["opa"]).strip(),
             str(doc["opb"]).strip(),
@@ -67,6 +73,7 @@ class MedMCQA(BaseMultipleChoiceSuite):
         choice_order: tuple[int, ...],
         labels: tuple[str, ...],
     ) -> str:
+        """Implement label prompt for med mcqa."""
         choice_texts = list(sample.metadata["choice_texts"])
         lines = [f"Question: {sample.metadata['question']}", "Choices:"]
         for label, choice_index in zip(labels, choice_order, strict=True):
@@ -76,4 +83,5 @@ class MedMCQA(BaseMultipleChoiceSuite):
 
 
 def medmcqa(**kwargs: Any) -> MedMCQA:
+    """Implement medmcqa for this module."""
     return MedMCQA(**kwargs)

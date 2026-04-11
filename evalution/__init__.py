@@ -43,6 +43,7 @@ from evalution.yaml import python_from_yaml, run_yaml
 from . import benchmarks
 from . import engines
 
+# Keep module-level state explicit for this module.
 __all__ = [
     "BaseEngine",
     "BaseEngineDeviceConfig",

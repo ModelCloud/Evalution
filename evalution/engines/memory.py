@@ -12,6 +12,8 @@ from typing import Any
 
 @dataclass(frozen=True, slots=True)
 class MemoryProfile:
+    """Define the memory profile helper class."""
+    # Keep the class-level state explicit for this helper.
     dtype_name: str
     dtype_bytes: int
     total_vram_gib: float
@@ -26,6 +28,7 @@ def build_memory_profile(
     input_device: Any,
     configured_dtype: str | None,
 ) -> MemoryProfile:
+    """Build memory profile."""
     import torch
 
     dtype_name, dtype_bytes = dtype_metadata(getattr(model, "dtype", None), configured=configured_dtype)
@@ -49,6 +52,7 @@ def build_memory_profile(
 
 
 def dtype_metadata(dtype: Any, *, configured: str | None) -> tuple[str, int]:
+    """Implement dtype metadata for this module."""
     import torch
 
     resolved_dtype = dtype
@@ -78,6 +82,7 @@ def dtype_metadata(dtype: Any, *, configured: str | None) -> tuple[str, int]:
 
 
 def resolve_dtype(dtype: str | None) -> Any:
+    """Resolve dtype."""
     if dtype is None:
         return None
     if dtype == "auto":
@@ -100,6 +105,7 @@ def resolve_dtype(dtype: str | None) -> Any:
 
 
 def parameter_count_billions(model: Any) -> float:
+    """Implement parameter count billions for this module."""
     with suppress(Exception):
         parameter_count = model.num_parameters()
         if parameter_count:
@@ -108,6 +114,7 @@ def parameter_count_billions(model: Any) -> float:
 
 
 def kv_cache_bytes_per_token(model: Any, *, dtype_bytes: int) -> int | None:
+    """Implement kv cache bytes per token for this module. Preserve the fallback order expected by the surrounding caller."""
     config = getattr(model, "config", None)
     if config is None:
         return None
@@ -132,8 +139,10 @@ def kv_cache_bytes_per_token(model: Any, *, dtype_bytes: int) -> int | None:
 
 
 def bytes_to_gib(num_bytes: int) -> float:
+    """Implement bytes to gib for this module."""
     return num_bytes / (1024**3)
 
 
 def gib_to_bytes(num_gib: float) -> float:
+    """Implement gib to bytes for this module."""
     return num_gib * (1024**3)

@@ -16,11 +16,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput, LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 qasper_module = importlib.import_module("evalution.benchmarks.qasper")
 
 
 class BoolSession:
+    """Define the bool session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for bool session."""
         assert batch_size == 8
         assert len(requests) == 2
         assert requests[0].context == "TITLE: Paper\nABSTRACT: Summary\n\nQ: Is the answer yes?\n\nA:"
@@ -32,7 +35,9 @@ class BoolSession:
 
 
 class FreeformSession:
+    """Define the freeform session helper used by the surrounding tests."""
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         assert batch_size == 4
         request_items = list(requests)
         assert len(request_items) == 1
@@ -42,6 +47,7 @@ class FreeformSession:
 
 
 def test_qasper_bool_scores_boolean_rows(monkeypatch) -> None:
+    """Verify QASPER bool scores boolean rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -70,6 +76,7 @@ def test_qasper_bool_scores_boolean_rows(monkeypatch) -> None:
 
 
 def test_qasper_freeform_scores_abstractive_rows(monkeypatch) -> None:
+    """Verify QASPER freeform scores abstractive rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -95,6 +102,7 @@ def test_qasper_loads_public_tarballs_without_dataset_scripts(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
+    """Verify QASPER loads public tarballs without dataset scripts."""
     archive_path = tmp_path / "qasper-train-dev-v0.3.tgz"
     payload = {
         "paper-1": {
@@ -146,6 +154,7 @@ def test_qasper_loads_public_tarballs_without_dataset_scripts(
 
 
 def test_qasper_flatten_supports_legacy_script_style_rows() -> None:
+    """Verify QASPER flatten supports legacy script style rows."""
     dataset = Dataset.from_list(
         [
             {
@@ -186,5 +195,6 @@ def test_qasper_flatten_supports_legacy_script_style_rows() -> None:
 
 
 def test_qasper_dispatcher_rejects_unknown_variant() -> None:
+    """Verify QASPER dispatcher rejects unknown variant."""
     with pytest.raises(ValueError, match="unsupported qasper variant"):
         evalution.benchmarks.qasper(variant="extractive")

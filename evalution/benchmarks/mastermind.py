@@ -13,6 +13,7 @@ from datasets import Dataset, load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 MASTERMIND_VARIANTS = (
     "mastermind_24_easy",
     "mastermind_24_hard",
@@ -26,11 +27,14 @@ _HF_DATASETS_CACHE_ROOT = Path.home() / ".cache" / "huggingface" / "datasets"
 
 @dataclass(frozen=True, slots=True)
 class _MastermindConfig:
+    """Define the mastermind config helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str
     code_shape: str
     difficulty: str
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _MASTERMIND_CONFIGS = {
     "mastermind_24_easy": _MastermindConfig("flair/mastermind_24_mcq_random", "24", "easy"),
     "mastermind_24_hard": _MastermindConfig("flair/mastermind_24_mcq_close", "24", "hard"),
@@ -42,10 +46,12 @@ _MASTERMIND_CONFIGS = {
 
 
 def _mastermind_prompt(instruction: str) -> str:
+    """Implement mastermind prompt for this module."""
     return f"{instruction.strip()}\n\nThe secret code is:"
 
 
 def _cached_mastermind_arrow_path(*, dataset_path: str, split: str) -> Path | None:
+    """Implement cached mastermind arrow path for this module."""
     namespace, name = dataset_path.split("/", 1)
     cache_root = _HF_DATASETS_CACHE_ROOT / f"{namespace}___{name}" / "default" / "0.0.0"
     candidates = sorted(cache_root.glob(f"*/{name}-{split}.arrow"))
@@ -54,6 +60,7 @@ def _cached_mastermind_arrow_path(*, dataset_path: str, split: str) -> Path | No
 
 def _mastermind_dataset_loader() -> Any:
     # Prefer the fully local HF datasets cache so concurrent shards do not block on Hub metadata.
+    """Implement mastermind dataset loader for this module."""
     def _loader(
         dataset_path: str,
         dataset_name: str | None = None,
@@ -63,6 +70,7 @@ def _mastermind_dataset_loader() -> Any:
         streaming: bool = False,
         stream: bool | None = None,
     ) -> Any:
+        """Implement loader for this module."""
         if stream is not None:
             streaming = stream
         if getattr(load_dataset, "__module__", "").startswith("datasets") and not streaming:
@@ -88,6 +96,7 @@ def _mastermind_dataset_loader() -> Any:
 @dataclass(slots=True)
 class Mastermind(BaseMultipleChoiceSuite):
     # Mastermind ranks candidate secret codes via multiple-choice loglikelihood.
+    """Implement the mastermind benchmark suite."""
     dataset_path: str = "flair/mastermind_24_mcq_random"
     dataset_name: str | None = None
     split: str = "test"
@@ -95,6 +104,7 @@ class Mastermind(BaseMultipleChoiceSuite):
     variant: str = "mastermind_24_easy"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.variant not in MASTERMIND_VARIANTS:
             raise ValueError(f"unsupported mastermind variant: {self.variant!r}")
         expected_path = _MASTERMIND_CONFIGS[self.variant].dataset_path
@@ -106,12 +116,15 @@ class Mastermind(BaseMultipleChoiceSuite):
             raise ValueError("mastermind does not use a dataset_name")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _mastermind_dataset_loader()
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.variant
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         config = _MASTERMIND_CONFIGS[self.variant]
         return {
             **super().result_metadata(),
@@ -121,6 +134,7 @@ class Mastermind(BaseMultipleChoiceSuite):
         }
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         config = _MASTERMIND_CONFIGS[self.variant]
         option_labels = [str(label) for label in doc["options"]["label"]]
         option_texts = [str(text).strip() for text in doc["options"]["text"]]
@@ -142,30 +156,37 @@ class Mastermind(BaseMultipleChoiceSuite):
 
 
 def mastermind(*, variant: str, **kwargs: Any) -> Mastermind:
+    """Implement mastermind for this module."""
     if variant not in MASTERMIND_VARIANTS:
         raise ValueError(f"unsupported mastermind variant: {variant!r}")
     return Mastermind(variant=variant, dataset_path=_MASTERMIND_CONFIGS[variant].dataset_path, **kwargs)
 
 
 def mastermind_24_easy(**kwargs: Any) -> Mastermind:
+    """Implement mastermind 24 easy for this module."""
     return mastermind(variant="mastermind_24_easy", **kwargs)
 
 
 def mastermind_24_hard(**kwargs: Any) -> Mastermind:
+    """Implement mastermind 24 hard for this module."""
     return mastermind(variant="mastermind_24_hard", **kwargs)
 
 
 def mastermind_35_easy(**kwargs: Any) -> Mastermind:
+    """Implement mastermind 35 easy for this module."""
     return mastermind(variant="mastermind_35_easy", **kwargs)
 
 
 def mastermind_35_hard(**kwargs: Any) -> Mastermind:
+    """Implement mastermind 35 hard for this module."""
     return mastermind(variant="mastermind_35_hard", **kwargs)
 
 
 def mastermind_46_easy(**kwargs: Any) -> Mastermind:
+    """Implement mastermind 46 easy for this module."""
     return mastermind(variant="mastermind_46_easy", **kwargs)
 
 
 def mastermind_46_hard(**kwargs: Any) -> Mastermind:
+    """Implement mastermind 46 hard for this module."""
     return mastermind(variant="mastermind_46_hard", **kwargs)

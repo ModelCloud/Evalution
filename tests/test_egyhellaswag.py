@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 egyhellaswag_module = importlib.import_module("evalution.benchmarks.egyhellaswag")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == "شيل قرميد السقف: راجل قاعد على سقف. هو"
@@ -31,6 +34,7 @@ class FakeSession:
 
 
 def test_egyhellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
+    """Verify egyhellaswag scores raw and normalized accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -71,6 +75,7 @@ def test_egyhellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
 
 
 def test_egyhellaswag_label_prompt_lists_explicit_choices() -> None:
+    """Verify egyhellaswag label prompt lists explicit choices."""
     suite = evalution.benchmarks.egyhellaswag()
     sample = evalution.benchmarks.MultipleChoiceSample(
         index=0,

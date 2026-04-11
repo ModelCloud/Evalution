@@ -14,15 +14,19 @@ from evalution.engines import transformers_common as common
 
 
 def test_tokenicer_is_imported_from_installed_package() -> None:
+    """Verify tokenicer is imported from installed package."""
     assert common.Tokenicer is tokenicer.Tokenicer
 
 
 def test_load_tokenizer_from_model_uses_tokenicer_load(monkeypatch) -> None:
+    """Verify load tokenizer from model uses tokenicer load."""
     observed: dict[str, object] = {}
 
     class FakeTokenicer:
+        """Provide the fake tokenicer helper used by the surrounding tests."""
         @classmethod
         def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            """Load load."""
             observed["path"] = path
             observed["strict"] = strict
             observed["kwargs"] = kwargs
@@ -43,13 +47,16 @@ def test_load_tokenizer_from_model_uses_tokenicer_load(monkeypatch) -> None:
 
 
 def test_load_tokenizer_from_model_retries_direct_local_gguf_file(monkeypatch, tmp_path) -> None:
+    """Verify load tokenizer from model retries direct local gguf file."""
     calls: list[tuple[str, bool, dict[str, object]]] = []
     gguf_path = tmp_path / "Bonsai-1.7B.gguf"
     gguf_path.write_bytes(b"GGUF")
 
     class FakeTokenicer:
+        """Provide the fake tokenicer helper used by the surrounding tests."""
         @classmethod
         def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            """Load load."""
             calls.append((path, strict, dict(kwargs)))
             if len(calls) == 1:
                 raise ValueError("missing gguf_file")
@@ -67,13 +74,16 @@ def test_load_tokenizer_from_model_retries_direct_local_gguf_file(monkeypatch, t
 
 
 def test_load_tokenizer_from_model_retries_single_gguf_directory(monkeypatch, tmp_path) -> None:
+    """Verify load tokenizer from model retries single gguf directory."""
     calls: list[tuple[str, bool, dict[str, object]]] = []
     (tmp_path / "Bonsai-1.7B.gguf").write_bytes(b"GGUF")
     (tmp_path / "README.md").write_text("docs")
 
     class FakeTokenicer:
+        """Provide the fake tokenicer helper used by the surrounding tests."""
         @classmethod
         def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            """Load load."""
             calls.append((path, strict, dict(kwargs)))
             if len(calls) == 1:
                 raise ValueError("missing gguf_file")
@@ -91,11 +101,14 @@ def test_load_tokenizer_from_model_retries_single_gguf_directory(monkeypatch, tm
 
 
 def test_load_tokenizer_from_model_retries_single_gguf_hub_repo(monkeypatch) -> None:
+    """Verify load tokenizer from model retries single gguf hub repo."""
     calls: list[tuple[str, bool, dict[str, object]]] = []
 
     class FakeTokenicer:
+        """Provide the fake tokenicer helper used by the surrounding tests."""
         @classmethod
         def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            """Load load."""
             calls.append((path, strict, dict(kwargs)))
             if len(calls) == 1:
                 raise ValueError("missing gguf_file")
@@ -129,11 +142,14 @@ def test_load_tokenizer_from_model_retries_single_gguf_hub_repo(monkeypatch) -> 
 
 
 def test_load_tokenizer_from_model_does_not_retry_when_dense_weights_are_present(monkeypatch) -> None:
+    """Verify load tokenizer from model does not retry when dense weights are present."""
     calls: list[tuple[str, bool, dict[str, object]]] = []
 
     class FakeTokenicer:
+        """Provide the fake tokenicer helper used by the surrounding tests."""
         @classmethod
         def load(cls, path: str, strict: bool = False, **kwargs: object) -> object:
+            """Load load."""
             calls.append((path, strict, dict(kwargs)))
             raise RuntimeError("original failure")
 
@@ -154,11 +170,14 @@ def test_load_tokenizer_from_model_does_not_retry_when_dense_weights_are_present
 
 
 def test_normalize_tokenizer_special_tokens_calls_auto_fix_with_model_when_present() -> None:
+    """Verify normalize tokenizer special tokens calls auto fix with model when present. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     calls: list[tuple[object | None, bool, object]] = []
     model = SimpleNamespace()
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
         def auto_fix_pad_token(self, model=None, strict: bool = True, pad_tokens: object = None) -> None:
+            """Implement auto fix pad token for fake tokenizer."""
             calls.append((model, strict, pad_tokens))
 
     common._normalize_tokenizer_special_tokens(tokenizer=FakeTokenizer(), model=model)
@@ -167,10 +186,13 @@ def test_normalize_tokenizer_special_tokens_calls_auto_fix_with_model_when_prese
 
 
 def test_normalize_tokenizer_special_tokens_calls_auto_fix_without_model_when_absent() -> None:
+    """Verify normalize tokenizer special tokens calls auto fix without model when absent. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     calls: list[tuple[object | None, bool]] = []
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
         def auto_fix_pad_token(self, strict: bool = True) -> None:
+            """Implement auto fix pad token for fake tokenizer."""
             calls.append((None, strict))
 
     common._normalize_tokenizer_special_tokens(tokenizer=FakeTokenizer(), model=None)

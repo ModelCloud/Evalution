@@ -15,11 +15,13 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 def _wic_target_word(doc: dict[str, Any]) -> str:
     # Extract the focus word from the first sentence using the dataset-provided character offsets.
+    """Implement wic target word for this module."""
     return str(doc["sentence1"])[int(doc["start1"]) : int(doc["end1"])]
 
 
 def _wic_prompt(doc: dict[str, Any]) -> str:
     # Format the two-sentence word-sense question using the canonical same-meaning prompt wording.
+    """Implement wic prompt for this module."""
     target_word = _wic_target_word(doc)
     return (
         f"Sentence 1: {str(doc['sentence1']).strip()}\n"
@@ -32,20 +34,24 @@ def _wic_prompt(doc: dict[str, Any]) -> str:
 @dataclass(slots=True)
 class WiC(BaseMultipleChoiceSuite):
     # Evaluate word-in-context disambiguation by ranking yes/no continuations for the paired sentences.
+    """Implement the wi c benchmark suite."""
     dataset_path: str = "super_glue"
     dataset_name: str | None = "wic"
     split: str = "validation"
 
     # Use the Hugging Face datasets loader for the WiC task packaged inside SuperGLUE.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used by logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "wic"
 
     # Convert one WiC row into the shared prompt and binary-choice structure used by the helper.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_wic_prompt(doc),
@@ -57,4 +63,5 @@ class WiC(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used by the rest of the package.
 def wic(**kwargs: Any) -> WiC:
+    """Implement wic for this module."""
     return WiC(**kwargs)

@@ -13,10 +13,12 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 arithmetic_module = importlib.import_module("evalution.benchmarks.arithmetic")
 
 
 class FakeLoglikelihoodSession:
+    """Provide the fake loglikelihood session helper used by the surrounding tests."""
     def __init__(
         self,
         *,
@@ -24,11 +26,13 @@ class FakeLoglikelihoodSession:
         expected_continuation: str,
         output: LoglikelihoodOutput,
     ) -> None:
+        """Initialize this object."""
         self.expected_prompt = expected_prompt
         self.expected_continuation = expected_continuation
         self.output = output
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake loglikelihood session."""
         assert batch_size == 4
         assert len(requests) == 1
         assert requests[0].context == self.expected_prompt
@@ -52,6 +56,7 @@ class FakeLoglikelihoodSession:
     ],
 )
 def test_arithmetic_factories_set_expected_variant_names(factory_name: str, expected_dataset_name: str) -> None:
+    """Verify arithmetic factories set expected variant names."""
     suite = getattr(evalution.benchmarks, factory_name)()
 
     assert suite.dataset_name == expected_dataset_name
@@ -59,6 +64,7 @@ def test_arithmetic_factories_set_expected_variant_names(factory_name: str, expe
 
 
 def test_arithmetic_scores_loglikelihood_without_perplexity(monkeypatch) -> None:
+    """Verify arithmetic scores loglikelihood without perplexity. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -112,6 +118,7 @@ def test_arithmetic_scores_loglikelihood_without_perplexity(monkeypatch) -> None
 
 
 def test_normalize_arithmetic_context_matches_upstream_dataset_script() -> None:
+    """Verify normalize arithmetic context matches upstream dataset script. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     assert arithmetic_module._normalize_arithmetic_context("\n\nQ: What is (9 + 8) * 2?\n\nA:") == (
         "Question: What is (9 + 8) * 2?\nAnswer:"
     )

@@ -12,16 +12,20 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput, LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 gsm8k_module = importlib.import_module("evalution.benchmarks.gsm8k")
 sciq_module = importlib.import_module("evalution.benchmarks.sciq")
 
 
 class RecordingGenerationSession:
+    """Define the recording generation session helper used by the surrounding tests."""
     def __init__(self, responses: list[str]) -> None:
+        """Initialize this object."""
         self.responses = responses
         self.prompts: list[str] = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         del batch_size
         self.prompts.extend(request.prompt or "" for request in requests)
         return [
@@ -30,14 +34,18 @@ class RecordingGenerationSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 class RecordingLoglikelihoodSession:
+    """Define the recording loglikelihood session helper used by the surrounding tests."""
     def __init__(self) -> None:
+        """Initialize this object."""
         self.contexts: list[str] = []
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for recording loglikelihood session."""
         del batch_size
         self.contexts.extend(request.context for request in requests)
         return [
@@ -47,6 +55,7 @@ class RecordingLoglikelihoodSession:
 
 
 def test_base_suite_length_order_uses_generation_prompt_length(monkeypatch) -> None:
+    """Verify base suite length order uses generation prompt length."""
     dataset = Dataset.from_list(
         [
             {
@@ -78,6 +87,7 @@ def test_base_suite_length_order_uses_generation_prompt_length(monkeypatch) -> N
 
 
 def test_multiple_choice_length_order_uses_prompt_and_choice_length(monkeypatch) -> None:
+    """Verify multiple choice length order uses prompt and choice length."""
     dataset = Dataset.from_list(
         [
             {
@@ -118,6 +128,7 @@ def test_multiple_choice_length_order_uses_prompt_and_choice_length(monkeypatch)
 
 
 def test_shuffle_order_with_seed_is_deterministic(monkeypatch) -> None:
+    """Verify shuffle order with seed is deterministic."""
     dataset = Dataset.from_list(
         [
             {

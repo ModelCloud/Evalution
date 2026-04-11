@@ -35,11 +35,13 @@ _KORMEDMCQA_STOP_STRINGS = ("Q:", "</s>", "<|im_end|>", ".", "\n\n")
 
 
 def _choice_label(answer: int) -> str:
+    """Implement choice label for this module."""
     return _KORMEDMCQA_CHOICE_LABELS[int(answer) - 1]
 
 
 def _format_prompt(doc: dict[str, Any], *, include_answer: bool) -> str:
     # lm-eval's fewshot examples include a space before the gold label; the scored query does not.
+    """Format prompt."""
     answer_suffix = f" {_choice_label(int(doc['answer']))}" if include_answer else ""
     return (
         f"{str(doc['question']).strip()}\n"
@@ -53,6 +55,7 @@ def _format_prompt(doc: dict[str, Any], *, include_answer: bool) -> str:
 
 
 def _normalize_prediction_label(text: str) -> str:
+    """Normalize prediction label. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     for char in text.upper():
         if char in _KORMEDMCQA_CHOICE_LABELS:
             return char
@@ -60,6 +63,7 @@ def _normalize_prediction_label(text: str) -> str:
 
 
 def _group_rows(*, dataset_path: str, split: str, cache_dir: str | None = None) -> Dataset:
+    """Group rows. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     rows_by_subset: list[list[dict[str, Any]]] = []
     for subset, dataset_name in KORMEDMCQA_SUBSETS.items():
         dataset = load_dataset(dataset_path, dataset_name, split=split, cache_dir=cache_dir)
@@ -82,6 +86,7 @@ def _group_rows(*, dataset_path: str, split: str, cache_dir: str | None = None) 
 @dataclass(slots=True)
 class KorMedMCQA(BaseTestSuite):
     # KorMedMCQA uses five-shot Korean medical exam prompting and exact-match answer-label scoring.
+    """Implement the kor med mcqa benchmark suite."""
     dataset_path: str = "sean0042/KorMedMCQA"
     dataset_name: str | None = "doctor"
     split: str = "test"
@@ -96,6 +101,7 @@ class KorMedMCQA(BaseTestSuite):
     apply_chat_template: bool = False
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset == "kormedmcqa":
             self.dataset_name = None
             return
@@ -108,6 +114,7 @@ class KorMedMCQA(BaseTestSuite):
         raise ValueError("kormedmcqa dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         if self.subset != "kormedmcqa":
             return load_dataset
 
@@ -115,16 +122,19 @@ class KorMedMCQA(BaseTestSuite):
         split = self.split
 
         def loader(*_args: Any, cache_dir: str | None = None, **_kwargs: Any) -> Dataset:
+            """Implement loader for kor med mcqa."""
             return _group_rows(dataset_path=dataset_path, split=split, cache_dir=cache_dir)
 
         return loader
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         if self.subset == "kormedmcqa":
             return self.subset
         return f"kormedmcqa_{self.subset}"
 
     def result_metadata(self, *, generation_submission_mode: str) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_exact_match",
@@ -136,9 +146,11 @@ class KorMedMCQA(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         fewshot_prefix_cache: dict[str, str] = {}
 
         def fewshot_prefix(subset: str) -> str:
+            """Implement fewshot prefix for kor med mcqa."""
             if subset not in fewshot_prefix_cache:
                 fewshot_docs = load_dataset(
                     self.dataset_path,
@@ -172,6 +184,7 @@ class KorMedMCQA(BaseTestSuite):
             )
 
     def score_sample(self, prepared_sample: PreparedSample, output: GenerationOutput) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         normalized_prediction = _normalize_prediction_label(output.text)
         return SampleResult(
             index=prepared_sample.index,
@@ -201,24 +214,29 @@ class KorMedMCQA(BaseTestSuite):
 
 
 def kormedmcqa(**kwargs: Any) -> KorMedMCQA:
+    """Implement kormedmcqa for this module."""
     return KorMedMCQA(subset="kormedmcqa", dataset_name=None, **kwargs)
 
 
 def kormedmcqa_doctor(**kwargs: Any) -> KorMedMCQA:
+    """Implement kormedmcqa doctor for this module."""
     kwargs.setdefault("dataset_name", KORMEDMCQA_SUBSETS["doctor"])
     return KorMedMCQA(subset="doctor", **kwargs)
 
 
 def kormedmcqa_nurse(**kwargs: Any) -> KorMedMCQA:
+    """Implement kormedmcqa nurse for this module."""
     kwargs.setdefault("dataset_name", KORMEDMCQA_SUBSETS["nurse"])
     return KorMedMCQA(subset="nurse", **kwargs)
 
 
 def kormedmcqa_pharm(**kwargs: Any) -> KorMedMCQA:
+    """Implement kormedmcqa pharm for this module."""
     kwargs.setdefault("dataset_name", KORMEDMCQA_SUBSETS["pharm"])
     return KorMedMCQA(subset="pharm", **kwargs)
 
 
 def kormedmcqa_dentist(**kwargs: Any) -> KorMedMCQA:
+    """Implement kormedmcqa dentist for this module."""
     kwargs.setdefault("dataset_name", KORMEDMCQA_SUBSETS["dentist"])
     return KorMedMCQA(subset="dentist", **kwargs)

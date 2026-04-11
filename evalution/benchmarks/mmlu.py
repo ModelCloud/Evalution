@@ -24,6 +24,7 @@ from evalution.benchmarks.base import TestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.benchmarks.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _MMLU_LABELS = ["A", "B", "C", "D"]
 _MMLU_SUBSET_TREE = {
     "stem": {
@@ -96,10 +97,12 @@ _MMLU_SUBSETS = SubsetTree(_MMLU_SUBSET_TREE)
 
 
 def _format_subject_title(subject: str) -> str:
+    """Format subject title."""
     return " ".join(subject.split("_"))
 
 
 def _format_mmlu_question(doc: dict[str, Any], *, include_answer: bool) -> str:
+    """Format MMLU question."""
     lines = [doc["question"].strip()]
     for label, choice in zip(_MMLU_LABELS, doc["choices"], strict=True):
         lines.append(f"{label}. {choice}")
@@ -109,6 +112,7 @@ def _format_mmlu_question(doc: dict[str, Any], *, include_answer: bool) -> str:
 
 
 def _fewshot_prompt(subject: str, fewshot_docs: list[dict[str, Any]]) -> str:
+    """Implement fewshot prompt for this module."""
     subject_title = _format_subject_title(subject)
     sections = [f"The following are multiple choice questions (with answers) about {subject_title}."]
     if fewshot_docs:
@@ -118,6 +122,8 @@ def _fewshot_prompt(subject: str, fewshot_docs: list[dict[str, Any]]) -> str:
 
 @dataclass(slots=True)
 class MMLU(TestSuite):
+    """Define the MMLU helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "cais/mmlu"
     subsets: str | list[str] = "all"
     # Default to the benchmark-reporting split. Callers can still override `split=` explicitly
@@ -130,18 +136,22 @@ class MMLU(TestSuite):
     batch_size: int | None = None
     cache_dir: str | None = None
     def dataset_name(self) -> str:
+        """Implement dataset name for MMLU."""
         resolved_subsets = self._resolved_subsets()
         if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "leaf":
             return resolved_subsets.leaf_values[0]
         return "all"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def dataset_builder_loader(self) -> Any:
+        """Implement dataset builder loader for MMLU."""
         return load_dataset_builder
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         resolved_subsets = self._resolved_subsets()
         if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return "mmlu"
@@ -149,6 +159,7 @@ class MMLU(TestSuite):
         return f"mmlu_{suffix}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         resolved_subsets = self._resolved_subsets()
         return {
             "dataset_path": self.dataset_path,
@@ -165,6 +176,7 @@ class MMLU(TestSuite):
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate."""
         loglikelihood_continuous = getattr(session, "loglikelihood_continuous", None)
         if callable(loglikelihood_continuous):
             return self._evaluate_continuous(
@@ -174,6 +186,7 @@ class MMLU(TestSuite):
         return self._evaluate_eager(session)
 
     def _evaluate_eager(self, session: InferenceSession) -> TestResult:
+        """Evaluate eager. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -302,6 +315,7 @@ class MMLU(TestSuite):
         *,
         loglikelihood_continuous: Any,
     ) -> TestResult:
+        """Evaluate continuous."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -343,6 +357,7 @@ class MMLU(TestSuite):
         )
 
         def iter_request_stream() -> Any:
+            """Iterate over request stream. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             for index, doc in enumerate(docs):
                 subject = str(doc["subject"])
                 subject_key = normalize_subset_token(subject)
@@ -433,20 +448,24 @@ class MMLU(TestSuite):
         )
 
     def _resolved_subsets(self) -> ResolvedSubsets:
+        """Implement resolved subsets for MMLU."""
         return _MMLU_SUBSETS.resolve_many(self.subsets)
 
     def _selected_subjects(self) -> set[str] | None:
+        """Implement selected subjects for MMLU."""
         resolved_subsets = self._resolved_subsets()
         if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return None
         return {normalize_subset_token(subject) for subject in resolved_subsets.leaf_values}
 
     def _iter_selected_docs(self, docs: Any) -> Any:
+        """Iterate over selected docs."""
         selected_subjects = self._selected_subjects()
         if selected_subjects is None:
             return iter(docs)
 
         def iterator() -> Any:
+            """Implement iterator for MMLU."""
             matched = False
             for doc in docs:
                 if normalize_subset_token(doc.get("subject", "")) not in selected_subjects:
@@ -459,6 +478,7 @@ class MMLU(TestSuite):
         return iterator()
 
     def _build_fewshot_cache(self, *, task_name: str) -> dict[str, list[dict[str, Any]]]:
+        """Build fewshot cache. Preserve the fallback order expected by the surrounding caller."""
         if self.num_fewshot <= 0:
             return {}
         fewshot_loaded_docs, _fewshot_load_wall_s = load_suite_dataset(
@@ -497,6 +517,7 @@ class MMLU(TestSuite):
         loaded_docs: Any,
         split: str,
     ) -> int | None:
+        """Implement estimated total for split for MMLU. Preserve the fallback order expected by the surrounding caller."""
         if hasattr(loaded_docs, "__len__") and self._selected_subjects() is None:
             count = len(loaded_docs)
             return min(self.max_rows, count) if self.max_rows is not None else count
@@ -529,6 +550,7 @@ class MMLU(TestSuite):
         return min(self.max_rows, total) if self.max_rows is not None else total
 
     def _select_docs(self, docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Select docs."""
         selected_subjects = self._selected_subjects()
         if selected_subjects is None:
             return docs
@@ -543,4 +565,5 @@ class MMLU(TestSuite):
 
 
 def mmlu(**kwargs: Any) -> MMLU:
+    """Implement MMLU for this module."""
     return MMLU(**kwargs)

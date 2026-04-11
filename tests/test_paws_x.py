@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 paws_x_module = importlib.import_module("evalution.benchmarks.paws_x")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 5
         assert len(requests) == 6
         assert requests[0].context == (
@@ -39,6 +42,7 @@ class FakeSession:
 
 
 def test_paws_x_scores_accuracy_and_positive_class_f1(monkeypatch) -> None:
+    """Verify paws x scores accuracy and positive class F1. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -82,6 +86,7 @@ def test_paws_x_scores_accuracy_and_positive_class_f1(monkeypatch) -> None:
 
 
 def test_paws_x_prompt_helper_formats_paraphrase_question() -> None:
+    """Verify paws x prompt helper formats paraphrase question."""
     assert (
         paws_x_module._paws_x_prompt("Sentence A.", "Sentence B.")
         == "Sentence 1: Sentence A.\nSentence 2: Sentence B.\nQuestion: Do both sentences mean the same thing?\nAnswer:"
@@ -89,5 +94,6 @@ def test_paws_x_prompt_helper_formats_paraphrase_question() -> None:
 
 
 def test_paws_x_rejects_unknown_language() -> None:
+    """Verify paws x rejects unknown language."""
     with pytest.raises(ValueError, match="unsupported paws-x language"):
         paws_x_module.paws_x(language="it")

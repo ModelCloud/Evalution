@@ -21,7 +21,9 @@ class TransformersCompat(_TransformersCommonConfig):
     # Use the fixed-batch compatibility engine for transformers releases that predate continuous batching.
 
     # Build the compatibility session that emulates the continuous-refill API on top of standard generate().
+    """Define the transformers compat helper class."""
     def build(self, model: Model) -> BaseTransformerSession:
+        """Build build."""
         if _requests_paged_attention(self.attn_implementation):
             raise ValueError("TransformersCompat does not support paged attn_implementation")
         self.resolved_engine = "TransformersCompat"
@@ -30,6 +32,7 @@ class TransformersCompat(_TransformersCommonConfig):
     @classmethod
     def from_transformers(cls, engine: object) -> TransformersCompat:
         # Copy only the shared controls from the modern engine when auto-falling back to compat mode.
+        """Implement from transformers for transformers compat."""
         return cls(
             dtype=getattr(engine, "dtype", "auto"),
             attn_implementation=getattr(engine, "attn_implementation", None),
@@ -47,12 +50,14 @@ class TransformersCompat(_TransformersCommonConfig):
 class TransformersCompatSession(BaseTransformerSession):
     # Run the shared transformer session logic without paged attention or an upstream batching manager.
 
+    """Define the transformers compat session helper class."""
     @classmethod
     def from_config(
         cls,
         config: TransformersCompat,
         model_config: Model,
     ) -> TransformersCompatSession:
+        """Implement from config for transformers compat session."""
         runtime = load_transformer_runtime(config, model_config)
         return cls(
             config=config,

@@ -12,15 +12,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 aime_module = importlib.import_module("evalution.benchmarks.aime")
 
 
 class FakeGenerationSession:
+    """Provide the fake generation session helper used by the surrounding tests."""
     def __init__(self, responses: list[str]) -> None:
+        """Initialize this object."""
         self.responses = responses
         self.requests = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size in {1, 3}
         self.requests.extend(requests)
         return [
@@ -33,6 +37,7 @@ class FakeGenerationSession:
 
 
 def test_aime_scores_boxed_math_exact_match(monkeypatch) -> None:
+    """Verify aime scores boxed math exact match. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -85,6 +90,7 @@ def test_aime_scores_boxed_math_exact_match(monkeypatch) -> None:
 
 
 def test_aime24_uses_problem_field_and_stringifies_integer_answers(monkeypatch) -> None:
+    """Verify aime24 uses problem field and stringifies integer answers."""
     dataset = Dataset.from_list(
         [
             {
@@ -113,6 +119,7 @@ def test_aime24_uses_problem_field_and_stringifies_integer_answers(monkeypatch) 
 
 
 def test_aime25_factory_uses_test_split_and_lowercase_fields() -> None:
+    """Verify aime25 factory uses test split and lowercase fields."""
     suite = evalution.benchmarks.aime25()
 
     assert suite.dataset_path == "math-ai/aime25"
@@ -123,6 +130,7 @@ def test_aime25_factory_uses_test_split_and_lowercase_fields() -> None:
 
 
 def test_aime26_factory_uses_test_split_and_lowercase_fields() -> None:
+    """Verify aime26 factory uses test split and lowercase fields."""
     suite = evalution.benchmarks.aime26()
 
     assert suite.dataset_path == "math-ai/aime26"

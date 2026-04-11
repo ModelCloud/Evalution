@@ -13,6 +13,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 INVERSE_SCALING_SUBSETS = (
     "hindsight-neglect",
     "into-the-unknown",
@@ -34,6 +35,7 @@ _SUBSET_TO_TASK = dict(zip(INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, stric
 
 
 def _parse_choice_list(raw_classes: Any) -> list[str]:
+    """Parse choice list."""
     if isinstance(raw_classes, list):
         return [str(choice).strip() for choice in raw_classes]
     if not isinstance(raw_classes, str):
@@ -46,6 +48,8 @@ def _parse_choice_list(raw_classes: Any) -> list[str]:
 
 @dataclass(slots=True)
 class InverseScaling(BaseMultipleChoiceSuite):
+    """Implement the inverse scaling benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "pminervini/inverse-scaling"
     dataset_name: str | None = "hindsight-neglect"
     split: str = "data"
@@ -53,6 +57,7 @@ class InverseScaling(BaseMultipleChoiceSuite):
     stream: bool = (False)
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in INVERSE_SCALING_SUBSETS:
             raise ValueError(f"unsupported inverse_scaling subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -61,12 +66,15 @@ class InverseScaling(BaseMultipleChoiceSuite):
         raise ValueError("inverse_scaling dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _SUBSET_TO_TASK[self.subset]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = _parse_choice_list(doc["classes"])
         gold_index = int(doc["answer_index"])
         return MultipleChoiceSample(
@@ -85,11 +93,14 @@ class InverseScaling(BaseMultipleChoiceSuite):
 
 
 def inverse_scaling(*, subset: str, **kwargs: Any) -> InverseScaling:
+    """Implement inverse scaling for this module."""
     return InverseScaling(subset=subset, dataset_name=subset, **kwargs)
 
 
 def _make_inverse_scaling_factory(subset: str) -> Any:
+    """Make inverse scaling factory."""
     def factory(**kwargs: Any) -> InverseScaling:
+        """Implement factory for this module."""
         return inverse_scaling(subset=subset, **kwargs)
 
     factory.__name__ = _SUBSET_TO_TASK[subset]

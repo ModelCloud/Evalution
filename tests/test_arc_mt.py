@@ -13,15 +13,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 arc_mt_module = importlib.import_module("evalution.benchmarks.arc_mt")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[LoglikelihoodOutput]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
         self.requests = []
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 7
         assert len(requests) == 4
         self.requests.extend(requests)
@@ -29,6 +33,7 @@ class FakeSession:
 
 
 def _dataset() -> Dataset:
+    """Support the surrounding tests with dataset."""
     return Dataset.from_list(
         [
             {
@@ -53,6 +58,7 @@ def _dataset() -> Dataset:
 
 
 def test_arc_mt_scores_translated_arc_exam_score(monkeypatch) -> None:
+    """Verify ARC mt scores translated ARC exam score. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     monkeypatch.setattr(arc_mt_module, "load_dataset", lambda *args, **kwargs: _dataset())
 
     suite = evalution.benchmarks.arc_mt_da(max_rows=1, batch_size=7)
@@ -91,6 +97,7 @@ def test_arc_mt_scores_translated_arc_exam_score(monkeypatch) -> None:
 
 
 def test_arc_mt_uses_icelandic_dataset_path() -> None:
+    """Verify ARC mt uses icelandic dataset path."""
     suite = evalution.benchmarks.arc_mt_is()
     assert suite.dataset_path == "mideind/icelandic-arc-challenge"
     assert suite.dataset_name is None
@@ -98,10 +105,12 @@ def test_arc_mt_uses_icelandic_dataset_path() -> None:
 
 
 def test_arc_mt_rejects_unknown_language() -> None:
+    """Verify ARC mt rejects unknown language."""
     with pytest.raises(ValueError, match="unsupported arc_mt language"):
         evalution.benchmarks.arc_mt(language="fr")
 
 
 def test_arc_mt_rejects_dataset_path_mismatch() -> None:
+    """Verify ARC mt rejects dataset path mismatch."""
     with pytest.raises(ValueError, match="dataset_path must match"):
         evalution.benchmarks.arc_mt(language="da", dataset_path="elsewhere/arc_mt")

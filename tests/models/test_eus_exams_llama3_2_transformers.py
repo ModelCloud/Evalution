@@ -9,10 +9,12 @@ import pytest
 
 from tests.models_support import EUS_EXAMS_TASKS, LLAMA3_2_TRANSFORMERS_TEST_MARKS, run_suite_specs
 
+# Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
 
 
 def test_llama3_2_transformers_eus_exams_full_model_eval(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """Verify llama3 2 transformers eus exams full model eval."""
     run_suite_specs(capsys, EUS_EXAMS_TASKS)

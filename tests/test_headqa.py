@@ -13,15 +13,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 headqa_module = importlib.import_module("evalution.benchmarks.headqa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, *, prompt: str, continuations: list[str]) -> None:
+        """Initialize this object."""
         self.prompt = prompt
         self.continuations = continuations
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 4
         for request, continuation in zip(requests, self.continuations, strict=True):
@@ -81,6 +85,7 @@ class FakeSession:
     ],
 )
 def test_headqa_variants_score_four_way_multiple_choice(monkeypatch, factory_name, dataset_name, doc, expected_prompt, expected_choices) -> None:
+    """Verify headqa variants score four way multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list([doc])
     monkeypatch.setattr(headqa_module, "load_dataset", lambda *args, **kwargs: dataset)
 
@@ -120,6 +125,7 @@ def test_headqa_variants_score_four_way_multiple_choice(monkeypatch, factory_nam
 
 
 def test_headqa_en_can_emit_label_permutation_metric(monkeypatch) -> None:
+    """Verify headqa en can emit label permutation metric. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -141,10 +147,13 @@ def test_headqa_en_can_emit_label_permutation_metric(monkeypatch) -> None:
     monkeypatch.setattr(headqa_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class LabelPermutationSession:
+        """Define the label permutation session helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.calls = 0
 
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for label permutation session."""
             assert batch_size == 6
             self.calls += 1
             if self.calls == 1:

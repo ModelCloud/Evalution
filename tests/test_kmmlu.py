@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 kmmlu_module = importlib.import_module("evalution.benchmarks.kmmlu")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -44,6 +47,7 @@ class FakeSession:
 
 
 def test_kmmlu_scores_subject_with_dev_fewshots(monkeypatch) -> None:
+    """Verify kmmlu scores subject with dev fewshots. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     test = Dataset.from_list(
         [
             {
@@ -74,6 +78,7 @@ def test_kmmlu_scores_subject_with_dev_fewshots(monkeypatch) -> None:
     )
 
     def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del path, name, kwargs
         if split == "test":
             return test
@@ -110,5 +115,6 @@ def test_kmmlu_scores_subject_with_dev_fewshots(monkeypatch) -> None:
 
 
 def test_kmmlu_rejects_unknown_subset() -> None:
+    """Verify kmmlu rejects unknown subset."""
     with pytest.raises(ValueError, match="unsupported KMMLU subset"):
         evalution.benchmarks.kmmlu(subset="unknown_subject")

@@ -13,12 +13,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 cb_module = importlib.import_module("evalution.benchmarks.cb")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 7
         assert len(requests) == 9
         assert requests[0].context == (
@@ -43,6 +46,7 @@ class FakeSession:
 
 
 def test_cb_scores_accuracy_and_macro_f1(monkeypatch) -> None:
+    """Verify cb scores accuracy and macro F1. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -101,6 +105,7 @@ def test_cb_scores_accuracy_and_macro_f1(monkeypatch) -> None:
 
 
 def test_cb_prompt_helper_formats_three_way_entailment_question() -> None:
+    """Verify cb prompt helper formats three way entailment question."""
     assert (
         cb_module._cb_prompt("Premise.", "Hypothesis")
         == "Premise.\nQuestion: Hypothesis. True, False, or Neither?\nAnswer:"

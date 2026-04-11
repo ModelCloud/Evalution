@@ -28,6 +28,7 @@ from evalution.engines.transformers_compat import TransformersCompat
 
 
 def test_transformer_defaults_batch_size_to_auto() -> None:
+    """Verify transformer defaults batch size to auto."""
     engine = Transformers()
 
     assert engine.batch_size == "auto"
@@ -55,23 +56,32 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
 
 
 def test_resolve_input_device_keeps_cpu_only_hf_device_maps_on_cpu() -> None:
+    """Verify resolve input device keeps cpu only hf device maps on cpu."""
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         hf_device_map = {"": "cpu"}
 
     assert _resolve_input_device(FakeModel()) == torch.device("cpu")
 
 
 def test_resolve_input_device_uses_model_device_when_no_device_map_exists() -> None:
+    """Verify resolve input device uses model device when no device map exists."""
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         device = torch.device("cpu")
 
     assert _resolve_input_device(FakeModel()) == torch.device("cpu")
 
 
 def test_transformer_session_from_config_seeds_runtime(monkeypatch) -> None:
+    """Verify transformer session from config seeds runtime."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         pad_token = "<pad>"
         eos_token = "</s>"
@@ -79,16 +89,21 @@ def test_transformer_session_from_config_seeds_runtime(monkeypatch) -> None:
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             return self
 
         def to(self, device):
+            """Implement to for fake model."""
             return self
 
     seed_calls: list[int | None] = []
@@ -122,6 +137,7 @@ def test_transformer_session_from_config_seeds_runtime(monkeypatch) -> None:
 def test_seed_transformer_runtime_syncs_transformers_python_numpy_torch_and_cuda(
     monkeypatch,
 ) -> None:
+    """Verify seed transformer runtime syncs transformers python numpy torch and cuda."""
     import numpy as np
     import transformers
 
@@ -148,6 +164,7 @@ def test_seed_transformer_runtime_syncs_transformers_python_numpy_torch_and_cuda
 
 
 def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch) -> None:
+    """Verify transformer session resolves auto batch size once per suite."""
     session = TransformersSession(
         config=Transformers(batch_size="auto"),
         model_config=Model(path="/tmp/model"),
@@ -179,6 +196,7 @@ def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch
     )
 
     def fake_estimate(self, batch_stats):
+        """Support the surrounding tests with fake estimate."""
         calls["estimate"] += 1
         assert batch_stats is stats
         return 16
@@ -195,6 +213,7 @@ def test_transformer_session_resolves_auto_batch_size_once_per_suite(monkeypatch
 
 
 def test_transformer_session_describes_paged_attention_on_cuda_like_session() -> None:
+    """Verify transformer session describes paged attention on cuda like session."""
     session = TransformersSession(
         config=Transformers(attn_implementation="paged|flash_attention_2"),
         model_config=Model(path="/tmp/model"),
@@ -221,6 +240,7 @@ def test_transformer_session_describes_paged_attention_on_cuda_like_session() ->
 
 
 def test_transformer_session_gc_clears_caches_and_releases_cuda_allocator(monkeypatch) -> None:
+    """Verify transformer session gc clears caches and releases cuda allocator."""
     ipc_collect_calls = {"count": 0}
     empty_cache_calls = {"count": 0}
 
@@ -257,6 +277,7 @@ def test_transformer_session_gc_clears_caches_and_releases_cuda_allocator(monkey
 
 
 def test_transformer_session_gc_stops_continuous_batching_manager(monkeypatch) -> None:
+    """Verify transformer session gc stops continuous batching manager."""
     empty_cache_calls = {"count": 0}
     ipc_collect_calls = {"count": 0}
 
@@ -273,14 +294,18 @@ def test_transformer_session_gc_stops_continuous_batching_manager(monkeypatch) -
     )
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.evicted_request_ids: list[str] = []
             self.stop_calls = 0
 
         def evict_request_from_cache(self, request_id: str) -> None:
+            """Implement evict request from cache for fake continuous batching manager."""
             self.evicted_request_ids.append(request_id)
 
         def stop(self, block=True) -> None:
+            """Implement stop for fake continuous batching manager."""
             assert block is True
             self.stop_calls += 1
 
@@ -309,9 +334,12 @@ def test_transformer_session_gc_stops_continuous_batching_manager(monkeypatch) -
 
 
 def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatch) -> None:
+    """Verify transformer session from config freezes model and calls eval."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         pad_token = "<pad>"
         eos_token = "</s>"
@@ -319,21 +347,26 @@ def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatc
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.eval_called = False
             self.requires_grad_value: bool | None = None
             self.moved_to: str | None = None
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             self.requires_grad_value = value
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             self.eval_called = True
             return self
 
         def to(self, device):
+            """Implement to for fake model."""
             self.moved_to = str(device)
             return self
 
@@ -364,9 +397,12 @@ def test_transformer_session_from_config_freezes_model_and_calls_eval(monkeypatc
 
 
 def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch) -> None:
+    """Verify transformer session from config prefers dtype loader kwarg."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         pad_token = "<pad>"
         eos_token = "</s>"
@@ -374,16 +410,21 @@ def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch)
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             return self
 
         def to(self, device):
+            """Implement to for fake model."""
             return self
 
     loader_calls: list[dict[str, object]] = []
@@ -394,6 +435,7 @@ def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch)
     )
 
     def fake_from_pretrained(*args, **kwargs):
+        """Support the surrounding tests with fake from pretrained."""
         loader_calls.append(kwargs)
         return FakeModel()
 
@@ -420,7 +462,10 @@ def test_transformer_session_from_config_prefers_dtype_loader_kwarg(monkeypatch)
 def test_transformer_session_from_config_uses_preinitialized_tokenizer(
     monkeypatch,
 ) -> None:
+    """Verify transformer session from config uses preinitialized tokenizer."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         pad_token = "<pad>"
         eos_token = "</s>"
@@ -428,22 +473,28 @@ def test_transformer_session_from_config_uses_preinitialized_tokenizer(
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             return self
 
         def to(self, device):
+            """Implement to for fake model."""
             return self
 
     load_calls: list[object] = []
     provided_tokenizer = FakeTokenizer()
 
     def fake_load_tokenizer(source: object, **kwargs: object) -> object:
+        """Support the surrounding tests with fake load tokenizer."""
         load_calls.append(source)
         return provided_tokenizer
 
@@ -470,9 +521,12 @@ def test_transformer_session_from_config_uses_preinitialized_tokenizer(
 
 
 def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypatch) -> None:
+    """Verify transformer session from config remaps dtype for older loader."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         pad_token = "<pad>"
         eos_token = "</s>"
@@ -480,16 +534,21 @@ def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypat
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             return self
 
         def to(self, device):
+            """Implement to for fake model."""
             return self
 
     loader_calls: list[dict[str, object]] = []
@@ -500,6 +559,7 @@ def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypat
     )
 
     def fake_from_pretrained(*args, **kwargs):
+        """Support the surrounding tests with fake from pretrained."""
         loader_calls.append(kwargs)
         if "dtype" in kwargs:
             raise TypeError("from_pretrained() got an unexpected keyword argument 'dtype'")
@@ -528,9 +588,12 @@ def test_transformer_session_from_config_remaps_dtype_for_older_loader(monkeypat
 
 
 def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_error(monkeypatch) -> None:
+    """Verify transformer session from config reloads with device map after meta to error."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         pad_token = "<pad>"
         eos_token = "</s>"
@@ -538,7 +601,9 @@ def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_e
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self, *, fail_on_to: bool) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.fail_on_to = fail_on_to
             self.eval_called = False
@@ -546,14 +611,17 @@ def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_e
             self.moved_to: str | None = None
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             self.requires_grad_value = value
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             self.eval_called = True
             return self
 
         def to(self, device):
+            """Implement to for fake model."""
             if self.fail_on_to:
                 raise NotImplementedError("Cannot copy out of meta tensor; no data!")
             self.moved_to = str(device)
@@ -571,6 +639,7 @@ def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_e
     )
 
     def fake_from_pretrained(*args, **kwargs):
+        """Support the surrounding tests with fake from pretrained."""
         loader_calls.append(kwargs)
         return models.pop(0)
 
@@ -599,10 +668,13 @@ def test_transformer_session_from_config_reloads_with_device_map_after_meta_to_e
 def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_is_unavailable(
     monkeypatch,
 ) -> None:
+    """Verify transformer build falls back to compat engine when continuous batching is unavailable."""
     fake_session = object()
 
     class FakeCompatEngine:
+        """Provide the fake compat engine helper used by the surrounding tests."""
         def build(self, model):
+            """Build build."""
             assert model.path == "/tmp/model"
             return fake_session
 
@@ -626,7 +698,10 @@ def test_transformer_build_falls_back_to_compat_engine_when_continuous_batching_
 
 
 def test_transformer_compat_uses_preinitialized_tokenizer(monkeypatch) -> None:
+    """Verify transformer compat uses preinitialized tokenizer."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         pad_token = "<pad>"
         eos_token = "</s>"
@@ -634,22 +709,28 @@ def test_transformer_compat_uses_preinitialized_tokenizer(monkeypatch) -> None:
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             return self
 
         def to(self, device):
+            """Implement to for fake model."""
             return self
 
     load_calls: list[object] = []
     provided_tokenizer = FakeTokenizer()
 
     def fake_load_tokenizer(source: object, **kwargs: object) -> object:
+        """Support the surrounding tests with fake load tokenizer."""
         load_calls.append(source)
         return provided_tokenizer
 
@@ -680,6 +761,7 @@ def test_transformer_compat_uses_preinitialized_tokenizer(monkeypatch) -> None:
 def test_transformer_build_rejects_paged_attn_when_continuous_batching_is_unavailable(
     monkeypatch,
 ) -> None:
+    """Verify transformer build rejects paged attn when continuous batching is unavailable."""
     monkeypatch.setattr(
         "evalution.engines.transformers.transformers_continuous_batching_support",
         lambda: (False, "transformers 4.55.4 is older than 4.56.0"),
@@ -696,12 +778,15 @@ def test_transformer_build_rejects_paged_attn_when_continuous_batching_is_unavai
 
 
 def test_transformer_build_warns_once_about_pending_nogil_transformers_pr(monkeypatch) -> None:
+    """Verify transformer build warns once about pending no-GIL transformers pr."""
     import evalution.engines.transformers as transformer_module
 
     warnings: list[tuple[str, tuple[object, ...]]] = []
 
     class FakeLogger:
+        """Provide the fake logger helper used by the surrounding tests."""
         def warning(self, message, *args):
+            """Implement warning for fake logger."""
             warnings.append((message, args))
 
     fake_session = object()
@@ -729,12 +814,15 @@ def test_transformer_build_warns_once_about_pending_nogil_transformers_pr(monkey
 
 
 def test_transformer_build_skips_pending_nogil_pr_warning_when_gil_is_enabled(monkeypatch) -> None:
+    """Verify transformer build skips pending no-GIL pr warning when gil is enabled."""
     import evalution.engines.transformers as transformer_module
 
     warnings: list[tuple[str, tuple[object, ...]]] = []
 
     class FakeLogger:
+        """Provide the fake logger helper used by the surrounding tests."""
         def warning(self, message, *args):
+            """Implement warning for fake logger."""
             warnings.append((message, args))
 
     fake_session = object()
@@ -757,27 +845,35 @@ def test_transformer_build_skips_pending_nogil_pr_warning_when_gil_is_enabled(mo
 
 
 def test_transformer_monkey_patches_continuous_batching_generation_loop_once(monkeypatch) -> None:
+    """Verify transformer monkey patches continuous batching generation loop once."""
     import evalution.engines.transformers as transformer_module
 
     entered_devices: list[object] = []
     calls: list[str] = []
 
     class FakeCudaDeviceContext:
+        """Provide the fake cuda device context helper used by the surrounding tests."""
         def __init__(self, device: object) -> None:
+            """Initialize this object."""
             self.device = device
 
         def __enter__(self) -> None:
+            """Enter the managed context for this object."""
             entered_devices.append(self.device)
 
         def __exit__(self, exc_type, exc, tb) -> bool:
+            """Exit the managed context for this object."""
             del exc_type, exc, tb
             return False
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.model = SimpleNamespace(device=SimpleNamespace(type="cuda", index=3))
 
         def _run_generation_loop(self) -> str:
+            """Run generation loop."""
             calls.append("run")
             return "ok"
 
@@ -801,16 +897,21 @@ def test_transformer_monkey_patches_continuous_batching_generation_loop_once(mon
 
 
 def test_transformer_monkey_patch_skips_cuda_context_for_cpu_manager(monkeypatch) -> None:
+    """Verify transformer monkey patch skips cuda context for cpu manager."""
     import evalution.engines.transformers as transformer_module
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.model = SimpleNamespace(device=SimpleNamespace(type="cpu"))
 
         def _run_generation_loop(self) -> str:
+            """Run generation loop."""
             return "ok"
 
     def fail_if_called(device: object) -> object:
+        """Support the surrounding tests with fail if called."""
         raise AssertionError(f"torch.cuda.device should not be used for CPU manager: {device!r}")
 
     monkeypatch.setattr(torch.cuda, "device", fail_if_called)
@@ -822,12 +923,15 @@ def test_transformer_monkey_patch_skips_cuda_context_for_cpu_manager(monkeypatch
 
 
 def test_transformer_monkey_patch_skips_manager_without_generation_loop(monkeypatch) -> None:
+    """Verify transformer monkey patch skips manager without generation loop."""
     import evalution.engines.transformers as transformer_module
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
         pass
 
     def fail_if_called(device: object) -> object:
+        """Support the surrounding tests with fail if called."""
         raise AssertionError(f"torch.cuda.device should not be used without _run_generation_loop: {device!r}")
 
     monkeypatch.setattr(torch.cuda, "device", fail_if_called)
@@ -850,6 +954,7 @@ def test_transformer_monkey_patch_seeds_flash_attention_cb_defaults(
     max_batch_tokens: int,
     expected_blocks: int,
 ) -> None:
+    """Verify transformer monkey patch seeds flash attention cb defaults."""
     import evalution.engines.transformers as transformer_module
     from transformers import ContinuousBatchingConfig
     from transformers.generation.continuous_batching import continuous_api
@@ -882,6 +987,7 @@ def test_transformer_monkey_patch_seeds_flash_attention_cb_defaults(
 
 
 def test_transformer_monkey_patch_preserves_explicit_flash_attention_cb_settings(monkeypatch) -> None:
+    """Verify transformer monkey patch preserves explicit flash attention cb settings."""
     import evalution.engines.transformers as transformer_module
     from transformers import ContinuousBatchingConfig
     from transformers.generation.continuous_batching import continuous_api
@@ -914,6 +1020,7 @@ def test_transformer_monkey_patch_preserves_explicit_flash_attention_cb_settings
 
 
 def test_transformer_monkey_patch_accepts_fa2_decode_fast_path(monkeypatch) -> None:
+    """Verify transformer monkey patch accepts fa2 decode fast path."""
     import evalution.engines.transformers as transformer_module
     from transformers.generation.continuous_batching import continuous_api
 
@@ -944,6 +1051,7 @@ def test_transformer_monkey_patch_accepts_fa2_decode_fast_path(monkeypatch) -> N
 
 
 def test_transformer_monkey_patch_skips_when_transformers_has_native_flash_attention_support(monkeypatch) -> None:
+    """Verify transformer monkey patch skips when transformers has native flash attention support."""
     import evalution.engines.transformers as transformer_module
     from transformers.generation.continuous_batching import continuous_api
 
@@ -962,6 +1070,7 @@ def test_transformer_monkey_patch_skips_when_transformers_has_native_flash_atten
 
 
 def test_transformer_monkey_patch_keeps_defaults_patch_when_only_native_decode_support_exists(monkeypatch) -> None:
+    """Verify transformer monkey patch keeps defaults patch when only native decode support exists."""
     import evalution.engines.transformers as transformer_module
     from transformers import ContinuousBatchingConfig
     from transformers.generation.continuous_batching import continuous_api
@@ -995,11 +1104,15 @@ def test_transformer_monkey_patch_keeps_defaults_patch_when_only_native_decode_s
 
 
 def test_transformer_session_prepare_requests_batches_tokenization() -> None:
+    """Verify transformer session prepare requests batches tokenization."""
     class FakePrepareTokenizer:
+        """Provide the fake prepare tokenizer helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.encode_calls: list[list[str]] = []
 
         def __call__(self, prompts, *, add_special_tokens=False, padding=False):
+            """Implement call for fake prepare tokenizer."""
             assert add_special_tokens is False
             assert padding is False
             assert isinstance(prompts, list)
@@ -1012,6 +1125,7 @@ def test_transformer_session_prepare_requests_batches_tokenization() -> None:
             }
 
         def apply_chat_template(self, messages, *, tokenize=False, add_generation_prompt=True):
+            """Implement apply chat template for fake prepare tokenizer."""
             assert tokenize is False
             assert add_generation_prompt is True
             return f"chat::{messages[0]['content']}"
@@ -1048,20 +1162,26 @@ def test_transformer_session_prepare_requests_batches_tokenization() -> None:
 
 
 def test_transformer_session_generate_reuses_pretokenized_requests() -> None:
+    """Verify transformer session generate reuses pretokenized requests."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def __init__(self) -> None:
+            """Initialize this object."""
             self.pad_calls = 0
             self.encode_calls = 0
 
         def __call__(self, prompts, **kwargs):
+            """Implement call for fake tokenizer."""
             del prompts, kwargs
             self.encode_calls += 1
             raise AssertionError("pretokenized requests should not be re-encoded")
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             assert return_tensors == "pt"
             assert padding is True
             self.pad_calls += 1
@@ -1071,11 +1191,14 @@ def test_transformer_session_generate_reuses_pretokenized_requests() -> None:
             }
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def generate(self, **kwargs):
+            """Generate generate."""
             del kwargs
             return torch.tensor([[1, 2, 3, 4, 5]], dtype=torch.long)
 
@@ -1108,13 +1231,17 @@ def test_transformer_session_generate_reuses_pretokenized_requests() -> None:
 def test_transformer_session_generate_uses_continuous_batching_manager_when_paged_attention_is_enabled(
     monkeypatch,
 ) -> None:
+    """Verify transformer session generate uses continuous batching manager when paged attention is enabled. Preserve the fallback order expected by the surrounding caller."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            """Implement call for fake tokenizer."""
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
@@ -1122,27 +1249,36 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
             return {"input_ids": [[11, 12, 13] for _ in prompts]}
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeContinuousOutput:
+        """Provide the fake continuous output helper used by the surrounding tests."""
         def __init__(self, request_id, tokens):
+            """Initialize this object."""
             self.request_id = request_id
             self.generated_tokens = tokens
             self.error = None
 
         def is_finished(self) -> bool:
+            """Implement is finished for fake continuous output."""
             return True
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for fake model."""
             self.config._attn_implementation = value
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         last_instance: FakeContinuousBatchingManager | None = None
 
         def __init__(
@@ -1157,6 +1293,7 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
             allow_block_sharing=True,
             use_async_batching=None,
         ):
+            """Initialize this object."""
             self.model = model
             self.generation_config = generation_config
             self.manual_eviction = manual_eviction
@@ -1176,9 +1313,11 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
             FakeContinuousBatchingManager.last_instance = self
 
         def start(self) -> None:
+            """Implement start for fake continuous batching manager."""
             self.started = True
 
         def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            """Implement add request for fake continuous batching manager."""
             del max_new_tokens, streaming
             assert input_ids == [11, 12, 13]
             assert request_id is not None
@@ -1197,6 +1336,7 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
                 self.result_queue.append(FakeContinuousOutput(request_id, [301, 302, 303]))
 
         def get_result(self, timeout=None):
+            """Get result."""
             del timeout
             if not self.result_queue:
                 return None
@@ -1206,9 +1346,11 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
             return result
 
         def is_running(self) -> bool:
+            """Implement is running for fake continuous batching manager."""
             return self.started and not self.stopped
 
         def stop(self, block=True):
+            """Implement stop for fake continuous batching manager."""
             assert block is True
             self.stopped = True
             self.stop_calls += 1
@@ -1268,13 +1410,17 @@ def test_transformer_session_generate_uses_continuous_batching_manager_when_page
 def test_transformer_session_generate_continuous_refills_paged_manager_while_caller_is_paused(
     monkeypatch,
 ) -> None:
+    """Verify transformer session generate continuous refills paged manager while caller is paused. Preserve the fallback order expected by the surrounding caller."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            """Implement call for fake tokenizer."""
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
@@ -1282,30 +1428,40 @@ def test_transformer_session_generate_continuous_refills_paged_manager_while_cal
             return {"input_ids": [[11, 12, 13] for _ in prompts]}
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeContinuousOutput:
+        """Provide the fake continuous output helper used by the surrounding tests."""
         def __init__(self, request_id, tokens):
+            """Initialize this object."""
             self.request_id = request_id
             self.generated_tokens = tokens
             self.error = None
 
         def is_finished(self) -> bool:
+            """Implement is finished for fake continuous output."""
             return True
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for fake model."""
             self.config._attn_implementation = value
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         last_instance: FakeContinuousBatchingManager | None = None
 
         def __init__(self, model, generation_config, **kwargs):
+            """Initialize this object."""
             del model, generation_config, kwargs
             self.started = False
             self.stopped = False
@@ -1316,9 +1472,11 @@ def test_transformer_session_generate_continuous_refills_paged_manager_while_cal
             FakeContinuousBatchingManager.last_instance = self
 
         def start(self) -> None:
+            """Implement start for fake continuous batching manager."""
             self.started = True
 
         def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            """Implement add request for fake continuous batching manager."""
             del input_ids, max_new_tokens, streaming
             assert request_id is not None
             self.added_request_ids.append(request_id)
@@ -1328,6 +1486,7 @@ def test_transformer_session_generate_continuous_refills_paged_manager_while_cal
                 self.third_request_added.set()
 
         def get_result(self, timeout=None):
+            """Get result."""
             if not self.result_queue:
                 if timeout:
                     threading.Event().wait(min(timeout, 0.01))
@@ -1335,9 +1494,11 @@ def test_transformer_session_generate_continuous_refills_paged_manager_while_cal
             return self.result_queue.pop(0)
 
         def is_running(self) -> bool:
+            """Implement is running for fake continuous batching manager."""
             return self.started and not self.stopped
 
         def stop(self, block=True):
+            """Implement stop for fake continuous batching manager."""
             assert block is True
             self.stopped = True
             self.stop_calls += 1
@@ -1391,26 +1552,34 @@ def test_transformer_session_generate_continuous_refills_paged_manager_while_cal
 def test_transformer_session_generate_continuous_bounds_paged_request_queue_and_skips_large_preview_when_batch_size_is_fixed(
     monkeypatch,
 ) -> None:
+    """Verify transformer session generate continuous bounds paged request queue and skips large preview when batch size is fixed."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for fake model."""
             self.config._attn_implementation = value
 
     consumed_count = 0
     captured_queue_max_size: int | None = None
 
     def request_source():
+        """Support the surrounding tests with request source."""
         nonlocal consumed_count
         for index in range(100):
             consumed_count += 1
@@ -1431,6 +1600,7 @@ def test_transformer_session_generate_continuous_bounds_paged_request_queue_and_
         require_non_main_thread,
         request_queue_max_size=None,
     ):
+        """Support the surrounding tests with fake stream request results."""
         nonlocal captured_queue_max_size
         del requests, producer_name, consumer_name, process_requests, require_non_main_thread
         captured_queue_max_size = request_queue_max_size
@@ -1460,12 +1630,14 @@ def test_transformer_session_generate_continuous_bounds_paged_request_queue_and_
 
 
 def test_transformer_session_generate_supports_config_object_continuous_batching_manager_api(monkeypatch) -> None:
+    """Verify transformer session generate supports config object continuous batching manager API."""
     import transformers
     import torch as torch_module
 
     compile_calls: list[object] = []
 
     def fake_compile(obj, *args, **kwargs):
+        """Support the surrounding tests with fake compile."""
         del args, kwargs
         compile_calls.append(obj)
         return obj
@@ -1473,10 +1645,13 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
     monkeypatch.setattr(torch_module, "compile", fake_compile)
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            """Implement call for fake tokenizer."""
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
@@ -1484,27 +1659,35 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             return {"input_ids": [[11, 12, 13] for _ in prompts]}
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeContinuousOutput:
+        """Provide the fake continuous output helper used by the surrounding tests."""
         def __init__(self, request_id, tokens):
+            """Initialize this object."""
             self.request_id = request_id
             self.generated_tokens = tokens
             self.error = None
 
         def is_finished(self) -> bool:
+            """Implement is finished for fake continuous output."""
             return True
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for fake model."""
             self.config._attn_implementation = value
 
     class FakeContinuousBatchingConfig:
+        """Provide the fake continuous batching config helper used by the surrounding tests."""
         def __init__(
             self,
             *,
@@ -1517,6 +1700,7 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             max_cached_graphs=0,
             torch_compile=False,
         ):
+            """Initialize this object."""
             if torch_compile:
                 torch_module.compile(SimpleNamespace())
             self.allow_block_sharing = allow_block_sharing
@@ -1529,9 +1713,12 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             self.torch_compile = torch_compile
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         last_instance: FakeContinuousBatchingManager | None = None
 
         def __init__(self, model, generation_config, continuous_batching_config):
+            """Initialize this object."""
             self.model = model
             self.generation_config = generation_config
             self.continuous_batching_config = continuous_batching_config
@@ -1542,23 +1729,28 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             FakeContinuousBatchingManager.last_instance = self
 
         def start(self) -> None:
+            """Implement start for fake continuous batching manager."""
             self.started = True
 
         def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            """Implement add request for fake continuous batching manager."""
             del input_ids, max_new_tokens, streaming
             assert request_id is not None
             self.added_request_ids.append(request_id)
 
         def get_result(self, timeout=None):
+            """Get result."""
             del timeout
             if not self.result_queue:
                 return None
             return self.result_queue.pop(0)
 
         def is_running(self) -> bool:
+            """Implement is running for fake continuous batching manager."""
             return self.started and not self.stopped
 
         def stop(self, block=True):
+            """Implement stop for fake continuous batching manager."""
             assert block is True
             self.stopped = True
 
@@ -1611,20 +1803,26 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
 
 
 def test_transformer_session_disables_continuous_batching_when_configured_off(monkeypatch) -> None:
+    """Verify transformer session disables continuous batching when configured off."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "left"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
 
     compile_calls: list[object] = []
 
     def fake_compile(obj, *args, **kwargs):
+        """Support the surrounding tests with fake compile."""
         del args, kwargs
         compile_calls.append(obj)
         return obj
@@ -1666,12 +1864,16 @@ def test_transformer_session_disables_continuous_batching_when_configured_off(mo
 
 
 def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> None:
+    """Verify transformer session loglikelihood scores pretokenized requests. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "left"
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             assert return_tensors == "pt"
             assert padding is True
             sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
@@ -1688,10 +1890,13 @@ def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> Non
             }
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = SimpleNamespace(max_position_embeddings=8)
 
         def __call__(self, *, input_ids, attention_mask=None):
+            """Implement call for fake model. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             del attention_mask
             batch_size, sequence_length = input_ids.shape
             vocab_size = 16
@@ -1740,13 +1945,17 @@ def test_transformer_session_loglikelihood_scores_pretokenized_requests() -> Non
 
 
 def test_transformer_session_loglikelihood_context_uses_tokenizer_default_special_tokens() -> None:
+    """Verify transformer session loglikelihood context uses tokenizer default special tokens."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         bos_token_id = 99
         eos_token_id = 1
         pad_token_id = 0
         padding_side = "left"
 
         def __call__(self, prompt, *, add_special_tokens=True, **kwargs):
+            """Implement call for fake tokenizer."""
             del kwargs
             base_ids = {
                 "ctx": [11, 12],
@@ -1759,6 +1968,7 @@ def test_transformer_session_loglikelihood_context_uses_tokenizer_default_specia
             return {"input_ids": input_ids}
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del skip_special_tokens
             if isinstance(token_ids, int):
                 token_ids = [token_ids]
@@ -1796,16 +2006,22 @@ def test_transformer_session_loglikelihood_context_uses_tokenizer_default_specia
 
 
 def test_transformer_session_loglikelihood_right_pads_batches_without_attention_mask() -> None:
+    """Verify transformer session loglikelihood right pads batches without attention mask."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "left"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = SimpleNamespace(max_position_embeddings=8)
 
         def __call__(self, *, input_ids, attention_mask=None):
+            """Implement call for fake model. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             assert attention_mask is None
             assert input_ids.tolist() == [
                 [5, 6, 7, 8],
@@ -1857,6 +2073,7 @@ def test_transformer_session_loglikelihood_right_pads_batches_without_attention_
 def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before_scoring(
     monkeypatch,
 ) -> None:
+    """Verify transformer session loglikelihood sorts requests by total length before scoring."""
     session = TransformersSession(
         config=Transformers(batch_size=2),
         model_config=Model(path="/tmp/model"),
@@ -1867,9 +2084,11 @@ def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before
     observed_chunk_order: list[int] = []
 
     def fake_prepare(self, request):
+        """Support the surrounding tests with fake prepare."""
         return [], list(request.metadata["token_ids"]), dict(request.metadata)
 
     def fake_score(self, chunks, *, batch_size):
+        """Support the surrounding tests with fake score. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         assert batch_size == 2
         observed_chunk_order[:] = [chunk.request_index for chunk in chunks]
         return [
@@ -1907,12 +2126,16 @@ def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before
 
 
 def test_transformer_session_loglikelihood_reports_non_greedy_predictions() -> None:
+    """Verify transformer session loglikelihood reports non greedy predictions."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "right"
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             assert return_tensors == "pt"
             assert padding is True
             sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
@@ -1929,10 +2152,13 @@ def test_transformer_session_loglikelihood_reports_non_greedy_predictions() -> N
             }
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = SimpleNamespace(max_position_embeddings=8)
 
         def __call__(self, *, input_ids, attention_mask=None):
+            """Implement call for fake model. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             del attention_mask
             batch_size, sequence_length = input_ids.shape
             vocab_size = 16
@@ -1967,12 +2193,16 @@ def test_transformer_session_loglikelihood_reports_non_greedy_predictions() -> N
 
 
 def test_transformer_session_loglikelihood_uses_request_progress_title(monkeypatch) -> None:
+    """Verify transformer session loglikelihood uses request progress title."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "right"
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             assert return_tensors == "pt"
             assert padding is True
             sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
@@ -1989,10 +2219,13 @@ def test_transformer_session_loglikelihood_uses_request_progress_title(monkeypat
             }
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = SimpleNamespace(max_position_embeddings=8)
 
         def __call__(self, *, input_ids, attention_mask=None):
+            """Implement call for fake model. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             del attention_mask
             batch_size, sequence_length = input_ids.shape
             vocab_size = 16
@@ -2004,25 +2237,31 @@ def test_transformer_session_loglikelihood_uses_request_progress_title(monkeypat
             return SimpleNamespace(logits=logits)
 
     class FakeProgressBar:
+        """Provide the fake progress bar helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.titles: list[str] = []
             self.subtitles: list[str] = []
             self.next_calls = 0
             self.draw_calls = 0
 
         def title(self, value: str):
+            """Implement title for fake progress bar."""
             self.titles.append(value)
             return self
 
         def subtitle(self, value: str):
+            """Implement subtitle for fake progress bar."""
             self.subtitles.append(value)
             return self
 
         def next(self):
+            """Implement next for fake progress bar."""
             self.next_calls += 1
             return self
 
         def draw(self):
+            """Implement draw for fake progress bar."""
             self.draw_calls += 1
             return self
 
@@ -2030,6 +2269,7 @@ def test_transformer_session_loglikelihood_uses_request_progress_title(monkeypat
     progress_bar = FakeProgressBar()
 
     def fake_manual_progress(total: int, *, title: str, subtitle: str | None = None):
+        """Support the surrounding tests with fake manual progress."""
         progress_calls.append((total, title, subtitle))
         progress_bar.title(title)
         if subtitle is not None:
@@ -2078,12 +2318,16 @@ def test_transformer_session_loglikelihood_uses_request_progress_title(monkeypat
 
 
 def test_transformer_session_loglikelihood_continuous_scores_streamed_requests() -> None:
+    """Verify transformer session loglikelihood continuous scores streamed requests. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "right"
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             assert return_tensors == "pt"
             assert padding is True
             sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
@@ -2100,10 +2344,13 @@ def test_transformer_session_loglikelihood_continuous_scores_streamed_requests()
             }
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = SimpleNamespace(max_position_embeddings=8)
 
         def __call__(self, *, input_ids, attention_mask=None):
+            """Implement call for fake model. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             del attention_mask
             batch_size, sequence_length = input_ids.shape
             vocab_size = 16
@@ -2156,12 +2403,16 @@ def test_transformer_session_loglikelihood_continuous_scores_streamed_requests()
 
 
 def test_transformer_session_loglikelihood_continuous_with_explicit_batch_size_limits_preview() -> None:
+    """Verify transformer session loglikelihood continuous with explicit batch size limits preview."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "right"
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             assert return_tensors == "pt"
             assert padding is True
             sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
@@ -2178,10 +2429,13 @@ def test_transformer_session_loglikelihood_continuous_with_explicit_batch_size_l
             }
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = SimpleNamespace(max_position_embeddings=8)
 
         def __call__(self, *, input_ids, attention_mask=None):
+            """Implement call for fake model. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             del attention_mask
             batch_size, sequence_length = input_ids.shape
             vocab_size = 16
@@ -2203,6 +2457,7 @@ def test_transformer_session_loglikelihood_continuous_with_explicit_batch_size_l
     produced_count = {"value": 0}
 
     def iter_requests():
+        """Iterate over requests."""
         for request_index in range(100):
             produced_count["value"] += 1
             yield (
@@ -2222,12 +2477,16 @@ def test_transformer_session_loglikelihood_continuous_with_explicit_batch_size_l
     assert produced_count["value"] <= 4
     iterator.close()
 def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None:
+    """Verify transformer session loglikelihood rolling scores chunked text. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "left"
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             assert return_tensors == "pt"
             assert padding is True
             sequences = [list(ids) for ids in encoded_inputs["input_ids"]]
@@ -2244,11 +2503,14 @@ def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None
             }
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = SimpleNamespace(max_position_embeddings=4)
             self.calls = 0
 
         def __call__(self, *, input_ids, attention_mask=None):
+            """Implement call for fake model. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             del attention_mask
             self.calls += 1
             batch_size, sequence_length = input_ids.shape
@@ -2293,12 +2555,16 @@ def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None
 
 
 def test_transformer_session_loglikelihood_temporarily_restores_base_attention() -> None:
+    """Verify transformer session loglikelihood temporarily restores base attention."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
         padding_side = "right"
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             assert return_tensors == "pt"
             assert padding is True
             return {
@@ -2307,14 +2573,18 @@ def test_transformer_session_loglikelihood_temporarily_restores_base_attention()
             }
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = SimpleNamespace(max_position_embeddings=8)
             self.attn_history: list[str] = []
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for fake model."""
             self.attn_history.append(value)
 
         def __call__(self, *, input_ids, attention_mask=None):
+            """Implement call for fake model."""
             del attention_mask
             logits = torch.full((1, input_ids.shape[1], 16), -2.0)
             logits[0, 0, 4] = 3.0
@@ -2346,13 +2616,17 @@ def test_transformer_session_loglikelihood_temporarily_restores_base_attention()
 def test_transformer_session_reuses_continuous_batching_manager_for_matching_signature(
     monkeypatch,
 ) -> None:
+    """Verify transformer session reuses continuous batching manager for matching signature."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            """Implement call for fake tokenizer."""
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
@@ -2360,30 +2634,40 @@ def test_transformer_session_reuses_continuous_batching_manager_for_matching_sig
             return {"input_ids": [[11, 12, 13] for _ in prompts]}
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeContinuousOutput:
+        """Provide the fake continuous output helper used by the surrounding tests."""
         def __init__(self, request_id, tokens):
+            """Initialize this object."""
             self.request_id = request_id
             self.generated_tokens = tokens
             self.error = None
 
         def is_finished(self) -> bool:
+            """Implement is finished for fake continuous output."""
             return True
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for fake model."""
             self.config._attn_implementation = value
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         instances: list[FakeContinuousBatchingManager] = []
 
         def __init__(self, model, generation_config, **kwargs):
+            """Initialize this object."""
             del model, generation_config, kwargs
             self.started = False
             self.stopped = False
@@ -2392,24 +2676,29 @@ def test_transformer_session_reuses_continuous_batching_manager_for_matching_sig
             FakeContinuousBatchingManager.instances.append(self)
 
         def start(self) -> None:
+            """Implement start for fake continuous batching manager."""
             self.started = True
 
         def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            """Implement add request for fake continuous batching manager."""
             del input_ids, max_new_tokens, streaming
             assert request_id is not None
             self.added_request_ids.append(request_id)
             self.result_queue.append(FakeContinuousOutput(request_id, [101, 102, 103]))
 
         def get_result(self, timeout=None):
+            """Get result."""
             del timeout
             if not self.result_queue:
                 return None
             return self.result_queue.pop(0)
 
         def is_running(self) -> bool:
+            """Implement is running for fake continuous batching manager."""
             return self.started and not self.stopped
 
         def stop(self, block=True):
+            """Implement stop for fake continuous batching manager."""
             assert block is True
             self.stopped = True
 
@@ -2449,13 +2738,17 @@ def test_transformer_session_reuses_continuous_batching_manager_for_matching_sig
 def test_transformer_session_rebuilds_continuous_batching_manager_when_signature_changes(
     monkeypatch,
 ) -> None:
+    """Verify transformer session rebuilds continuous batching manager when signature changes."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            """Implement call for fake tokenizer."""
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
@@ -2463,30 +2756,40 @@ def test_transformer_session_rebuilds_continuous_batching_manager_when_signature
             return {"input_ids": [[11, 12, 13] for _ in prompts]}
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeContinuousOutput:
+        """Provide the fake continuous output helper used by the surrounding tests."""
         def __init__(self, request_id, tokens):
+            """Initialize this object."""
             self.request_id = request_id
             self.generated_tokens = tokens
             self.error = None
 
         def is_finished(self) -> bool:
+            """Implement is finished for fake continuous output."""
             return True
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for fake model."""
             self.config._attn_implementation = value
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         instances: list[FakeContinuousBatchingManager] = []
 
         def __init__(self, model, generation_config, **kwargs):
+            """Initialize this object."""
             del model, kwargs
             self.generation_config = generation_config
             self.started = False
@@ -2495,23 +2798,28 @@ def test_transformer_session_rebuilds_continuous_batching_manager_when_signature
             FakeContinuousBatchingManager.instances.append(self)
 
         def start(self) -> None:
+            """Implement start for fake continuous batching manager."""
             self.started = True
 
         def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            """Implement add request for fake continuous batching manager."""
             del input_ids, max_new_tokens, streaming
             assert request_id is not None
             self.result_queue.append(FakeContinuousOutput(request_id, [101, 102, 103]))
 
         def get_result(self, timeout=None):
+            """Get result."""
             del timeout
             if not self.result_queue:
                 return None
             return self.result_queue.pop(0)
 
         def is_running(self) -> bool:
+            """Implement is running for fake continuous batching manager."""
             return self.started and not self.stopped
 
         def stop(self, block=True):
+            """Implement stop for fake continuous batching manager."""
             assert block is True
             self.stopped = True
 
@@ -2544,13 +2852,17 @@ def test_transformer_session_rebuilds_continuous_batching_manager_when_signature
 
 
 def test_transformer_sessions_do_not_share_continuous_batching_managers(monkeypatch) -> None:
+    """Verify transformer sessions do not share continuous batching managers."""
     import transformers
 
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            """Implement call for fake tokenizer."""
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
@@ -2558,31 +2870,41 @@ def test_transformer_sessions_do_not_share_continuous_batching_managers(monkeypa
             return {"input_ids": [[11, 12, 13] for _ in prompts]}
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeContinuousOutput:
+        """Provide the fake continuous output helper used by the surrounding tests."""
         def __init__(self, request_id, tokens):
+            """Initialize this object."""
             self.request_id = request_id
             self.generated_tokens = tokens
             self.error = None
 
         def is_finished(self) -> bool:
+            """Implement is finished for fake continuous output."""
             return True
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self, *, tag: str) -> None:
+            """Initialize this object."""
             self.tag = tag
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for fake model."""
             self.config._attn_implementation = value
 
     class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         instances: list[FakeContinuousBatchingManager] = []
 
         def __init__(self, model, generation_config, **kwargs):
+            """Initialize this object."""
             del generation_config, kwargs
             self.model = model
             self.started = False
@@ -2592,24 +2914,29 @@ def test_transformer_sessions_do_not_share_continuous_batching_managers(monkeypa
             FakeContinuousBatchingManager.instances.append(self)
 
         def start(self) -> None:
+            """Implement start for fake continuous batching manager."""
             self.started = True
 
         def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            """Implement add request for fake continuous batching manager."""
             del input_ids, max_new_tokens, streaming
             assert request_id is not None
             self.added_request_ids.append(request_id)
             self.result_queue.append(FakeContinuousOutput(request_id, [101, 102, 103]))
 
         def get_result(self, timeout=None):
+            """Get result."""
             del timeout
             if not self.result_queue:
                 return None
             return self.result_queue.pop(0)
 
         def is_running(self) -> bool:
+            """Implement is running for fake continuous batching manager."""
             return self.started and not self.stopped
 
         def stop(self, block=True):
+            """Implement stop for fake continuous batching manager."""
             assert block is True
             self.stopped = True
 
@@ -2665,11 +2992,15 @@ def test_transformer_sessions_do_not_share_continuous_batching_managers(monkeypa
 
 
 def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_and_generate() -> None:
+    """Verify transformer session serializes shared tokenizer access between prepare and generate."""
     class BlockingTokenizer:
+        """Define the blocking tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def __init__(self) -> None:
+            """Initialize this object."""
             self._state_lock = threading.Lock()
             self._active_calls = 0
             self.overlap_detected = False
@@ -2678,16 +3009,19 @@ def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_
             self.allow_prepare_finish = threading.Event()
 
         def _enter(self) -> None:
+            """Implement enter for blocking tokenizer."""
             with self._state_lock:
                 self._active_calls += 1
                 if self._active_calls > 1:
                     self.overlap_detected = True
 
         def _exit(self) -> None:
+            """Implement exit for blocking tokenizer."""
             with self._state_lock:
                 self._active_calls -= 1
 
         def __call__(self, prompts, *, add_special_tokens=False, padding=False, **kwargs):
+            """Implement call for blocking tokenizer."""
             del kwargs
             assert add_special_tokens is False
             assert padding is False
@@ -2701,6 +3035,7 @@ def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_
                 self._exit()
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for blocking tokenizer."""
             del encoded_inputs
             assert return_tensors == "pt"
             assert padding is True
@@ -2715,11 +3050,14 @@ def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_
                 self._exit()
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for blocking tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def generate(self, **kwargs):
+            """Generate generate."""
             del kwargs
             return torch.tensor([[1, 2, 3, 4, 5]], dtype=torch.long)
 
@@ -2737,12 +3075,14 @@ def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_
     generate_errors: list[BaseException] = []
 
     def run_prepare() -> None:
+        """Run prepare."""
         try:
             session.prepare_requests([GenerationRequest(prompt="Q: 1 + 1\nA:")])
         except BaseException as exc:  # pragma: no cover - asserted below
             prepare_errors.append(exc)
 
     def run_generate() -> None:
+        """Run generate."""
         try:
             session.generate(
                 [
@@ -2776,11 +3116,15 @@ def test_transformer_session_serializes_shared_tokenizer_access_between_prepare_
 
 
 def test_transformer_session_serializes_generate_calls() -> None:
+    """Verify transformer session serializes generate calls."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def pad(self, encoded_inputs, *, return_tensors="pt", padding=True):
+            """Implement pad for fake tokenizer."""
             del encoded_inputs
             assert return_tensors == "pt"
             assert padding is True
@@ -2790,11 +3134,14 @@ def test_transformer_session_serializes_generate_calls() -> None:
             }
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for fake tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class BlockingModel:
+        """Define the blocking model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self._state_lock = threading.Lock()
             self._active_calls = 0
             self._call_count = 0
@@ -2804,6 +3151,7 @@ def test_transformer_session_serializes_generate_calls() -> None:
             self.allow_first_finish = threading.Event()
 
         def generate(self, **kwargs):
+            """Generate generate."""
             del kwargs
             with self._state_lock:
                 self._active_calls += 1
@@ -2840,6 +3188,7 @@ def test_transformer_session_serializes_generate_calls() -> None:
     errors: list[BaseException] = []
 
     def run_generate() -> None:
+        """Run generate."""
         try:
             session.generate(requests, batch_size=1)
         except BaseException as exc:  # pragma: no cover - asserted below
@@ -2869,14 +3218,18 @@ def test_transformer_session_serializes_generate_calls() -> None:
 def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batching(
     monkeypatch,
 ) -> None:
+    """Verify transformer session allows no-GIL prepare overlap with continuous batching."""
     import transformers
 
     class PrepareTokenizer:
+        """Define the prepare tokenizer helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.prepare_started = threading.Event()
             self.allow_prepare_finish = threading.Event()
 
         def __call__(self, prompts, *, add_special_tokens=False, padding=False, **kwargs):
+            """Implement call for prepare tokenizer."""
             del kwargs
             assert add_special_tokens is False
             assert padding is False
@@ -2886,29 +3239,38 @@ def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batchi
             return {"input_ids": [[1, 2, 3] for _ in prompts]}
 
         def apply_chat_template(self, messages, *, tokenize=False, add_generation_prompt=True):
+            """Implement apply chat template for prepare tokenizer."""
             assert tokenize is False
             assert add_generation_prompt is True
             return f"chat::{messages[0]['content']}"
 
     class GenerateTokenizer:
+        """Define the generate tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         eos_token_id = 1
 
         def decode(self, token_ids, *, skip_special_tokens=False):
+            """Implement decode for generate tokenizer."""
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeContinuousOutput:
+        """Provide the fake continuous output helper used by the surrounding tests."""
         def __init__(self, request_id, tokens):
+            """Initialize this object."""
             self.request_id = request_id
             self.generated_tokens = tokens
             self.error = None
 
         def is_finished(self) -> bool:
+            """Implement is finished for fake continuous output."""
             return True
 
     class BlockingContinuousBatchingManager:
+        """Define the blocking continuous batching manager helper used by the surrounding tests."""
         def __init__(self, model, generation_config):
+            """Initialize this object."""
             del model, generation_config
             self.generate_started = threading.Event()
             self.allow_generate_finish = threading.Event()
@@ -2916,9 +3278,11 @@ def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batchi
             self.result_returned = False
 
         def start(self) -> None:
+            """Implement start for blocking continuous batching manager."""
             return None
 
         def add_request(self, input_ids, *, request_id=None, max_new_tokens=None, streaming=False):
+            """Implement add request for blocking continuous batching manager."""
             del max_new_tokens, streaming
             assert input_ids == [1, 2, 3]
             assert request_id is not None
@@ -2926,6 +3290,7 @@ def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batchi
             self.generate_started.set()
 
         def get_result(self, timeout=None):
+            """Get result."""
             del timeout
             assert self.allow_generate_finish.wait(timeout=1.0)
             if self.result_returned:
@@ -2935,18 +3300,23 @@ def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batchi
             return FakeContinuousOutput(self.request_id, [101, 102, 103])
 
         def is_running(self) -> bool:
+            """Implement is running for blocking continuous batching manager."""
             return True
 
         def stop(self, block=True):
+            """Implement stop for blocking continuous batching manager."""
             del block
             return None
 
     class BlockingPagedModel:
+        """Define the blocking paged model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
 
         def set_attn_implementation(self, value: str) -> None:
+            """Implement set attn implementation for blocking paged model."""
             self.config._attn_implementation = value
 
     manager = BlockingContinuousBatchingManager(None, None)
@@ -2975,12 +3345,14 @@ def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batchi
     generate_errors: list[BaseException] = []
 
     def run_prepare() -> None:
+        """Run prepare."""
         try:
             session.prepare_requests([GenerationRequest(prompt="Q: 1 + 1\nA:")])
         except BaseException as exc:  # pragma: no cover - asserted below
             prepare_errors.append(exc)
 
     def run_generate() -> None:
+        """Run generate."""
         try:
             session.generate(
                 [
@@ -3016,6 +3388,7 @@ def test_transformer_session_allows_nogil_prepare_overlap_with_continuous_batchi
 
 
 def test_transformer_session_falls_back_to_standard_generate_when_paged_generation_fails(monkeypatch) -> None:
+    """Verify transformer session falls back to standard generate when paged generation fails."""
     model = SimpleNamespace(
         config=SimpleNamespace(_attn_implementation="sdpa"),
         set_attn_implementation=lambda value: None,
@@ -3035,10 +3408,12 @@ def test_transformer_session_falls_back_to_standard_generate_when_paged_generati
     calls: dict[str, object] = {}
 
     def fake_generate_paged(self, batch, *, batch_size):
+        """Support the surrounding tests with fake generate paged."""
         del self, batch, batch_size
         raise RuntimeError("paged failure")
 
     def fake_generate_standard(self, batch, *, batch_size):
+        """Support the surrounding tests with fake generate standard."""
         calls["batch_size"] = batch_size
         return [
             GenerationOutput(

@@ -15,6 +15,7 @@ from evalution.benchmarks.execution import PreparedSample
 from evalution.engines.base import GenerationRequest, GenerationOutput
 from evalution.results import SampleResult
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 MULTIRC_DATASET_PATH = "super_glue"
 MULTIRC_DATASET_NAME = "multirc"
 MULTIRC_SPLIT = "validation"
@@ -22,6 +23,7 @@ _MULTIRC_INTEGER_RE = pcre.compile(r"\d+")
 
 
 def _group_questions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Group questions."""
     grouped: dict[tuple[int, int], dict[str, Any]] = {}
     for row in rows:
         p_idx = int(row["idx"]["paragraph"])
@@ -44,6 +46,7 @@ def _group_questions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _extract_indices(text: str, num_answers: int) -> set[int]:
     # Pull out all integers and clamp to valid range; allow "none".
+    """Extract indices."""
     if "none" in text.lower():
         return set()
     matches = {int(m) for m in _MULTIRC_INTEGER_RE.findall(text)}
@@ -51,6 +54,7 @@ def _extract_indices(text: str, num_answers: int) -> set[int]:
 
 
 def _precision_recall_f1(pred: set[int], gold: set[int]) -> tuple[float, float, float]:
+    """Implement precision recall F1 for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if not pred and not gold:
         return 1.0, 1.0, 1.0
     if not pred:
@@ -70,6 +74,7 @@ class MultiRC(BaseTestSuite):
     We score per-question exact match and F1 over selected answer options.
     """
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = MULTIRC_DATASET_PATH
     dataset_name: str | None = MULTIRC_DATASET_NAME
     split: str = MULTIRC_SPLIT
@@ -79,15 +84,19 @@ class MultiRC(BaseTestSuite):
     temperature: float = 0.0
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "multirc"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def requires_full_doc_materialization(self) -> bool:
+        """Implement requires full doc materialization for multi rc."""
         return True
 
     def result_metadata(self, *, generation_submission_mode: str) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "primary_metric": "em",
@@ -95,6 +104,7 @@ class MultiRC(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         questions = _group_questions(list(docs))
         if self.max_rows is not None:
             questions = questions[: self.max_rows]
@@ -125,6 +135,7 @@ class MultiRC(BaseTestSuite):
             )
 
     def _score_question(self, prediction: str, doc: dict[str, Any]) -> tuple[float, float]:
+        """Score question. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         gold = {ans["answer_idx"] for ans in doc["answers"] if ans["label"] == 1}
         pred = _extract_indices(prediction, len(doc["answers"]))
         em = 1.0 if pred == gold else 0.0
@@ -132,6 +143,7 @@ class MultiRC(BaseTestSuite):
         return em, f1
 
     def score_sample(self, prepared_sample: PreparedSample, output: GenerationOutput) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         em, f1 = self._score_question(output.text, prepared_sample.doc)
         return SampleResult(
             index=prepared_sample.index,
@@ -153,4 +165,5 @@ class MultiRC(BaseTestSuite):
 
 
 def multirc(**kwargs: Any) -> MultiRC:
+    """Implement multirc for this module."""
     return MultiRC(**kwargs)

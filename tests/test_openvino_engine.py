@@ -23,10 +23,12 @@ from evalution.engines.openvino_engine import (
     load_openvino_runtime,
 )
 
+# Keep shared test fixtures and expectations explicit at module scope.
 _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0")
 
 
 def _openvino_runtime_available() -> bool:
+    """Support the surrounding tests with OpenVINO runtime available."""
     try:
         return (
             importlib.util.find_spec("optimum.intel.openvino") is not None
@@ -37,6 +39,7 @@ def _openvino_runtime_available() -> bool:
 
 
 def test_openvino_engine_defaults_batch_size_to_auto() -> None:
+    """Verify OpenVINO engine defaults batch size to auto."""
     engine = OpenVINO()
 
     assert engine.batch_size == "auto"
@@ -49,7 +52,9 @@ def test_openvino_engine_defaults_batch_size_to_auto() -> None:
 
 
 def test_import_openvino_optimum_requires_optional_dependency(monkeypatch) -> None:
+    """Verify import OpenVINO optimum requires optional dependency."""
     def fake_import_module(name: str):
+        """Support the surrounding tests with fake import module."""
         assert name == "optimum.intel.openvino"
         raise ModuleNotFoundError("No module named 'optimum'")
 
@@ -66,7 +71,10 @@ def test_import_openvino_optimum_requires_optional_dependency(monkeypatch) -> No
 
 
 def test_load_openvino_runtime_seeds_runtime(monkeypatch) -> None:
+    """Verify load OpenVINO runtime seeds runtime."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = 0
         pad_token = "<pad>"
         eos_token = "</s>"
@@ -74,13 +82,17 @@ def test_load_openvino_runtime_seeds_runtime(monkeypatch) -> None:
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             return self
 
     seed_calls: list[int | None] = []
@@ -113,7 +125,10 @@ def test_load_openvino_runtime_seeds_runtime(monkeypatch) -> None:
 
 
 def test_load_openvino_runtime_uses_optimum_loader(monkeypatch) -> None:
+    """Verify load OpenVINO runtime uses optimum loader."""
     class FakeTokenizer:
+        """Provide the fake tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         pad_token_id = None
         pad_token = None
         eos_token = "</s>"
@@ -121,27 +136,33 @@ def test_load_openvino_runtime_uses_optimum_loader(monkeypatch) -> None:
         padding_side = "right"
 
     class FakeModel:
+        """Provide the fake model helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.config = PretrainedConfig()
             self.seed_calls: list[int] = []
             self.requires_grad_calls: list[bool] = []
             self.eval_calls = 0
 
         def requires_grad_(self, value: bool):
+            """Implement requires grad for fake model."""
             self.requires_grad_calls.append(value)
             return self
 
         def eval(self):
+            """Implement eval for fake model."""
             self.eval_calls += 1
             return self
 
         def set_seed(self, value: int) -> None:
+            """Implement set seed for fake model."""
             self.seed_calls.append(value)
 
     fake_model = FakeModel()
     load_calls: list[tuple[str, dict[str, object]]] = []
 
     def fake_from_pretrained(model_path: str, **kwargs):
+        """Support the surrounding tests with fake from pretrained."""
         load_calls.append((model_path, kwargs))
         return fake_model
 
@@ -195,6 +216,7 @@ def test_load_openvino_runtime_uses_optimum_loader(monkeypatch) -> None:
 
 
 def test_openvino_session_describes_backend() -> None:
+    """Verify OpenVINO session describes backend."""
     session = OpenVINOSession(
         config=OpenVINO(),
         model_config=Model(path="/tmp/model"),
@@ -214,6 +236,7 @@ def test_openvino_session_describes_backend() -> None:
 
 
 def test_openvino_build_constructs_session(monkeypatch) -> None:
+    """Verify OpenVINO build constructs session."""
     fake_session = object()
 
     monkeypatch.setattr(
@@ -239,6 +262,7 @@ def test_openvino_build_constructs_session(monkeypatch) -> None:
     reason="optimum-intel[openvino] is required for the OpenVINO engine integration test",
 )
 def test_openvino_engine_can_generate_and_score_on_tinyllama_checkpoint() -> None:
+    """Verify OpenVINO engine can generate and score on tinyllama checkpoint. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     session = OpenVINO(
         device="cpu",
         batch_size=1,

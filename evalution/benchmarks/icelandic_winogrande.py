@@ -24,6 +24,7 @@ from evalution.scorers.multiple_choice import (
     multiple_choice_outcome,
 )
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _ANSWER_TO_INDEX = {"1": 0, "2": 1}
 
 
@@ -32,6 +33,7 @@ def _blank_choice_contexts_and_suffix(
     option1: str,
     option2: str,
 ) -> tuple[list[str], str]:
+    """Implement blank choice contexts and suffix for this module."""
     blank_index = sentence.index("_")
     suffix = sentence[blank_index + 1 :]
     prefix = sentence[:blank_index]
@@ -40,6 +42,8 @@ def _blank_choice_contexts_and_suffix(
 
 @dataclass(slots=True)
 class IcelandicWinoGrande:
+    """Define the icelandic wino grande helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "mideind/icelandic-winogrande"
     split: str = "train"
     stream: bool = (False)
@@ -47,12 +51,15 @@ class IcelandicWinoGrande:
     batch_size: int | None = None
     cache_dir: str | None = None
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "icelandic_winogrande"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": None,
@@ -63,6 +70,7 @@ class IcelandicWinoGrande:
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -187,4 +195,5 @@ class IcelandicWinoGrande:
 
 
 def icelandic_winogrande(**kwargs: Any) -> IcelandicWinoGrande:
+    """Implement icelandic winogrande for this module."""
     return IcelandicWinoGrande(**kwargs)

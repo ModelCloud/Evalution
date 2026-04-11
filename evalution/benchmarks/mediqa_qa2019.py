@@ -33,17 +33,20 @@ _MEDIQA_QA2019_STOP_STRINGS = ("\n\n",)
 
 
 def _mediqa_qa2019_prompt(question: str) -> str:
+    """Implement mediqa qa2019 prompt for this module."""
     return f"{_MEDIQA_QA2019_INSTRUCTION}\n\nQuestion: {question.strip()}\n\nAnswer:"
 
 
 @lru_cache(maxsize=1)
 def _mediqa_qa2019_rouge_scorer() -> rouge_scorer.RougeScorer:
     # The upstream task uses non-stemmed overlap metrics, so keep the local scorer equally literal.
+    """Implement mediqa qa2019 ROUGE scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=False)
 
 
 def _zero_summary_scores() -> dict[str, float]:
     # Empty predictions or references should count as zero overlap instead of poisoning the suite aggregate.
+    """Implement zero summary scores for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return {
         "bleu": 0.0,
         "rouge1": 0.0,
@@ -53,6 +56,7 @@ def _zero_summary_scores() -> dict[str, float]:
 
 
 def _mediqa_qa2019_answer_scores(prediction: str, reference: str) -> dict[str, float]:
+    """Implement mediqa qa2019 answer scores for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     prediction_text = prediction.strip()
     reference_text = reference.strip()
     if not prediction_text or not reference_text:
@@ -70,6 +74,7 @@ def _mediqa_qa2019_answer_scores(prediction: str, reference: str) -> dict[str, f
 @dataclass(slots=True)
 class MediqaQA2019(BaseTestSuite):
     # MEDIQA 2019 QA evaluates whether a model can answer patient questions in a clinically helpful style.
+    """Implement the mediqa qa2019 benchmark suite."""
     dataset_path: str = MEDIQA_QA_DATASET_PATH
     dataset_name: str | None = MEDIQA_QA_DATASET_NAME
     split: str = "test"
@@ -78,9 +83,11 @@ class MediqaQA2019(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_mediqa_qa_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "mediqa_qa2019"
 
     def result_metadata(
@@ -88,6 +95,7 @@ class MediqaQA2019(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_medical_answer_quality",
@@ -99,6 +107,7 @@ class MediqaQA2019(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             question_blob = dict(doc["QUESTION"])
             answers = list(question_blob["AnswerList"])
@@ -122,6 +131,7 @@ class MediqaQA2019(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         prediction = output.text.strip()
         reference = prepared_sample.target.strip()
         first_answer = prepared_sample.doc["QUESTION"]["AnswerList"][0]["Answer"]
@@ -146,4 +156,5 @@ class MediqaQA2019(BaseTestSuite):
 
 
 def mediqa_qa2019(**kwargs: Any) -> MediqaQA2019:
+    """Implement mediqa qa2019 for this module."""
     return MediqaQA2019(**kwargs)

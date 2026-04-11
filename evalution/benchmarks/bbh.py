@@ -17,6 +17,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.choice_label import exact_match
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 BBH_SUBSETS = (
     "boolean_expressions",
     "causal_judgement",
@@ -56,10 +57,12 @@ _LETTER_TARGET_RE = pcre.compile(r"[A-Z]")
 
 
 def _bbh_prompt(input_text: str) -> str:
+    """Implement BBH prompt for this module."""
     return f"Q: {input_text.strip()}\nA:"
 
 
 def _normalize_bbh_prediction(prediction: str, *, target: str) -> str:
+    """Normalize BBH prediction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     candidate = prediction.strip()
     if "\n" in candidate:
         candidate = candidate.splitlines()[0].strip()
@@ -81,6 +84,8 @@ def _normalize_bbh_prediction(prediction: str, *, target: str) -> str:
 
 @dataclass(slots=True)
 class BBH(BaseTestSuite):
+    """Implement the BBH benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "lukaemon/bbh"
     dataset_name: str | None = None
     split: str = "test"
@@ -90,6 +95,7 @@ class BBH(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in BBH_SUBSETS:
             raise ValueError(f"unsupported bbh subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -98,9 +104,11 @@ class BBH(BaseTestSuite):
         raise ValueError("bbh dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"bbh_{self.subset}"
 
     def result_metadata(
@@ -108,6 +116,7 @@ class BBH(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_exact_match",
@@ -115,6 +124,7 @@ class BBH(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             target = str(doc["target"]).strip()
             yield PreparedSample(
@@ -135,6 +145,7 @@ class BBH(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         normalized_prediction = _normalize_bbh_prediction(output.text, target=prepared_sample.target)
         return SampleResult(
             index=prepared_sample.index,
@@ -155,11 +166,14 @@ class BBH(BaseTestSuite):
 
 
 def bbh(*, subset: str, **kwargs: Any) -> BBH:
+    """Implement BBH for this module."""
     return BBH(subset=subset, dataset_name=subset, **kwargs)
 
 
 def _make_bbh_subset_factory(subset: str) -> Any:
+    """Make BBH subset factory."""
     def factory(**kwargs: Any) -> BBH:
+        """Implement factory for this module."""
         return bbh(subset=subset, **kwargs)
 
     factory.__name__ = f"bbh_{subset}"

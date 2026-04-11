@@ -9,6 +9,7 @@ import string
 from collections import Counter
 import pcre
 
+# Keep scorer defaults and parser helpers explicit at module scope.
 _ARTICLES_RE = pcre.compile(r"\b(a|an|the)\b")
 _WHITESPACE_RE = pcre.compile(r"\s+")
 _NO_ANSWER_CANONICAL = "unanswerable"
@@ -23,6 +24,7 @@ _NO_ANSWER_ALIASES = {
 
 
 def normalize_qa_text(text: str) -> str:
+    """Normalize QA text. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     lowered = text.lower()
     no_punct = "".join(ch for ch in lowered if ch not in string.punctuation)
     no_articles = _ARTICLES_RE.sub(" ", no_punct)
@@ -30,6 +32,7 @@ def normalize_qa_text(text: str) -> str:
 
 
 def canonicalize_no_answer(text: str) -> str:
+    """Implement canonicalize no answer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = normalize_qa_text(text)
     if normalized in _NO_ANSWER_ALIASES:
         return _NO_ANSWER_CANONICAL
@@ -37,10 +40,12 @@ def canonicalize_no_answer(text: str) -> str:
 
 
 def qa_exact_match(prediction: str, target: str) -> float:
+    """Implement QA exact match for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return float(canonicalize_no_answer(prediction) == canonicalize_no_answer(target))
 
 
 def qa_f1(prediction: str, target: str) -> float:
+    """Implement QA F1 for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     prediction_tokens = canonicalize_no_answer(prediction).split()
     target_tokens = canonicalize_no_answer(target).split()
     if not prediction_tokens or not target_tokens:
@@ -57,6 +62,7 @@ def qa_f1(prediction: str, target: str) -> float:
 
 
 def best_qa_scores(prediction: str, targets: list[str]) -> tuple[float, float, int]:
+    """Implement best QA scores for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if not targets:
         raise ValueError("qa targets must contain at least one reference answer")
 

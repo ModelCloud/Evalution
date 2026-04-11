@@ -13,10 +13,12 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 spanish_bench_module = importlib.import_module("evalution.benchmarks.spanish_bench")
 
 
 def test_copa_es_scores_accuracy(monkeypatch) -> None:
+    """Verify COPA es scores accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -32,7 +34,9 @@ def test_copa_es_scores_accuracy(monkeypatch) -> None:
     monkeypatch.setattr(spanish_bench_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for fake session."""
             assert batch_size == 6
             assert len(requests) == 2
             assert requests[0].context == "El hombre abrió el grifo y por lo tanto"
@@ -62,6 +66,7 @@ def test_copa_es_scores_accuracy(monkeypatch) -> None:
 
 
 def test_escola_scores_accuracy_and_mcc(monkeypatch) -> None:
+    """Verify escola scores accuracy and MCC. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -93,7 +98,9 @@ def test_escola_scores_accuracy_and_mcc(monkeypatch) -> None:
     monkeypatch.setattr(spanish_bench_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for fake session."""
             assert batch_size == 4
             assert len(requests) == 6
             assert requests[0].context == (
@@ -128,6 +135,7 @@ def test_escola_scores_accuracy_and_mcc(monkeypatch) -> None:
 
 
 def test_openbookqa_es_scores_accuracy(monkeypatch) -> None:
+    """Verify openbookqa es scores accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -152,7 +160,9 @@ def test_openbookqa_es_scores_accuracy(monkeypatch) -> None:
     monkeypatch.setattr(spanish_bench_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for fake session."""
             assert batch_size == 7
             assert len(requests) == 4
             assert requests[0].context == (
@@ -183,6 +193,7 @@ def test_openbookqa_es_scores_accuracy(monkeypatch) -> None:
 
 
 def test_paws_es_scores_full_sentence_choices_without_leading_space(monkeypatch) -> None:
+    """Verify paws es scores full sentence choices without leading space. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -196,7 +207,9 @@ def test_paws_es_scores_full_sentence_choices_without_leading_space(monkeypatch)
     monkeypatch.setattr(spanish_bench_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for fake session."""
             assert batch_size == 5
             assert len(requests) == 2
             assert requests[0].context == ""
@@ -228,6 +241,7 @@ def test_paws_es_scores_full_sentence_choices_without_leading_space(monkeypatch)
 
 
 def test_wnli_es_scores_true_false_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify WNLI es scores true false multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -247,7 +261,9 @@ def test_wnli_es_scores_true_false_multiple_choice_accuracy(monkeypatch) -> None
     monkeypatch.setattr(spanish_bench_module, "load_wnli_es_dataset", lambda *args, **kwargs: dataset)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for fake session."""
             assert batch_size == 4
             assert len(requests) == 4
             assert requests[0].context == (
@@ -281,6 +297,7 @@ def test_wnli_es_scores_true_false_multiple_choice_accuracy(monkeypatch) -> None
 
 
 def test_xnli_es_scores_full_sentence_choices_without_leading_space(monkeypatch) -> None:
+    """Verify XNLI es scores full sentence choices without leading space. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -293,7 +310,9 @@ def test_xnli_es_scores_full_sentence_choices_without_leading_space(monkeypatch)
     monkeypatch.setattr(spanish_bench_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for fake session."""
             assert batch_size == 4
             assert len(requests) == 3
             assert requests[0].context == ""
@@ -330,6 +349,7 @@ def test_xnli_es_scores_full_sentence_choices_without_leading_space(monkeypatch)
 
 
 def test_spanish_bench_dispatch_and_validation() -> None:
+    """Verify spanish bench dispatch and validation."""
     suite = evalution.benchmarks.spanish_bench(task="openbookqa_es", max_rows=1)
     assert suite.task_name() == "openbookqa_es"
     assert suite.dataset_path == "BSC-LT/openbookqa-es"

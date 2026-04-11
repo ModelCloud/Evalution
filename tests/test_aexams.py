@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 aexams_module = importlib.import_module("evalution.benchmarks.aexams")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 4
         assert requests[0].context == (
@@ -39,6 +42,7 @@ class FakeSession:
 
 
 def test_aexams_scores_labeled_subject_multiple_choice(monkeypatch) -> None:
+    """Verify aexams scores labeled subject multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -73,6 +77,7 @@ def test_aexams_scores_labeled_subject_multiple_choice(monkeypatch) -> None:
 
 
 def test_aexams_validates_subject_and_prompt_helper() -> None:
+    """Verify aexams validates subject and prompt helper."""
     assert aexams_module._aexams_prompt("مقدمة", "سؤال؟", ["أ", "ب", "ج", "د"]).endswith("الجواب:")
     try:
         aexams_module.AEXAMS(subject="history")

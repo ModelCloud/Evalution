@@ -51,14 +51,17 @@ _OPTION_LABEL_RE = pcre.compile(r"^\(?([A-Z])\)?(?:[.:：、]|．)?\s*")
 
 
 def _slugify_subset_name(subset: str) -> str:
+    """Implement slugify subset name for this module."""
     return subset.replace("-", "_")
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 AGIEVAL_TASKS = tuple(f"agieval_{_slugify_subset_name(subset)}" for subset in AGIEVAL_SUBSETS)
 _SUBSET_TO_TASK = dict(zip(AGIEVAL_SUBSETS, AGIEVAL_TASKS, strict=True))
 
 
 def _agieval_prompt(*, passage: str | None, question: str, choices: list[tuple[str, str]]) -> str:
+    """Implement agieval prompt for this module."""
     lines: list[str] = []
     if passage:
         lines.extend(("Passage:", passage, ""))
@@ -71,6 +74,7 @@ def _agieval_prompt(*, passage: str | None, question: str, choices: list[tuple[s
 
 
 def _parse_choice(option: str, *, index: int) -> tuple[str, str]:
+    """Parse choice."""
     normalized = str(option).strip()
     default_label = chr(ord("A") + index)
     match = _OPTION_LABEL_RE.match(normalized)
@@ -87,12 +91,14 @@ def _parse_choice(option: str, *, index: int) -> tuple[str, str]:
 class AGIEval(BaseMultipleChoiceSuite):
     """AGIEval suite backed by a frozen subset registry to keep imports offline-safe."""
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "RUCAIBox/AGIEval"
     dataset_name: str | None = None
     split: str = "test"
     subset: str = ""
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in AGIEVAL_SUBSETS:
             raise ValueError(f"unsupported agieval subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -101,12 +107,15 @@ class AGIEval(BaseMultipleChoiceSuite):
         raise ValueError("agieval dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _SUBSET_TO_TASK[self.subset]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         raw_options = doc["options"]
         if not isinstance(raw_options, list) or not raw_options:
             raise ValueError(f"agieval subset {self.subset!r} does not expose answer options")
@@ -145,11 +154,14 @@ class AGIEval(BaseMultipleChoiceSuite):
 
 
 def agieval(*, subset: str, **kwargs: Any) -> AGIEval:
+    """Implement agieval for this module."""
     return AGIEval(subset=subset, dataset_name=subset, **kwargs)
 
 
 def _make_agieval_factory(subset: str) -> Any:
+    """Make agieval factory."""
     def factory(**kwargs: Any) -> AGIEval:
+        """Implement factory for this module."""
         return agieval(subset=subset, **kwargs)
 
     factory.__name__ = _SUBSET_TO_TASK[subset]

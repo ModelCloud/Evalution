@@ -6,6 +6,7 @@ import pytest
 
 
 def test_llama3_2_transformers_multirc_full_model_eval():
+    """Verify llama3 2 transformers multirc full model eval."""
     suite = evalution.benchmarks.multirc(batch_size=8, max_rows=16, max_new_tokens=64)
     result = (
         evalution.Transformers(

@@ -31,6 +31,7 @@ from evalution.benchmarks.execution import (
 )
 from evalution.benchmarks.subsets import ResolvedSubsets, SubsetTree, normalize_subset_token
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _INVALID_CHOICE = "[invalid]"
 _OPTION_LABELS = tuple("ABCDEFGHIJKLMNOP")
 _STOP_STRINGS = ("Question:", "</s>", "<|im_end|>", "<|eot_id|>")
@@ -69,6 +70,7 @@ _CHOICE_TOKEN_PATTERN = pcre.compile(r"\b([A-Z])\b")
 
 
 def _choice_labels(option_count: int) -> list[str]:
+    """Implement choice labels for this module."""
     if option_count > len(_OPTION_LABELS):
         raise ValueError(
             f"MMLU-Pro question has {option_count} options but only {len(_OPTION_LABELS)} labels are supported"
@@ -77,6 +79,7 @@ def _choice_labels(option_count: int) -> list[str]:
 
 
 def _choice_options(doc: dict[str, Any]) -> list[str]:
+    """Implement choice options for this module."""
     return [
         str(option).strip()
         for option in doc.get("options", [])
@@ -85,12 +88,14 @@ def _choice_options(doc: dict[str, Any]) -> list[str]:
 
 
 def _preprocess_doc(doc: dict[str, Any]) -> dict[str, Any]:
+    """Implement preprocess doc for this module."""
     processed = dict(doc)
     processed["options"] = _choice_options(doc)
     return processed
 
 
 def _format_cot_example(doc: dict[str, Any], *, include_answer: bool) -> str:
+    """Format cot example."""
     options = _choice_options(doc)
     labels = _choice_labels(len(options))
     prompt = "Question:\n"
@@ -121,6 +126,7 @@ def _build_prompt(
     fewshot_docs: list[dict[str, Any]],
     doc: dict[str, Any],
 ) -> str:
+    """Build prompt."""
     header = (
         "The following are multiple choice questions (with answers) about "
         f"{subset_value}. Think step by step and then finish your answer with "
@@ -131,11 +137,13 @@ def _build_prompt(
 
 
 def _normalize_choice_text(text: Any) -> str:
+    """Normalize choice text. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = _NON_ALNUM_PATTERN.sub(" ", str(text).lower())
     return normalized.strip()
 
 
 def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
+    """Extract choice label. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     response = text or ""
     for pattern in _EXPLICIT_ANSWER_PATTERNS:
         for match in pattern.findall(response):
@@ -152,6 +160,7 @@ def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
 
 
 def _extract_choice_label_from_text(text: str, options: list[str]) -> str:
+    """Extract choice label from text. Preserve the fallback order expected by the surrounding caller."""
     normalized_response = _normalize_choice_text(text)
     if not normalized_response:
         return _INVALID_CHOICE
@@ -180,10 +189,12 @@ def _extract_choice_label_from_text(text: str, options: list[str]) -> str:
 
 
 def _session_tokenizer(session: InferenceSession) -> Any | None:
+    """Implement session tokenizer for this module."""
     return getattr(session, "prepare_tokenizer", None) or getattr(session, "tokenizer", None)
 
 
 def _session_context_limit(session: InferenceSession) -> int | None:
+    """Implement session context limit for this module."""
     tokenizer = _session_tokenizer(session)
     model_length = getattr(getattr(getattr(session, "model", None), "config", None), "max_position_embeddings", None)
     tokenizer_length = getattr(tokenizer, "model_max_length", None)
@@ -209,6 +220,7 @@ def _prepare_request_for_context_fit(
     session: InferenceSession,
     request: GenerationRequest,
 ) -> GenerationRequest:
+    """Prepare request for context fit. Preserve the fallback order expected by the surrounding caller."""
     prepare_requests = getattr(session, "prepare_requests", None)
     if callable(prepare_requests):
         return prepare_requests([request])[0]
@@ -252,6 +264,7 @@ def _request_fits_context(
     session: InferenceSession,
     request: GenerationRequest,
 ) -> tuple[bool, GenerationRequest]:
+    """Implement request fits context for this module."""
     prepared_request = _prepare_request_for_context_fit(session, request)
     context_limit = _session_context_limit(session)
     if context_limit is None or prepared_request.input_ids is None:
@@ -266,6 +279,8 @@ def _request_fits_context(
 
 @dataclass(slots=True)
 class MMLUPro(TestSuite):
+    """Define the mmlupro helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "TIGER-Lab/MMLU-Pro"
     split: str = "test"
     fewshot_split: str = "validation"
@@ -286,9 +301,11 @@ class MMLUPro(TestSuite):
     )
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         resolved_subsets = self._resolved_subsets()
         if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return "mmlu_pro"
@@ -300,6 +317,7 @@ class MMLUPro(TestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         resolved_subsets = self._resolved_subsets()
         return {
             "dataset_path": self.dataset_path,
@@ -324,6 +342,7 @@ class MMLUPro(TestSuite):
         aggregate_scores: dict[str, float],
         invalid_predictions: int,
     ) -> str:
+        """Score progress title. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         accuracy = (
             aggregate_scores.get("em,choice_label", 0.0) / processed
             if processed
@@ -336,6 +355,7 @@ class MMLUPro(TestSuite):
         )
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Preserve the fallback order expected by the surrounding caller."""
         task_name = self.task_name()
         logger = get_logger()
 
@@ -427,6 +447,7 @@ class MMLUPro(TestSuite):
         )
 
         def score_output(prepared_sample: PreparedSample, output: GenerationOutput) -> None:
+            """Score output. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             nonlocal invalid_predictions
             nonlocal processed_count
             nonlocal scoring_wall_s
@@ -453,6 +474,7 @@ class MMLUPro(TestSuite):
                 sample_by_request_key: dict[int, PreparedSample] = {}
 
                 def iter_request_stream() -> Any:
+                    """Yield request items for the continuous generation loop."""
                     request_key = 0
                     prefetched_samples = iter_prefetched_samples(
                         session,
@@ -541,6 +563,7 @@ class MMLUPro(TestSuite):
         )
 
     def _select_docs(self, docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Select docs."""
         resolved_subsets = self._resolved_subsets()
         if resolved_subsets.selection_mode == "single" and resolved_subsets.kinds[0] == "all":
             return docs
@@ -562,6 +585,7 @@ class MMLUPro(TestSuite):
         session: InferenceSession,
         docs: list[dict[str, Any]],
     ) -> Any:
+        """Iterate over prepared samples."""
         for index, doc in enumerate(docs):
             subset_value = str(doc["category"]).strip()
             request, fewshot_count = self._build_request_with_backoff(
@@ -583,6 +607,7 @@ class MMLUPro(TestSuite):
         subset_value: str,
         doc: dict[str, Any],
     ) -> tuple[GenerationRequest, int]:
+        """Build request with backoff."""
         subset_token = normalize_subset_token(subset_value)
         subset_fewshots = self._fewshot_by_subset_value.get(subset_token, [])
         max_fewshots = min(self.num_fewshot, len(subset_fewshots))
@@ -614,6 +639,7 @@ class MMLUPro(TestSuite):
         fewshot_docs: list[dict[str, Any]],
         doc: dict[str, Any],
     ) -> GenerationRequest:
+        """Build request."""
         prompt = _build_prompt(
             subset_value=subset_value,
             fewshot_docs=fewshot_docs,
@@ -643,6 +669,7 @@ class MMLUPro(TestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score sample. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         options = _choice_options(prepared_sample.doc)
         labels = _choice_labels(len(options))
         valid_labels = set(labels)
@@ -683,11 +710,14 @@ class MMLUPro(TestSuite):
         )
 
     def _invalid_prediction_count(self, sample: SampleResult) -> int:
+        """Implement invalid prediction count for mmlupro."""
         return int(sample.extracted["choice-label"] == _INVALID_CHOICE)
 
     def _resolved_subsets(self) -> ResolvedSubsets:
+        """Implement resolved subsets for mmlupro."""
         return _MMLU_PRO_SUBSETS.resolve_many(self.subsets)
 
 
 def mmlu_pro(**kwargs: Any) -> MMLUPro:
+    """Implement MMLU pro for this module."""
     return MMLUPro(**kwargs)

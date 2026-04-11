@@ -26,6 +26,7 @@ HUMANEVAL_STOP_STRINGS = ("\nclass ", "\ndef ", "\nif __name__")
 
 def _extract_code(text: str) -> str:
     # Prefer fenced code and otherwise strip the most common chat preamble.
+    """Extract code."""
     fence_pattern = pcre.compile(r"```(?:python)?\n?(.*?)\n?```", pcre.DOTALL)
     match = fence_pattern.search("```" + text)
     if match:
@@ -36,10 +37,12 @@ def _extract_code(text: str) -> str:
 
 def _build_python_script(*, prompt: str, completion: str, test_code: str, entry_point: str) -> str:
     # Join the candidate solution and benchmark test harness into one process.
+    """Build python script."""
     return f"{prompt}{completion}\n{test_code}\ncheck({entry_point})\n"
 
 
 def _run_script(script: str, *, timeout: int = 10) -> bool:
+    """Run script."""
     try:
         completed = subprocess.run(
             ["python3", "-c", script],
@@ -56,6 +59,7 @@ def _run_script(script: str, *, timeout: int = 10) -> bool:
 @dataclass(slots=True)
 class HumanEval(BaseTestSuite):
     # HumanEval reports pass@1 by executing the generated function completion.
+    """Implement the human eval benchmark suite."""
     dataset_path: str = HUMANEVAL_DATASET_PATH
     dataset_name: str | None = HUMANEVAL_DATASET_NAME
     split: str = HUMANEVAL_TEST_SPLIT
@@ -65,15 +69,19 @@ class HumanEval(BaseTestSuite):
     temperature: float = 0.0
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "humaneval"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def requires_full_doc_materialization(self) -> bool:
+        """Implement requires full doc materialization for human eval."""
         return True
 
     def result_metadata(self, *, generation_submission_mode: str) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_code_execution",
@@ -81,6 +89,7 @@ class HumanEval(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             prompt = (
                 "Complete the following Python function. "
@@ -101,6 +110,7 @@ class HumanEval(BaseTestSuite):
             )
 
     def _score_prediction(self, prediction: str, doc: dict[str, Any]) -> bool:
+        """Score prediction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         script = _build_python_script(
             prompt=doc["prompt"],
             completion=_extract_code(prediction),
@@ -110,6 +120,7 @@ class HumanEval(BaseTestSuite):
         return _run_script(script)
 
     def score_sample(self, prepared_sample: PreparedSample, output: GenerationOutput) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         passed = self._score_prediction(output.text, prepared_sample.doc)
         return SampleResult(
             index=prepared_sample.index,
@@ -129,4 +140,5 @@ class HumanEval(BaseTestSuite):
 
 
 def humaneval(**kwargs: Any) -> HumanEval:
+    """Implement humaneval for this module."""
     return HumanEval(**kwargs)

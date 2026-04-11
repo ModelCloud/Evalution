@@ -12,6 +12,7 @@ from rouge_score import rouge_scorer
 
 @lru_cache(maxsize=1)
 def _summary_rouge_scorer() -> rouge_scorer.RougeScorer:
+    """Implement summary ROUGE scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return rouge_scorer.RougeScorer(
         ["rouge1", "rouge2", "rougeLsum"],
         use_stemmer=True,
@@ -19,6 +20,7 @@ def _summary_rouge_scorer() -> rouge_scorer.RougeScorer:
 
 
 def summary_rouge_scores(prediction: str, reference: str) -> dict[str, float]:
+    """Implement summary ROUGE scores for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     scores = _summary_rouge_scorer().score(reference, prediction)
     return {
         "rouge1": scores["rouge1"].fmeasure,

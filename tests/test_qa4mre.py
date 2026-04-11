@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 qa4mre_module = importlib.import_module("evalution.benchmarks.qa4mre")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 5
         assert requests[0].context.startswith("Annie Lennox Why I am an HIVAIDS activist")
@@ -33,6 +36,7 @@ class FakeSession:
 
 
 def test_qa4mre_scores_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify qa4mre scores multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -79,5 +83,6 @@ def test_qa4mre_scores_multiple_choice_accuracy(monkeypatch) -> None:
 
 
 def test_qa4mre_rejects_unknown_year() -> None:
+    """Verify qa4mre rejects unknown year."""
     with pytest.raises(ValueError, match="unsupported qa4mre year"):
         qa4mre_module.QA4MRE(year="2014")

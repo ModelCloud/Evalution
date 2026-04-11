@@ -37,6 +37,7 @@ from evalution.engines.transformers_common import (
     _truncate_at_stop,
 )
 
+# Keep engine defaults and compatibility flags explicit at module scope.
 _AUTO_BATCH_SIZE = "auto"
 _DEFAULT_VLLM_CHECKOUT_CANDIDATES = (
     Path(__file__).resolve().parents[3] / "vllm",
@@ -77,6 +78,7 @@ class VLLM(BaseEngineTokenizerModeConfig, BaseEngineQuantizationConfig, SharedEn
 class VLLMSession(BaseInferenceSession):
     """Own one live vLLM runtime plus Evalution-specific request preparation logic."""
 
+    # Keep the class-level state explicit for this helper.
     config: VLLM
     model_config: Model
     llm: Any

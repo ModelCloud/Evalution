@@ -40,6 +40,7 @@ _CHOICE_LABELS = ["A", "B", "C", "D"]
 
 
 def _afrimmlu_prompt(question: str, choices: list[str]) -> str:
+    """Implement afrimmlu prompt for this module."""
     lines = [f"Question: {question.strip()}"]
     lines.extend(f"{label}. {choice}" for label, choice in zip(_CHOICE_LABELS, choices, strict=True))
     lines.append("Answer:")
@@ -47,6 +48,7 @@ def _afrimmlu_prompt(question: str, choices: list[str]) -> str:
 
 
 def _parse_choices(raw_choices: Any) -> list[str]:
+    """Parse choices."""
     if isinstance(raw_choices, list):
         return [str(choice).strip() for choice in raw_choices]
     parsed = ast.literal_eval(str(raw_choices))
@@ -59,12 +61,14 @@ def _parse_choices(raw_choices: Any) -> list[str]:
 class AfriMMLU(BaseMultipleChoiceSuite):
     """AfriMMLU suite backed by a frozen language registry to keep imports offline-safe."""
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "masakhane/afrimmlu"
     dataset_name: str | None = "eng"
     split: str = "test"
     language: str = "eng"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in AFRIMMLU_LANGUAGES:
             raise ValueError(f"unsupported afrimmlu language: {self.language!r}")
         if self.dataset_name in {None, self.language}:
@@ -73,17 +77,21 @@ class AfriMMLU(BaseMultipleChoiceSuite):
         raise ValueError("afrimmlu dataset_name must match the configured language")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"afrimmlu_{self.language}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata()
         metadata["language"] = self.language
         return metadata
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = _parse_choices(doc["choices"])
         answer_label = str(doc["answer"]).strip().upper()
         return MultipleChoiceSample(
@@ -103,12 +111,15 @@ class AfriMMLU(BaseMultipleChoiceSuite):
 
 
 def afrimmlu(*, language: str, **kwargs: Any) -> AfriMMLU:
+    """Implement afrimmlu for this module."""
     kwargs.setdefault("dataset_name", language)
     return AfriMMLU(language=language, **kwargs)
 
 
 def _make_afrimmlu_factory(language: str) -> Any:
+    """Make afrimmlu factory."""
     def factory(**kwargs: Any) -> AfriMMLU:
+        """Implement factory for this module."""
         return afrimmlu(language=language, **kwargs)
 
     factory.__name__ = f"afrimmlu_{language}"

@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 kobest_module = importlib.import_module("evalution.benchmarks.kobest")
 
 
 class FakeBoolQSession:
+    """Provide the fake bool qsession helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake bool qsession."""
         assert batch_size == 8
         assert len(requests) == 2
         assert requests[0].context == (
@@ -33,7 +36,9 @@ class FakeBoolQSession:
 
 
 class FakeCOPASession:
+    """Provide the fake copasession helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake copasession."""
         assert batch_size == 8
         assert len(requests) == 2
         assert requests[0].context == "전쟁이 시작되었다 그래서"
@@ -48,7 +53,9 @@ class FakeCOPASession:
 
 
 class FakeHellaSwagSession:
+    """Provide the fake hella swag session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake hella swag session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -70,7 +77,9 @@ class FakeHellaSwagSession:
 
 
 class FakeSentiNegSession:
+    """Provide the fake senti neg session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake senti neg session."""
         assert batch_size == 8
         assert len(requests) == 2
         assert requests[0].context == "문장: 택배사 정말 마음에 듬\n질문: 이 문장의 감성은 무엇입니까?\n답변:"
@@ -82,7 +91,9 @@ class FakeSentiNegSession:
 
 
 class FakeWiCSession:
+    """Provide the fake wi csession helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake wi csession."""
         assert batch_size == 8
         assert len(requests) == 2
         assert requests[0].context == (
@@ -99,6 +110,7 @@ class FakeWiCSession:
 
 
 def test_kobest_boolq_scores_yes_no_reading_comprehension(monkeypatch) -> None:
+    """Verify kobest boolq scores yes no reading comprehension. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -125,6 +137,7 @@ def test_kobest_boolq_scores_yes_no_reading_comprehension(monkeypatch) -> None:
 
 
 def test_kobest_copa_scores_korean_causal_choice(monkeypatch) -> None:
+    """Verify kobest COPA scores korean causal choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -150,6 +163,7 @@ def test_kobest_copa_scores_korean_causal_choice(monkeypatch) -> None:
 
 
 def test_kobest_hellaswag_scores_four_way_story_completion(monkeypatch) -> None:
+    """Verify kobest hellaswag scores four way story completion. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -178,6 +192,7 @@ def test_kobest_hellaswag_scores_four_way_story_completion(monkeypatch) -> None:
 
 
 def test_kobest_sentineg_scores_sentence_sentiment(monkeypatch) -> None:
+    """Verify kobest sentineg scores sentence sentiment. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list([{"sentence": "택배사 정말 마음에 듬", "label": 1}])
     monkeypatch.setattr(kobest_module, "load_dataset", lambda *args, **kwargs: dataset)
 
@@ -192,6 +207,7 @@ def test_kobest_sentineg_scores_sentence_sentiment(monkeypatch) -> None:
 
 
 def test_kobest_wic_scores_word_sense_similarity(monkeypatch) -> None:
+    """Verify kobest wic scores word sense similarity. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -215,10 +231,12 @@ def test_kobest_wic_scores_word_sense_similarity(monkeypatch) -> None:
 
 
 def test_kobest_rejects_unknown_subset() -> None:
+    """Verify kobest rejects unknown subset."""
     with pytest.raises(ValueError, match="unsupported kobest subset"):
         evalution.benchmarks.kobest(subset="unknown_subset")
 
 
 def test_kobest_rejects_dataset_name_mismatch() -> None:
+    """Verify kobest rejects dataset name mismatch."""
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.kobest(subset="boolq", dataset_name="wic")

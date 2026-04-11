@@ -16,10 +16,12 @@ import evalution
 from evalution.datasets import mediqa_qa as mediqa_qa_dataset
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mediqa_qa2019_module = importlib.import_module("evalution.benchmarks.mediqa_qa2019")
 
 
 def _build_minimal_mediqa_archive(path: Path) -> str:
+    """Build minimal mediqa archive."""
     xml_payload = """<?xml version="1.0" encoding="UTF-8"?>
 <MEDIQA2019-Task3-QA-ValidationSet>
   <Question QID="2">
@@ -46,6 +48,7 @@ def _build_minimal_mediqa_archive(path: Path) -> str:
 
 
 def test_load_mediqa_qa_dataset_reads_pinned_zip(monkeypatch, tmp_path: Path) -> None:
+    """Verify load mediqa QA dataset reads pinned zip."""
     archive_path = tmp_path / "mediqa.zip"
     archive_sha256 = _build_minimal_mediqa_archive(archive_path)
     monkeypatch.setattr(mediqa_qa_dataset, "MEDIQA_QA_SOURCE_SHA256", archive_sha256)
@@ -99,6 +102,7 @@ def test_load_mediqa_qa_dataset_reads_pinned_zip(monkeypatch, tmp_path: Path) ->
 
 
 def test_load_mediqa_qa_dataset_rejects_checksum_mismatch(monkeypatch, tmp_path: Path) -> None:
+    """Verify load mediqa QA dataset rejects checksum mismatch."""
     archive_path = tmp_path / "mediqa.zip"
     _build_minimal_mediqa_archive(archive_path)
     monkeypatch.setattr(mediqa_qa_dataset, "MEDIQA_QA_SOURCE_SHA256", "0" * 64)
@@ -117,6 +121,7 @@ def test_load_mediqa_qa_dataset_rejects_checksum_mismatch(monkeypatch, tmp_path:
 
 
 def test_mediqa_qa2019_scores_medical_answer_generation(monkeypatch) -> None:
+    """Verify mediqa qa2019 scores medical answer generation. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     docs = [
         {
             "QUESTION": {
@@ -144,7 +149,9 @@ def test_mediqa_qa2019_scores_medical_answer_generation(monkeypatch) -> None:
     )
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 1
             assert len(requests) == 1
             assert requests[0].prompt == (
@@ -184,6 +191,7 @@ def test_mediqa_qa2019_scores_medical_answer_generation(monkeypatch) -> None:
 
 
 def test_mediqa_qa2019_empty_text_scores_zero() -> None:
+    """Verify mediqa qa2019 empty text scores zero. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     assert mediqa_qa2019_module._mediqa_qa2019_answer_scores("", "reference") == {
         "bleu": 0.0,
         "rouge1": 0.0,

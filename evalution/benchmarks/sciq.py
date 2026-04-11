@@ -14,6 +14,7 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 
 def _sciq_prompt(*, support: str, question: str) -> str:
+    """Implement sciq prompt for this module."""
     lines: list[str] = []
     support_text = support.strip()
     if support_text:
@@ -27,19 +28,23 @@ def _sciq_prompt(*, support: str, question: str) -> str:
 class SciQ(BaseMultipleChoiceSuite):
     # Evaluate science question answering by ranking four answer strings with token log-likelihood.
     # Align the default split with current benchmark-style harness usage.
+    """Implement the sci q benchmark suite."""
     dataset_path: str = "allenai/sciq"
     split: str = "test"
 
     # Use the Hugging Face datasets loader for the public SciQ benchmark.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used in logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "sciq"
 
     # Match the upstream task ordering where the three distractors precede the correct answer.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [
             doc["distractor1"].strip(),
             doc["distractor2"].strip(),
@@ -62,4 +67,5 @@ class SciQ(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used by the rest of the package.
 def sciq(**kwargs: Any) -> SciQ:
+    """Implement sciq for this module."""
     return SciQ(**kwargs)

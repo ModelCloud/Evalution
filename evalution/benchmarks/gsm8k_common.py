@@ -19,11 +19,14 @@ from evalution.scorers.gsm8k import (
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 GSM8KVariant = Literal["base", "cot", "cot_llama", "cot_zeroshot", "default"]
 
 
 @dataclass(frozen=True, slots=True)
 class VariantSpec:
+    """Define the variant spec helper class."""
+    # Keep the class-level state explicit for this helper.
     task_name: str
     stop_strings: tuple[str, ...]
     prompt_builder: Any
@@ -32,6 +35,7 @@ class VariantSpec:
     fewshots: tuple[dict[str, str], ...]
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _COT_FEWSHOTS = (
     {
         "question": "There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?",
@@ -104,18 +108,22 @@ _LLAMA_FEWSHOTS = (
 
 
 def base_prompt(doc: dict[str, Any]) -> str:
+    """Implement base prompt for this module."""
     return f"Question: {doc['question']}\nAnswer:"
 
 
 def cot_prompt(doc: dict[str, Any]) -> str:
+    """Implement cot prompt for this module."""
     return f"Q: {doc['question']}\nA:"
 
 
 def cot_zeroshot_prompt(doc: dict[str, Any]) -> str:
+    """Implement cot zeroshot prompt for this module."""
     return f"Q: {doc['question']}\nA: Let's think step by step."
 
 
 def llama_prompt(doc: dict[str, Any]) -> str:
+    """Implement llama prompt for this module."""
     return (
         "Given the following problem, reason and give a final answer to the problem.\n"
         f"Problem: {doc['question']}\n"
@@ -124,10 +132,12 @@ def llama_prompt(doc: dict[str, Any]) -> str:
 
 
 def full_answer(doc: dict[str, Any]) -> str:
+    """Implement full answer for this module."""
     return str(doc["answer"])
 
 
 def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
+    """Build variant specs."""
     return {
         "base": VariantSpec(
             task_name=task_prefix,
@@ -165,11 +175,14 @@ def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
 
 
 def requires_full_doc_materialization(spec: VariantSpec) -> bool:
+    """Implement requires full doc materialization for this module."""
     return not spec.fewshots and spec.num_fewshot > 0
 
 
 @dataclass(slots=True)
 class BaseGSM8KSuite(BaseTestSuite):
+    """Implement the base gsm8 ksuite benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     variant: GSM8KVariant = "cot"
     apply_chat_template: bool = False
     fewshot_as_multiturn: bool | None = None
@@ -185,13 +198,16 @@ class BaseGSM8KSuite(BaseTestSuite):
     SCORING_MODE: ClassVar[str]
 
     def numeric_target_from_doc(self, doc: dict[str, Any]) -> str:
+        """Implement numeric target from doc for base gsm8 ksuite."""
         raise NotImplementedError
 
     def _resolved_variant(self) -> tuple[str, VariantSpec]:
+        """Implement resolved variant for base gsm8 ksuite."""
         variant_name = "base" if self.variant == "default" else self.variant
         return variant_name, self.VARIANTS[variant_name]
 
     def _resolved_fewshot_as_multiturn(self) -> bool:
+        """Implement resolved fewshot as multiturn for base gsm8 ksuite."""
         return (
             self.fewshot_as_multiturn
             if self.fewshot_as_multiturn is not None
@@ -199,9 +215,11 @@ class BaseGSM8KSuite(BaseTestSuite):
         )
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self._resolved_variant()[1].task_name
 
     def requires_full_doc_materialization(self) -> bool:
+        """Implement requires full doc materialization for base gsm8 ksuite."""
         return requires_full_doc_materialization(self._resolved_variant()[1])
 
     def score_progress_title(
@@ -211,6 +229,7 @@ class BaseGSM8KSuite(BaseTestSuite):
         aggregate_scores: dict[str, float],
         invalid_predictions: int,
     ) -> str:
+        """Score progress title. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         numeric_total = aggregate_scores.get(self.PRIMARY_METRIC, 0.0)
         if processed == 0:
             numeric_score = 0.0
@@ -227,6 +246,7 @@ class BaseGSM8KSuite(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         variant_name, spec = self._resolved_variant()
         return {
             **self.base_result_metadata(
@@ -241,6 +261,7 @@ class BaseGSM8KSuite(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         _, spec = self._resolved_variant()
         fewshot_docs = docs if requires_full_doc_materialization(spec) else list(spec.fewshots)
         fewshot_as_multiturn = self._resolved_fewshot_as_multiturn()
@@ -268,6 +289,7 @@ class BaseGSM8KSuite(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         numeric_prediction = extract_format_insensitive_numeric_answer(output.text)
         scores = {
             self.PRIMARY_METRIC: float(numbers_equal(numeric_prediction, prepared_sample.target)),
@@ -285,9 +307,11 @@ class BaseGSM8KSuite(BaseTestSuite):
         )
 
     def invalid_prediction_count(self, sample: SampleResult) -> int:
+        """Implement invalid prediction count for base gsm8 ksuite."""
         return int(sample.extracted[self.NUMERIC_EXTRACT_KEY] == INVALID_ANSWER)
 
     def _sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
+        """Implement sample metadata for base gsm8 ksuite."""
         if self.INCLUDE_CLEANING_STATUS:
             return {
                 "cleaning_status": doc.get("cleaning_status"),
@@ -302,6 +326,7 @@ class BaseGSM8KSuite(BaseTestSuite):
         fewshots: list[dict[str, str]],
         fewshot_as_multiturn: bool,
     ) -> GenerationRequest:
+        """Build request."""
         if self.apply_chat_template:
             if fewshot_as_multiturn:
                 messages: list[dict[str, str]] = []
@@ -333,6 +358,7 @@ class BaseGSM8KSuite(BaseTestSuite):
         doc: dict[str, Any],
         fewshots: list[dict[str, str]],
     ) -> str:
+        """Build plain prompt."""
         parts: list[str] = []
         for fewshot in fewshots:
             parts.append(spec.prompt_builder(fewshot))
@@ -350,6 +376,7 @@ class BaseGSM8KSuite(BaseTestSuite):
         doc: dict[str, Any],
         index: int,
     ) -> list[dict[str, str]]:
+        """Select fewshots."""
         if spec.fewshots:
             return list(spec.fewshots[: spec.num_fewshot])
         if spec.num_fewshot == 0:

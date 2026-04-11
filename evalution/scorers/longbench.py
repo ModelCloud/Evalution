@@ -7,23 +7,26 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 from functools import lru_cache
-import re
 import string
 import unicodedata
 
+import pcre
 from rouge_score import rouge_scorer
 
-_EN_ARTICLES_RE = re.compile(r"\b(a|an|the)\b")
-_DIGIT_RE = re.compile(r"\d+")
-_PARAGRAPH_RE = re.compile(r"Paragraph (\d+)")
-_PARAGRAPH_ZH_RE = re.compile(r"段落(\d+)")
+# Keep scorer defaults and parser helpers explicit at module scope.
+_EN_ARTICLES_RE = pcre.compile(r"\b(a|an|the)\b")
+_DIGIT_RE = pcre.compile(r"\d+")
+_PARAGRAPH_RE = pcre.compile(r"Paragraph (\d+)")
+_PARAGRAPH_ZH_RE = pcre.compile(r"段落(\d+)")
 
 
 def _is_punctuation(character: str) -> bool:
+    """Implement is punctuation for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return character in string.punctuation or unicodedata.category(character).startswith("P")
 
 
 def _normalize_english_qa_text(text: str) -> str:
+    """Normalize english QA text. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     lowered = text.lower()
     no_punctuation = "".join(character for character in lowered if not _is_punctuation(character))
     no_articles = _EN_ARTICLES_RE.sub(" ", no_punctuation)
@@ -33,6 +36,7 @@ def _normalize_english_qa_text(text: str) -> str:
 def _tokenize_zh_text(text: str) -> list[str]:
     # Keep Chinese scoring dependency-free by splitting CJK code points as standalone tokens
     # while still preserving contiguous Latin or digit sequences.
+    """Implement tokenize zh text for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     tokens: list[str] = []
     buffered: list[str] = []
     for character in text.lower():
@@ -54,6 +58,7 @@ def _tokenize_zh_text(text: str) -> list[str]:
 
 
 def _token_f1(prediction_tokens: list[str], reference_tokens: list[str]) -> float:
+    """Implement token F1 for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if not prediction_tokens or not reference_tokens:
         return float(prediction_tokens == reference_tokens)
 
@@ -78,6 +83,7 @@ def _token_f1(prediction_tokens: list[str], reference_tokens: list[str]) -> floa
 
 
 def longbench_qa_f1_score(prediction: str, reference: str) -> float:
+    """Implement longbench QA F1 score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _token_f1(
         _normalize_english_qa_text(prediction).split(),
         _normalize_english_qa_text(reference).split(),
@@ -85,6 +91,7 @@ def longbench_qa_f1_score(prediction: str, reference: str) -> float:
 
 
 def longbench_qa_f1_zh_score(prediction: str, reference: str) -> float:
+    """Implement longbench QA F1 zh score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _token_f1(
         _tokenize_zh_text(prediction),
         _tokenize_zh_text(reference),
@@ -93,14 +100,17 @@ def longbench_qa_f1_zh_score(prediction: str, reference: str) -> float:
 
 @lru_cache(maxsize=1)
 def _rouge_l_scorer() -> rouge_scorer.RougeScorer:
+    """Implement ROUGE l scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
 
 
 def longbench_rouge_score(prediction: str, reference: str) -> float:
+    """Implement longbench ROUGE score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _rouge_l_scorer().score(reference, prediction)["rougeL"].fmeasure
 
 
 def longbench_rouge_zh_score(prediction: str, reference: str) -> float:
+    """Implement longbench ROUGE zh score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return longbench_rouge_score(
         " ".join(_tokenize_zh_text(prediction)),
         " ".join(_tokenize_zh_text(reference)),
@@ -113,6 +123,7 @@ def longbench_classification_score(
     *,
     all_classes: list[str],
 ) -> float:
+    """Implement longbench classification score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     matches = [class_name for class_name in all_classes if class_name and class_name in prediction]
     filtered_matches = [
         match
@@ -125,6 +136,7 @@ def longbench_classification_score(
 
 
 def longbench_count_score(prediction: str, reference: str) -> float:
+    """Implement longbench count score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     numbers = _DIGIT_RE.findall(prediction)
     if not numbers:
         return 0.0
@@ -137,8 +149,9 @@ def _retrieval_score(
     prediction: str,
     reference: str,
     *,
-    pattern: re.Pattern[str],
+    pattern: pcre.Pattern,
 ) -> float:
+    """Implement retrieval score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     match = pattern.search(reference)
     if match is None:
         return 0.0
@@ -151,14 +164,17 @@ def _retrieval_score(
 
 
 def longbench_retrieval_score(prediction: str, reference: str) -> float:
+    """Implement longbench retrieval score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _retrieval_score(prediction, reference, pattern=_PARAGRAPH_RE)
 
 
 def longbench_retrieval_zh_score(prediction: str, reference: str) -> float:
+    """Implement longbench retrieval zh score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _retrieval_score(prediction, reference, pattern=_PARAGRAPH_ZH_RE)
 
 
 def _first_code_candidate_line(prediction: str) -> str:
+    """Implement first code candidate line for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     for line in prediction.lstrip("\n").splitlines():
         if "`" in line or "#" in line or "//" in line:
             continue
@@ -168,12 +184,14 @@ def _first_code_candidate_line(prediction: str) -> str:
 
 
 def longbench_code_sim_score(prediction: str, reference: str) -> float:
+    """Implement longbench code sim score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     candidate_line = _first_code_candidate_line(prediction)
     if not candidate_line and not reference:
         return 1.0
     return SequenceMatcher(None, candidate_line, reference).ratio()
 
 
+# Keep scorer defaults and parser helpers explicit at module scope.
 __all__ = [
     "longbench_classification_score",
     "longbench_code_sim_score",

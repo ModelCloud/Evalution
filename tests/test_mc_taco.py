@@ -14,11 +14,14 @@ import pytest
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mc_taco_module = importlib.import_module("evalution.benchmarks.mc_taco")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 2
         assert requests[0].context == (
@@ -36,6 +39,7 @@ class FakeSession:
 
 
 def test_mc_taco_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify mc taco scores binary multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -73,6 +77,7 @@ def test_mc_taco_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
 
 
 def test_mc_taco_loader_reads_raw_tsv_via_csv_builder() -> None:
+    """Verify mc taco loader reads raw tsv via CSV builder."""
     dataset = mc_taco_module._load_mc_taco_dataset(
         "CogComp/mc_taco",
         split="validation",

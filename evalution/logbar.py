@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from evalution.results import CompareTestResult, TestResult
 
 
+# Keep module-level state explicit for this module.
 _RESULT_TABLE_COLUMNS = [
     {"label": "suite", "width": "fit"},
     {"label": "samples", "width": "fit"},
@@ -40,6 +41,8 @@ _COMPARE_RESULT_TABLE_BASE_COLUMNS = [
 
 @dataclass(frozen=True, slots=True)
 class LoggingContext:
+    """Define the logging context helper class."""
+    # Keep the class-level state explicit for this helper.
     logger: Any
     session: Any | None = None
     region_id: str | None = None
@@ -47,11 +50,14 @@ class LoggingContext:
 
 @dataclass(frozen=True, slots=True)
 class SplitPaneLoggingSession:
+    """Define the split pane logging session helper class."""
+    # Keep the class-level state explicit for this helper.
     session: Any
     left: LoggingContext
     right: LoggingContext
 
 
+# Keep module-level state explicit for this module.
 _ACTIVE_LOGGING_CONTEXT: ContextVar[LoggingContext | None] = ContextVar(
     "evalution_active_logging_context",
     default=None,
@@ -62,6 +68,7 @@ _LOGLIKELIHOOD_PROGRESS_TITLE_METADATA_KEY = "_evalution_loglikelihood_progress_
 
 
 def get_logger() -> LogBar:
+    """Get logger."""
     context = _ACTIVE_LOGGING_CONTEXT.get()
     if context is not None:
         logger = context.logger
@@ -78,6 +85,7 @@ def loglikelihood_progress_metadata(
     title: str,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Implement loglikelihood progress metadata for this module."""
     merged_metadata = dict(metadata or {})
     normalized_title = title.strip()
     if normalized_title:
@@ -86,6 +94,7 @@ def loglikelihood_progress_metadata(
 
 
 def loglikelihood_progress_title(metadata: dict[str, Any] | None) -> str | None:
+    """Implement loglikelihood progress title for this module."""
     if metadata is None:
         return None
     raw_title = metadata.get(_LOGLIKELIHOOD_PROGRESS_TITLE_METADATA_KEY)
@@ -96,6 +105,7 @@ def loglikelihood_progress_title(metadata: dict[str, Any] | None) -> str | None:
 
 
 def progress_output_interval(total: int) -> int | None:
+    """Implement progress output interval for this module."""
     if total <= 0:
         return None
     if total <= 100:
@@ -104,6 +114,7 @@ def progress_output_interval(total: int) -> int | None:
 
 
 def progress(iterable: Any, *, title: str) -> Any:
+    """Implement progress for this module."""
     total = len(iterable) if hasattr(iterable, "__len__") else 0
     context = _ACTIVE_LOGGING_CONTEXT.get()
     if context is not None and context.session is not None:
@@ -120,6 +131,7 @@ def progress(iterable: Any, *, title: str) -> Any:
 
 
 def manual_progress(total: int, *, title: str, subtitle: str | None = None) -> Any:
+    """Implement manual progress for this module."""
     context = _ACTIVE_LOGGING_CONTEXT.get()
     if context is not None and context.session is not None:
         bar = context.session.pb(
@@ -138,6 +150,7 @@ def manual_progress(total: int, *, title: str, subtitle: str | None = None) -> A
 
 @contextmanager
 def spinner(title: str) -> Iterator[None]:
+    """Implement spinner for this module."""
     context = _ACTIVE_LOGGING_CONTEXT.get()
     if context is not None and context.session is not None:
         with context.session.spinner(region_id=context.region_id, title=title):
@@ -155,6 +168,7 @@ def create_logging_context(
     region_id: str | None = None,
     name: str | None = None,
 ) -> LoggingContext:
+    """Create logging context."""
     if logger is None and session is not None:
         logger = session.create_logger(region_id or "main", name=name)
     if logger is None:
@@ -169,6 +183,7 @@ def create_logging_context(
 
 @contextmanager
 def use_logging_context(context: LoggingContext | None) -> Iterator[LoggingContext | None]:
+    """Implement use logging context for this module."""
     if context is None:
         yield None
         return
@@ -190,6 +205,7 @@ def create_split_pane_logging_session(
     use_alternate_screen: bool | None = None,
     auto_render: bool | None = None,
 ) -> SplitPaneLoggingSession | None:
+    """Create split pane logging session."""
     if RegionScreenSession is None:
         return None
 
@@ -216,6 +232,7 @@ def create_split_pane_logging_session(
 
 
 def render_test_result_table(result: TestResult, *, logger: LogBar | None = None) -> None:
+    """Render test result table."""
     _render_result_table(
         [result],
         title=f"test suite result: {result.name}",
@@ -228,6 +245,7 @@ def render_test_summary_table(
     *,
     logger: LogBar | None = None,
 ) -> None:
+    """Render test summary table."""
     if len(results) <= 1:
         return
 
@@ -245,6 +263,7 @@ def render_compare_result_table(
     right_label: str = "right",
     logger: LogBar | None = None,
 ) -> None:
+    """Render compare result table."""
     _render_compare_table(
         [result],
         title=f"comparison result: {result.name}",
@@ -261,6 +280,7 @@ def render_compare_summary_table(
     right_label: str = "right",
     logger: LogBar | None = None,
 ) -> None:
+    """Render compare summary table."""
     if not results:
         return
 
@@ -279,6 +299,7 @@ def _render_result_table(
     title: str,
     logger: LogBar | None = None,
 ) -> None:
+    """Render result table."""
     rows = _result_rows(results)
     if not rows:
         return
@@ -302,6 +323,7 @@ def _render_compare_table(
     right_label: str,
     logger: LogBar | None = None,
 ) -> None:
+    """Render compare table."""
     rows = _compare_result_rows(results)
     if not rows:
         return
@@ -327,6 +349,7 @@ def _render_compare_table(
 
 
 def _result_rows(results: Sequence[TestResult]) -> list[tuple[str, str, str, str]]:
+    """Implement result rows for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     rows: list[tuple[str, str, str, str]] = []
     for result in results:
         sample_count = str(len(result.samples))
@@ -350,6 +373,7 @@ def _result_rows(results: Sequence[TestResult]) -> list[tuple[str, str, str, str
 def _compare_result_rows(
     results: Sequence[CompareTestResult],
 ) -> list[tuple[str, str, str, str, str, str]]:
+    """Compare result rows. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     rows: list[tuple[str, str, str, str, str, str]] = []
     for result in results:
         for metric_name, metric_result in result.metrics.items():
@@ -369,6 +393,7 @@ def _compare_result_rows(
 
 
 def _format_metric_value(value: Any) -> str:
+    """Format metric value. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if isinstance(value, bool):
         return str(value)
     if isinstance(value, int):

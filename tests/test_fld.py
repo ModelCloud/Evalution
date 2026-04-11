@@ -9,6 +9,7 @@ from evalution.engines.base import GenerationOutput
 
 
 def _row(**overrides):
+    """Support the surrounding tests with row."""
     row = {
         "prompt_serial": "$hypothesis$ = h ; $context$ = c",
         "world_assump_label": "UNKNOWN",
@@ -23,7 +24,9 @@ def _row(**overrides):
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size):
+        """Generate generate."""
         assert batch_size == 1
         return [
             GenerationOutput(prompt=requests[0].prompt or "", text=" \n unknown \n ")
@@ -31,10 +34,12 @@ class FakeSession:
 
 
 def test_fld_scores_normalized_generation(monkeypatch):
+    """Verify fld scores normalized generation. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list([_row()])
     module = importlib.import_module("evalution.benchmarks.fld")
 
     def fake_load_dataset(*args, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         return dataset
 
     monkeypatch.setattr(module, "load_dataset", fake_load_dataset)
@@ -56,11 +61,14 @@ def test_fld_scores_normalized_generation(monkeypatch):
 
 
 def test_fld_requires_exact_label_after_whitespace_normalization(monkeypatch):
+    """Verify fld requires exact label after whitespace normalization. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list([_row(world_assump_label="PROVED")])
     module = importlib.import_module("evalution.benchmarks.fld")
 
     class Session:
+        """Define the session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size):
+            """Generate generate."""
             return [
                 GenerationOutput(prompt=requests[0].prompt or "", text="The verdict is proved")
             ]

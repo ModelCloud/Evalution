@@ -14,10 +14,12 @@ from datasets import load_dataset
 from evalution.benchmarks.logiqa import _logiqa_prompt
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _LOGIQA2_CHOICE_LABELS = ["A", "B", "C", "D"]
 
 
 def _parse_logiqa2_row(doc: dict[str, Any]) -> dict[str, Any]:
+    """Parse logiqa2 row."""
     payload = doc.get("text")
     if not isinstance(payload, str):
         raise TypeError("LogiQA2 rows must expose a JSON-encoded 'text' field")
@@ -29,18 +31,23 @@ def _parse_logiqa2_row(doc: dict[str, Any]) -> dict[str, Any]:
 
 @dataclass(slots=True)
 class LogiQA2(BaseMultipleChoiceSuite):
+    """Implement the logi qa2 benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "datatune/LogiQA2.0"
     dataset_name: str | None = None
     split: str = "test"
     stream: bool = (False)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "logiqa2"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         parsed = _parse_logiqa2_row(doc)
         options = [str(option).strip() for option in parsed["options"]]
         question_type = parsed.get("type", {})
@@ -67,4 +74,5 @@ class LogiQA2(BaseMultipleChoiceSuite):
 
 
 def logiqa2(**kwargs: Any) -> LogiQA2:
+    """Implement logiqa2 for this module."""
     return LogiQA2(**kwargs)

@@ -13,6 +13,7 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 crows_pairs_module = importlib.import_module("evalution.benchmarks.crows_pairs")
 
 _ENGLISH_ROWS = [
@@ -48,7 +49,9 @@ _LOGPROBS = {
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         del batch_size
         return [
             LoglikelihoodOutput(
@@ -61,10 +64,12 @@ class FakeSession:
 
 
 def test_crows_pairs_scores_full_and_filtered_variants(monkeypatch) -> None:
+    """Verify crows pairs scores full and filtered variants. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     english_dataset = Dataset.from_list(_ENGLISH_ROWS)
     french_dataset = Dataset.from_list(_FRENCH_ROWS)
 
     def fake_load_dataset(dataset_path, dataset_name, *, split, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         assert dataset_path == "jannalu/crows_pairs_multilingual"
         assert split == "test"
         if dataset_name == "english":
@@ -158,6 +163,7 @@ def test_crows_pairs_scores_full_and_filtered_variants(monkeypatch) -> None:
 
 
 def test_crows_pairs_rejects_unknown_configuration() -> None:
+    """Verify crows pairs rejects unknown configuration."""
     with pytest.raises(ValueError, match="unsupported crows_pairs language"):
         evalution.benchmarks.crows_pairs(language="german")
 

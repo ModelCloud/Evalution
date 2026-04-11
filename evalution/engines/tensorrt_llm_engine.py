@@ -61,10 +61,12 @@ class TensorRTLLM(SharedEngineConfig):
     llm_kwargs: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseInferenceSession:
+        """Build build."""
         self.resolved_engine = "TensorRTLLM"
         return TensorRTLLMSession.from_config(self, model)
 
     def to_dict(self) -> dict[str, Any]:
+        """Implement to dict for tensor rtllm."""
         return asdict(self)
 
 
@@ -140,6 +142,7 @@ class TensorRTLLMSession(BaseInferenceSession):
 
     @property
     def batch_size(self) -> int | str:
+        """Implement batch size for tensor rtllmsession."""
         return self.config.batch_size
 
     def describe_execution(self) -> dict[str, Any]:
@@ -230,6 +233,7 @@ class TensorRTLLMSession(BaseInferenceSession):
         """Yield completions in runtime finish order while preserving caller request ids."""
 
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
+            """Implement iterator for tensor rtllmsession."""
             request_iter = iter(requests)
             preview_items: list[tuple[Any, GenerationRequest]] = []
             for _ in range(64):
@@ -308,6 +312,7 @@ class TensorRTLLMSession(BaseInferenceSession):
         source_exhausted = False
 
         def submit_one() -> bool:
+            """Implement submit one for tensor rtllmsession."""
             nonlocal source_exhausted
             if source_exhausted:
                 return False
@@ -824,6 +829,7 @@ def _import_tensorrt_llm(tensorrt_llm_path: str | None) -> Any:
             """Fallback placeholder for TensorRT-LLM imports on text-only workloads."""
 
             def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+                """Implement new for missing auto model for vision2 seq."""
                 raise RuntimeError(
                     "transformers.AutoModelForVision2Seq is unavailable in this environment"
                 )

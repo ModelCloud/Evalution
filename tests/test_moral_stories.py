@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 moral_stories_module = importlib.import_module("evalution.benchmarks.moral_stories")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 2
         assert len(requests) == 2
         assert requests[0].context == (
@@ -31,6 +34,7 @@ class FakeSession:
 
 
 def test_moral_stories_scores_multiple_choice_loglikelihood(monkeypatch) -> None:
+    """Verify moral stories scores multiple choice loglikelihood. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {

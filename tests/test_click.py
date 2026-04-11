@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 click_module = importlib.import_module("evalution.benchmarks.click")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 4
         assert requests[0].context == (
@@ -36,6 +39,7 @@ class FakeSession:
 
 
 def test_click_lang_text_filters_and_scores_label_choices(monkeypatch) -> None:
+    """Verify click lang text filters and scores label choices. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -74,6 +78,7 @@ def test_click_lang_text_filters_and_scores_label_choices(monkeypatch) -> None:
 
 
 def test_click_build_sample_supports_five_choice_csat_items() -> None:
+    """Verify click build sample supports five choice csat items."""
     suite = evalution.benchmarks.click_lang_text()
     sample = suite.build_sample(
         {
@@ -93,6 +98,7 @@ def test_click_build_sample_supports_five_choice_csat_items() -> None:
 
 
 def test_click_prompt_matches_upstream_shape() -> None:
+    """Verify click prompt matches upstream shape."""
     assert click_module._click_prompt(
         {
             "paragraph": "배경",

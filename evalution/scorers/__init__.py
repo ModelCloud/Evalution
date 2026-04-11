@@ -50,6 +50,7 @@ from .longbench import (
 )
 from .summary_rouge import summary_rouge_scores
 
+# Keep scorer defaults and parser helpers explicit at module scope.
 __all__ = [
     "ChoiceScore",
     "ExamScoreOutcome",

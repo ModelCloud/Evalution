@@ -39,6 +39,7 @@ def _load_esbbq_dataset(
     cache_dir: str | None = None,
     stream: bool = True,
 ) -> Any:
+    """Load esbbq dataset."""
     return load_dataset(
         dataset_path,
         dataset_name,
@@ -53,12 +54,14 @@ def _load_esbbq_dataset(
 class EsBBQ(BaseMultipleChoiceSuite):
     """EsBBQ suite backed by a frozen category registry to keep imports offline-safe."""
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "BSC-LT/EsBBQ"
     dataset_name: str | None = "Age"
     split: str = "test"
     category: str = "Age"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.category not in ESBBQ_CATEGORIES:
             raise ValueError(f"unsupported esbbq category: {self.category!r}")
         if self.dataset_name in {None, self.category}:
@@ -67,12 +70,15 @@ class EsBBQ(BaseMultipleChoiceSuite):
         raise ValueError("esbbq dataset_name must match the configured category")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_esbbq_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _CATEGORY_TO_TASK[self.category]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(doc["ans0"]).strip(), str(doc["ans1"]).strip(), str(doc["ans2"]).strip()]
         gold_index = int(doc["label"])
         return MultipleChoiceSample(
@@ -92,11 +98,14 @@ class EsBBQ(BaseMultipleChoiceSuite):
 
 
 def esbbq(*, category: str, **kwargs: Any) -> EsBBQ:
+    """Implement esbbq for this module."""
     return EsBBQ(category=category, dataset_name=category, **kwargs)
 
 
 def _make_esbbq_factory(category: str) -> Any:
+    """Make esbbq factory."""
     def factory(**kwargs: Any) -> EsBBQ:
+        """Implement factory for this module."""
         return esbbq(category=category, **kwargs)
 
     factory.__name__ = _CATEGORY_TO_TASK[category]

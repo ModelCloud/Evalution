@@ -5,12 +5,15 @@
 
 from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, run_suite_spec
 
+# Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
 
 
 def test_llama3_2_transformers_mmlu_pro_full_model_eval(capsys):
+    """Verify llama3 2 transformers MMLU pro full model eval."""
     run_suite_spec(capsys, "mmlu_pro_all")
 
 
 def test_llama3_2_transformers_mmlu_pro_stem_full_model_eval(capsys):
+    """Verify llama3 2 transformers MMLU pro stem full model eval."""
     run_suite_spec(capsys, "mmlu_pro_stem")

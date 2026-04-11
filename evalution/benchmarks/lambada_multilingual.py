@@ -17,6 +17,7 @@ LAMBADA_OPENAI_MT_TASKS = tuple(
 
 
 def lambada_openai_mt(language: str, **kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt for this module."""
     if language not in LAMBADA_OPENAI_MT_LANGUAGES:
         raise ValueError(f"unsupported lambada_openai_mt language: {language!r}")
     return LAMBADA(
@@ -27,20 +28,25 @@ def lambada_openai_mt(language: str, **kwargs: Any) -> LAMBADA:
 
 
 def lambada_openai_mt_de(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt de for this module."""
     return lambada_openai_mt("de", **kwargs)
 
 
 def lambada_openai_mt_en(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt en for this module."""
     return lambada_openai_mt("en", **kwargs)
 
 
 def lambada_openai_mt_es(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt es for this module."""
     return lambada_openai_mt("es", **kwargs)
 
 
 def lambada_openai_mt_fr(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt fr for this module."""
     return lambada_openai_mt("fr", **kwargs)
 
 
 def lambada_openai_mt_it(**kwargs: Any) -> LAMBADA:
+    """Implement lambada openai mt it for this module."""
     return lambada_openai_mt("it", **kwargs)

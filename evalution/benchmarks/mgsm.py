@@ -39,6 +39,7 @@ def _load_mgsm_dataset(
     stream: bool = False,
 ) -> Any:
     # Resolve the language-specific MGSM TSV and adapt it to the datasets CSV reader.
+    """Load mgsm dataset."""
     if dataset_path != "juletxara/mgsm":
         raise ValueError(f"unsupported MGSM dataset path: {dataset_path!r}")
     if dataset_name not in MGSM_LANGUAGES:
@@ -64,11 +65,13 @@ def _load_mgsm_dataset(
 
 def _mgsm_prompt(doc: dict[str, Any]) -> str:
     # Match the direct-answer MGSM prompt shape used by the lm-eval task configuration.
+    """Implement mgsm prompt for this module."""
     return f"Question: {str(doc['question']).strip()}\nAnswer:"
 
 
 def _mgsm_target(doc: dict[str, Any]) -> str:
     # Normalize numeric answers to the compact string form used by the GSM-style scorer.
+    """Implement mgsm target for this module."""
     value = doc["answer_number"]
     if isinstance(value, int):
         return str(value)
@@ -77,6 +80,7 @@ def _mgsm_target(doc: dict[str, Any]) -> str:
     return str(value).strip()
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _DIRECT_VARIANTS = {
     # Keep MGSM aligned with the zero-shot direct-answer variant rather than the CoT GSM8K defaults.
     "base": VariantSpec(
@@ -93,6 +97,7 @@ _DIRECT_VARIANTS = {
 @dataclass(slots=True)
 class MGSM(BaseGSM8KSuite):
     # Keep MGSM aligned with the direct numeric-extraction task that ships in the lm-eval package.
+    """Define the mgsm helper class."""
     VARIANTS = _DIRECT_VARIANTS
     SCORING_MODE = "numeric_format_insensitive"
     dataset_path: str = "juletxara/mgsm"
@@ -103,6 +108,7 @@ class MGSM(BaseGSM8KSuite):
 
     def __post_init__(self) -> None:
         # Restrict MGSM to the published direct-answer language set and one matching dataset name.
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in MGSM_LANGUAGES:
             raise ValueError(f"unsupported MGSM language: {self.language!r}")
         if self.dataset_name in {None, self.language}:
@@ -114,14 +120,17 @@ class MGSM(BaseGSM8KSuite):
 
     def dataset_loader(self) -> Any:
         # Route MGSM through the language-specific TSV loader above.
+        """Return the dataset loader bound to this suite."""
         return _load_mgsm_dataset
 
     def task_name(self) -> str:
         # Expose one stable task name per direct MGSM language factory.
+        """Return the exported task name for this suite."""
         return f"mgsm_direct_{self.language}"
 
     def numeric_target_from_doc(self, doc: dict[str, Any]) -> str:
         # Reuse the shared numeric normalization helper for benchmark targets.
+        """Implement numeric target from doc for mgsm."""
         return _mgsm_target(doc)
 
     def result_metadata(
@@ -130,12 +139,14 @@ class MGSM(BaseGSM8KSuite):
         generation_submission_mode: str,
     ) -> dict[str, Any]:
         # Add the resolved MGSM language to the shared GSM-style result metadata.
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata(generation_submission_mode=generation_submission_mode)
         metadata["language"] = self.language
         return metadata
 
     def _sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
         # Preserve the source question and normalized numeric answer for debugging.
+        """Implement sample metadata for mgsm."""
         return {
             "language": self.language,
             "question": str(doc["question"]).strip(),
@@ -145,13 +156,16 @@ class MGSM(BaseGSM8KSuite):
 
 def mgsm(*, language: str, **kwargs: Any) -> MGSM:
     # Build the generic MGSM suite while pinning the requested language as the dataset name.
+    """Implement mgsm for this module."""
     kwargs.setdefault("dataset_name", language)
     return MGSM(language=language, **kwargs)
 
 
 def _make_mgsm_factory(language: str) -> Any:
     # Emit one import-stable zero-argument factory per MGSM language.
+    """Make mgsm factory."""
     def factory(**kwargs: Any) -> MGSM:
+        """Implement factory for this module."""
         return mgsm(language=language, **kwargs)
 
     factory.__name__ = f"mgsm_direct_{language}"

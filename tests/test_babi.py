@@ -12,15 +12,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 babi_module = importlib.import_module("evalution.benchmarks.babi")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, responses: list[str]) -> None:
+        """Initialize this object."""
         self.responses = responses
         self.requests = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 1
         self.requests.extend(requests)
         return [
@@ -32,10 +36,12 @@ class FakeSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_babi_scores_generated_exact_match(monkeypatch) -> None:
+    """Verify babi scores generated exact match. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -82,6 +88,7 @@ def test_babi_scores_generated_exact_match(monkeypatch) -> None:
 
 
 def test_babi_marks_mismatched_generation_incorrect(monkeypatch) -> None:
+    """Verify babi marks mismatched generation incorrect."""
     dataset = Dataset.from_list(
         [
             {

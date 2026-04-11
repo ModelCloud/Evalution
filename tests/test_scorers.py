@@ -22,6 +22,7 @@ from evalution.scorers.multiple_choice import (
 
 
 def test_multiple_choice_outcome_tracks_raw_and_normalized_winners() -> None:
+    """Verify multiple choice outcome tracks raw and normalized winners."""
     choice_scores = build_choice_scores(
         [
             (0, -1.0, 1),
@@ -39,6 +40,7 @@ def test_multiple_choice_outcome_tracks_raw_and_normalized_winners() -> None:
 
 
 def test_exam_score_outcome_awards_partial_credit_on_tie() -> None:
+    """Verify exam score outcome awards partial credit on tie. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     choice_scores = build_choice_scores(
         [
             (0, -0.5, 1),
@@ -54,11 +56,13 @@ def test_exam_score_outcome_awards_partial_credit_on_tie() -> None:
 
 
 def test_choice_label_exact_match_is_strict() -> None:
+    """Verify choice label exact match is strict. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     assert choice_label_exact_match("B", "B") == 1.0
     assert choice_label_exact_match("b", "B") == 0.0
 
 
 def test_label_permutation_fraction_uses_balanced_minimum() -> None:
+    """Verify label permutation fraction uses balanced minimum."""
     assert format_label_permutation_fraction(0.25) == "0.25"
     assert format_label_permutation_fraction(1.0) == "1.0"
     assert label_permutation_metric_name(0.25) == "acc,label_perm:0.25"
@@ -71,6 +75,7 @@ def test_label_permutation_fraction_uses_balanced_minimum() -> None:
 
 
 def test_math_exact_match_handles_boxed_and_fraction_normalization() -> None:
+    """Verify math exact match handles boxed and fraction normalization. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     assert extract_math_answer("Reasoning... \\boxed{033}") == "033"
     assert normalize_math_string("0.5") == "\\frac{1}{2}"
     assert math_exact_match("Reasoning... \\boxed{033}", "33") == 0.0
@@ -78,8 +83,10 @@ def test_math_exact_match_handles_boxed_and_fraction_normalization() -> None:
 
 
 def test_math_exact_match_extracts_simple_dollar_delimited_answer() -> None:
+    """Verify math exact match extracts simple dollar delimited answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     assert extract_math_answer("Final answer is $42$") == "42"
 
 
 def test_math_normalizer_strips_text_units_without_asserting() -> None:
+    """Verify math normalizer strips text units without asserting."""
     assert normalize_math_string("12\\text{ cm}\\text{ squared}") == "12"

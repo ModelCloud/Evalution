@@ -15,6 +15,7 @@ def f1_for_label(
     label: int,
 ) -> float:
     # Compute the one-vs-rest F1 score for a single label so binary and multiclass suites can share the same math.
+    """Implement F1 for label for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     true_positive = 0
     false_positive = 0
     false_negative = 0
@@ -41,6 +42,7 @@ def macro_f1(
     labels: list[int],
 ) -> float:
     # Average the per-label F1 scores so tasks like CB can report the same macro-style metric as upstream.
+    """Implement macro F1 for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if not labels:
         return 0.0
     total = 0.0
@@ -56,6 +58,7 @@ def matthews_corrcoef(
     positive_label: int = 1,
 ) -> float:
     # Compute binary Matthews correlation so GLUE tasks like CoLA can report the benchmark's primary metric.
+    """Implement matthews corrcoef for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     true_positive = 0
     true_negative = 0
     false_positive = 0

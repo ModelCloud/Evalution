@@ -12,15 +12,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challenge")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[LoglikelihoodOutput]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
         self.requests = []
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 7
         assert len(requests) == 4
         self.requests.extend(requests)
@@ -28,6 +32,7 @@ class FakeSession:
 
 
 def _dataset() -> Dataset:
+    """Support the surrounding tests with dataset."""
     return Dataset.from_list(
         [
             {
@@ -52,6 +57,7 @@ def _dataset() -> Dataset:
 
 
 def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
+    """Verify ARC challenge scores original style exam score. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     monkeypatch.setattr(
         arc_challenge_module,
         "load_dataset",
@@ -103,6 +109,7 @@ def test_arc_challenge_scores_original_style_exam_score(monkeypatch) -> None:
 
 
 def test_arc_challenge_awards_partial_credit_for_tied_top_choices(monkeypatch) -> None:
+    """Verify ARC challenge awards partial credit for tied top choices."""
     monkeypatch.setattr(
         arc_challenge_module,
         "load_dataset",
@@ -130,9 +137,11 @@ def test_arc_challenge_awards_partial_credit_for_tied_top_choices(monkeypatch) -
 
 
 def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> None:
+    """Verify ARC challenge passes streaming flag to load dataset."""
     calls: list[dict[str, object]] = []
 
     def fake_load_dataset(*args, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del args
         if "stream" in kwargs:
             raise TypeError("unexpected keyword argument 'stream'")
@@ -162,6 +171,7 @@ def test_arc_challenge_passes_streaming_flag_to_load_dataset(monkeypatch) -> Non
 
 
 def test_arc_challenge_can_emit_label_permutation_metric(monkeypatch) -> None:
+    """Verify ARC challenge can emit label permutation metric. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     monkeypatch.setattr(
         arc_challenge_module,
         "load_dataset",
@@ -169,10 +179,13 @@ def test_arc_challenge_can_emit_label_permutation_metric(monkeypatch) -> None:
     )
 
     class LabelPermutationSession:
+        """Define the label permutation session helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.calls = 0
 
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for label permutation session."""
             assert batch_size == 7
             self.calls += 1
             if self.calls == 1:

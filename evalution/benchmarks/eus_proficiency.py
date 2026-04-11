@@ -17,6 +17,7 @@ _EUS_PROFICIENCY_LABELS = ("A", "B", "C", "D")
 
 
 def _eus_proficiency_prompt(doc: dict[str, Any]) -> str:
+    """Implement eus proficiency prompt for this module."""
     candidates = [str(candidate).strip() for candidate in doc["candidates"]]
     if len(candidates) != len(_EUS_PROFICIENCY_LABELS):
         raise ValueError("eus_proficiency requires exactly four candidates")
@@ -33,17 +34,21 @@ def _eus_proficiency_prompt(doc: dict[str, Any]) -> str:
 @dataclass(slots=True)
 class EusProficiency(BaseMultipleChoiceSuite):
     # The public test split is the benchmarked evaluation set in lm-eval.
+    """Implement the eus proficiency benchmark suite."""
     dataset_path: str = "HiTZ/EusProficiency"
     dataset_name: str | None = "default"
     split: str = "test"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "eus_proficiency"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         gold_index = int(doc["answer"])
         if gold_index < 0 or gold_index >= len(_EUS_PROFICIENCY_LABELS):
             raise ValueError("eus_proficiency answer index is out of range")
@@ -62,4 +67,5 @@ class EusProficiency(BaseMultipleChoiceSuite):
 
 
 def eus_proficiency(**kwargs: Any) -> EusProficiency:
+    """Implement eus proficiency for this module."""
     return EusProficiency(**kwargs)

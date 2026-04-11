@@ -13,12 +13,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 cola_module = importlib.import_module("evalution.benchmarks.cola")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 6
         assert requests[0].context == (
@@ -39,6 +42,7 @@ class FakeSession:
 
 
 def test_cola_scores_accuracy_and_mcc(monkeypatch) -> None:
+    """Verify cola scores accuracy and MCC. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -87,6 +91,7 @@ def test_cola_scores_accuracy_and_mcc(monkeypatch) -> None:
 
 
 def test_cola_prompt_helper_formats_acceptability_question() -> None:
+    """Verify cola prompt helper formats acceptability question."""
     assert (
         cola_module._cola_prompt("Colorless green ideas sleep furiously.")
         == "Colorless green ideas sleep furiously.\nQuestion: Does this sentence make sense?\nAnswer:"
