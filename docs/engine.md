@@ -163,7 +163,9 @@ the scoring APIs that Evalution benchmarks require. Evalution also ships
 `engines.Transformers()`, in a queued microbatching HTTP server for local testing. The OpenAI
 engine defaults to `batch_size=4`, treating that as the client-side in-flight queue depth: it
 submits up to four requests at once and injects the next queued request whenever one result comes
-back. Set `batch_size=0` to disable this emulated batching and fall back to single requests.
+back. For this engine, Evalution's required `.model(path=...)` call is translated into the remote
+OpenAI-compatible HTTP `model` argument. Set `batch_size=0` to disable this emulated batching and
+fall back to single requests.
 
 `engines.OpenVINO()` loads decoder-only models through `optimum.intel.openvino.OVModelForCausalLM`
 while reusing Evalution's shared transformer-style generation, log-likelihood, and rolling
