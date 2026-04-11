@@ -4537,7 +4537,7 @@ SUITE_SPECS = {
     "afrimgsm_fra": _afrimgsm_suite_spec(
         "afrimgsm_fra",
         language="fra",
-        baseline=0.0703125,
+        baseline=0.0859375,
     ),
     "afrimgsm_swa": _afrimgsm_suite_spec(
         "afrimgsm_swa",
