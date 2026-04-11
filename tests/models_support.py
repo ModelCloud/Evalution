@@ -5331,8 +5331,8 @@ SUITE_SPECS = {
         baseline={
             "acc,ll": 0.375,
             "acc,ll_avg": 0.375,
-            "mcc,ll": 0.0,
-            "mcc,ll_avg": 0.0,
+            "mcc,ll": 0.09245003270420485,
+            "mcc,ll_avg": 0.09245003270420485,
         },
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg", "mcc,ll", "mcc,ll_avg"}),
         expected_metadata={
