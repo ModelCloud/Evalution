@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Evalution"
-version = "0.0.2"
+version = "0.0.3"
 description = "Modern LLM model evaluation for Transformers, SGLang, vLLM, TensorRT-LLM, GPTQModel, and OpenVINO."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,6 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
 
 [project.scripts]
