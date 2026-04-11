@@ -33,6 +33,8 @@ _GSM8K_PLATINUM_SUITE_KWARGS = {
 }
 # Re-run the child Python scripts from the repository root so imports stay consistent.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+# Force deterministic engine initialization inside the subprocess probes.
+_ENGINE_SEED = 0
 # Allow small score drift while still catching engine-level regressions.
 _DUAL_ENGINE_SCORE_ABS_TOLERANCE = 3 / 128
 _RESULT_JSON_RE = pcre.compile(r"RESULT_JSON_START\n(.*?)\nRESULT_JSON_END", pcre.DOTALL)
@@ -50,6 +52,7 @@ def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
         model_path = {str(LLAMA3_2_1B_INSTRUCT)!r}
         device = {LLAMA3_2_TRANSFORMERS_DEVICE!r}
         engine_name = {engine_name!r}
+        seed = {_ENGINE_SEED!r}
         suite_kwargs = {dict(_GSM8K_PLATINUM_SUITE_KWARGS)!r}
 
         if engine_name == "transformers":
@@ -58,12 +61,14 @@ def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
                 attn_implementation="paged|flash_attention_2",
                 device=device,
                 batch_size="auto",
+                seed=seed,
             )
         elif engine_name == "compat":
             engine = evalution.TransformersCompat(
                 dtype="bfloat16",
                 device=device,
                 batch_size="auto",
+                seed=seed,
             )
         else:
             raise ValueError(engine_name)
@@ -127,11 +132,11 @@ def test_llama3_2_transformers_vs_transformers_compat_gsm8k_platinum_baselines()
 
     assert_metrics_match_baseline(
         transformers_result["metrics"],
-        {"acc,num": 0.390625},
+        {"acc,num": 0.4296875},
         abs_tolerance=_DUAL_ENGINE_SCORE_ABS_TOLERANCE,
     )
     assert_metrics_match_baseline(
         compat_result["metrics"],
-        {"acc,num": 0.4375},
+        {"acc,num": 0.4453125},
         abs_tolerance=_DUAL_ENGINE_SCORE_ABS_TOLERANCE,
     )
