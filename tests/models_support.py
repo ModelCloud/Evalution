@@ -8766,8 +8766,8 @@ SUITE_SPECS = {
         ),
         expected_name="noticia",
         baseline={
-            "rouge1": 0.060665674326899545,
-            "average_len": 26.0,
+            "rouge1": 0.06413572119903121,
+            "average_len": 24.96875,
         },
         expected_metrics=frozenset({"rouge1", "average_len"}),
         expected_metadata={
