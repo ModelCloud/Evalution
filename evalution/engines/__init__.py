@@ -14,6 +14,7 @@ from .base import (
     SharedEngineConfig,
 )
 from .gptqmodel_engine import GPTQModel
+from .llama_cpp_engine import LlamaCpp
 from .openvino_engine import OpenVINO
 from .sglang_engine import SGLang
 from .tensorrt_llm_engine import TensorRTLLM
@@ -31,6 +32,7 @@ __all__ = [
     "BaseEngineTransformersRuntimeConfig",
     "BaseInferenceSession",
     "GPTQModel",
+    "LlamaCpp",
     "OpenVINO",
     "SGLang",
     "SharedEngineConfig",

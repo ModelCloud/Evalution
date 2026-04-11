@@ -19,6 +19,7 @@ from evalution.engines import (
     BaseEngineTokenizerModeConfig,
     BaseEngineTransformersRuntimeConfig,
     GPTQModel,
+    LlamaCpp,
     OpenVINO,
     SGLang,
     SharedEngineConfig,
@@ -1516,15 +1517,40 @@ tests:
     assert "eval(engines." not in script
 
 
+def test_python_from_yaml_emits_llama_cpp_name() -> None:
+    """Verify python_from_yaml emits the explicit LlamaCpp engine constructor name."""
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: LlamaCpp
+  device: cuda
+  n_ctx: 8192
+model:
+  path: /tmp/model.gguf
+tests:
+  - type: gsm8k_platinum
+    max_rows: 8
+"""
+    )
+
+    assert "engines.LlamaCpp(" in script
+    assert "device='cuda'" in script
+    assert "n_ctx=8192" in script
+    assert "eval(engines." not in script
+
+
 def test_non_yaml_engine_api_uses_shared_engine_config_inheritance() -> None:
     """Verify the public engine classes inherit common runtime controls from one shared base."""
 
     assert issubclass(Transformers, SharedEngineConfig)
     assert issubclass(TransformersCompat, SharedEngineConfig)
     assert issubclass(GPTQModel, SharedEngineConfig)
+    assert issubclass(LlamaCpp, SharedEngineConfig)
     assert issubclass(OpenVINO, SharedEngineConfig)
     assert issubclass(VLLM, SharedEngineConfig)
     assert issubclass(SGLang, SharedEngineConfig)
+    assert issubclass(LlamaCpp, BaseEngineDeviceConfig)
     assert issubclass(OpenVINO, BaseEngineDeviceConfig)
     assert issubclass(TensorRTLLM, SharedEngineConfig)
     assert issubclass(TransformersCompat, BaseEngineTransformersRuntimeConfig)
@@ -1573,6 +1599,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     transformers_compat_keys = evalution_yaml._engine_option_keys("transformerscompat")
     vllm_keys = evalution_yaml._engine_option_keys("vllm")
     sglang_keys = evalution_yaml._engine_option_keys("sglang")
+    llama_cpp_keys = evalution_yaml._engine_option_keys("llamacpp")
     openvino_keys = evalution_yaml._engine_option_keys("openvino")
     tensorrt_llm_keys = evalution_yaml._engine_option_keys("tensorrtllm")
 
@@ -1609,6 +1636,15 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "sampling_params" in sglang_keys
     assert "attn_implementation" not in sglang_keys
 
+    assert "dtype" in llama_cpp_keys
+    assert "batch_size" in llama_cpp_keys
+    assert "device" in llama_cpp_keys
+    assert "n_ctx" in llama_cpp_keys
+    assert "n_gpu_layers" in llama_cpp_keys
+    assert "llama_cpp_path" in llama_cpp_keys
+    assert "tokenizer_mode" not in llama_cpp_keys
+    assert "attn_implementation" not in llama_cpp_keys
+
     assert "dtype" in openvino_keys
     assert "batch_size" in openvino_keys
     assert "device" in openvino_keys
@@ -1638,6 +1674,22 @@ def test_build_engine_constructs_openvino() -> None:
     assert isinstance(engine, OpenVINO)
     assert engine.device == "GPU"
     assert engine.compile is False
+
+
+def test_build_engine_constructs_llama_cpp() -> None:
+    """Verify YAML engine construction resolves the registered LlamaCpp engine."""
+
+    engine = evalution_yaml._build_engine(
+        {
+            "type": "LlamaCpp",
+            "device": "cuda",
+            "n_ctx": 8192,
+        }
+    )
+
+    assert isinstance(engine, LlamaCpp)
+    assert engine.device == "cuda"
+    assert engine.n_ctx == 8192
 
 
 def test_build_engine_constructs_sglang() -> None:
