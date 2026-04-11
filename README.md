@@ -432,6 +432,44 @@ tests:
   - type: gsm8k_platinum
 ```
 
+### OpenAICompatible 🌐
+
+Use `engines.OpenAICompatible()` in Python or `engine.type: OpenAICompatible` in YAML when you
+want to evaluate through an OpenAI-compatible HTTP endpoint. Evalution expects generation routes
+such as `/v1/chat/completions` or `/v1/completions`, plus the Evalution scoring routes
+`/v1/eval/loglikelihood` and `/v1/eval/loglikelihood/rolling`.
+
+Python:
+
+```python
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.OpenAICompatible(
+        base_url="http://127.0.0.1:8000",
+        batch_size=4,
+    )
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: OpenAICompatible
+  base_url: http://127.0.0.1:8000
+  batch_size: 4
+
+model:
+  path: meta-llama/Llama-3.2-1B-Instruct
+
+tests:
+  - type: gsm8k_platinum
+```
+
 ### GPTQModel 🪶
 
 Use `engines.GPTQModel()` in Python or `engine.type: GPTQModel` in YAML when you want to load a
