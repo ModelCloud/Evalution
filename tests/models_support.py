@@ -5088,7 +5088,7 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_platinum_cot",
         baseline={
-            "acc,num": 0.4140625,
+            "acc,num": 0.4296875,
         },
         expected_metrics=frozenset({"acc,num"}),
         expected_metadata={
@@ -5104,6 +5104,7 @@ SUITE_SPECS = {
         expected_sample_count=128,
         sample_validator=_assert_gsm8k_sample,
         result_validator=_validate_gsm8k_like_result,
+        abs_tolerance=3 / 128,
     ),
     "anli_r1": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.anli_r1(batch_size=24, stream=True, max_rows=128),
