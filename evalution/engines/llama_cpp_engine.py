@@ -10,7 +10,7 @@ import importlib
 import sys
 import threading
 from collections.abc import Iterable, Iterator
-from contextlib import suppress
+from contextlib import closing, suppress
 from dataclasses import asdict, dataclass, field
 from itertools import chain, islice
 from pathlib import Path
@@ -55,6 +55,7 @@ class LlamaCpp(BaseEngineDeviceConfig, SharedEngineConfig):
     """Configure Evalution to run generation and scoring through llama.cpp."""
 
     # Mirror the llama-cpp-python constructor knobs we want to expose directly through Evalution.
+    continuous_batching: bool = True
     n_gpu_layers: int | None = None
     main_gpu: int = 0
     split_mode: int = 1
@@ -142,6 +143,11 @@ class LlamaCppSession(BaseInferenceSession):
             llm_kwargs.setdefault("seed", config.seed)
 
         llm = llama_module.Llama(**llm_kwargs)
+        _configure_llama_runtime_for_continuous_batching(
+            config=config,
+            llm=llm,
+            llama_module=llama_module,
+        )
         prepare_tokenizer = _maybe_load_prepare_tokenizer(
             model_config=model_config,
             trust_remote_code=(
@@ -173,8 +179,14 @@ class LlamaCppSession(BaseInferenceSession):
         """Expose stable llama.cpp runtime metadata in result payloads and logs."""
 
         return {
-            "generation_backend": "llama_cpp_completion",
-            "continuous_batching": "queue_emulated",
+            "generation_backend": (
+                "continuous_batching"
+                if self.config.continuous_batching
+                else "llama_cpp_completion"
+            ),
+            "continuous_batching": self.config.continuous_batching,
+            "kv_unified": bool(getattr(getattr(self.llm, "context_params", None), "kv_unified", False)),
+            "n_seq_max": self._native_sequence_capacity(),
             "requested_device": self.requested_device,
             "device": self.effective_device,
             "gpu_offload_supported": self.gpu_offload_supported,
@@ -203,6 +215,16 @@ class LlamaCppSession(BaseInferenceSession):
             return []
 
         effective_batch_size = batch_size or self.resolve_batch_size(requests)
+        if self.config.continuous_batching and len(requests) > 1:
+            indexed_outputs: dict[int, GenerationOutput] = {}
+            with self._generation_lock:
+                self._run_native_continuous_generation(
+                    ((index, request) for index, request in enumerate(requests)),
+                    max_concurrency=effective_batch_size,
+                    put_result=indexed_outputs.__setitem__,
+                )
+            return [indexed_outputs[index] for index in range(len(requests))]
+
         outputs: list[GenerationOutput] = []
         with self._generation_lock:
             for start in range(0, len(requests), effective_batch_size):
@@ -216,7 +238,70 @@ class LlamaCppSession(BaseInferenceSession):
         *,
         batch_size: int | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
-        """Emulate continuous generation with explicit request and result queues."""
+        """Generate with either native llama.cpp continuous batching or fixed-size fallback batches."""
+
+        if not self.config.continuous_batching:
+            return self._generate_continuous_fixed_batches(requests, batch_size=batch_size)
+
+        return self._generate_continuous_native(requests, batch_size=batch_size)
+
+    def _generate_continuous_native(
+        self,
+        requests: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        batch_size: int | None = None,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Drive llama.cpp's native multi-sequence decode loop behind Evalution's iterator contract."""
+
+        def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
+            request_iter = iter(requests)
+            if batch_size is not None:
+                effective_batch_size = batch_size
+                first_item = next(request_iter, None)
+                if first_item is None:
+                    return
+                items = chain((first_item,), request_iter)
+            else:
+                preview_items = list(islice(request_iter, 64))
+                if not preview_items:
+                    return
+                effective_batch_size = self.resolve_batch_size(
+                    [request for _, request in preview_items]
+                )
+                items = chain(preview_items, request_iter)
+
+            def consume_requests(
+                stop_event: threading.Event,
+                request_queue: Any,
+                put_result: Any,
+            ) -> None:
+                """Schedule requests natively through llama.cpp's multi-sequence batch API."""
+
+                with self._generation_lock:
+                    self._run_native_continuous_generation(
+                        request_queue.iter_requests(stop_event=stop_event),
+                        max_concurrency=effective_batch_size,
+                        put_result=put_result,
+                    )
+
+            yield from stream_request_results(
+                items,
+                producer_name=f"{type(self).__name__}.request_producer",
+                consumer_name=f"{type(self).__name__}.request_consumer",
+                process_requests=consume_requests,
+                require_non_main_thread=self.request_executor_requires_non_main_thread,
+                request_queue_max_size=max(effective_batch_size * 2, 1),
+            )
+
+        return iterator()
+
+    def _generate_continuous_fixed_batches(
+        self,
+        requests: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        batch_size: int | None = None,
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Retain the old fixed-batch queue path when native continuous batching is disabled."""
 
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
             request_iter = iter(requests)
@@ -459,6 +544,302 @@ class LlamaCppSession(BaseInferenceSession):
         outputs = self.generate([request for _, request in batch], batch_size=len(batch))
         for (request_key, _request), output in zip(batch, outputs, strict=True):
             put_result(request_key, output)
+
+    def _run_native_continuous_generation(
+        self,
+        request_items: Iterable[tuple[Any, GenerationRequest]],
+        *,
+        max_concurrency: int,
+        put_result: Any,
+    ) -> None:
+        """Run native llama.cpp continuous batching with one sequence id per active request."""
+
+        if max_concurrency <= 0:
+            raise ValueError("continuous batching requires a positive concurrency")
+
+        ctx = getattr(self.llm, "_ctx", None)
+        batch = getattr(self.llm, "_batch", None)
+        internals = getattr(self.llama_module, "internals", None)
+        if ctx is None or batch is None or internals is None:
+            raise RuntimeError(
+                "native llama.cpp continuous batching requires llama-cpp-python low-level internals"
+            )
+
+        request_iter = iter(request_items)
+        max_context_tokens = self._max_input_tokens()
+        max_concurrency = min(max_concurrency, self._native_sequence_capacity())
+        if max_concurrency <= 0:
+            raise RuntimeError("native llama.cpp continuous batching requires n_seq_max >= 1")
+        ctx.kv_cache_clear()
+        batch.reset()
+        eos_token_id = self.llm.token_eos()
+        available_seq_ids = list(reversed(range(max_concurrency)))
+        active_states: dict[int, _LlamaCppContinuousBatchState] = {}
+        active_reserved_tokens = 0
+        pending_state: _LlamaCppContinuousBatchState | None = None
+        source_exhausted = False
+
+        while True:
+            while available_seq_ids and len(active_states) < max_concurrency and not source_exhausted:
+                if pending_state is None:
+                    request_item = next(request_iter, None)
+                    if request_item is None:
+                        source_exhausted = True
+                        break
+                    pending_state = self._prepare_native_generation_state(
+                        request_item=request_item,
+                        max_context_tokens=max_context_tokens,
+                        put_result=put_result,
+                    )
+                    if pending_state is None:
+                        continue
+                if active_states and active_reserved_tokens + pending_state.reserved_tokens > max_context_tokens:
+                    break
+                seq_id = available_seq_ids.pop()
+                active_states[seq_id] = pending_state
+                active_reserved_tokens += pending_state.reserved_tokens
+                pending_state = None
+
+            if not active_states:
+                break
+
+            batch.reset()
+            remaining_capacity = max(int(self.llm.n_batch), 1)
+            logits_batch_indices: list[tuple[int, int]] = []
+            for seq_id, state in active_states.items():
+                if remaining_capacity <= 0:
+                    break
+                if state.pending_decode_token is None:
+                    continue
+                last_batch_index = self._append_llama_batch_tokens(
+                    batch=batch,
+                    tokens=[state.pending_decode_token],
+                    start_pos=state.position,
+                    seq_id=seq_id,
+                    request_logits=True,
+                )
+                state.position += 1
+                state.pending_decode_token = None
+                remaining_capacity -= 1
+                logits_batch_indices.append((seq_id, last_batch_index))
+
+            prompt_seq_ids = [
+                seq_id
+                for seq_id, state in active_states.items()
+                if state.prompt_cursor < len(state.prompt_tokens)
+            ]
+            while remaining_capacity > 0 and prompt_seq_ids:
+                next_prompt_seq_ids: list[int] = []
+                for offset, seq_id in enumerate(prompt_seq_ids):
+                    if remaining_capacity <= 0:
+                        next_prompt_seq_ids.extend(prompt_seq_ids[offset:])
+                        break
+                    state = active_states[seq_id]
+                    active_prompt_count = len(prompt_seq_ids) - offset
+                    share = max(remaining_capacity // active_prompt_count, 1)
+                    take_count = min(
+                        len(state.prompt_tokens) - state.prompt_cursor,
+                        share,
+                    )
+                    chunk = state.prompt_tokens[state.prompt_cursor : state.prompt_cursor + take_count]
+                    last_batch_index = self._append_llama_batch_tokens(
+                        batch=batch,
+                        tokens=chunk,
+                        start_pos=state.position,
+                        seq_id=seq_id,
+                        request_logits=state.prompt_cursor + take_count == len(state.prompt_tokens),
+                    )
+                    state.prompt_cursor += take_count
+                    state.position += take_count
+                    remaining_capacity -= take_count
+                    if state.prompt_cursor == len(state.prompt_tokens):
+                        logits_batch_indices.append((seq_id, last_batch_index))
+                    else:
+                        next_prompt_seq_ids.append(seq_id)
+                prompt_seq_ids = next_prompt_seq_ids
+
+            if batch.n_tokens() == 0:
+                raise RuntimeError("native llama.cpp continuous batching could not schedule any tokens")
+
+            ctx.decode(batch)
+
+            completed_seq_ids: list[int] = []
+            for seq_id, batch_index in logits_batch_indices:
+                state = active_states[seq_id]
+                sampled_token = int(state.sampler.sample(ctx, idx=batch_index))
+                state.sampler.accept(sampled_token)
+                state.generated_token_ids.append(sampled_token)
+                reached_eos = sampled_token == eos_token_id
+                generated_text = state.generated_text
+                if not reached_eos:
+                    generated_text += self._detokenize_output_token(
+                        prev_tokens=state.detokenize_prev_tokens,
+                        token_id=sampled_token,
+                    )
+                truncated_text = _truncate_at_stop(generated_text, state.request.stop)
+                reached_stop = truncated_text != generated_text
+                reached_length = len(state.generated_token_ids) >= state.max_completion_tokens
+
+                if reached_stop or reached_eos or reached_length:
+                    put_result(
+                        state.request_key,
+                        GenerationOutput(
+                            prompt=state.prompt_text,
+                            text=truncated_text,
+                            metadata={
+                                **dict(state.request.metadata),
+                                "finish_reason": (
+                                    "stop"
+                                    if reached_stop or reached_eos
+                                    else "length"
+                                ),
+                                "usage": {
+                                    "prompt_tokens": len(state.prompt_tokens),
+                                    "completion_tokens": len(state.generated_token_ids),
+                                    "total_tokens": len(state.prompt_tokens) + len(state.generated_token_ids),
+                                },
+                            },
+                        ),
+                    )
+                    completed_seq_ids.append(seq_id)
+                    continue
+
+                state.generated_text = generated_text
+                state.detokenize_prev_tokens.append(sampled_token)
+                state.pending_decode_token = sampled_token
+
+            for seq_id in completed_seq_ids:
+                state = active_states.pop(seq_id)
+                active_reserved_tokens -= state.reserved_tokens
+                available_seq_ids.append(seq_id)
+                with suppress(Exception):
+                    state.sampler.close()
+                ctx.kv_cache_seq_rm(seq_id, 0, -1)
+
+        for state in active_states.values():
+            with suppress(Exception):
+                state.sampler.close()
+
+    def _build_native_sampler(self, *, do_sample: bool, temperature: float) -> Any:
+        """Create one sampler chain for a native continuous-batching sequence."""
+
+        return self.llm._init_sampler(temp=temperature if do_sample else 0.0)
+
+    def _prepare_native_generation_state(
+        self,
+        *,
+        request_item: tuple[Any, GenerationRequest],
+        max_context_tokens: int,
+        put_result: Any,
+    ) -> _LlamaCppContinuousBatchState | None:
+        """Prepare one request for native continuous batching while respecting the shared KV budget."""
+
+        request_key, request = request_item
+        if request.num_beams != 1:
+            raise ValueError("LlamaCpp currently requires num_beams=1")
+
+        prompt_text, prompt_tokens = self._prepare_generation_prompt(request)
+        if not prompt_tokens:
+            prompt_tokens = [self._prefix_token_id()]
+
+        max_completion_tokens, reserved_tokens = self._resolve_native_generation_budget(
+            prompt_tokens=prompt_tokens,
+            requested_max_new_tokens=request.max_new_tokens,
+            max_context_tokens=max_context_tokens,
+        )
+        if max_completion_tokens == 0:
+            put_result(
+                request_key,
+                GenerationOutput(
+                    prompt=prompt_text,
+                    text="",
+                    metadata={
+                        **dict(request.metadata),
+                        "finish_reason": "length",
+                        "usage": {
+                            "prompt_tokens": len(prompt_tokens),
+                            "completion_tokens": 0,
+                            "total_tokens": len(prompt_tokens),
+                        },
+                    },
+                ),
+            )
+            return None
+
+        return _LlamaCppContinuousBatchState(
+            request_key=request_key,
+            request=request,
+            prompt_text=prompt_text,
+            prompt_tokens=prompt_tokens,
+            sampler=self._build_native_sampler(
+                do_sample=request.do_sample,
+                temperature=request.temperature,
+            ),
+            max_completion_tokens=max_completion_tokens,
+            reserved_tokens=reserved_tokens,
+            detokenize_prev_tokens=list(prompt_tokens),
+        )
+
+    def _resolve_native_generation_budget(
+        self,
+        *,
+        prompt_tokens: list[int],
+        requested_max_new_tokens: int,
+        max_context_tokens: int,
+    ) -> tuple[int, int]:
+        """Clamp one request's generation budget so native continuous batching never overcommits KV space."""
+
+        if len(prompt_tokens) > max_context_tokens:
+            raise ValueError("generation prompt exceeds llama.cpp context window")
+        max_completion_tokens = max(max_context_tokens - len(prompt_tokens), 0)
+        max_completion_tokens = min(requested_max_new_tokens, max_completion_tokens)
+        return max_completion_tokens, len(prompt_tokens) + max_completion_tokens
+
+    def _native_sequence_capacity(self) -> int:
+        """Return the configured number of simultaneous sequence ids supported by the live context."""
+
+        context_params = getattr(self.llm, "context_params", None)
+        n_seq_max = getattr(context_params, "n_seq_max", None)
+        if isinstance(n_seq_max, int) and n_seq_max > 0:
+            return int(n_seq_max)
+        return max(int(self.config.n_batch), 1)
+
+    def _append_llama_batch_tokens(
+        self,
+        *,
+        batch: Any,
+        tokens: list[int],
+        start_pos: int,
+        seq_id: int,
+        request_logits: bool,
+    ) -> int:
+        """Append tokens to one llama_batch while preserving explicit sequence ids and positions."""
+
+        n_tokens0 = batch.batch.n_tokens
+        batch.batch.n_tokens += len(tokens)
+        for token_offset, token_id in enumerate(tokens):
+            batch_index = n_tokens0 + token_offset
+            batch.batch.token[batch_index] = token_id
+            batch.batch.pos[batch_index] = start_pos + token_offset
+            batch.batch.seq_id[batch_index][0] = seq_id
+            batch.batch.n_seq_id[batch_index] = 1
+            batch.batch.logits[batch_index] = False
+        if request_logits:
+            batch.batch.logits[n_tokens0 + len(tokens) - 1] = True
+        return n_tokens0 + len(tokens) - 1
+
+    def _detokenize_output_token(
+        self,
+        *,
+        prev_tokens: list[int],
+        token_id: int,
+    ) -> str:
+        """Decode one generated token into text while preserving llama.cpp's piece-boundary rules."""
+
+        return self.llm.detokenize([token_id], prev_tokens=prev_tokens).decode(
+            "utf-8",
+            errors="ignore",
+        )
 
     def _emit_scored_batch(
         self,
@@ -719,6 +1100,25 @@ class LlamaCppSession(BaseInferenceSession):
         )
 
 
+@dataclass(slots=True)
+class _LlamaCppContinuousBatchState:
+    """Track one active native llama.cpp generation lane inside the continuous scheduler."""
+
+    request_key: Any
+    request: GenerationRequest
+    prompt_text: str
+    prompt_tokens: list[int]
+    sampler: Any
+    max_completion_tokens: int
+    reserved_tokens: int
+    detokenize_prev_tokens: list[int] = field(default_factory=list)
+    prompt_cursor: int = 0
+    position: int = 0
+    pending_decode_token: int | None = None
+    generated_token_ids: list[int] = field(default_factory=list)
+    generated_text: str = ""
+
+
 def _import_llama_cpp(llama_cpp_path: str | None) -> Any:
     """Import llama-cpp-python and optionally fall back to a local checkout path."""
 
@@ -753,6 +1153,71 @@ def _llama_supports_gpu_offload(llama_module: Any) -> bool:
     with suppress(Exception):
         return bool(supports_gpu_offload())
     return False
+
+
+def _configure_llama_runtime_for_continuous_batching(
+    *,
+    config: LlamaCpp,
+    llm: Any,
+    llama_module: Any,
+) -> None:
+    """Reopen the low-level llama.cpp context with unified KV cache support for native multi-sequence decode."""
+
+    if not config.continuous_batching:
+        return
+
+    internals = getattr(llama_module, "_internals", None) or getattr(llama_module, "internals", None)
+    context_params = getattr(llm, "context_params", None)
+    model = getattr(llm, "_model", None)
+    stack = getattr(llm, "_stack", None)
+    old_ctx = getattr(llm, "_ctx", None)
+    old_batch = getattr(llm, "_batch", None)
+    if (
+        internals is None
+        or context_params is None
+        or model is None
+        or stack is None
+        or old_ctx is None
+        or old_batch is None
+    ):
+        return
+
+    # The native scheduler needs a reusable pool of request-lane ids, not one id per prompt token.
+    # Keeping this pool modest avoids heavy unified-KV contexts on current llama-cpp-python builds.
+    configured_batch_size = _normalize_batch_size(config.batch_size)
+    target_n_seq_max = 64 if configured_batch_size == _AUTO_BATCH_SIZE else max(int(configured_batch_size), 8)
+    target_n_seq_max = min(target_n_seq_max, 64)
+    if (
+        bool(getattr(context_params, "kv_unified", False))
+        and int(getattr(context_params, "n_seq_max", 1)) >= target_n_seq_max
+    ):
+        return
+
+    context_params.kv_unified = True
+    context_params.n_seq_max = target_n_seq_max
+    llm._ctx = stack.enter_context(
+        closing(
+            internals.LlamaContext(
+                model=model,
+                params=context_params,
+                verbose=config.verbose,
+            )
+        )
+    )
+    llm._batch = stack.enter_context(
+        closing(
+            internals.LlamaBatch(
+                n_tokens=int(getattr(llm, "n_batch", config.n_batch)),
+                embd=0,
+                n_seq_max=target_n_seq_max,
+                verbose=config.verbose,
+            )
+        )
+    )
+    with suppress(Exception):
+        old_ctx.close()
+    with suppress(Exception):
+        old_batch.close()
 
 
 def _resolve_effective_device(requested_device: str | None, gpu_offload_supported: bool) -> str:

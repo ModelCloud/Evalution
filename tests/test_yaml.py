@@ -1639,6 +1639,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "dtype" in llama_cpp_keys
     assert "batch_size" in llama_cpp_keys
     assert "device" in llama_cpp_keys
+    assert "continuous_batching" in llama_cpp_keys
     assert "n_ctx" in llama_cpp_keys
     assert "n_gpu_layers" in llama_cpp_keys
     assert "llama_cpp_path" in llama_cpp_keys

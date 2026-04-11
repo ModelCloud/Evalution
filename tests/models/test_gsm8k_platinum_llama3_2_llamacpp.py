@@ -20,8 +20,8 @@ pytestmark = LLAMA3_2_LLAMACPP_TEST_MARKS
 def test_llama3_2_llamacpp_gsm8k_platinum_full_model_eval(capsys):
     """Verify llama3 2 llama.cpp GSM8K Platinum full-model evaluation and baseline."""
 
-    # Keep the queue-emulated llama.cpp path on a practical slow-test budget while still pinning
-    # a real benchmark score against the shared Llama 3.2 GGUF fixture.
+    # Keep the native llama.cpp continuous-batching path on a practical slow-test budget while still
+    # pinning a real benchmark score against the shared Llama 3.2 GGUF fixture.
     suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=True,
@@ -44,4 +44,4 @@ def test_llama3_2_llamacpp_gsm8k_platinum_full_model_eval(capsys):
         {"acc,num": 0.34375},
         abs_tolerance=2 / 32,
     )
-    assert result.engine["execution"]["continuous_batching"] == "queue_emulated"
+    assert result.engine["execution"]["continuous_batching"] is True

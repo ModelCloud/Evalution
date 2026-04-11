@@ -167,6 +167,7 @@ def _build_session(
     *,
     prepare_tokenizer=None,
     device: str | None = None,
+    continuous_batching: bool = False,
 ) -> LlamaCppSession:
     """Construct one minimal llama.cpp session test double."""
 
@@ -175,7 +176,11 @@ def _build_session(
         Llama=SimpleNamespace(logits_to_logprobs=staticmethod(lambda logits: logits)),
     )
     return LlamaCppSession(
-        config=LlamaCpp(device=device, batch_size=2),
+        config=LlamaCpp(
+            device=device,
+            batch_size=2,
+            continuous_batching=continuous_batching,
+        ),
         model_config=Model(path="/tmp/model.gguf"),
         llm=fake_llm,
         llama_module=fake_module,
@@ -193,6 +198,7 @@ def test_llama_cpp_engine_defaults_batch_size_to_auto() -> None:
     engine = LlamaCpp()
 
     assert engine.batch_size == "auto"
+    assert engine.continuous_batching is True
     assert engine.n_ctx == 4096
     assert engine.logits_all is True
     assert engine.llama_cpp_path is None
@@ -262,6 +268,8 @@ def test_llama_cpp_build_enables_full_gpu_offload_when_available(monkeypatch) ->
     assert session.describe_execution()["requested_device"] == "cuda"
     assert session.describe_execution()["device"] == "cuda"
     assert session.describe_execution()["n_gpu_layers"] == -1
+    assert session.describe_execution()["continuous_batching"] is True
+    assert session.describe_execution()["generation_backend"] == "continuous_batching"
 
 
 def test_llama_cpp_build_falls_back_to_cpu_without_gpu_offload(monkeypatch) -> None:
@@ -303,6 +311,49 @@ def test_llama_cpp_build_accepts_mlx_device_when_gpu_offload_is_available(monkey
     assert session.describe_execution()["requested_device"] == "mlx"
     assert session.describe_execution()["device"] == "mlx"
     assert session.describe_execution()["n_gpu_layers"] == -1
+
+
+def test_llama_cpp_session_generate_uses_native_continuous_batching_when_enabled(monkeypatch) -> None:
+    """Verify batched generation dispatches through the native continuous-batching runner."""
+
+    session = _build_session(continuous_batching=True)
+    seen_max_concurrency: list[int] = []
+
+    def fake_native_runner(self, request_items, *, max_concurrency, put_result):
+        """Support the surrounding tests with a deterministic native continuous-batching stub."""
+
+        seen_max_concurrency.append(max_concurrency)
+        for request_key, request in request_items:
+            put_result(
+                request_key,
+                GenerationOutput(
+                    prompt=request.prompt or "",
+                    text=f"native::{request.prompt}",
+                    metadata={},
+                ),
+            )
+
+    monkeypatch.setattr(
+        LlamaCppSession,
+        "_run_native_continuous_generation",
+        fake_native_runner,
+    )
+
+    outputs = session.generate(
+        [
+            GenerationRequest(prompt="alpha"),
+            GenerationRequest(prompt="beta"),
+            GenerationRequest(prompt="gamma"),
+        ],
+        batch_size=2,
+    )
+
+    assert seen_max_concurrency == [2]
+    assert outputs == [
+        GenerationOutput(prompt="alpha", text="native::alpha", metadata={}),
+        GenerationOutput(prompt="beta", text="native::beta", metadata={}),
+        GenerationOutput(prompt="gamma", text="native::gamma", metadata={}),
+    ]
 
 
 def test_llama_cpp_session_generate_uses_completion_and_chat_paths() -> None:
@@ -390,10 +441,55 @@ def test_llama_cpp_session_generate_renders_messages_with_prepare_tokenizer() ->
     assert outputs[0].prompt == "user: Hi"
 
 
-def test_llama_cpp_session_generate_continuous_emulates_queue_batches(monkeypatch) -> None:
-    """Verify queue-based continuous generation drains the request stream in fixed-size batches."""
+def test_llama_cpp_session_generate_continuous_uses_native_scheduler_when_enabled(monkeypatch) -> None:
+    """Verify continuous generation routes through the native llama.cpp scheduler by default."""
 
-    session = _build_session()
+    session = _build_session(continuous_batching=True)
+    seen_max_concurrency: list[int] = []
+
+    def fake_native_runner(self, request_items, *, max_concurrency, put_result):
+        """Support the surrounding tests with a deterministic native continuous-batching stub."""
+
+        seen_max_concurrency.append(max_concurrency)
+        for request_key, request in request_items:
+            put_result(
+                request_key,
+                GenerationOutput(
+                    prompt=request.prompt or "",
+                    text=f"out::{request.prompt}",
+                    metadata={},
+                ),
+            )
+
+    monkeypatch.setattr(
+        LlamaCppSession,
+        "_run_native_continuous_generation",
+        fake_native_runner,
+    )
+
+    outputs = list(
+        session.generate_continuous(
+            [
+                (10, GenerationRequest(prompt="alpha")),
+                (11, GenerationRequest(prompt="beta")),
+                (12, GenerationRequest(prompt="gamma")),
+            ],
+            batch_size=2,
+        )
+    )
+
+    assert seen_max_concurrency == [2]
+    assert outputs == [
+        (10, GenerationOutput(prompt="alpha", text="out::alpha", metadata={})),
+        (11, GenerationOutput(prompt="beta", text="out::beta", metadata={})),
+        (12, GenerationOutput(prompt="gamma", text="out::gamma", metadata={})),
+    ]
+
+
+def test_llama_cpp_session_generate_continuous_uses_fixed_batches_when_disabled(monkeypatch) -> None:
+    """Verify disabling native continuous batching falls back to the fixed-size queue path."""
+
+    session = _build_session(continuous_batching=False)
     seen_batch_sizes: list[int] = []
 
     def fake_generate(self, requests, *, batch_size=None):
@@ -424,6 +520,34 @@ def test_llama_cpp_session_generate_continuous_emulates_queue_batches(monkeypatc
         (11, GenerationOutput(prompt="beta", text="out::beta", metadata={})),
         (12, GenerationOutput(prompt="gamma", text="out::gamma", metadata={})),
     ]
+
+
+def test_llama_cpp_native_generation_budget_respects_context_window() -> None:
+    """Verify native continuous batching clamps completion length to the live context budget."""
+
+    session = _build_session(continuous_batching=True)
+
+    max_completion_tokens, reserved_tokens = session._resolve_native_generation_budget(
+        prompt_tokens=[1, 2, 3, 4, 5, 6, 7],
+        requested_max_new_tokens=8,
+        max_context_tokens=8,
+    )
+
+    assert max_completion_tokens == 1
+    assert reserved_tokens == 8
+
+
+def test_llama_cpp_native_generation_budget_rejects_oversized_prompts() -> None:
+    """Verify prompts larger than the runtime context fail fast before native scheduling starts."""
+
+    session = _build_session(continuous_batching=True)
+
+    with pytest.raises(ValueError, match="generation prompt exceeds llama.cpp context window"):
+        session._resolve_native_generation_budget(
+            prompt_tokens=[1, 2, 3, 4, 5, 6, 7, 8, 9],
+            requested_max_new_tokens=4,
+            max_context_tokens=8,
+        )
 
 
 def test_llama_cpp_session_loglikelihood_scores_continuation_tokens() -> None:

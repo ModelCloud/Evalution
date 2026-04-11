@@ -157,11 +157,13 @@ transformer engines when the loaded quantized model exposes the required HF hook
 surfaces the resolved quantized runtime backend in execution metadata.
 
 `engines.LlamaCpp()` loads GGUF-compatible checkpoints through `llama_cpp.Llama(...)` and keeps
-generation plus both log-likelihood APIs fully in process. Since llama.cpp does not expose the
-same request-level scheduler primitives as vLLM or some TensorRT-LLM builds, Evalution preserves
-the `generate_continuous(...)` contract with an explicit request/result queue bridge around
-fixed-size execution batches. `LlamaCpp` accepts `device="auto"`, `device="cuda"`,
-`device="cpu"`, and `device="mlx"`. CUDA execution still depends on a source-built
+generation plus both log-likelihood APIs fully in process. Since llama.cpp does expose a native
+multi-sequence batch API, Evalution drives `generate_continuous(...)` through the underlying
+`llama_batch` / `llama_decode` scheduler. Evalution reopens the low-level runtime with unified KV
+cache support for that path and admits requests against the shared `n_ctx` budget instead of
+assuming the configured benchmark batch size is always safe. `LlamaCpp` accepts
+`continuous_batching=True|False` plus `device="auto"`, `device="cuda"`, `device="cpu"`, and
+`device="mlx"`. CUDA execution still depends on a source-built
 `llama-cpp-python` install with `GGML_CUDA=on`, but when the installed binding does not expose the
 requested GPU mode Evalution degrades to CPU instead of failing engine construction.
 For chat-template benchmarks such as `gsm8k_platinum`, point `model.path` at the GGUF file and

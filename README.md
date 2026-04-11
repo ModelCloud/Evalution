@@ -478,7 +478,7 @@ tests:
 ### LlamaCpp 🦙
 
 Use `engines.LlamaCpp()` in Python or `engine.type: LlamaCpp` in YAML when you want a
-`llama.cpp` backend through `llama-cpp-python`. Evalution keeps generation, queue-emulated
+`llama.cpp` backend through `llama-cpp-python`. Evalution keeps generation, native
 `generate_continuous(...)`, `loglikelihood(...)`, and `loglikelihood_rolling(...)` on the same
 shared engine contract. The current backend expects `num_beams=1`.
 
@@ -494,8 +494,10 @@ Notes:
 
 - `device` can be `auto`, `cuda`, `cpu`, or `mlx`. When a GPU-backed request is not available in
   the installed binding, Evalution falls back to CPU instead of aborting engine construction.
-- `generate_continuous(...)` is emulated with Evalution-owned request/result queues because
-  llama.cpp does not expose the same request-level scheduler API as vLLM.
+- `continuous_batching` defaults to `True` and uses llama.cpp's native multi-sequence batch API.
+  Evalution enables the required unified-KV multi-sequence runtime internally and admits requests
+  by shared `n_ctx` budget, so large prompts do not overcommit the native scheduler. Set
+  `continuous_batching=False` if you want regular fixed-size batching instead.
 - `LlamaCpp` uses llama.cpp's native tokenizer for prompt tokenization and scoring. An optional
   Hugging Face tokenizer is only loaded when needed for chat template rendering.
 
@@ -509,6 +511,7 @@ import evalution.engines as engines
 result = (
     engines.LlamaCpp(
         device="auto",
+        continuous_batching=True,
         n_ctx=4096,
         n_gpu_layers=-1,
     )
@@ -526,6 +529,7 @@ YAML:
 engine:
   type: LlamaCpp
   device: auto
+  continuous_batching: true
   n_ctx: 4096
   n_gpu_layers: -1
 

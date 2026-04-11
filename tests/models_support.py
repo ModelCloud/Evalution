@@ -566,9 +566,10 @@ def run_llama3_2_llamacpp_suite(
     assert result.model["tokenizer_path"] == str(LLAMA3_2_1B_INSTRUCT)
     assert result.engine["resolved_engine"] == "LlamaCpp"
     assert result.engine["device"] == LLAMA3_2_LLAMACPP_DEVICE
+    assert result.engine["continuous_batching"] is True
     assert result.engine["batch_size"] == "auto"
-    assert result.engine["execution"]["generation_backend"] == "llama_cpp_completion"
-    assert result.engine["execution"]["continuous_batching"] == "queue_emulated"
+    assert result.engine["execution"]["generation_backend"] == "continuous_batching"
+    assert result.engine["execution"]["continuous_batching"] is True
     assert result.engine["execution"]["requested_device"] in {"auto", "cuda", "cpu", "mlx"}
     assert result.engine["execution"]["device"] in {"cpu", "cuda", "mlx"}
     assert len(result.tests) == 1
