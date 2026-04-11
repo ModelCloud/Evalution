@@ -27,6 +27,8 @@ The package also depends on `tokenicer` for tokenizer loading and normalization.
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
 Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
 scorer-module mapping live in [docs/scorers.md](docs/scorers.md).
+Contributor guidance for adding new eval/benchmark/test suites lives in
+[docs/new_suite_guidelines.md](docs/new_suite_guidelines.md).
 
 Simple usage:
 

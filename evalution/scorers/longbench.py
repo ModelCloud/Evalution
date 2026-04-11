@@ -7,16 +7,16 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 from functools import lru_cache
-import re
 import string
 import unicodedata
 
+import pcre
 from rouge_score import rouge_scorer
 
-_EN_ARTICLES_RE = re.compile(r"\b(a|an|the)\b")
-_DIGIT_RE = re.compile(r"\d+")
-_PARAGRAPH_RE = re.compile(r"Paragraph (\d+)")
-_PARAGRAPH_ZH_RE = re.compile(r"段落(\d+)")
+_EN_ARTICLES_RE = pcre.compile(r"\b(a|an|the)\b")
+_DIGIT_RE = pcre.compile(r"\d+")
+_PARAGRAPH_RE = pcre.compile(r"Paragraph (\d+)")
+_PARAGRAPH_ZH_RE = pcre.compile(r"段落(\d+)")
 
 
 def _is_punctuation(character: str) -> bool:
@@ -137,7 +137,7 @@ def _retrieval_score(
     prediction: str,
     reference: str,
     *,
-    pattern: re.Pattern[str],
+    pattern: pcre.Pattern,
 ) -> float:
     match = pattern.search(reference)
     if match is None:

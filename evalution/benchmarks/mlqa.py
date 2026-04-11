@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from functools import partial
 import json
 from pathlib import Path
-import re
 import string
 import sys
 from typing import Any
@@ -19,6 +18,7 @@ from urllib.request import urlopen
 import zipfile
 
 from datasets import Dataset
+import pcre
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -47,6 +47,13 @@ _MLQA_PUNCT = {
 }.union(string.punctuation)
 _WHITESPACE_LANGS = frozenset({"ar", "de", "en", "es", "hi", "vi"})
 _MIXED_SEGMENTATION_LANGS = frozenset({"zh"})
+# Keep language-specific normalizers compiled once because answer scoring hits them for every prediction/reference pair.
+_MLQA_CJK_RE = pcre.compile("[\u4e00-\u9fff]")
+_MLQA_ARTICLES_EN_RE = pcre.compile(r"\b(a|an|the)\b")
+_MLQA_ARTICLES_ES_RE = pcre.compile(r"\b(un|una|unos|unas|el|la|los|las)\b")
+_MLQA_ARTICLES_VI_RE = pcre.compile(r"\b(của|là|cái|chiếc|những)\b")
+_MLQA_ARTICLES_DE_RE = pcre.compile(r"\b(ein|eine|einen|einem|eines|einer|der|die|das|den|dem|des)\b")
+_MLQA_ARTICLES_AR_RE = pcre.compile(r"(?:^|\s)ال")
 
 
 def _mlqa_cache_dir(cache_dir: str | None) -> Path:
@@ -155,7 +162,7 @@ def _mixed_segmentation(text: str) -> list[str]:
     segments: list[str] = []
     buffered = ""
     for character in text:
-        if re.search(r"[\u4e00-\u9fa5]", character) or character in _MLQA_PUNCT:
+        if _MLQA_CJK_RE.search(character) or character in _MLQA_PUNCT:
             if buffered:
                 segments.extend(_whitespace_tokenize(buffered))
                 buffered = ""
@@ -171,21 +178,17 @@ def _normalize_mlqa_answer(text: str, language: str) -> str:
     lowered = text.lower()
     stripped_punctuation = "".join(character for character in lowered if character not in _MLQA_PUNCT)
     if language == "en":
-        stripped_articles = re.sub(r"\b(a|an|the)\b", " ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_EN_RE.sub(" ", stripped_punctuation)
     elif language == "es":
-        stripped_articles = re.sub(r"\b(un|una|unos|unas|el|la|los|las)\b", " ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_ES_RE.sub(" ", stripped_punctuation)
     elif language == "hi":
         stripped_articles = stripped_punctuation
     elif language == "vi":
-        stripped_articles = re.sub(r"\b(của|là|cái|chiếc|những)\b", " ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_VI_RE.sub(" ", stripped_punctuation)
     elif language == "de":
-        stripped_articles = re.sub(
-            r"\b(ein|eine|einen|einem|eines|einer|der|die|das|den|dem|des)\b",
-            " ",
-            stripped_punctuation,
-        )
+        stripped_articles = _MLQA_ARTICLES_DE_RE.sub(" ", stripped_punctuation)
     elif language == "ar":
-        stripped_articles = re.sub(r"(?:^|\s)ال", " ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_AR_RE.sub(" ", stripped_punctuation)
     elif language == "zh":
         stripped_articles = stripped_punctuation
     else:

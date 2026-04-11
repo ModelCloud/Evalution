@@ -5,6 +5,8 @@
 # GPU=-1
 from __future__ import annotations
 
+import importlib
+
 import pcre
 
 _MATHQA_OPTIONS_RE = pcre.compile(r"[abcd] \) .*?, |e \) .*?$")
@@ -52,3 +54,53 @@ def test_pcre_matches_affected_project_patterns() -> None:
     match = _RESULT_JSON_RE.search(payload)
     assert match is not None
     assert match.group(1) == "{\"ok\": true}"
+
+
+def test_recent_replacements_execute_compatibly_on_compiled_pcre_patterns() -> None:
+    xlsum_module = importlib.import_module("evalution.datasets.xlsum")
+    qasper_module = importlib.import_module("evalution.benchmarks.qasper")
+    longbench_module = importlib.import_module("evalution.scorers.longbench")
+    scrolls_module = importlib.import_module("evalution.benchmarks.scrolls")
+    mlqa_module = importlib.import_module("evalution.benchmarks.mlqa")
+    ruler_module = importlib.import_module("evalution.benchmarks.ruler")
+
+    patterns = (
+        xlsum_module._INLINE_SPACES_RE,
+        qasper_module._QASPER_ARTICLES_RE,
+        longbench_module._EN_ARTICLES_RE,
+        longbench_module._DIGIT_RE,
+        longbench_module._PARAGRAPH_RE,
+        longbench_module._PARAGRAPH_ZH_RE,
+        scrolls_module._QUALITY_CHOICE_PATTERN,
+        mlqa_module._MLQA_CJK_RE,
+        mlqa_module._MLQA_ARTICLES_EN_RE,
+        mlqa_module._MLQA_ARTICLES_ES_RE,
+        mlqa_module._MLQA_ARTICLES_VI_RE,
+        mlqa_module._MLQA_ARTICLES_DE_RE,
+        mlqa_module._MLQA_ARTICLES_AR_RE,
+        ruler_module._CONTROL_CHARS_RE,
+    )
+    assert all(isinstance(pattern, pcre.Pattern) for pattern in patterns)
+
+    assert xlsum_module._normalize_inline_spaces("uno   dos") == "uno dos"
+    assert qasper_module._normalize_qasper_answer("The, cat!") == "cat"
+
+    paragraph_match = longbench_module._PARAGRAPH_RE.search("Paragraph 42")
+    assert paragraph_match is not None
+    assert paragraph_match.group(1) == "42"
+    paragraph_zh_match = longbench_module._PARAGRAPH_ZH_RE.search("段落7")
+    assert paragraph_zh_match is not None
+    assert paragraph_zh_match.group(1) == "7"
+
+    choices, passage = scrolls_module._quality_choices_and_context(
+        "(A) one (B) two (C) three (D) four\n\nPassage"
+    )
+    assert choices == ["one", "two", "three", "four"]
+    assert passage == "Passage"
+
+    assert mlqa_module._MLQA_CJK_RE.search("漢") is not None
+    assert mlqa_module._normalize_mlqa_answer("The, cat!", "en") == "cat"
+    assert mlqa_module._normalize_mlqa_answer("el gato", "es") == "gato"
+    assert mlqa_module._normalize_mlqa_answer("البيت", "ar") == "بيت"
+
+    assert ruler_module._CONTROL_CHARS_RE.sub(" ", "a\x00b\x1fc") == "a b c"

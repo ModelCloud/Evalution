@@ -6,13 +6,13 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from typing import Any
 import zipfile
 
 from datasets import Dataset
 from huggingface_hub import hf_hub_download
+import pcre
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -49,7 +49,7 @@ _SCROLLS_ALIASES = {
     "summ_screen_fd": "summscreenfd",
 }
 _STOP_STRINGS = ("\n", "\nQuestion:", "\nAnswer:")
-_QUALITY_CHOICE_PATTERN = re.compile(r" *\([A-D]\) *")
+_QUALITY_CHOICE_PATTERN = pcre.compile(r" *\([A-D]\) *")
 _CONTRACT_NLI_CHOICES = ["Not mentioned", "Entailment", "Contradiction"]
 
 
@@ -189,7 +189,7 @@ def _quality_choices_and_context(text: str) -> tuple[list[str], str]:
     passage_text = text[split_index:].strip()
     choices = [
         " ".join(choice.split()).strip()
-        for choice in re.split(_QUALITY_CHOICE_PATTERN, choices_text)[1:]
+        for choice in _QUALITY_CHOICE_PATTERN.split(choices_text)[1:]
     ]
     if len(choices) != 4:
         raise ValueError(f"scrolls quality expects four answer choices, got {len(choices)}")

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import tarfile
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
@@ -17,6 +16,7 @@ from threading import Lock
 from typing import Any
 
 from huggingface_hub import hf_hub_download
+import pcre
 
 # Pin the XLSum archive we audit locally so evaluation never executes the remote dataset script.
 XLSUM_DATASET_PATH = "csebuetnlp/xlsum"
@@ -38,6 +38,8 @@ _XLSUM_SPLIT_ALIASES = {
     "test": "test",
 }
 _XLSUM_EXTRACT_LOCK = Lock()
+# Normalize inline spacing once with a compiled PCRE2 pattern because this loader runs over every row.
+_INLINE_SPACES_RE = pcre.compile(r" +")
 
 
 def _default_cache_root() -> Path:
@@ -165,7 +167,7 @@ def ensure_local_xlsum_archive(dataset_name: str, cache_dir: str | None = None) 
 
 
 def _normalize_inline_spaces(text: str) -> str:
-    return re.sub(r" +", " ", text).strip()
+    return _INLINE_SPACES_RE.sub(" ", text).strip()
 
 
 @lru_cache(maxsize=None)

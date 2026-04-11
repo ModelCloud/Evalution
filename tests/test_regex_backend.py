@@ -9,11 +9,21 @@ import ast
 from pathlib import Path
 
 
+def _project_python_files(root: Path) -> list[Path]:
+    paths = {path for path in root.glob("*.py")}
+    for relative_dir in ("benchmarks", "evalution", "scripts", "tests"):
+        directory = root / relative_dir
+        if not directory.exists():
+            continue
+        paths.update(directory.rglob("*.py"))
+    return sorted(paths)
+
+
 def test_project_python_files_do_not_import_stdlib_regex_module() -> None:
     root = Path(__file__).resolve().parent.parent
     offenders: list[str] = []
 
-    for path in sorted(root.rglob("*.py")):
+    for path in _project_python_files(root):
         for node in ast.walk(ast.parse(path.read_text(), filename=str(path))):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -31,7 +41,7 @@ def test_project_python_files_use_compiled_pcre_execution_apis() -> None:
     offenders: list[str] = []
     forbidden_attrs = {"search", "match", "fullmatch", "findall", "finditer", "sub", "split"}
 
-    for path in sorted(root.rglob("*.py")):
+    for path in _project_python_files(root):
         tree = ast.parse(path.read_text(), filename=str(path))
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):

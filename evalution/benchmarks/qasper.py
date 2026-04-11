@@ -10,13 +10,13 @@ from dataclasses import dataclass
 from functools import partial
 import json
 from pathlib import Path
-import re
 import string
 import tarfile
 from typing import Any
 from urllib.request import urlopen
 
 from datasets import Dataset
+import pcre
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -36,6 +36,7 @@ _QASPER_DATA_FILES = {
     "validation": "qasper-dev-v0.3.json",
     "test": "qasper-test-v0.3.json",
 }
+_QASPER_ARTICLES_RE = pcre.compile(r"\b(a|an|the)\b")
 
 
 def _qasper_cache_dir(cache_dir: str | None) -> Path:
@@ -87,7 +88,7 @@ def _qasper_prompt(*, title: str, abstract: str, question: str) -> str:
 def _normalize_qasper_answer(text: str) -> str:
     lowered = text.lower()
     stripped_punctuation = "".join(character for character in lowered if character not in set(string.punctuation))
-    stripped_articles = re.sub(r"\b(a|an|the)\b", " ", stripped_punctuation)
+    stripped_articles = _QASPER_ARTICLES_RE.sub(" ", stripped_punctuation)
     return " ".join(stripped_articles.split())
 
 
