@@ -1,6 +1,7 @@
 <p align=center>
 <div align=center>
-<img width="500" alt="image" src="https://github.com/user-attachments/assets/0385a9b5-a249-49bf-943f-6ecfd3c7c73c" />
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/cda318d5-7f4c-4dc9-8fa8-2b48afcd4c29" />
+
 
 </div>
 <h1 align="center">Evalution</h1>
