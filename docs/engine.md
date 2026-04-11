@@ -119,6 +119,7 @@ Evalution ships these built-in engines:
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
 - `engines.LlamaCpp()`: the llama.cpp backend through `llama-cpp-python`
+- `engines.OpenAICompatible()`: an OpenAI-style HTTP backend
 - `engines.OpenVINO()`: the Optimum Intel OpenVINO backend
 - `engines.SGLang()`: the in-process SGLang runtime backend
 - `engines.TensorRTLLM()`: the TensorRT-LLM runtime backend
@@ -170,6 +171,17 @@ For chat-template benchmarks such as `gsm8k_platinum`, point `model.path` at the
 `model.tokenizer_path` at the matching dense Hugging Face tokenizer checkout. The shared full-model
 llama.cpp test fixture uses `bartowski/Llama-3.2-1B-Instruct-GGUF` with
 `Llama-3.2-1B-Instruct-Q4_K_M.gguf`.
+
+`engines.OpenAICompatible()` talks to an OpenAI-compatible HTTP endpoint for generation, while
+using Evalution-specific `/v1/eval/loglikelihood` and `/v1/eval/loglikelihood/rolling` routes for
+the scoring APIs that Evalution benchmarks require. Evalution also ships
+`engines.build_openai_compatible_server(...)` to wrap a local engine session, such as
+`engines.Transformers()`, in a queued microbatching HTTP server for local testing. The OpenAI
+engine defaults to `batch_size=4`, treating that as the client-side in-flight queue depth: it
+submits up to four requests at once and injects the next queued request whenever one result comes
+back. For this engine, Evalution's required `.model(path=...)` call is translated into the remote
+OpenAI-compatible HTTP `model` argument. Set `batch_size=0` to disable this emulated batching and
+fall back to single requests.
 
 `engines.OpenVINO()` loads decoder-only models through `optimum.intel.openvino.OVModelForCausalLM`
 while reusing Evalution's shared transformer-style generation, log-likelihood, and rolling

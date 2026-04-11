@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Evalution"
-version = "0.0.2"
-description = "Modern LLM model evaluation for Transformers, SGLang, vLLM, TensorRT-LLM, llama.cpp, GPTQModel, and OpenVINO."
+version = "0.0.3"
+description = "Modern LLM model evaluation for Transformers, SGLang, vLLM, TensorRT-LLM, llama.cpp, GPTQModel, OpenAI-compatible HTTP backends, and OpenVINO."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
@@ -26,6 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
 
 [project.scripts]
