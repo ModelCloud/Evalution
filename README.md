@@ -26,11 +26,11 @@ Core runtime dependencies stay lean: `transformers`, `datasets`, `logbar`, `PyPc
 
 ## Why Evalution ✨
 
-**7 engines. 126 built-in benchmark families. 213 in-tree CUDA regression suite specs.**
+**8 engines. 126 built-in benchmark families. 213 in-repo GPU benchmark regression tests.**
 
-- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `GPTQModel`, and `OpenVINO`.
+- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `OpenAICompatible`, `GPTQModel`, and `OpenVINO`.
 - 📚 Broad benchmark coverage: 126 documented built-in benchmark families spanning reasoning, multilingual evals, coding, long-context, QA, perplexity, safety, and more.
-- 🧪 GPU validated: the repo includes 213 Llama 3.2 single-suite CUDA regression specs, with RTX 4090 and A100-aware baselines where scores are pinned.
+- 🧪 GPU validated: the repo includes 213 in-repo GPU benchmark regression tests for individual Llama 3.2 benchmark runs, with RTX 4090 and A100-aware baselines where scores are pinned.
 - ⚡ Speed: Evalution is faster than many evaluators and attempts continuous batching by default when the selected engine supports it.
 - 🪶 Minimal core deps: the default install stays focused and avoids dragging in every backend dependency up front.
 - 🧼 Clean API: Python, YAML, CLI, single-model runs, and compare flows all share the same readable shape.
@@ -427,6 +427,48 @@ engine:
 
 model:
   path: /monster/data/model/Llama-3.2-1B-Instruct
+
+tests:
+  - type: gsm8k_platinum
+```
+
+### OpenAICompatible 🌐
+
+Use `engines.OpenAICompatible()` in Python or `engine.type: OpenAICompatible` in YAML when you
+want to evaluate through an OpenAI-compatible HTTP endpoint. Evalution expects generation routes
+such as `/v1/chat/completions` or `/v1/completions`, plus the Evalution scoring routes
+`/v1/eval/loglikelihood` and `/v1/eval/loglikelihood/rolling`.
+
+Python:
+
+```python
+import os
+
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.OpenAICompatible(
+        base_url="http://127.0.0.1:8000",
+        api_key=os.environ["OPENAI_API_KEY"],
+        batch_size=4,
+    )
+    .model(path="meta-llama/Llama-3.2-1B-Instruct")
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: OpenAICompatible
+  base_url: http://127.0.0.1:8000
+  api_key: ${OPENAI_API_KEY}
+  batch_size: 4
+
+model:
+  path: meta-llama/Llama-3.2-1B-Instruct
 
 tests:
   - type: gsm8k_platinum

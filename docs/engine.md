@@ -118,6 +118,7 @@ Evalution ships these built-in engines:
 - `engines.Transformers()`: the modern backend
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
+- `engines.OpenAICompatible()`: an OpenAI-style HTTP backend
 - `engines.OpenVINO()`: the Optimum Intel OpenVINO backend
 - `engines.SGLang()`: the in-process SGLang runtime backend
 - `engines.TensorRTLLM()`: the TensorRT-LLM runtime backend
@@ -154,6 +155,15 @@ strings and sampling settings stay compatible, then tears it down on `gc()` betw
 the same shared generation, scoring, and paged continuous-batching path as the built-in
 transformer engines when the loaded quantized model exposes the required HF hooks. It also
 surfaces the resolved quantized runtime backend in execution metadata.
+
+`engines.OpenAICompatible()` talks to an OpenAI-compatible HTTP endpoint for generation, while
+using Evalution-specific `/v1/eval/loglikelihood` and `/v1/eval/loglikelihood/rolling` routes for
+the scoring APIs that Evalution benchmarks require. Evalution also ships
+`engines.build_openai_compatible_server(...)` to wrap a local engine session, such as
+`engines.Transformers()`, in a queued microbatching HTTP server for local testing. The OpenAI
+engine defaults to `batch_size=4`, treating that as the client-side in-flight queue depth: it
+submits up to four requests at once and injects the next queued request whenever one result comes
+back. Set `batch_size=0` to disable this emulated batching and fall back to single requests.
 
 `engines.OpenVINO()` loads decoder-only models through `optimum.intel.openvino.OVModelForCausalLM`
 while reusing Evalution's shared transformer-style generation, log-likelihood, and rolling

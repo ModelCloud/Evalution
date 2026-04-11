@@ -14,6 +14,8 @@ from .base import (
     SharedEngineConfig,
 )
 from .gptqmodel_engine import GPTQModel
+from .openai_engine import OpenAICompatible
+from .openai_server import OpenAICompatibleServer, build_openai_compatible_server
 from .openvino_engine import OpenVINO
 from .sglang_engine import SGLang
 from .tensorrt_llm_engine import TensorRTLLM
@@ -31,6 +33,8 @@ __all__ = [
     "BaseEngineTransformersRuntimeConfig",
     "BaseInferenceSession",
     "GPTQModel",
+    "OpenAICompatible",
+    "OpenAICompatibleServer",
     "OpenVINO",
     "SGLang",
     "SharedEngineConfig",
@@ -38,4 +42,5 @@ __all__ = [
     "Transformers",
     "TransformersCompat",
     "VLLM",
+    "build_openai_compatible_server",
 ]
