@@ -180,6 +180,9 @@ evalution emit-python evalution.yaml
 `mem_fraction_static`, `context_length`, `quantization`, `attention_backend`, `sampling_backend`, `tokenizer_mode`,
 and `max_running_requests`.
 
+`engines.LlamaCpp(...)` accepts llama.cpp runtime options such as `device`, `n_ctx`,
+`n_gpu_layers`, `flash_attn`, `main_gpu`, `llama_cpp_path`, and `llama_kwargs`.
+
 `engines.OpenVINO(...)` accepts OpenVINO runtime options such as `dtype`, `device`, `batch_size`, `attn_implementation`, `max_new_tokens` and `ov_config`.
 
 Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`,
@@ -472,6 +475,53 @@ tests:
   - type: gsm8k_platinum
 ```
 
+### LlamaCpp 🦙
+
+Use `engines.LlamaCpp()` in Python or `engine.type: LlamaCpp` in YAML when you want a
+`llama.cpp` backend through `llama-cpp-python`. Evalution keeps generation, queue-emulated
+`generate_continuous(...)`, `loglikelihood(...)`, and `loglikelihood_rolling(...)` on the same
+shared engine contract. The current backend expects `num_beams=1`.
+
+Install from source when you need CUDA support:
+
+```bash
+CMAKE_ARGS="-DGGML_CUDA=on" pip install --no-binary=:all: --force-reinstall llama-cpp-python
+```
+
+Python:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.LlamaCpp(
+        device="cuda",
+        n_ctx=4096,
+        n_gpu_layers=-1,
+    )
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct-Q4_K_M.gguf")
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: LlamaCpp
+  device: cuda
+  n_ctx: 4096
+  n_gpu_layers: -1
+
+model:
+  path: /monster/data/model/Llama-3.2-1B-Instruct-Q4_K_M.gguf
+
+tests:
+  - type: gsm8k_platinum
+```
+
 ### OpenVINO 🔧
 
 Use `engines.OpenVINO()` in Python or `engine.type: OpenVINO` in YAML when you want to run an
@@ -509,9 +559,12 @@ tests:
 ```
 
 `Tokenicer` is used to load tokenizers for the transformer, transformer-compat, OpenVINO, GPTQModel,
-and vLLM engines. When `engine.model(...)` is called with a model config, Evalution resolves tokenizer loading in this order:
+vLLM, and optionally LlamaCpp engines. When `engine.model(...)` is called with a model config,
+Evalution resolves tokenizer loading in this order:
 `tokenizer` (preinitialized object), `tokenizer_path`, then `path`.
 `Tokenicer` also applies its normalization stage so pad/eos/bos token IDs are corrected before evaluation.
+`LlamaCpp` still uses llama.cpp's native tokenizer for scoring and prompt tokenization; the optional
+loaded tokenizer is only used to render chat templates when the caller supplies one.
 To inject a custom tokenizer, pass it through `.model(...)` on the model config:
 
 ```python

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "Evalution"
 version = "0.0.2"
-description = "Modern LLM model evaluation for Transformers, SGLang, vLLM, TensorRT-LLM, GPTQModel, and OpenVINO."
+description = "Modern LLM model evaluation for Transformers, SGLang, vLLM, TensorRT-LLM, llama.cpp, GPTQModel, and OpenVINO."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"

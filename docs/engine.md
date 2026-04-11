@@ -118,6 +118,7 @@ Evalution ships these built-in engines:
 - `engines.Transformers()`: the modern backend
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
+- `engines.LlamaCpp()`: the llama.cpp backend through `llama-cpp-python`
 - `engines.OpenVINO()`: the Optimum Intel OpenVINO backend
 - `engines.SGLang()`: the in-process SGLang runtime backend
 - `engines.TensorRTLLM()`: the TensorRT-LLM runtime backend
@@ -154,6 +155,12 @@ strings and sampling settings stay compatible, then tears it down on `gc()` betw
 the same shared generation, scoring, and paged continuous-batching path as the built-in
 transformer engines when the loaded quantized model exposes the required HF hooks. It also
 surfaces the resolved quantized runtime backend in execution metadata.
+
+`engines.LlamaCpp()` loads GGUF-compatible checkpoints through `llama_cpp.Llama(...)` and keeps
+generation plus both log-likelihood APIs fully in process. Since llama.cpp does not expose the
+same request-level scheduler primitives as vLLM or some TensorRT-LLM builds, Evalution preserves
+the `generate_continuous(...)` contract with an explicit request/result queue bridge around
+fixed-size execution batches.
 
 `engines.OpenVINO()` loads decoder-only models through `optimum.intel.openvino.OVModelForCausalLM`
 while reusing Evalution's shared transformer-style generation, log-likelihood, and rolling
