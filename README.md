@@ -508,11 +508,14 @@ import evalution.engines as engines
 
 result = (
     engines.LlamaCpp(
-        device="cuda",
+        device="auto",
         n_ctx=4096,
         n_gpu_layers=-1,
     )
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct-Q4_K_M.gguf")
+    .model(
+        path="/monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+        tokenizer_path="/monster/data/model/Llama-3.2-1B-Instruct",
+    )
     .run(benchmarks.gsm8k_platinum())
 )
 ```
@@ -522,15 +525,32 @@ YAML:
 ```yaml
 engine:
   type: LlamaCpp
-  device: cuda
+  device: auto
   n_ctx: 4096
   n_gpu_layers: -1
 
 model:
-  path: /monster/data/model/Llama-3.2-1B-Instruct-Q4_K_M.gguf
+  path: /monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf
+  tokenizer_path: /monster/data/model/Llama-3.2-1B-Instruct
 
 tests:
   - type: gsm8k_platinum
+```
+
+For the shared llama.cpp integration test artifact, download
+`bartowski/Llama-3.2-1B-Instruct-GGUF` with the `Llama-3.2-1B-Instruct-Q4_K_M.gguf` file and keep
+the original Hugging Face tokenizer checkout at `/monster/data/model/Llama-3.2-1B-Instruct`:
+
+```bash
+python - <<'PY'
+from huggingface_hub import hf_hub_download
+
+hf_hub_download(
+    repo_id="bartowski/Llama-3.2-1B-Instruct-GGUF",
+    filename="Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+    local_dir="/monster/data/model/Llama-3.2-1B-Instruct-GGUF",
+)
+PY
 ```
 
 ### OpenVINO 🔧

@@ -164,6 +164,10 @@ fixed-size execution batches. `LlamaCpp` accepts `device="auto"`, `device="cuda"
 `device="cpu"`, and `device="mlx"`. CUDA execution still depends on a source-built
 `llama-cpp-python` install with `GGML_CUDA=on`, but when the installed binding does not expose the
 requested GPU mode Evalution degrades to CPU instead of failing engine construction.
+For chat-template benchmarks such as `gsm8k_platinum`, point `model.path` at the GGUF file and
+`model.tokenizer_path` at the matching dense Hugging Face tokenizer checkout. The shared full-model
+llama.cpp test fixture uses `bartowski/Llama-3.2-1B-Instruct-GGUF` with
+`Llama-3.2-1B-Instruct-Q4_K_M.gguf`.
 
 `engines.OpenVINO()` loads decoder-only models through `optimum.intel.openvino.OVModelForCausalLM`
 while reusing Evalution's shared transformer-style generation, log-likelihood, and rolling
