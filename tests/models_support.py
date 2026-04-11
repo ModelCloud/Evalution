@@ -7384,8 +7384,8 @@ SUITE_SPECS = {
         suite_factory=lambda: evalution.benchmarks.gsm_plus_mini(batch_size=24, max_rows=128),
         expected_name="gsm_plus_mini",
         baseline={
-            "em,strict": 0.3125,
-            "em,flex": 0.3125,
+            "em,strict": 0.328125,
+            "em,flex": 0.328125,
         },
         expected_metrics=frozenset({"em,strict", "em,flex"}),
         expected_metadata={
