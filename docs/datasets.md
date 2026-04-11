@@ -78,7 +78,7 @@ This document records the dataset identifier and split semantics for each Evalut
 | `eus_reading.EusReading` | `HiTZ/EusReading` | `default` | `test` | none |
 | `eus_proficiency.EusProficiency` | `HiTZ/EusProficiency` | `default` | `test` | none |
 | `eus_trivia.EusTrivia` | `HiTZ/EusTrivia` | `default` | `test` | none |
-| `gpqa.GPQA` | `Idavidrein/gpqa` | `None` | `train` | none |
+| `gpqa.GPQA` | `Idavidrein/gpqa` | `None` | `train` | `subset={main,diamond,extended}` via `gpqa_main`, `gpqa_diamond`, and `gpqa_extended` |
 | `gsm_plus.GSMPlus` | `qintongli/GSM-Plus` | `None` | `test` | none |
 | `gsm_plus.GSMPlusMini` | `qintongli/GSM-Plus` | `None` | `testmini` | none |
 | `haerae.Haerae` | `HAERAE-HUB/HAE_RAE_BENCH` | `general_knowledge` or `None` | `test` | `subset=...` |
