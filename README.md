@@ -6,14 +6,15 @@
 </div>
 <h1 align="center">Evalution</h1>
 
-Evalution is a modern LLM evaluation toolkit.
-Install:
+Evalution is a modern LLM evaluation toolkit for fast, benchmark-faithful, multi-engine model evaluation. 🚀
+
+Install ⚡
 
 ```bash
 pip install Evalution
 ```
 
-Install from source:
+Install from source 🛠️
 
 ```bash
 git clone https://github.com/modelcloud/Evalution.git
@@ -21,16 +22,31 @@ cd Evalution
 pip install .
 ```
 
-Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
-The package also depends on `tokenicer` for tokenizer loading and normalization.
+Core runtime dependencies stay lean: `transformers`, `datasets`, `logbar`, `PyPcre`, and `tokenicer`. 🪶
+
+## Why Evalution ✨
+
+**7 engines. 126 built-in benchmark families. 213 in-tree CUDA regression suite specs.**
+
+- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `GPTQModel`, and `OpenVINO`.
+- 📚 Broad benchmark coverage: 126 documented built-in benchmark families spanning reasoning, multilingual evals, coding, long-context, QA, perplexity, safety, and more.
+- 🧪 GPU validated: the repo includes 213 Llama 3.2 single-suite CUDA regression specs, with RTX 4090 and A100-aware baselines where scores are pinned.
+- ⚡ Speed: Evalution is faster than many evaluators and attempts continuous batching by default when the selected engine supports it.
+- 🪶 Minimal core deps: the default install stays focused and avoids dragging in every backend dependency up front.
+- 🧼 Clean API: Python, YAML, CLI, single-model runs, and compare flows all share the same readable shape.
+- 🧩 Extensible: Evalution has a clean extension API for execution engines, benchmark suites, and scorers.
+- 📝 YAML support: run configs from YAML and emit Python back from YAML when you want a code path.
+- 🔌 Easy to extend: adding new engines and new benchmark suites follows a clear public contract with contributor docs in-tree.
+- ⚖️ Side-by-side compare mode: run threaded left/right model lanes against the same suite list and get one consolidated summary.
+- 🎯 Benchmark-faithful by default: suites aim to stay close to original papers and released reference behavior, not just headline numbers.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
 Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
 scorer-module mapping live in [docs/scorers.md](docs/scorers.md).
 Contributor guidance for adding new eval/benchmark/test suites lives in
-[docs/new_suite_guidelines.md](docs/new_suite_guidelines.md).
+[docs/benchmark_suite_guidelines.md](docs/benchmark_suite_guidelines.md).
 
-Simple usage:
+Simple usage 🧪
 
 ```python
 import evalution.benchmarks as benchmarks
@@ -43,7 +59,7 @@ result = (
 )
 ```
 
-Advanced usage:
+Advanced usage 🧠
 
 ```python
 import evalution as eval
@@ -82,7 +98,7 @@ result = (
 The chained object is already the completed run handle. Accessing `result.model`, `result.engine`,
 `result.tests`, or `result.to_dict()` finalizes the run and closes the engine session implicitly.
 
-Compare usage:
+Compare usage ⚖️
 
 ```python
 import evalution as eval
@@ -112,7 +128,7 @@ suite list on both lanes while allowing different engines and model configs on t
 When the terminal supports LogBar split panes, Evalution binds each lane to its own pane and
 renders a consolidated compare summary when the run closes.
 
-YAML usage:
+YAML usage 📝
 
 ```yaml
 engine:
@@ -144,7 +160,7 @@ result = eval.run_yaml("evalution.yaml")
 python_script = eval.python_from_yaml("evalution.yaml")
 ```
 
-CLI usage:
+CLI usage 💻
 
 ```bash
 evalution evalution.yaml
@@ -170,7 +186,7 @@ Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_toke
 `order`, and scorer-specific options like `label_permutations` can be set directly on each benchmark
 call or in each YAML `tests` entry.
 
-## Benchmark Row Order
+## Benchmark Row Order 🔀
 
 Dataset-backed benchmarks support an `order` override that controls benchmark row traversal order.
 This is a benchmark-level dataset ordering control, separate from any engine-internal request
@@ -209,7 +225,7 @@ Notes:
 - Ordering is applied after the benchmark's selected rows are loaded and capped by `max_rows`.
 - When `stream=True`, `order` must stay `native`.
 
-## Subset Selection
+## Subset Selection 🧭
 
 Subset-aware benchmarks use a `subsets` selector instead of benchmark-specific selector names.
 Currently this applies to `mmlu` and `mmlu_pro`.
@@ -249,14 +265,14 @@ tests:
     num_fewshot: 5
 ```
 
-## Engine Samples
+## Engine Samples 🔌
 
 Each exported engine has a minimal sample below. `Transformers` covers both the modern
 `Transformers` engine and the fixed-batch `TransformersCompat` engine; swap `Transformers` for
 `TransformersCompat` or `type: Transformers` for `type: TransformersCompat` when you need the
 compatibility backend explicitly.
 
-### Transformers / TransformersCompat
+### Transformers / TransformersCompat 🤗
 
 Use `engines.Transformers()` in Python or `engine.type: Transformers` in YAML when you want the
 preferred Hugging Face runtime.
@@ -292,7 +308,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### SGLang
+### SGLang ⚡
 
 Use `engines.SGLang()` in Python or `engine.type: SGLang` in YAML when you want the SGLang runtime.
 Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
@@ -333,7 +349,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### VLLM
+### VLLM 🚀
 
 Use `engines.VLLM()` in Python or `engine.type: VLLM` in YAML when you want the vLLM runtime.
 Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
@@ -377,7 +393,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### TensorRTLLM
+### TensorRTLLM 🧠
 
 Use `engines.TensorRTLLM()` in Python or `engine.type: TensorRTLLM` in YAML when you want the
 TensorRT-LLM runtime. Configure `tensorrt_llm_path` only when `tensorrt_llm` is not importable
@@ -416,7 +432,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### GPTQModel
+### GPTQModel 🪶
 
 Use `engines.GPTQModel()` in Python or `engine.type: GPTQModel` in YAML when you want to load a
 quantized checkpoint through GPTQModel's native loader. Configure `gptqmodel_path` only when the
@@ -456,7 +472,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### OpenVINO
+### OpenVINO 🔧
 
 Use `engines.OpenVINO()` in Python or `engine.type: OpenVINO` in YAML when you want to run an
 Optimum Intel `OVModelForCausalLM` backend.
@@ -517,7 +533,7 @@ result = (
 
 YAML flows can only configure `tokenizer_path`; passing a live tokenizer object is Python-only.
 
-## Supported Benchmarks
+## Supported Benchmarks 📚
 
 Evalution currently ships the following built-in benchmarks:
 
@@ -534,134 +550,134 @@ logic, those implementation details can shift results.
 Variant-heavy families are folded into a single row below. Brace notation indicates the concrete
 built-in suite names covered by that row.
 
-| Suite | Scoring | Original benchmark |
-| --- | --- | --- |
-| `aexams` | Multiple-choice log-likelihood over answer labels across `biology/islamic_studies/physics/science/social` subjects, raw + length-normalized accuracy | EXAMS `hardalov-etal-2020-exams` |
-| `agieval` | Multiple-choice log-likelihood across supported AGIEval subject subsets, raw + length-normalized accuracy | AGIEval `zhong2023agieval` |
-| `afrimgsm` | Generated numeric exact match across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/vai/wol/xho/yor/zul` translated grade-school math subsets | IrokoBench AfriMGSM `adelani2025irokobench` |
-| `afrimmlu` | Multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` translated MMLU subsets, raw + length-normalized accuracy | IrokoBench AfriMMLU `adelani2025irokobench` |
-| `aime`, `aime24`, `aime25`, `aime26` | Generated math-normalized exact match with boxed-answer extraction | AIME `aime_1983_2024`, `aime_2024`, `aime_2025`, `aime_2026` |
-| `afrixnli` | Three-way NLI multiple-choice log-likelihood across `amh/eng/ewe/fra/hau/ibo/kin/lin/lug/orm/sna/sot/swa/twi/wol/xho/yor/zul` language subsets, raw + length-normalized accuracy | IrokoBench AfriXNLI `adelani2025irokobench` |
-| `anli_{r1,r2,r3}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ANLI `nie-etal-2020-adversarial` |
-| `arabicmmlu` | Multiple-choice log-likelihood across configurable ArabicMMLU subject subsets, raw + length-normalized accuracy | ArabicMMLU `koto2024arabicmmlu` |
-| `darijammlu` | Multiple-choice log-likelihood across configurable DarijaMMLU subject subsets, raw + length-normalized accuracy | DarijaMMLU `shang2024atlaschatadaptinglargelanguage` |
-| `egymmlu` | Multiple-choice log-likelihood across configurable EgyMMLU subject subsets, raw + length-normalized accuracy | EgyMMLU `el-mekki-etal-2025-nilechat` |
-| `eus_exams` | Multiple-choice log-likelihood across configurable Basque and Spanish civil-service exam subsets, raw + length-normalized accuracy | EusExams `etxaniz2024latxa` |
-| `eus_reading` | Multiple-choice log-likelihood over Basque reading-comprehension answer labels, raw + length-normalized accuracy | EusReading `etxaniz2024latxa` |
-| `eus_proficiency` | Multiple-choice log-likelihood over Basque proficiency answer labels, raw + length-normalized accuracy | EusProficiency `etxaniz2024latxa` |
-| `eus_trivia` | Multiple-choice log-likelihood over Basque trivia answer labels, raw + length-normalized accuracy | EusTrivia `etxaniz2024latxa` |
-| `arc_challenge`, `arc_easy`, `arc_mt_{da,de,el,es,fi,hu,is,it,nb,pl,pt,sv}` | Multiple-choice exam score with tie-aware partial credit | ARC `clark2018arc` |
-| `arithmetic_{1dc,2da,2dm,2ds,3da,3ds,4da,4ds,5da,5ds}` | Single-continuation log-likelihood, greedy accuracy with no added target delimiter | GPT-3 arithmetic `brown2020gpt3` |
-| `asdiv` | Single-continuation log-likelihood, greedy accuracy over canonical numeric answers | ASDiv `miao2021diverse` |
-| `asdiv_cot_llama` | Few-shot CoT generation with format-insensitive numeric accuracy | ASDiv `miao2021diverse` |
-| `babi` | Generated exact match | bAbI `weston2015towards` |
-| `babilong` | Generated normalized exact match across `qa1` to `qa20` with configurable context lengths | BABILong `kuratov2024babilong` |
-| `bbh` | Generated exact match across 27 BIG-Bench Hard subsets selected through the `subset` parameter | BIG-Bench Hard `suzgun2022challenging` |
-| `bangla` | Multiple-choice log-likelihood across `boolqa/commonsenseqa/mmlu/openbookqa/piqa` Bangla subsets, raw + length-normalized accuracy | TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms` |
-| `bear`, `bear_big` | Full-statement multiple-choice log-likelihood over the standard and larger BEAR probes, raw + length-normalized accuracy | BEAR `wiland2024bear` |
-| `belebele` | Multiple-choice reading-comprehension log-likelihood across 122 language variants selected through the `language` parameter, raw + length-normalized accuracy | Belebele `bandarkar2023belebele` |
-| `bbq` | Multiple-choice log-likelihood across English BBQ bias categories, raw + length-normalized accuracy | BBQ `parrish2022bbq` |
-| `blimp` | Minimal-pair full-sentence log-likelihood over configurable BLiMP subsets, raw + length-normalized accuracy | BLiMP `warstadt2020blimp` |
-| `c4` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | C4 `raffel2020exploring` |
-| `careqa` | Multiple-choice log-likelihood across supported closed-ended healthcare QA subsets `en/es`, raw + length-normalized accuracy | CareQA `arias-duart-etal-2025-automatic` |
-| `cabbq` | Multiple-choice log-likelihood across Catalan BBQ bias categories, raw + length-normalized accuracy | CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
-| `esbbq` | Multiple-choice log-likelihood across Spanish BBQ bias categories, raw + length-normalized accuracy | EsBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
-| `ceval` | Multiple-choice log-likelihood over configurable C-Eval subsets, raw + length-normalized accuracy | C-Eval `huang2023ceval` |
-| `cmmlu` | Multiple-choice log-likelihood across configurable CMMLU subject subsets, raw + length-normalized accuracy | CMMLU `li2023cmmlu` |
-| `boolq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `cb` | Multiple-choice log-likelihood, raw + length-normalized accuracy, macro F1 | SuperGLUE `wang2019superglue` |
-| `multirc` | Multi-answer reading comprehension with per-question exact match and F1a over selected answer indices | SuperGLUE `wang2019superglue` |
-| `click` | Multiple-choice log-likelihood across Korean CLIcK language and culture subsets, raw + length-normalized accuracy | CLIcK `kim-etal-2024-click` |
-| `cola` | Multiple-choice log-likelihood, raw + length-normalized accuracy, MCC | GLUE `wang-etal-2018-glue` |
-| `cnn_dailymail` | Generated summarization with ROUGE-1, ROUGE-2, and ROUGE-Lsum F1 | CNN/DailyMail `nallapati2016abstractive` |
-| `code_x_glue` | Code-to-docstring generation with corpus smoothed BLEU-4 across `go/java/javascript/php/python/ruby` language subsets | CodeXGLUE `lu2021codexglue` |
-| `commonsense_qa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | CommonsenseQA `talmor2019commonsenseqa` |
-| `coqa` | Generated conversational QA exact match and token-overlap F1 with gold history turns | CoQA `reddy2019coqa` |
-| `copa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `copa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic COPA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
-| `copal_id` | Multiple-choice log-likelihood across `standard/colloquial` variants, raw + length-normalized accuracy | COPAL-ID `wibowo-etal-2024-copal` |
-| `crows_pairs` | Pairwise full-sentence log-likelihood across `english/french` language splits and supported bias-category subsets, with stereotype-preference rate and average absolute log-likelihood gap | CrowS-Pairs `nangia-etal-2020-crows`, French CrowS-Pairs `neveol-etal-2022-french` |
-| `darijahellaswag` | Multiple-choice log-likelihood over Moroccan Darija translated HellaSwag endings, raw + length-normalized accuracy | DarijaHellaSwag `shang2024atlaschatadaptinglargelanguage` |
-| `egyhellaswag` | Multiple-choice log-likelihood over Egyptian Arabic translated HellaSwag endings, raw + length-normalized accuracy | NileChat `el-mekki-etal-2025-nilechat` |
-| `drop` | Generated QA exact match and token-overlap F1 over accepted answer spans | DROP `dua2019drop` |
-| `fld` | Generated exact match over `PROVED/DISPROVED/UNKNOWN` world-assumption verdicts from serialized deduction prompts | FLD `morishita2023learning` |
-| `fda` | Generated contains-over-answer match over the `validation` split | BASED / FDA `arora2024simple` |
-| `french_bench_arc_challenge` | Multiple-choice log-likelihood over the French ARC-Challenge split, with raw and length-normalized accuracy | FrenchBench ARC-Challenge |
-| `gpqa` | Generated answer-label exact match across the `main/diamond/extended` subsets, with seeded answer-order shuffling and author-style zero-shot prompting | GPQA `rein2024gpqa` |
-| `gsm_plus`, `gsm_plus_mini` | Generated strict and flexible exact match over GSM-Plus solution extraction on the `test` and `testmini` splits | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
-| `ethics_{cm,deontology,justice,utilitarianism,virtue}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | ETHICS `hendrycks2021ethics` |
-| `gsm8k` | Format-insensitive numeric accuracy | GSM8K `cobbe2021trainingverifierssolvemath` |
-| `gsm8k_fr` | Format-insensitive numeric accuracy on the French GSM8K translation | GSM8K `cobbe2021trainingverifierssolvemath`, French translation dataset `cmh2025gsm8kfr` |
-| `gsm8k_ko` | Format-insensitive numeric accuracy on the Korean GSM8K translation | GSM8K `cobbe2021trainingverifierssolvemath`, Korean translation dataset `kuotient2024gsm8kko` |
-| `gsm8k_platinum` | Format-insensitive numeric accuracy | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
-| `mgsm` | Format-insensitive numeric accuracy across configurable multilingual direct-answer subsets | MGSM `shi2022multilingualchainofthought` |
-| `haerae` | Multiple-choice log-likelihood across Korean HAE-RAE subsets, raw + length-normalized accuracy | HAE-RAE `son-etal-2024-hae` |
-| `hellaswag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HellaSwag `zellers2019hellaswag` |
-| `headqa_{en,es}` | Multiple-choice log-likelihood, raw + length-normalized accuracy | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
-| `ifeval` | Instruction-following generation scoring across up to 4 instruction checks per prompt | IFEval `zhou2023instruction` |
-| `ifeval_pt` | Instruction-following generation scoring across the Portuguese IFEval translation | IFEval `zhou2023instruction`, Tucano 2 Cool `klugecorrea2026tucano2cool` |
-| `hendrycks_math` | Generated math-normalized exact match across `algebra/counting_and_probability/geometry/intermediate_algebra/number_theory/prealgebra/precalculus` subsets | MATH `hendrycks2021measuring` |
-| `histoires_morales` | Multiple-choice log-likelihood over moral versus norm-divergent actions, raw + length-normalized accuracy | Histoires Morales `leteno2025histoiresmorales` |
-| `moral_stories` | Multiple-choice log-likelihood over moral versus immoral actions, raw + length-normalized accuracy | Moral Stories `emelin-etal-2021-moral` |
-| `kobest` | Multiple-choice log-likelihood across `boolq/copa/hellaswag/sentineg/wic` Korean subsets, raw + length-normalized accuracy | KoBEST `kim2022kobest` |
-| `kmmlu` | Multiple-choice log-likelihood across configurable KMMLU subject subsets, raw + length-normalized accuracy | KMMLU `son2024kmmlu` |
-| `kormedmcqa` | Five-shot generated answer-label exact match across Korean medical licensing subsets | KorMedMCQA `kweon2024kormedmcqa` |
-| `icelandic_winogrande` | Partial-evaluation multiple-choice log-likelihood over blank replacements, raw + length-normalized accuracy | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
-| `lambada_{openai,openai_cloze,standard,standard_cloze}` | Single-continuation log-likelihood, greedy accuracy + perplexity | LAMBADA `paperno2016lambada` |
-| `lambada_openai_mt_{de,en,es,fr,it}`, `lambada_openai_mt_stablelm_{de,en,es,fr,it,nl,pt}` | Single-continuation log-likelihood, greedy accuracy + perplexity over multilingual LAMBADA translations | LAMBADA-MT |
-| `inverse_scaling` | Multiple-choice log-likelihood across inverse-scaling subsets, raw + length-normalized accuracy | Inverse Scaling Prize `mckenzie2023inverse` |
-| `logiqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA `liu2020logiqa` |
-| `logiqa2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | LogiQA 2.0 `liu2022logiqa2` |
-| `humaneval` | Generated Python code execution, pass@1 over benchmark tests | HumanEval `chen2021evaluatinglargelanguagemodels` |
-| `mbpp` | Generated Python code execution, pass@1 over provided unit tests | MBPP `austin2021program` |
-| `mastermind` | Multiple-choice log-likelihood over candidate secret codes across the `24/35/46` easy and hard variants | Mastermind |
-| `mathqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MathQA `amini2019mathqa` |
-| `mc_taco` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | MC-TACO `zhou2019mctaco` |
-| `medmcqa` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedMCQA `pmlr-v174-pal22a` |
-| `medqa_4options` | Multiple-choice log-likelihood over answer labels, raw + length-normalized accuracy | MedQA `jin2020disease` |
-| `mmlu` | Multiple-choice log-likelihood, raw + length-normalized accuracy | MMLU `hendryckstest2021` |
-| `mmlu_cf` | Multiple-choice log-likelihood across configurable contamination-free subject subsets, raw + length-normalized accuracy | MMLU-CF `zhao2024mmlucf` |
-| `mmlu_pro` | Generated choice-label exact match with CoT prompting | MMLU-Pro `wang2024mmlupro` |
-| `mnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `mrpc` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
-| `mutual` | Multiple-choice dialogue response selection log-likelihood, raw + length-normalized accuracy | MuTual `cui2020mutual` |
-| `nq_open` | Generated QA exact match and token-overlap F1 over answer aliases | Natural Questions `kwiatkowski2019natural` |
-| `openbookqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | OpenBookQA `mihaylov2018openbookqa` |
-| `paws_x` | Multiple-choice log-likelihood across `de/en/es/fr/ja/ko/zh` language subsets, raw + length-normalized accuracy, positive-class F1 | PAWS-X `yang2019pawsx` |
-| `xcopa` | Multiple-choice log-likelihood over option labels across `et/ht/id/it/qu/sw/ta/th/tr/vi/zh` language subsets, raw + length-normalized accuracy | XCOPA `ponti2020xcopa` |
-| `polemo2` | Generated sentiment choice-label micro-F1 across the `in/out` opinion subsets | KLEJ POLEMO 2.0 `kocon-etal-2019-multi` |
-| `xquad` | Generated extractive QA exact match and token-overlap F1 across `ar/de/el/en/es/hi/ro/ru/th/tr/vi/zh` language subsets | XQuAD `artetxe2020crosslingual` |
-| `xstorycloze` | Multiple-choice log-likelihood over translated StoryCloze endings across `ar/en/es/eu/hi/id/my/ru/sw/te/zh` subsets, raw + length-normalized accuracy | XStoryCloze `lin2021fewshotmultilingual` |
-| `xnli` | Three-way NLI multiple-choice log-likelihood across `ar/bg/de/el/en/es/fr/hi/ru/sw/th/tr/ur/vi/zh` language subsets, raw + length-normalized accuracy | XNLI `conneau2018xnli` |
-| `xnli_eu` | Three-way Basque NLI multiple-choice log-likelihood over `Bai/Gainera/Ez` hypothesis relations, raw + length-normalized accuracy | XNLI-EU `heredia-etal-2024-xnlieu` |
-| `xwinograd` | Partial-evaluation multiple-choice log-likelihood over blank replacements across `en/fr/jp/pt/ru/zh` language subsets, raw + length-normalized accuracy | XWinograd `tikhonov2021heads` |
-| `piqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PIQA `bisk2020piqa` |
-| `piqa_ar` | Multiple-choice log-likelihood over the AlGhafa Arabic PIQA translation, raw + length-normalized accuracy | AlGhafa `almazrouei-etal-2023-alghafa` |
-| `pile_10k` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | The Pile `gao2020pile` |
-| `prost` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PROST `aroca-ouellette-etal-2021-prost` |
-| `pubmedqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | PubMedQA `jin2019pubmedqa` |
-| `qa4mre` | Multiple-choice log-likelihood across `2011/2012/2013` English machine reading evaluation sets, raw + length-normalized accuracy | QA4MRE `Peas2013QA4MRE2O` |
-| `qnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `qqp` | Multiple-choice log-likelihood, raw + length-normalized accuracy, positive-class F1 | GLUE `wang-etal-2018-glue` |
-| `race` | Multiple-choice log-likelihood, raw + length-normalized accuracy | RACE `lai-etal-2017-race` |
-| `record` | Entity-choice multiple-choice log-likelihood with benchmark-native exact match and token-overlap F1 over accepted answers | SuperGLUE ReCoRD `wang2019superglue` |
-| `rte` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `sciq` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SciQ `welbl2017crowdsourcing` |
-| `siqa` | Multiple-choice log-likelihood, raw + length-normalized accuracy | Social IQA `sap2019social` |
-| `swag` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SWAG `zellers2018swagaf` |
-| `toxigen` | Binary hateful-statement multiple-choice log-likelihood, raw + length-normalized accuracy | ToxiGen `hartvigsen-etal-2022-toxigen` |
-| `sst2` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `squadv2` | Generated QA exact match and token-overlap F1 with explicit no-answer handling | SQuAD 2.0 `rajpurkar2018know` |
-| `truthfulqa` | Multiple-choice truthfulness scoring for `mc1/mc2`, using benchmark-native accuracy semantics | TruthfulQA `lin-etal-2022-truthfulqa` |
-| `triviaqa` | Generated QA exact match and token-overlap F1 over answer aliases | TriviaQA `joshi2017triviaqa` |
-| `wic` | Multiple-choice log-likelihood, raw + length-normalized accuracy | SuperGLUE `wang2019superglue` |
-| `webqs` | Accepted-alias log-likelihood, greedy exact match over any accepted answer | WebQuestions `berant-etal-2013-semantic` |
-| `wikitext` | Rolling log-likelihood with word perplexity, byte perplexity, and bits per byte | WikiText-2 `merity2016pointer` |
-| `winogender` | Multiple-choice log-likelihood over pronoun-reference prompts across `all/gotcha` variants and `female/male/neutral` gender filters, raw + length-normalized accuracy | WinoGender `rudinger2018winogender` |
-| `wsc` | Multiple-choice log-likelihood over the SuperGLUE fixed-schema pronoun-resolution prompts, raw + length-normalized accuracy | SuperGLUE WSC `wang2019superglue` |
-| `wsc273` | Partial-evaluation multiple-choice log-likelihood, raw + length-normalized accuracy | WSC273 `levesque2012winograd` |
-| `wnli` | Multiple-choice log-likelihood, raw + length-normalized accuracy | GLUE `wang-etal-2018-glue` |
-| `winogrande` | Multiple-choice log-likelihood, raw + length-normalized accuracy | WinoGrande `sakaguchi2019winogrande` |
+| Suite | Original benchmark |
+| --- | --- |
+| `aexams` | EXAMS `hardalov-etal-2020-exams` |
+| `agieval` | AGIEval `zhong2023agieval` |
+| `afrimgsm` | IrokoBench AfriMGSM `adelani2025irokobench` |
+| `afrimmlu` | IrokoBench AfriMMLU `adelani2025irokobench` |
+| `aime`, `aime24`, `aime25`, `aime26` | AIME `aime_1983_2024`, `aime_2024`, `aime_2025`, `aime_2026` |
+| `afrixnli` | IrokoBench AfriXNLI `adelani2025irokobench` |
+| `anli_{r1,r2,r3}` | ANLI `nie-etal-2020-adversarial` |
+| `arabicmmlu` | ArabicMMLU `koto2024arabicmmlu` |
+| `darijammlu` | DarijaMMLU `shang2024atlaschatadaptinglargelanguage` |
+| `egymmlu` | EgyMMLU `el-mekki-etal-2025-nilechat` |
+| `eus_exams` | EusExams `etxaniz2024latxa` |
+| `eus_reading` | EusReading `etxaniz2024latxa` |
+| `eus_proficiency` | EusProficiency `etxaniz2024latxa` |
+| `eus_trivia` | EusTrivia `etxaniz2024latxa` |
+| <code>arc_challenge</code>, <code>arc_easy</code>, <code>arc_mt_{da,<wbr>de,<wbr>el,<wbr>es,<wbr>fi,<wbr>hu,<wbr>is,<wbr>it,<wbr>nb,<wbr>pl,<wbr>pt,<wbr>sv}</code> | ARC `clark2018arc` |
+| <code>arithmetic_{1dc,<wbr>2da,<wbr>2dm,<wbr>2ds,<wbr>3da,<wbr>3ds,<wbr>4da,<wbr>4ds,<wbr>5da,<wbr>5ds}</code> | GPT-3 arithmetic `brown2020gpt3` |
+| `asdiv` | ASDiv `miao2021diverse` |
+| `asdiv_cot_llama` | ASDiv `miao2021diverse` |
+| `babi` | bAbI `weston2015towards` |
+| `babilong` | BABILong `kuratov2024babilong` |
+| `bbh` | BIG-Bench Hard `suzgun2022challenging` |
+| `bangla` | TituLLMs Bangla benchmarks `nahin2025titullmsfamilybanglallms` |
+| `bear`, `bear_big` | BEAR `wiland2024bear` |
+| `belebele` | Belebele `bandarkar2023belebele` |
+| `bbq` | BBQ `parrish2022bbq` |
+| `blimp` | BLiMP `warstadt2020blimp` |
+| `c4` | C4 `raffel2020exploring` |
+| `careqa` | CareQA `arias-duart-etal-2025-automatic` |
+| `cabbq` | CaBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
+| `esbbq` | EsBBQ `ruizfernández2025esbbqcabbqspanishcatalan` |
+| `ceval` | C-Eval `huang2023ceval` |
+| `cmmlu` | CMMLU `li2023cmmlu` |
+| `boolq` | SuperGLUE `wang2019superglue` |
+| `cb` | SuperGLUE `wang2019superglue` |
+| `multirc` | SuperGLUE `wang2019superglue` |
+| `click` | CLIcK `kim-etal-2024-click` |
+| `cola` | GLUE `wang-etal-2018-glue` |
+| `cnn_dailymail` | CNN/DailyMail `nallapati2016abstractive` |
+| `code_x_glue` | CodeXGLUE `lu2021codexglue` |
+| `commonsense_qa` | CommonsenseQA `talmor2019commonsenseqa` |
+| `coqa` | CoQA `reddy2019coqa` |
+| `copa` | SuperGLUE `wang2019superglue` |
+| `copa_ar` | AlGhafa `almazrouei-etal-2023-alghafa` |
+| `copal_id` | COPAL-ID `wibowo-etal-2024-copal` |
+| `crows_pairs` | CrowS-Pairs `nangia-etal-2020-crows`, French CrowS-Pairs `neveol-etal-2022-french` |
+| `darijahellaswag` | DarijaHellaSwag `shang2024atlaschatadaptinglargelanguage` |
+| `egyhellaswag` | NileChat `el-mekki-etal-2025-nilechat` |
+| `drop` | DROP `dua2019drop` |
+| `fld` | FLD `morishita2023learning` |
+| `fda` | BASED / FDA `arora2024simple` |
+| `french_bench_arc_challenge` | FrenchBench ARC-Challenge |
+| `gpqa` | GPQA `rein2024gpqa` |
+| `gsm_plus`, `gsm_plus_mini` | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
+| <code>ethics_{cm,<wbr>deontology,<wbr>justice,<wbr>utilitarianism,<wbr>virtue}</code> | ETHICS `hendrycks2021ethics` |
+| `gsm8k` | GSM8K `cobbe2021trainingverifierssolvemath` |
+| `gsm8k_fr` | GSM8K `cobbe2021trainingverifierssolvemath`, French translation dataset `cmh2025gsm8kfr` |
+| `gsm8k_ko` | GSM8K `cobbe2021trainingverifierssolvemath`, Korean translation dataset `kuotient2024gsm8kko` |
+| `gsm8k_platinum` | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| `mgsm` | MGSM `shi2022multilingualchainofthought` |
+| `haerae` | HAE-RAE `son-etal-2024-hae` |
+| `hellaswag` | HellaSwag `zellers2019hellaswag` |
+| `headqa_{en,es}` | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
+| `ifeval` | IFEval `zhou2023instruction` |
+| `ifeval_pt` | IFEval `zhou2023instruction`, Tucano 2 Cool `klugecorrea2026tucano2cool` |
+| `hendrycks_math` | MATH `hendrycks2021measuring` |
+| `histoires_morales` | Histoires Morales `leteno2025histoiresmorales` |
+| `moral_stories` | Moral Stories `emelin-etal-2021-moral` |
+| `kobest` | KoBEST `kim2022kobest` |
+| `kmmlu` | KMMLU `son2024kmmlu` |
+| `kormedmcqa` | KorMedMCQA `kweon2024kormedmcqa` |
+| `icelandic_winogrande` | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
+| <code>lambada_{openai,<wbr>openai_cloze,<wbr>standard,<wbr>standard_cloze}</code> | LAMBADA `paperno2016lambada` |
+| <code>lambada_openai_mt_{de,<wbr>en,<wbr>es,<wbr>fr,<wbr>it}</code>, <code>lambada_openai_mt_stablelm_{de,<wbr>en,<wbr>es,<wbr>fr,<wbr>it,<wbr>nl,<wbr>pt}</code> | LAMBADA-MT |
+| `inverse_scaling` | Inverse Scaling Prize `mckenzie2023inverse` |
+| `logiqa` | LogiQA `liu2020logiqa` |
+| `logiqa2` | LogiQA 2.0 `liu2022logiqa2` |
+| `humaneval` | HumanEval `chen2021evaluatinglargelanguagemodels` |
+| `mbpp` | MBPP `austin2021program` |
+| `mastermind` | Mastermind |
+| `mathqa` | MathQA `amini2019mathqa` |
+| `mc_taco` | MC-TACO `zhou2019mctaco` |
+| `medmcqa` | MedMCQA `pmlr-v174-pal22a` |
+| `medqa_4options` | MedQA `jin2020disease` |
+| `mmlu` | MMLU `hendryckstest2021` |
+| `mmlu_cf` | MMLU-CF `zhao2024mmlucf` |
+| `mmlu_pro` | MMLU-Pro `wang2024mmlupro` |
+| `mnli` | GLUE `wang-etal-2018-glue` |
+| `mrpc` | GLUE `wang-etal-2018-glue` |
+| `mutual` | MuTual `cui2020mutual` |
+| `nq_open` | Natural Questions `kwiatkowski2019natural` |
+| `openbookqa` | OpenBookQA `mihaylov2018openbookqa` |
+| `paws_x` | PAWS-X `yang2019pawsx` |
+| `xcopa` | XCOPA `ponti2020xcopa` |
+| `polemo2` | KLEJ POLEMO 2.0 `kocon-etal-2019-multi` |
+| `xquad` | XQuAD `artetxe2020crosslingual` |
+| `xstorycloze` | XStoryCloze `lin2021fewshotmultilingual` |
+| `xnli` | XNLI `conneau2018xnli` |
+| `xnli_eu` | XNLI-EU `heredia-etal-2024-xnlieu` |
+| `xwinograd` | XWinograd `tikhonov2021heads` |
+| `piqa` | PIQA `bisk2020piqa` |
+| `piqa_ar` | AlGhafa `almazrouei-etal-2023-alghafa` |
+| `pile_10k` | The Pile `gao2020pile` |
+| `prost` | PROST `aroca-ouellette-etal-2021-prost` |
+| `pubmedqa` | PubMedQA `jin2019pubmedqa` |
+| `qa4mre` | QA4MRE `Peas2013QA4MRE2O` |
+| `qnli` | GLUE `wang-etal-2018-glue` |
+| `qqp` | GLUE `wang-etal-2018-glue` |
+| `race` | RACE `lai-etal-2017-race` |
+| `record` | SuperGLUE ReCoRD `wang2019superglue` |
+| `rte` | SuperGLUE `wang2019superglue` |
+| `sciq` | SciQ `welbl2017crowdsourcing` |
+| `siqa` | Social IQA `sap2019social` |
+| `swag` | SWAG `zellers2018swagaf` |
+| `toxigen` | ToxiGen `hartvigsen-etal-2022-toxigen` |
+| `sst2` | GLUE `wang-etal-2018-glue` |
+| `squadv2` | SQuAD 2.0 `rajpurkar2018know` |
+| `truthfulqa` | TruthfulQA `lin-etal-2022-truthfulqa` |
+| `triviaqa` | TriviaQA `joshi2017triviaqa` |
+| `wic` | SuperGLUE `wang2019superglue` |
+| `webqs` | WebQuestions `berant-etal-2013-semantic` |
+| `wikitext` | WikiText-2 `merity2016pointer` |
+| `winogender` | WinoGender `rudinger2018winogender` |
+| `wsc` | SuperGLUE WSC `wang2019superglue` |
+| `wsc273` | WSC273 `levesque2012winograd` |
+| `wnli` | GLUE `wang-etal-2018-glue` |
+| `winogrande` | WinoGrande `sakaguchi2019winogrande` |
 
 ARC suites (`arc_challenge`, `arc_easy`, and `arc_mt_*`) choose among answer options and score the
 question as an exam item, including partial credit when multiple top-scoring choices tie.
@@ -696,9 +712,9 @@ Metric key glossary:
 - `macro`: macro-average across labels rather than a single positive class.
 - `boolean`: positive-class metric using the suite's positive boolean label.
 
-Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
+Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting. 📈
 
-## Citation
+## Citation 📎
 
 If you use Evalution, cite the project itself. If you use one or more built-in suites, also cite the
 original benchmark papers below.
