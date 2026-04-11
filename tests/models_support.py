@@ -4005,7 +4005,7 @@ SUITE_SPECS = {
     "cabbq_disability_status": _cabbq_suite_spec(
         "cabbq_disability_status",
         category="DisabilityStatus",
-        baseline={"acc,ll": 0.5234375, "acc,ll_avg": 0.5234375},
+        baseline={"acc,ll": 0.546875, "acc,ll_avg": 0.546875},
     ),
     "cabbq_gender": _cabbq_suite_spec(
         "cabbq_gender",
