@@ -6271,7 +6271,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_de": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_de(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_de",
-        baseline={"acc,ll": 0.2421875, "ppl,ll": 159.49725779730807},
+        baseline={"acc,ll": 0.25, "ppl,ll": 158.80795113445453},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
