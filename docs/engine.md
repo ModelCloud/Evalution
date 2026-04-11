@@ -193,6 +193,12 @@ submitting request ids into `llm_engine.add_request(...)`, reading finished outp
 the installed vLLM runtime does not expose that lower-level request API, the engine falls back to
 fixed-batch emulation to preserve the `generate_continuous(...)` contract.
 
+`engines.LlamaCpp()` returns full request completions from `generate(...)` and
+`generate_continuous(...)`; it does not stream partial token text to callers. The current
+`llama-cpp-python` binding does not expose a higher-level whole-request continuous-batching API, so
+Evalution's native `LlamaCpp` path keeps the shared scheduler in Python while still honoring
+request-level completion semantics.
+
 The built-in vLLM engine currently expects `num_beams=1`. Benchmarks or custom requests that
 require beam search should use another engine until vLLM beam routing is added to this backend.
 

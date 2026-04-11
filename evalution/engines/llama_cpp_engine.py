@@ -238,7 +238,7 @@ class LlamaCppSession(BaseInferenceSession):
         *,
         batch_size: int | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
-        """Generate with either native llama.cpp continuous batching or fixed-size fallback batches."""
+        """Yield completed request outputs using native llama.cpp scheduling or fixed-size fallback batches."""
 
         if not self.config.continuous_batching:
             return self._generate_continuous_fixed_batches(requests, batch_size=batch_size)
@@ -251,7 +251,7 @@ class LlamaCppSession(BaseInferenceSession):
         *,
         batch_size: int | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
-        """Drive llama.cpp's native multi-sequence decode loop behind Evalution's iterator contract."""
+        """Drive llama.cpp's native multi-sequence decode loop while only emitting full request completions."""
 
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
             request_iter = iter(requests)
@@ -552,7 +552,13 @@ class LlamaCppSession(BaseInferenceSession):
         max_concurrency: int,
         put_result: Any,
     ) -> None:
-        """Run native llama.cpp continuous batching with one sequence id per active request."""
+        """Run native llama.cpp continuous batching with one sequence id per active request.
+
+        The public API still returns one final `GenerationOutput` per request. The current
+        llama-cpp-python binding does not expose a higher-level whole-request continuous-batching
+        scheduler, so Evalution advances the shared decode loop token by token inside Python while
+        preserving request-level outputs.
+        """
 
         if max_concurrency <= 0:
             raise ValueError("continuous batching requires a positive concurrency")

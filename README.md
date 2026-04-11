@@ -182,6 +182,8 @@ and `max_running_requests`.
 
 `engines.LlamaCpp(...)` accepts llama.cpp runtime options such as `device`, `n_ctx`,
 `n_gpu_layers`, `flash_attn`, `main_gpu`, `llama_cpp_path`, and `llama_kwargs`.
+Its `continuous_batching=True` mode schedules multiple in-flight requests together but still
+returns one final completion per request rather than streaming partial tokens to the caller.
 
 `engines.OpenVINO(...)` accepts OpenVINO runtime options such as `dtype`, `device`, `batch_size`, `attn_implementation`, `max_new_tokens` and `ov_config`.
 

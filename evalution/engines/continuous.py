@@ -5,6 +5,9 @@
 
 """Shared queued request/result runtime for continuous generation.
 
+This module coordinates whole-request submission and whole-request completion delivery.
+It does not stream partial token text back to callers.
+
 Terminology
 +------------------+-----------------------------------------------------------+
 | Term             | Meaning                                                   |
