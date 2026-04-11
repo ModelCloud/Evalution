@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 from dataclasses import dataclass
@@ -18,7 +19,12 @@ import evalution
 
 # Shared local model path and device selection for the Llama 3.2 integration matrix.
 LLAMA3_2_1B_INSTRUCT = Path("/monster/data/model/Llama-3.2-1B-Instruct")
+# Keep the tested GGUF artifact explicit so llama.cpp coverage uses one stable quant across runs.
+LLAMA3_2_1B_INSTRUCT_GGUF = Path(
+    "/monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+)
 LLAMA3_2_TRANSFORMERS_DEVICE = os.environ.get("EVALUTION_TEST_DEVICE", "cuda:0")
+LLAMA3_2_LLAMACPP_DEVICE = os.environ.get("EVALUTION_TEST_LLAMACPP_DEVICE", "auto")
 LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE = os.environ.get(
     "EVALUTION_TEST_COMPARE_LEFT_DEVICE",
     "cuda:0",
@@ -42,6 +48,7 @@ _MIN_A100_CLASS_VRAM_BYTES = 90 * 1024**3
 _GPU_BASELINE_BUCKET_DEFAULT = "default"
 _GPU_BASELINE_BUCKET_A100 = "a100"
 _GPU_BASELINE_BUCKET_RTX4090 = "rtx4090"
+_HAS_LLAMACPP_BINDING = importlib.util.find_spec("llama_cpp") is not None
 
 
 def _visible_llama3_2_gpu_baseline_bucket() -> str:
@@ -368,6 +375,23 @@ LLAMA3_2_TRANSFORMERS_COMPARE_TEST_MARKS = [
         reason="the full-model compare integration test requires at least two CUDA devices",
     ),
 ]
+# Llama.cpp integrations only need the GGUF payload plus the dense tokenizer repo for chat rendering.
+LLAMA3_2_LLAMACPP_TEST_MARKS = [
+    pytest.mark.integration,
+    pytest.mark.slow,
+    pytest.mark.skipif(
+        not LLAMA3_2_1B_INSTRUCT.exists(),
+        reason="local Llama 3.2 1B Instruct tokenizer weights are not available",
+    ),
+    pytest.mark.skipif(
+        not LLAMA3_2_1B_INSTRUCT_GGUF.exists(),
+        reason="local Llama 3.2 1B Instruct GGUF weights are not available",
+    ),
+    pytest.mark.skipif(
+        not _HAS_LLAMACPP_BINDING,
+        reason="llama-cpp-python is not installed",
+    ),
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -513,6 +537,41 @@ def run_llama3_2_compare_suite(
     assert result.right.engine["execution"]["paged_attention"] is True
     assert len(result.left.tests) == 1
     assert len(result.right.tests) == 1
+    assert len(result.tests) == 1
+    return result, result.tests[0]
+
+
+def run_llama3_2_llamacpp_suite(
+    capsys: pytest.CaptureFixture[str],
+    suite: Any,
+) -> tuple[Any, Any]:
+    """Run one llama.cpp-backed Llama 3.2 suite against the shared GGUF test artifact."""
+
+    with capsys.disabled():
+        result = (
+            evalution.LlamaCpp(
+                device=LLAMA3_2_LLAMACPP_DEVICE,
+                batch_size="auto",
+                seed=0,
+            )
+            .model(
+                path=str(LLAMA3_2_1B_INSTRUCT_GGUF),
+                tokenizer_path=str(LLAMA3_2_1B_INSTRUCT),
+            )
+            .run(suite)
+            .result()
+        )
+
+    assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT_GGUF)
+    assert result.model["tokenizer_path"] == str(LLAMA3_2_1B_INSTRUCT)
+    assert result.engine["resolved_engine"] == "LlamaCpp"
+    assert result.engine["device"] == LLAMA3_2_LLAMACPP_DEVICE
+    assert result.engine["continuous_batching"] is True
+    assert result.engine["batch_size"] == "auto"
+    assert result.engine["execution"]["generation_backend"] == "continuous_batching"
+    assert result.engine["execution"]["continuous_batching"] is True
+    assert result.engine["execution"]["requested_device"] in {"auto", "cuda", "cpu", "mlx"}
+    assert result.engine["execution"]["device"] in {"cpu", "cuda", "mlx"}
     assert len(result.tests) == 1
     return result, result.tests[0]
 

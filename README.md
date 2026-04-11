@@ -180,6 +180,11 @@ evalution emit-python evalution.yaml
 `mem_fraction_static`, `context_length`, `quantization`, `attention_backend`, `sampling_backend`, `tokenizer_mode`,
 and `max_running_requests`.
 
+`engines.LlamaCpp(...)` accepts llama.cpp runtime options such as `device`, `n_ctx`,
+`n_gpu_layers`, `flash_attn`, `main_gpu`, `llama_cpp_path`, and `llama_kwargs`.
+Its `continuous_batching=True` mode schedules multiple in-flight requests together but still
+returns one final completion per request rather than streaming partial tokens to the caller.
+
 `engines.OpenVINO(...)` accepts OpenVINO runtime options such as `dtype`, `device`, `batch_size`, `attn_implementation`, `max_new_tokens` and `ov_config`.
 
 Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_tokens`, `max_rows`,
@@ -516,6 +521,88 @@ tests:
   - type: gsm8k_platinum
 ```
 
+### LlamaCpp 🦙
+
+Use `engines.LlamaCpp()` in Python or `engine.type: LlamaCpp` in YAML when you want a
+`llama.cpp` backend through `llama-cpp-python`. Evalution keeps generation, native
+`generate_continuous(...)`, `loglikelihood(...)`, and `loglikelihood_rolling(...)` on the same
+shared engine contract. The current backend expects `num_beams=1`.
+
+Install from source when you need CUDA support:
+
+```bash
+CMAKE_ARGS="-DGGML_CUDA=on -DCUDAToolkit_ROOT=/usr/local/cuda-12.8" \
+FORCE_CMAKE=1 \
+pip install --no-binary=:all: --force-reinstall llama-cpp-python
+```
+
+Notes:
+
+- `device` can be `auto`, `cuda`, `cpu`, or `mlx`. When a GPU-backed request is not available in
+  the installed binding, Evalution falls back to CPU instead of aborting engine construction.
+- `continuous_batching` defaults to `True` and uses llama.cpp's native multi-sequence batch API.
+  Evalution enables the required unified-KV multi-sequence runtime internally and admits requests
+  by shared `n_ctx` budget, so large prompts do not overcommit the native scheduler. Set
+  `continuous_batching=False` if you want regular fixed-size batching instead.
+- `LlamaCpp` uses llama.cpp's native tokenizer for prompt tokenization and scoring. An optional
+  Hugging Face tokenizer is only loaded when needed for chat template rendering.
+
+Python:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.LlamaCpp(
+        device="auto",
+        continuous_batching=True,
+        n_ctx=4096,
+        n_gpu_layers=-1,
+    )
+    .model(
+        path="/monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+        tokenizer_path="/monster/data/model/Llama-3.2-1B-Instruct",
+    )
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: LlamaCpp
+  device: auto
+  continuous_batching: true
+  n_ctx: 4096
+  n_gpu_layers: -1
+
+model:
+  path: /monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf
+  tokenizer_path: /monster/data/model/Llama-3.2-1B-Instruct
+
+tests:
+  - type: gsm8k_platinum
+```
+
+For the shared llama.cpp integration test artifact, download
+`bartowski/Llama-3.2-1B-Instruct-GGUF` with the `Llama-3.2-1B-Instruct-Q4_K_M.gguf` file and keep
+the original Hugging Face tokenizer checkout at `/monster/data/model/Llama-3.2-1B-Instruct`:
+
+```bash
+python - <<'PY'
+from huggingface_hub import hf_hub_download
+
+hf_hub_download(
+    repo_id="bartowski/Llama-3.2-1B-Instruct-GGUF",
+    filename="Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+    local_dir="/monster/data/model/Llama-3.2-1B-Instruct-GGUF",
+)
+PY
+```
+
 ### OpenVINO 🔧
 
 Use `engines.OpenVINO()` in Python or `engine.type: OpenVINO` in YAML when you want to run an
@@ -553,9 +640,12 @@ tests:
 ```
 
 `Tokenicer` is used to load tokenizers for the transformer, transformer-compat, OpenVINO, GPTQModel,
-and vLLM engines. When `engine.model(...)` is called with a model config, Evalution resolves tokenizer loading in this order:
+vLLM, and optionally LlamaCpp engines. When `engine.model(...)` is called with a model config,
+Evalution resolves tokenizer loading in this order:
 `tokenizer` (preinitialized object), `tokenizer_path`, then `path`.
 `Tokenicer` also applies its normalization stage so pad/eos/bos token IDs are corrected before evaluation.
+`LlamaCpp` still uses llama.cpp's native tokenizer for scoring and prompt tokenization; the optional
+loaded tokenizer is only used to render chat templates when the caller supplies one.
 To inject a custom tokenizer, pass it through `.model(...)` on the model config:
 
 ```python

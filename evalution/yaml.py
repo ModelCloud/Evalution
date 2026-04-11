@@ -18,6 +18,7 @@ from evalution.config import Model
 from evalution.engines import (
     BaseEngine,
     GPTQModel,
+    LlamaCpp,
     OpenVINO,
     SGLang,
     TensorRTLLM,
@@ -45,6 +46,7 @@ _ENGINE_REGISTRY: dict[str, _EngineRegistryEntry] = {
     "transformers": _EngineSpec(factory=Transformers, emit_alias="Transformers"),
     "transformerscompat": _EngineSpec(factory=TransformersCompat, emit_alias="TransformersCompat"),
     "gptqmodel": _EngineSpec(factory=GPTQModel, emit_alias="GPTQModel"),
+    "llamacpp": _EngineSpec(factory=LlamaCpp, emit_alias="LlamaCpp"),
     "openvino": _EngineSpec(factory=OpenVINO, emit_alias="OpenVINO"),
     "tensorrtllm": _EngineSpec(factory=TensorRTLLM, emit_alias="TensorRTLLM"),
     "vllm": _EngineSpec(factory=VLLM, emit_alias="VLLM"),

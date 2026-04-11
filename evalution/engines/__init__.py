@@ -14,6 +14,7 @@ from .base import (
     SharedEngineConfig,
 )
 from .gptqmodel_engine import GPTQModel
+from .llama_cpp_engine import LlamaCpp
 from .openai_engine import OpenAICompatible
 from .openai_server import OpenAICompatibleServer, build_openai_compatible_server
 from .openvino_engine import OpenVINO
@@ -33,6 +34,7 @@ __all__ = [
     "BaseEngineTransformersRuntimeConfig",
     "BaseInferenceSession",
     "GPTQModel",
+    "LlamaCpp",
     "OpenAICompatible",
     "OpenAICompatibleServer",
     "OpenVINO",
