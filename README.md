@@ -437,7 +437,9 @@ tests:
 Use `engines.OpenAICompatible()` in Python or `engine.type: OpenAICompatible` in YAML when you
 want to evaluate through an OpenAI-compatible HTTP endpoint. Evalution expects generation routes
 such as `/v1/chat/completions` or `/v1/completions`, plus the Evalution scoring routes
-`/v1/eval/loglikelihood` and `/v1/eval/loglikelihood/rolling`.
+`/v1/eval/loglikelihood` and `/v1/eval/loglikelihood/rolling`. Evalution still uses
+`.model(...)` for its shared run API, and this engine converts `.model(path=...)` into the remote
+OpenAI-compatible HTTP `model` argument.
 
 Python:
 
