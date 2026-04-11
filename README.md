@@ -485,8 +485,19 @@ shared engine contract. The current backend expects `num_beams=1`.
 Install from source when you need CUDA support:
 
 ```bash
-CMAKE_ARGS="-DGGML_CUDA=on" pip install --no-binary=:all: --force-reinstall llama-cpp-python
+CMAKE_ARGS="-DGGML_CUDA=on -DCUDAToolkit_ROOT=/usr/local/cuda-12.8" \
+FORCE_CMAKE=1 \
+pip install --no-binary=:all: --force-reinstall llama-cpp-python
 ```
+
+Notes:
+
+- `device: cuda` requires a CUDA-enabled `llama-cpp-python` build. Evalution will fail fast when
+  the installed binding reports no GPU offload support.
+- `generate_continuous(...)` is emulated with Evalution-owned request/result queues because
+  llama.cpp does not expose the same request-level scheduler API as vLLM.
+- `LlamaCpp` uses llama.cpp's native tokenizer for prompt tokenization and scoring. An optional
+  Hugging Face tokenizer is only loaded when needed for chat template rendering.
 
 Python:
 
