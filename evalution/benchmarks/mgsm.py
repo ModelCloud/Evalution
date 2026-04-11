@@ -36,7 +36,7 @@ def _load_mgsm_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
 ) -> Any:
     # Resolve the language-specific MGSM TSV and adapt it to the datasets CSV reader.
     """Load mgsm dataset."""
@@ -46,6 +46,7 @@ def _load_mgsm_dataset(
         raise ValueError(f"unsupported MGSM language: {dataset_name!r}")
     if split != "test":
         raise ValueError(f"unsupported MGSM split: {split!r}")
+    effective_stream = False if stream is None else stream
     file_path = hf_hub_download(
         repo_id=dataset_path,
         filename=f"mgsm_{dataset_name}.tsv",
@@ -57,7 +58,7 @@ def _load_mgsm_dataset(
         data_files={split: file_path},
         split=split,
         cache_dir=cache_dir,
-        streaming=stream,
+        streaming=effective_stream,
         delimiter="\t",
         column_names=["question", "answer_number"],
     )

@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from datasets import Dataset, load_dataset
@@ -49,15 +49,16 @@ def _load_mmlu_redux_subject_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
 ) -> Any:
     """Load MMLU redux subject dataset."""
+    effective_stream = False if stream is None else stream
     return load_dataset(
         dataset_path,
         subject,
         split=split,
         cache_dir=cache_dir,
-        streaming=stream,
+        streaming=effective_stream,
         trust_remote_code=True,
     )
 
@@ -69,7 +70,7 @@ class MMLURedux(BaseMultipleChoiceSuite):
     dataset_path: str = "fxmarty/mmlu-redux-2.0-ok"
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = False
+    stream: bool = field(default=False)
     subsets: str | list[str] = "all"
 
     def dataset_loader(self) -> Any:
@@ -78,9 +79,10 @@ class MMLURedux(BaseMultipleChoiceSuite):
         dataset_path = self.dataset_path
         split = self.split
 
-        def loader(*_args: Any, cache_dir: str | None = None, stream: bool = False, **_kwargs: Any) -> Any:
+        def loader(*_args: Any, cache_dir: str | None = None, stream: bool | None = None, **_kwargs: Any) -> Any:
             """Implement loader for mmluredux. Keep the nested traversal explicit so ordering and metadata stay aligned."""
-            if stream and (selected_subjects is None or len(selected_subjects) != 1):
+            effective_stream = False if stream is None else stream
+            if effective_stream and (selected_subjects is None or len(selected_subjects) != 1):
                 raise ValueError("mmlu_redux only supports stream=True for a single selected subject")
             if selected_subjects is None:
                 rows: list[dict[str, Any]] = []
@@ -104,9 +106,9 @@ class MMLURedux(BaseMultipleChoiceSuite):
                     selected_subjects[0],
                     split=split,
                     cache_dir=cache_dir,
-                    stream=stream,
+                    stream=effective_stream,
                 )
-                if stream:
+                if effective_stream:
                     return dataset
                 rows = []
                 for doc in dataset:

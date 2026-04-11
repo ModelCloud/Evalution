@@ -111,11 +111,12 @@ def _load_scrolls_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
 ) -> Dataset:
     # Materialize SCROLLS splits from the repo-hosted zip archives so no remote dataset scripts execute.
     """Load scrolls dataset. Preserve the fallback order expected by the surrounding caller."""
-    if stream:
+    effective_stream = False if stream is None else stream
+    if effective_stream:
         raise ValueError("scrolls requires stream=False to group duplicate reference rows")
     if dataset_name is None:
         raise ValueError("scrolls dataset_name cannot be None")

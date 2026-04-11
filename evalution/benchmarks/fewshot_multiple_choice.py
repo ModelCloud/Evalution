@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from evalution.benchmarks.base import TestSuite
@@ -31,7 +31,7 @@ class BaseFewshotMultipleChoiceSuite(TestSuite, ABC):
     split: str = "test"
     fewshot_split: str = "dev"
     num_fewshot: int = 5
-    stream: bool = False
+    stream: bool = field(default=False)
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

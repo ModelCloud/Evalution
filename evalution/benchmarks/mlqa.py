@@ -114,12 +114,13 @@ def _load_mlqa_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
     context_language: str,
     question_language: str,
 ) -> Dataset:
     """Load MLQA dataset."""
-    if stream:
+    effective_stream = False if stream is None else stream
+    if effective_stream:
         raise ValueError("mlqa does not support stream=True")
     expected_dataset_name = f"mlqa.{context_language}.{question_language}"
     if dataset_name not in {None, expected_dataset_name}:

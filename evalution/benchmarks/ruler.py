@@ -726,7 +726,7 @@ def _load_ruler_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
     variant: str,
     tokenizer: Any,
     max_length: int,
@@ -734,11 +734,12 @@ def _load_ruler_dataset(
 ) -> Dataset:
     """Load ruler dataset."""
     del dataset_name
+    effective_stream = False if stream is None else stream
     if dataset_path != "NVIDIA/RULER":
         raise ValueError(f"unsupported ruler dataset path: {dataset_path!r}")
     if split != "test":
         raise ValueError(f"unsupported ruler split: {split!r}")
-    if stream:
+    if effective_stream:
         raise ValueError("ruler does not support stream=True")
     return Dataset.from_list(
         _generate_rows(
@@ -763,7 +764,7 @@ class RULER(BaseTestSuite):
     dataset_path: str = "NVIDIA/RULER"
     dataset_name: str | None = "niah_single_1"
     split: str = "test"
-    stream: bool = False
+    stream: bool = field(default=False)
     variant: str = "niah_single_1"
     max_length: int = 4096
     num_samples: int = _DEFAULT_SAMPLE_COUNT

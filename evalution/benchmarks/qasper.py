@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 import json
 from pathlib import Path
@@ -182,11 +182,12 @@ def _load_qasper_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
     answer_type: str,
 ) -> Dataset:
     """Load QASPER dataset."""
-    if stream:
+    effective_stream = False if stream is None else stream
+    if effective_stream:
         raise ValueError("qasper does not support stream=True")
     if dataset_name is not None:
         raise ValueError("qasper does not use dataset_name")
@@ -204,7 +205,7 @@ class QASPERBool(BaseMultipleChoiceSuite):
     dataset_path: str = "allenai/qasper"
     dataset_name: str | None = None
     split: str = "validation"
-    stream: bool = False
+    stream: bool = field(default=False)
 
     def dataset_loader(self) -> Any:
         """Return the dataset loader bound to this suite."""
@@ -264,7 +265,7 @@ class QASPERFreeform(BaseTestSuite):
     dataset_path: str = "allenai/qasper"
     dataset_name: str | None = None
     split: str = "validation"
-    stream: bool = False
+    stream: bool = field(default=False)
     max_new_tokens: int = 64
     do_sample: bool = False
     temperature: float = 0.0

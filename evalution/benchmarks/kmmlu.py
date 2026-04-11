@@ -120,7 +120,7 @@ def _load_kmmlu_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
 ) -> Any:
     # Resolve the subject CSV from Hugging Face and hand it to the standard datasets CSV loader.
     """Load kmmlu dataset."""
@@ -130,6 +130,7 @@ def _load_kmmlu_dataset(
         raise ValueError(f"unsupported KMMLU dataset_name: {dataset_name!r}")
     if split not in {"dev", "test"}:
         raise ValueError(f"unsupported KMMLU split: {split!r}")
+    effective_stream = False if stream is None else stream
     file_path = hf_hub_download(
         repo_id=dataset_path,
         filename=f"data/{dataset_name}-{split}.csv",
@@ -141,7 +142,7 @@ def _load_kmmlu_dataset(
         data_files={split: file_path},
         split=split,
         cache_dir=cache_dir,
-        streaming=stream,
+        streaming=effective_stream,
     )
 
 

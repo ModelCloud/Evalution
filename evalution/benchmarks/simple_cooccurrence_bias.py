@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import exp, log
 from typing import Any
 
@@ -33,7 +33,7 @@ class SimpleCooccurrenceBias:
     dataset_path: str = "oskarvanderwal/simple-cooccurrence-bias"
     dataset_name: str | None = None
     split: str = "test"
-    stream: bool = False
+    stream: bool = field(default=False)
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None

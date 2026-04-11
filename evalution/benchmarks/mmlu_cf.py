@@ -63,7 +63,7 @@ def _load_mmlu_cf_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
 ) -> Any:
     # Resolve the published parquet shard for one MMLU-CF subject split.
     """Load MMLU cf dataset."""
@@ -73,6 +73,7 @@ def _load_mmlu_cf_dataset(
         raise ValueError(f"unsupported MMLU-CF subject: {dataset_name!r}")
     if split not in {"dev", "val"}:
         raise ValueError(f"unsupported MMLU-CF split: {split!r}")
+    effective_stream = False if stream is None else stream
     file_prefix = MMLU_CF_FILE_PREFIXES[dataset_name]
     file_path = hf_hub_download(
         repo_id=dataset_path,
@@ -85,7 +86,7 @@ def _load_mmlu_cf_dataset(
         data_files={split: file_path},
         split=split,
         cache_dir=cache_dir,
-        streaming=stream,
+        streaming=effective_stream,
     )
 
 

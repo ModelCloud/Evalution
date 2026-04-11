@@ -127,7 +127,7 @@ def _load_cmmlu_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
 ) -> Dataset:
     # Adapt the raw CMMLU archive to the standard Evalution dataset-loader contract.
     """Load cmmlu dataset. Preserve the fallback order expected by the surrounding caller."""
@@ -138,7 +138,8 @@ def _load_cmmlu_dataset(
         raise ValueError(f"unsupported CMMLU subset: {dataset_name!r}")
     if split not in {"dev", "test"}:
         raise ValueError(f"unsupported CMMLU split: {split!r}")
-    if stream:
+    effective_stream = False if stream is None else stream
+    if effective_stream:
         raise ValueError("CMMLU raw zip loader requires non-stream dataset materialization")
     return Dataset.from_list(list(_cmmlu_rows(dataset_name, split)))
 
