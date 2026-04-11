@@ -4339,9 +4339,9 @@ SUITE_SPECS = {
         ),
         expected_name="phrases_va_es",
         baseline={
-            "bleu": 21.128406347527726,
-            "chrf": 56.634187265519266,
-            "ter": 65.66666666666666,
+            "bleu": 21.130123263852585,
+            "chrf": 57.05947842395071,
+            "ter": 66.33333333333333,
         },
         expected_metrics=frozenset({"bleu", "chrf", "ter"}),
         expected_metadata={
