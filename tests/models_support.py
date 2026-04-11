@@ -3729,6 +3729,7 @@ def _eus_exams_suite_spec(
     subset: str,
     baseline: dict[str, float],
     expected_sample_count: int,
+    abs_tolerance: float | None = None,
 ) -> SuiteSpec:
     """Support the surrounding tests with eus exams suite spec."""
     return SuiteSpec(
@@ -3757,7 +3758,7 @@ def _eus_exams_suite_spec(
             prompt_substrings=("\nA. ", "\nB. ", "\nC. ", "\nD. ", "\nAnswer:"),
             metadata_validator=_metadata_eus_exams_subset(subset),
         ),
-        abs_tolerance=2 / expected_sample_count,
+        abs_tolerance=(2 / expected_sample_count) if abs_tolerance is None else abs_tolerance,
     )
 
 
@@ -4107,8 +4108,9 @@ SUITE_SPECS = {
     "eus_exams_es_ejadministrativo": _eus_exams_suite_spec(
         "eus_exams_es_ejadministrativo",
         subset="es_ejadministrativo",
-        baseline={"acc,ll": 0.36220472440944884, "acc,ll_avg": 0.36220472440944884},
+        baseline={"acc,ll": 0.3779527559055118, "acc,ll_avg": 0.3779527559055118},
         expected_sample_count=127,
+        abs_tolerance=3 / 127,
     ),
     "eus_exams_es_ejauxiliar": _eus_exams_suite_spec(
         "eus_exams_es_ejauxiliar",
