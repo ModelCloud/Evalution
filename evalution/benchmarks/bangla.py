@@ -25,6 +25,9 @@ _BOOLQA_CHOICES = ["yes", "no"]
 _BINARY_LABELS = ["A", "B"]
 _FOUR_WAY_LABELS = ["A", "B", "C", "D"]
 _FIVE_WAY_LABELS = ["A", "B", "C", "D", "E"]
+_BANGLA_MMLU_DESCRIPTION = (
+    "The following are multiple choice questions (with answers) about range of topics in Bangla"
+)
 _BOOLQA_ANSWER_MAP = {
     "0": 0,
     "1": 1,
@@ -276,7 +279,7 @@ class Bangla(BaseMultipleChoiceSuite):
             question = str(doc["question"]).strip()
             prompt = " ".join(
                 [
-                    question,
+                    f"{_BANGLA_MMLU_DESCRIPTION}{question}",
                     f"A. {raw_choices[0]}",
                     f"B. {raw_choices[1]}",
                     f"C. {raw_choices[2]}",

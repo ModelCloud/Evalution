@@ -107,6 +107,7 @@ class FakeMMLUSession:
         assert batch_size == 6
         assert len(requests) == 4
         assert requests[0].context == (
+            "The following are multiple choice questions (with answers) about range of topics in Bangla"
             "পৃথিবী সূর্যের চারদিকে কত সময়ে একবার ঘোরে? "
             "A. এক দিন B. এক মাস C. এক বছর D. এক ঘণ্টা Answer:"
         )
