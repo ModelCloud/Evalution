@@ -5054,7 +5054,7 @@ SUITE_SPECS = {
         ),
         expected_name="gsm8k_ko",
         baseline={
-            "acc,num": 0.078125,
+            "acc,num": 0.109375,
         },
         expected_metrics=frozenset({"acc,num"}),
         expected_metadata={
