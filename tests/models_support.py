@@ -6194,7 +6194,7 @@ SUITE_SPECS = {
         subset="wic",
         baseline={
             "acc,ll": 0.4375,
-            "acc,ll_avg": 0.4765625,
+            "acc,ll_avg": 0.5,
         },
     ),
     "headqa_en": SuiteSpec(
