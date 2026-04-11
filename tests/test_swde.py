@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 swde_module = importlib.import_module("evalution.benchmarks.swde")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size):
+        """Generate generate."""
         assert batch_size == 1
         assert len(requests) == 1
         assert requests[0].prompt.endswith("Summary of information above...\nyear:")
@@ -30,6 +33,7 @@ class FakeSession:
 
 
 def test_swde_scores_generated_contains(monkeypatch) -> None:
+    """Verify SWDE scores generated contains. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {

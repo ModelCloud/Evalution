@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 arabicmmlu_module = importlib.import_module("evalution.benchmarks.arabicmmlu")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -39,6 +42,7 @@ class FakeSession:
 
 
 def test_arabicmmlu_scores_multiple_choice_rows(monkeypatch) -> None:
+    """Verify arabicmmlu scores multiple choice rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -81,6 +85,7 @@ def test_arabicmmlu_scores_multiple_choice_rows(monkeypatch) -> None:
 
 
 def test_arabicmmlu_slugify_subset_name() -> None:
+    """Verify arabicmmlu slugify subset name."""
     assert arabicmmlu_module._slugify_subset_name("Islamic Studies") == "islamic_studies"
     assert (
         arabicmmlu_module._slugify_subset_name("Computer Science (High School)")
@@ -89,5 +94,6 @@ def test_arabicmmlu_slugify_subset_name() -> None:
 
 
 def test_arabicmmlu_rejects_unknown_subset() -> None:
+    """Verify arabicmmlu rejects unknown subset."""
     with pytest.raises(ValueError, match="unsupported arabicmmlu subset"):
         evalution.benchmarks.arabicmmlu(subset="unknown")

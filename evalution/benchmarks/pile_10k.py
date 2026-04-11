@@ -18,15 +18,19 @@ from evalution.benchmarks.rolling_perplexity import (
 
 
 def _pile_word_count(text: str) -> int:
+    """Implement pile word count for this module."""
     return len(text.split())
 
 
 def _pile_byte_count(text: str) -> int:
+    """Implement pile byte count for this module."""
     return len(text.encode("utf-8"))
 
 
 @dataclass(slots=True)
 class Pile10K(BaseRollingPerplexitySuite):
+    """Define the pile10 k helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "monology/pile-uncopyrighted"
     dataset_name: str | None = None
     split: str = "train"
@@ -36,12 +40,15 @@ class Pile10K(BaseRollingPerplexitySuite):
     stream: bool = True
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "pile_10k"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> RollingPerplexitySample:
+        """Build one benchmark sample from a dataset row."""
         text = str(doc["text"])
         meta = doc.get("meta")
         pile_set_name = str(meta.get("pile_set_name", "")) if isinstance(meta, dict) else ""
@@ -60,4 +67,5 @@ class Pile10K(BaseRollingPerplexitySuite):
 
 
 def pile_10k(**kwargs: Any) -> Pile10K:
+    """Implement pile 10k for this module."""
     return Pile10K(**kwargs)

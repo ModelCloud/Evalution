@@ -12,15 +12,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 coqa_module = importlib.import_module("evalution.benchmarks.coqa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[str]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
         self.offset = 0
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size in {None, 1}
         request_list = list(requests)
         batch_outputs = self.outputs[self.offset : self.offset + len(request_list)]
@@ -32,6 +36,7 @@ class FakeSession:
 
 
 def test_coqa_flattens_turns_and_builds_gold_history_prompt(monkeypatch) -> None:
+    """Verify coqa flattens turns and builds gold history prompt."""
     dataset = Dataset.from_list(
         [
             {
@@ -81,6 +86,7 @@ def test_coqa_flattens_turns_and_builds_gold_history_prompt(monkeypatch) -> None
 
 
 def test_coqa_prompt_rejects_mismatched_history_lengths() -> None:
+    """Verify coqa prompt rejects mismatched history lengths."""
     try:
         coqa_module._coqa_prompt(
             story="Story.",

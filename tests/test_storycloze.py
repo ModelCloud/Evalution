@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 storycloze_module = importlib.import_module("evalution.benchmarks.storycloze")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 2
         assert requests[0].context == "One. Two. Three. Four."
@@ -30,6 +33,7 @@ class FakeSession:
 
 
 def test_storycloze_scores_year_specific_multiple_choice_rows(monkeypatch) -> None:
+    """Verify storycloze scores year specific multiple choice rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -68,6 +72,7 @@ def test_storycloze_scores_year_specific_multiple_choice_rows(monkeypatch) -> No
 
 
 def test_storycloze_prompt_builder_and_year_validation() -> None:
+    """Verify storycloze prompt builder and year validation."""
     assert storycloze_module._storycloze_prompt(
         {
             "input_sentence_1": "One.",

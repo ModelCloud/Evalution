@@ -21,6 +21,7 @@ _GROUNDCOCOA_GOLD_INDICES = {
 
 
 def _groundcocoa_prompt(doc: dict[str, Any]) -> str:
+    """Implement groundcocoa prompt for this module."""
     return (
         "A user has specified certain criteria for booking a flight. Below are five "
         "different flight options labeled 'A', 'B', 'C', 'D', and 'E'. Review these "
@@ -37,6 +38,7 @@ def _groundcocoa_prompt(doc: dict[str, Any]) -> str:
 
 
 def _groundcocoa_gold_index(answer: str) -> int:
+    """Implement groundcocoa gold index for this module."""
     try:
         return _GROUNDCOCOA_GOLD_INDICES[str(answer).strip()]
     except KeyError as exc:
@@ -46,23 +48,28 @@ def _groundcocoa_gold_index(answer: str) -> int:
 @dataclass(slots=True)
 class GroundCocoa(BaseMultipleChoiceSuite):
     # GroundCocoa scores whether the model can map natural-language travel constraints to the best flight option.
+    """Implement the ground cocoa benchmark suite."""
     dataset_path: str = "harsh147/GroundCocoa"
     dataset_name: str | None = None
     split: str = "test"
     stream: bool = True
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "groundcocoa"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata()
         metadata["prompt_variant"] = "flight_criteria_with_option_labels"
         return metadata
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_groundcocoa_prompt(doc),
@@ -77,4 +84,5 @@ class GroundCocoa(BaseMultipleChoiceSuite):
 
 
 def groundcocoa(**kwargs: Any) -> GroundCocoa:
+    """Implement groundcocoa for this module."""
     return GroundCocoa(**kwargs)

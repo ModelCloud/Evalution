@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 squad_completion_module = importlib.import_module("evalution.benchmarks.squad_completion")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size):
+        """Generate generate."""
         assert batch_size == 1
         assert len(requests) == 1
         assert requests[0].prompt.endswith("represented the AFC at Super Bowl 50 was the")
@@ -30,6 +33,7 @@ class FakeSession:
 
 
 def test_squad_completion_scores_generated_contains(monkeypatch) -> None:
+    """Verify SQuAD completion scores generated contains. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -80,6 +84,7 @@ def test_squad_completion_scores_generated_contains(monkeypatch) -> None:
 
 
 def test_squad_completion_contains_match_is_case_insensitive() -> None:
+    """Verify SQuAD completion contains match is case insensitive. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     assert squad_completion_module._contains_target_prediction(
         "denver broncos closed it out",
         "Denver Broncos",

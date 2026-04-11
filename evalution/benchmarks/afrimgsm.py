@@ -39,10 +39,12 @@ AFRIMGSM_TASKS = tuple(f"afrimgsm_{language}" for language in AFRIMGSM_LANGUAGES
 
 
 def _direct_prompt(doc: dict[str, Any]) -> str:
+    """Implement direct prompt for this module."""
     return f"Question: {str(doc['question']).strip()}\nAnswer:"
 
 
 def _numeric_target(doc: dict[str, Any]) -> str:
+    """Implement numeric target for this module."""
     value = doc["answer_number"]
     if isinstance(value, int):
         return str(value)
@@ -51,6 +53,7 @@ def _numeric_target(doc: dict[str, Any]) -> str:
     return str(value).strip()
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _DIRECT_VARIANTS = {
     "base": VariantSpec(
         task_name="afrimgsm",
@@ -67,6 +70,7 @@ _DIRECT_VARIANTS = {
 class AfriMGSM(BaseGSM8KSuite):
     """AfriMGSM suite backed by a frozen language registry to keep imports offline-safe."""
 
+    # Keep the class-level state explicit for this helper.
     VARIANTS = _DIRECT_VARIANTS
     SCORING_MODE = "numeric_format_insensitive"
     dataset_path: str = "masakhane/afrimgsm"
@@ -76,6 +80,7 @@ class AfriMGSM(BaseGSM8KSuite):
     variant: GSM8KVariant = "default"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in AFRIMGSM_LANGUAGES:
             raise ValueError(f"unsupported afrimgsm language: {self.language!r}")
         if self.dataset_name in {None, self.language}:
@@ -86,12 +91,15 @@ class AfriMGSM(BaseGSM8KSuite):
             raise ValueError("afrimgsm only supports the direct base variant")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"afrimgsm_{self.language}"
 
     def numeric_target_from_doc(self, doc: dict[str, Any]) -> str:
+        """Implement numeric target from doc for afri mgsm."""
         return _numeric_target(doc)
 
     def result_metadata(
@@ -99,11 +107,13 @@ class AfriMGSM(BaseGSM8KSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata(generation_submission_mode=generation_submission_mode)
         metadata["language"] = self.language
         return metadata
 
     def _sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
+        """Implement sample metadata for afri mgsm."""
         return {
             "language": self.language,
             "question": str(doc["question"]).strip(),
@@ -113,12 +123,15 @@ class AfriMGSM(BaseGSM8KSuite):
 
 
 def afrimgsm(*, language: str, **kwargs: Any) -> AfriMGSM:
+    """Implement afrimgsm for this module."""
     kwargs.setdefault("dataset_name", language)
     return AfriMGSM(language=language, **kwargs)
 
 
 def _make_afrimgsm_factory(language: str) -> Any:
+    """Make afrimgsm factory."""
     def factory(**kwargs: Any) -> AfriMGSM:
+        """Implement factory for this module."""
         return afrimgsm(language=language, **kwargs)
 
     factory.__name__ = f"afrimgsm_{language}"

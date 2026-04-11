@@ -123,6 +123,7 @@ def _load_kmmlu_dataset(
     stream: bool = False,
 ) -> Any:
     # Resolve the subject CSV from Hugging Face and hand it to the standard datasets CSV loader.
+    """Load kmmlu dataset."""
     if dataset_path != "HAERAE-HUB/KMMLU":
         raise ValueError(f"unsupported KMMLU dataset path: {dataset_path!r}")
     if dataset_name not in KMMLU_DATASET_NAMES.values():
@@ -147,6 +148,7 @@ def _load_kmmlu_dataset(
 @dataclass(slots=True)
 class KMMLU(BaseFewshotMultipleChoiceSuite):
     # Use the upstream dev split as few-shot context so KMMLU matches the benchmark's default setup.
+    """Define the kmmlu helper class."""
     dataset_path: str = "HAERAE-HUB/KMMLU"
     dataset_name: str | None = None
     split: str = "test"
@@ -155,6 +157,7 @@ class KMMLU(BaseFewshotMultipleChoiceSuite):
 
     def __post_init__(self) -> None:
         # Keep the public subset slug and the upstream title-cased filename mapping in sync.
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in KMMLU_SUBSETS:
             raise ValueError(f"unsupported KMMLU subset: {self.subset!r}")
         expected_dataset_name = KMMLU_DATASET_NAMES[self.subset]
@@ -165,14 +168,17 @@ class KMMLU(BaseFewshotMultipleChoiceSuite):
 
     def dataset_loader(self) -> Any:
         # Route KMMLU through the subject-CSV loader above.
+        """Return the dataset loader bound to this suite."""
         return _load_kmmlu_dataset
 
     def task_name(self) -> str:
         # Expose one stable task name per KMMLU subject factory.
+        """Return the exported task name for this suite."""
         return f"kmmlu_{self.subset}"
 
     def format_question(self, doc: dict[str, Any], *, include_answer: bool) -> str:
         # Render one KMMLU question block in the benchmark's standard Korean answer layout.
+        """Format question."""
         answer_index = int(doc["answer"]) - 1
         answer_text = _KMMLU_LABELS[answer_index] if include_answer else ""
         lines = [str(doc["question"]).strip()]
@@ -185,10 +191,12 @@ class KMMLU(BaseFewshotMultipleChoiceSuite):
 
     def gold_label(self, doc: dict[str, Any]) -> str:
         # Convert the dataset's one-based answer index to the corresponding label token.
+        """Implement gold label for kmmlu."""
         return _KMMLU_LABELS[int(doc["answer"]) - 1]
 
     def sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
         # Preserve the evaluated KMMLU subject metadata that helps explain failures later.
+        """Implement sample metadata for kmmlu."""
         return {
             "subset": self.subset,
             "category": str(doc["Category"]).strip(),
@@ -199,6 +207,7 @@ class KMMLU(BaseFewshotMultipleChoiceSuite):
 
 def kmmlu(*, subset: str, **kwargs: Any) -> KMMLU:
     # Build the generic KMMLU suite while pinning the mapped upstream dataset name.
+    """Implement kmmlu for this module."""
     if subset not in KMMLU_DATASET_NAMES:
         raise ValueError(f"unsupported KMMLU subset: {subset!r}")
     kwargs.setdefault("dataset_name", KMMLU_DATASET_NAMES[subset])
@@ -207,7 +216,9 @@ def kmmlu(*, subset: str, **kwargs: Any) -> KMMLU:
 
 def _make_kmmlu_factory(subset: str) -> Any:
     # Emit one import-stable zero-argument factory per KMMLU subject.
+    """Make kmmlu factory."""
     def factory(**kwargs: Any) -> KMMLU:
+        """Implement factory for this module."""
         return kmmlu(subset=subset, **kwargs)
 
     factory.__name__ = f"kmmlu_{subset}"

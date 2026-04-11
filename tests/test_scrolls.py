@@ -15,15 +15,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput, LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 scrolls_module = importlib.import_module("evalution.benchmarks.scrolls")
 
 
 class MultipleChoiceSession:
+    """Define the multiple choice session helper used by the surrounding tests."""
     def __init__(self, expected_context: str, expected_continuations: list[str]) -> None:
+        """Initialize this object."""
         self.expected_context = expected_context
         self.expected_continuations = expected_continuations
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for multiple choice session."""
         assert batch_size == 8
         request_items = list(requests)
         assert [request.context for request in request_items] == [self.expected_context] * len(request_items)
@@ -37,11 +41,14 @@ class MultipleChoiceSession:
 
 
 class ContinuousSession:
+    """Define the continuous session helper used by the surrounding tests."""
     def __init__(self, prediction: str, expected_prompt: str) -> None:
+        """Initialize this object."""
         self.prediction = prediction
         self.expected_prompt = expected_prompt
 
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         assert batch_size == 4
         request_items = list(requests)
         assert len(request_items) == 1
@@ -51,6 +58,7 @@ class ContinuousSession:
 
 
 def test_scrolls_groups_duplicate_reference_rows() -> None:
+    """Verify scrolls groups duplicate reference rows."""
     grouped = scrolls_module._group_scrolls_outputs(
         Dataset.from_list(
             [
@@ -72,6 +80,7 @@ def test_scrolls_loads_repo_zip_without_executing_dataset_script(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: pytest.TempPathFactory,
 ) -> None:
+    """Verify scrolls loads repo zip without executing dataset script."""
     archive_path = tmp_path / "contract_nli.zip"
     with zipfile.ZipFile(archive_path, "w") as archive:
         archive.writestr(
@@ -116,6 +125,7 @@ def test_scrolls_loads_repo_zip_without_executing_dataset_script(
 
 
 def test_scrolls_contractnli_scores_multiple_choice_rows(monkeypatch) -> None:
+    """Verify scrolls contractnli scores multiple choice rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -152,6 +162,7 @@ def test_scrolls_contractnli_scores_multiple_choice_rows(monkeypatch) -> None:
 
 
 def test_scrolls_quality_parser_and_task_aliases() -> None:
+    """Verify scrolls quality parser and task aliases."""
     choices, passage = scrolls_module._quality_choices_and_context(
         "(A) red (B) blue (C) green (D) yellow\n\nFull passage text."
     )
@@ -167,6 +178,7 @@ def test_scrolls_quality_parser_and_task_aliases() -> None:
 
 
 def test_scrolls_qasper_scores_qa_rows_against_multiple_references(monkeypatch) -> None:
+    """Verify scrolls QASPER scores QA rows against multiple references. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -193,6 +205,7 @@ def test_scrolls_qasper_scores_qa_rows_against_multiple_references(monkeypatch) 
 
 
 def test_scrolls_govreport_scores_summary_rows(monkeypatch) -> None:
+    """Verify scrolls govreport scores summary rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {

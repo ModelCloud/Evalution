@@ -11,11 +11,13 @@ from typing import Any, Mapping
 
 
 def normalize_subset_token(value: Any) -> str:
+    """Normalize subset token. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     text = str(value).strip().lower().replace("-", "_").replace(" ", "_")
     return "_".join(part for part in text.split("_") if part)
 
 
 def normalize_subset_path(value: Any) -> str:
+    """Normalize subset path. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     text = str(value).strip()
     if not text:
         raise ValueError("subset must be a non-empty string")
@@ -30,6 +32,8 @@ def normalize_subset_path(value: Any) -> str:
 
 @dataclass(frozen=True, slots=True)
 class ResolvedSubset:
+    """Define the resolved subset helper class."""
+    # Keep the class-level state explicit for this helper.
     canonical: str
     path: tuple[str, ...]
     kind: str
@@ -39,6 +43,8 @@ class ResolvedSubset:
 
 @dataclass(frozen=True, slots=True)
 class ResolvedSubsets:
+    """Define the resolved subsets helper class."""
+    # Keep the class-level state explicit for this helper.
     canonicals: tuple[str, ...]
     paths: tuple[tuple[str, ...], ...]
     kinds: tuple[str, ...]
@@ -50,17 +56,22 @@ class ResolvedSubsets:
 
 @dataclass(slots=True)
 class _SubsetNode:
+    """Define the subset node helper class."""
+    # Keep the class-level state explicit for this helper.
     children: dict[str, _SubsetNode]
     leaf_value: str | None = None
 
 
 class SubsetTree:
+    """Define the subset tree helper class."""
     def __init__(self, spec: Mapping[str, Any]):
+        """Initialize this object."""
         self._root = self._build_node(spec)
         self._leaf_path_by_value: dict[str, str] = {}
         self._index_leaf_paths(self._root, ())
 
     def resolve(self, subset: Any) -> ResolvedSubset:
+        """Resolve resolve."""
         canonical = normalize_subset_path(subset)
         if canonical == "all":
             leaf_paths, leaf_values = self._descendant_leaves(self._root, ())
@@ -95,6 +106,7 @@ class SubsetTree:
         )
 
     def resolve_many(self, subsets: Any) -> ResolvedSubsets:
+        """Resolve many. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         raw_values = _coerce_subset_values(subsets)
         if not raw_values:
             raise ValueError("subsets must contain at least one value")
@@ -142,6 +154,7 @@ class SubsetTree:
         )
 
     def leaf_subset(self, value: Any) -> str:
+        """Implement leaf subset for subset tree."""
         normalized_value = normalize_subset_token(value)
         subset = self._leaf_path_by_value.get(normalized_value)
         if subset is None:
@@ -149,9 +162,11 @@ class SubsetTree:
         return subset
 
     def leaf_subset_path(self, value: Any) -> list[str]:
+        """Implement leaf subset path for subset tree."""
         return self.leaf_subset(value).split(".")
 
     def _build_node(self, spec: Mapping[str, Any]) -> _SubsetNode:
+        """Build node."""
         children: dict[str, _SubsetNode] = {}
         for raw_token, raw_child in spec.items():
             token = normalize_subset_token(raw_token)
@@ -170,6 +185,7 @@ class SubsetTree:
         node: _SubsetNode,
         prefix: tuple[str, ...],
     ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        """Implement descendant leaves for subset tree."""
         if node.leaf_value is not None:
             return (".".join(prefix),), (node.leaf_value,)
 
@@ -186,6 +202,7 @@ class SubsetTree:
         node: _SubsetNode,
         prefix: tuple[str, ...],
     ) -> None:
+        """Implement index leaf paths for subset tree."""
         if node.leaf_value is not None:
             normalized_value = normalize_subset_token(node.leaf_value)
             canonical = ".".join(prefix)
@@ -199,6 +216,7 @@ class SubsetTree:
 
 
 def _coerce_subset_values(subsets: Any) -> tuple[Any, ...]:
+    """Implement coerce subset values for this module."""
     if isinstance(subsets, str):
         return (subsets,)
     if isinstance(subsets, Sequence):

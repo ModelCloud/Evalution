@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 BANGLA_SUBSETS = (
     "boolqa",
     "commonsenseqa",
@@ -39,11 +40,14 @@ _BOOLQA_ANSWER_MAP = {
 
 @dataclass(frozen=True, slots=True)
 class _BanglaSubsetConfig:
+    """Define the bangla subset config helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str
     dataset_name: str | None
     split: str
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _BANGLA_SUBSET_CONFIGS = {
     "boolqa": _BanglaSubsetConfig(
         dataset_path="hishab/boolq_bn",
@@ -74,6 +78,7 @@ _BANGLA_SUBSET_CONFIGS = {
 
 
 def _resolve_boolqa_gold_index(doc: dict[str, Any]) -> int:
+    """Resolve boolqa gold index. Preserve the fallback order expected by the surrounding caller."""
     for key in ("answer", "answer_bn"):
         if key not in doc:
             continue
@@ -90,6 +95,7 @@ def _resolve_boolqa_gold_index(doc: dict[str, Any]) -> int:
 
 
 def _resolve_label_index(value: Any, labels: list[str]) -> int:
+    """Resolve label index. Preserve the fallback order expected by the surrounding caller."""
     if isinstance(value, int):
         if 0 <= value < len(labels):
             return value
@@ -109,14 +115,17 @@ def _resolve_label_index(value: Any, labels: list[str]) -> int:
 
 
 def _choice_texts(doc: dict[str, Any]) -> list[str]:
+    """Implement choice texts for this module."""
     return [str(text).strip() for text in doc["choices"]["text"]]
 
 
 def _choice_labels(doc: dict[str, Any]) -> list[str]:
+    """Implement choice labels for this module."""
     return [str(label).strip() for label in doc["choices"]["label"]]
 
 
 def _labeled_prompt(stem: str, labels: list[str], choices: list[str]) -> str:
+    """Implement labeled prompt for this module."""
     lines = [stem.strip()]
     lines.extend(f"{label}. {choice}" for label, choice in zip(labels, choices, strict=True))
     lines.append("Answer:")
@@ -125,12 +134,15 @@ def _labeled_prompt(stem: str, labels: list[str], choices: list[str]) -> str:
 
 @dataclass(slots=True)
 class Bangla(BaseMultipleChoiceSuite):
+    """Implement the bangla benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = ""
     subset: str = "boolqa"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization. Preserve the fallback order expected by the surrounding caller."""
         if self.subset not in BANGLA_SUBSETS:
             raise ValueError(f"unsupported bangla subset: {self.subset!r}")
         config = _BANGLA_SUBSET_CONFIGS[self.subset]
@@ -148,12 +160,15 @@ class Bangla(BaseMultipleChoiceSuite):
             raise ValueError("bangla split must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"bangla_{self.subset}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata()
         metadata["subset"] = self.subset
         return metadata
@@ -165,6 +180,7 @@ class Bangla(BaseMultipleChoiceSuite):
         choice_order: tuple[int, ...],
         labels: tuple[str, ...],
     ) -> str:
+        """Implement label prompt for bangla."""
         if self.subset == "boolqa":
             return super().label_prompt(sample, choice_order=choice_order, labels=labels)
         raw_choices = sample.metadata["raw_choices"]
@@ -188,6 +204,7 @@ class Bangla(BaseMultipleChoiceSuite):
         raise AssertionError(f"unsupported bangla subset branch: {self.subset!r}")
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row. Preserve the fallback order expected by the surrounding caller."""
         if self.subset == "boolqa":
             return MultipleChoiceSample(
                 index=index,
@@ -285,24 +302,30 @@ class Bangla(BaseMultipleChoiceSuite):
 
 
 def bangla(*, subset: str, **kwargs: Any) -> Bangla:
+    """Implement bangla for this module."""
     return Bangla(subset=subset, **kwargs)
 
 
 def bangla_boolqa(**kwargs: Any) -> Bangla:
+    """Implement bangla boolqa for this module."""
     return bangla(subset="boolqa", **kwargs)
 
 
 def bangla_commonsenseqa(**kwargs: Any) -> Bangla:
+    """Implement bangla commonsenseqa for this module."""
     return bangla(subset="commonsenseqa", **kwargs)
 
 
 def bangla_mmlu(**kwargs: Any) -> Bangla:
+    """Implement bangla MMLU for this module."""
     return bangla(subset="mmlu", **kwargs)
 
 
 def bangla_openbookqa(**kwargs: Any) -> Bangla:
+    """Implement bangla openbookqa for this module."""
     return bangla(subset="openbookqa", **kwargs)
 
 
 def bangla_piqa(**kwargs: Any) -> Bangla:
+    """Implement bangla PIQA for this module."""
     return bangla(subset="piqa", **kwargs)

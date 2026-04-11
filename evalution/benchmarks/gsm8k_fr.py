@@ -21,6 +21,7 @@ _VARIANTS = _build_variant_specs("gsm8k_fr")
 @dataclass(slots=True)
 class GSM8KFR(BaseGSM8KSuite):
     # Score the French GSM8K translation with the shared numeric-answer evaluator.
+    """Define the gsm8 kfr helper class."""
     VARIANTS = _VARIANTS
     SCORING_MODE = "numeric_format_insensitive"
     variant: GSM8KVariant = "base"
@@ -31,13 +32,16 @@ class GSM8KFR(BaseGSM8KSuite):
 
     # Reuse the standard Hugging Face datasets loader for the translated corpus.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Normalize the French reference solution to the shared GSM8K numeric target.
     def numeric_target_from_doc(self, doc: dict[str, Any]) -> str:
+        """Implement numeric target from doc for gsm8 kfr."""
         return gsm8k_numeric_target(doc)
 
 
 # Expose the translated suite through the public benchmark namespace.
 def gsm8k_fr(**kwargs: Any) -> GSM8KFR:
+    """Implement GSM8K fr for this module."""
     return GSM8KFR(**kwargs)

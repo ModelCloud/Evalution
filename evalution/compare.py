@@ -20,6 +20,8 @@ from evalution.benchmarks.base import TestSuite
 
 @dataclass(slots=True)
 class CompareRun:
+    """Define the compare run helper class."""
+    # Keep the class-level state explicit for this helper.
     _left_name: str
     _right_name: str
     _left_run: EvaluationRun
@@ -30,6 +32,7 @@ class CompareRun:
     _split_logging_initialized: bool = field(default=False, init=False, repr=False)
 
     def run(self, test: TestSuite) -> CompareRun:
+        """Run run."""
         if self._closed:
             raise RuntimeError("compare run is already closed")
 
@@ -74,23 +77,29 @@ class CompareRun:
 
     @property
     def left(self):
+        """Implement left for compare run."""
         return self._materialize_result(close=True).left
 
     @property
     def right(self):
+        """Implement right for compare run."""
         return self._materialize_result(close=True).right
 
     @property
     def tests(self) -> list[CompareTestResult]:
+        """Implement tests for compare run."""
         return self._materialize_result(close=True).tests
 
     def result(self, *, close: bool = True) -> CompareRunResult:
+        """Implement result for compare run."""
         return self._materialize_result(close=close)
 
     def to_dict(self) -> dict[str, Any]:
+        """Implement to dict for compare run."""
         return self._materialize_result(close=True).to_dict()
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         if self._closed:
             return
 
@@ -113,13 +122,16 @@ class CompareRun:
         )
 
     def __enter__(self) -> CompareRun:
+        """Enter the managed context for this object."""
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        """Exit the managed context for this object."""
         del exc_type, exc, tb
         self.close()
 
     def _materialize_result(self, *, close: bool) -> CompareRunResult:
+        """Implement materialize result for compare run."""
         if close:
             self.close()
 
@@ -132,6 +144,7 @@ class CompareRun:
         )
 
     def _ensure_split_logging(self) -> None:
+        """Ensure split logging."""
         if self._split_logging_initialized:
             return
 
@@ -152,6 +165,7 @@ def compare(
     left: EvaluationRun,
     right: EvaluationRun,
 ) -> CompareRun:
+    """Compare compare."""
     left_run = _coerce_compare_lane(left, lane_label="left")
     right_run = _coerce_compare_lane(right, lane_label="right")
     if left_run is right_run:
@@ -171,6 +185,7 @@ def run_compare(
     *,
     tests: Sequence[TestSuite],
 ) -> CompareRunResult:
+    """Run compare."""
     comparison = compare(left, right)
     try:
         for test in tests:
@@ -182,6 +197,7 @@ def run_compare(
 
 
 def _clone_test(test: TestSuite) -> TestSuite:
+    """Implement clone test for this module."""
     try:
         return copy.deepcopy(test)
     except Exception as exc:  # pragma: no cover - defensive guard for custom suite objects.
@@ -191,6 +207,7 @@ def _clone_test(test: TestSuite) -> TestSuite:
 
 
 def _coerce_compare_lane(lane: EvaluationRun, *, lane_label: str) -> EvaluationRun:
+    """Implement coerce compare lane for this module."""
     if not isinstance(lane, EvaluationRun):
         raise TypeError(f"{lane_label} must be an engine.model(...) handle")
     if lane._closed:
@@ -203,6 +220,7 @@ def _coerce_compare_lane(lane: EvaluationRun, *, lane_label: str) -> EvaluationR
 
 
 def _default_lane_name(run: EvaluationRun, *, fallback: str) -> str:
+    """Implement default lane name for this module."""
     if run._model_config.label:
         return run._model_config.label
     model_path = run._model_config.path.strip()
@@ -217,6 +235,7 @@ def _run_compare_lane(
     test: TestSuite,
     errors: list[tuple[str, BaseException, str]],
 ) -> None:
+    """Run compare lane."""
     try:
         evaluation.run(test)
     except BaseException as exc:  # pragma: no cover - exercised via raised RuntimeError in caller.
@@ -230,6 +249,7 @@ def _build_compare_test_result(
     left_result,
     right_result,
 ) -> CompareTestResult:
+    """Build compare test result."""
     metrics: dict[str, CompareMetricResult] = {}
     metric_names = sorted(set(left_result.metrics) | set(right_result.metrics))
     for metric_name in metric_names:
@@ -257,6 +277,7 @@ def _build_compare_metric_result(
     left_value: Any,
     right_value: Any,
 ) -> CompareMetricResult:
+    """Build compare metric result. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     left_numeric = _is_numeric_metric(left_value)
     right_numeric = _is_numeric_metric(right_value)
     if not left_numeric or not right_numeric:
@@ -284,4 +305,5 @@ def _build_compare_metric_result(
 
 
 def _is_numeric_metric(value: Any) -> bool:
+    """Implement is numeric metric for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return isinstance(value, (int, float)) and not isinstance(value, bool)

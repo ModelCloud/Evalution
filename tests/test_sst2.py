@@ -12,12 +12,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 sst2_module = importlib.import_module("evalution.benchmarks.sst2")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 4
         assert requests[0].context == (
@@ -36,6 +39,7 @@ class FakeSession:
 
 
 def test_sst2_scores_sentiment_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify sst2 scores sentiment multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -79,6 +83,7 @@ def test_sst2_scores_sentiment_multiple_choice_accuracy(monkeypatch) -> None:
 
 
 def test_sst2_prompt_helper_formats_sentiment_question() -> None:
+    """Verify sst2 prompt helper formats sentiment question."""
     assert (
         sst2_module._sst2_prompt("A great film.")
         == "A great film.\nQuestion: Is this sentence positive or negative?\nAnswer:"

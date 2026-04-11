@@ -13,6 +13,7 @@ from datasets import load_dataset
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from evalution.scorers.classification import f1_for_label
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _MC_TACO_DATA_FILES = {
     "validation": "https://raw.githubusercontent.com/CogComp/MCTACO/master/dataset/dev_3783.tsv",
     "test": "https://raw.githubusercontent.com/CogComp/MCTACO/master/dataset/test_9442.tsv",
@@ -21,6 +22,7 @@ _MC_TACO_COLUMNS = ["sentence", "question", "answer", "label", "category"]
 
 
 def _mc_taco_prompt(sentence: str, question: str, answer: str) -> str:
+    """Implement mc taco prompt for this module."""
     return (
         f"{sentence.strip()}\n"
         f"Question: {question.strip()}\n"
@@ -36,6 +38,7 @@ def _load_mc_taco_dataset(
     cache_dir: str | None = None,
     stream: bool = True,
 ) -> Any:
+    """Load mc taco dataset."""
     if dataset_path != "CogComp/mc_taco":
         raise ValueError(f"unsupported MC-TACO dataset path: {dataset_path!r}")
     source_url = _MC_TACO_DATA_FILES.get(split)
@@ -54,17 +57,22 @@ def _load_mc_taco_dataset(
 
 @dataclass(slots=True)
 class MCTACO(BaseMultipleChoiceSuite):
+    """Implement the mctaco benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "CogComp/mc_taco"
     # Align the default split with current benchmark-style harness usage.
     split: str = "test"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_mc_taco_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "mc_taco"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         label = str(doc["label"]).strip().lower()
         return MultipleChoiceSample(
             index=index,
@@ -86,6 +94,7 @@ class MCTACO(BaseMultipleChoiceSuite):
         raw_predictions: list[int],
         normalized_predictions: list[int],
     ) -> dict[str, float]:
+        """Compute extra metrics from the collected predictions. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         gold_labels = [sample.gold_index for sample in samples]
         return {
             "f1,ll_boolean": f1_for_label(gold_labels, raw_predictions, label=1),
@@ -94,4 +103,5 @@ class MCTACO(BaseMultipleChoiceSuite):
 
 
 def mc_taco(**kwargs: Any) -> MCTACO:
+    """Implement mc taco for this module."""
     return MCTACO(**kwargs)

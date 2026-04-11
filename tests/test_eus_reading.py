@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 eus_reading_module = importlib.import_module("evalution.benchmarks.eus_reading")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -39,6 +42,7 @@ class FakeSession:
 
 
 def test_eus_reading_scores_context_question_multiple_choice(monkeypatch) -> None:
+    """Verify eus reading scores context question multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -80,6 +84,7 @@ def test_eus_reading_scores_context_question_multiple_choice(monkeypatch) -> Non
 
 
 def test_eus_reading_prompt_matches_upstream_shape() -> None:
+    """Verify eus reading prompt matches upstream shape."""
     doc = {
         "context": "Pasarte laburra.",
         "question": "Nor da?",
@@ -96,6 +101,7 @@ def test_eus_reading_prompt_matches_upstream_shape() -> None:
 
 
 def test_eus_reading_rejects_invalid_candidate_count() -> None:
+    """Verify eus reading rejects invalid candidate count."""
     with pytest.raises(ValueError, match="at least two candidates"):
         eus_reading_module._eus_reading_prompt(
             {"context": "x", "question": "Nor da?", "candidates": ["Bakarra"]}

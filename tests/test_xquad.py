@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 xquad_module = importlib.import_module("evalution.benchmarks.xquad")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         assert batch_size == 4
         request_items = list(requests)
         assert len(request_items) == 2
@@ -32,6 +35,7 @@ class FakeSession:
 
 
 def test_xquad_scores_extractable_answers(monkeypatch) -> None:
+    """Verify XQuAD scores extractable answers. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -65,6 +69,7 @@ def test_xquad_scores_extractable_answers(monkeypatch) -> None:
 
 
 def test_xquad_prompt_helper_formats_qa_prompt() -> None:
+    """Verify XQuAD prompt helper formats QA prompt."""
     assert (
         xquad_module._xquad_prompt(context="Context text", question="Question text")
         == "Context: Context text\n\nQuestion: Question text\n\nAnswer:"
@@ -72,10 +77,12 @@ def test_xquad_prompt_helper_formats_qa_prompt() -> None:
 
 
 def test_xquad_rejects_unknown_language() -> None:
+    """Verify XQuAD rejects unknown language."""
     with pytest.raises(ValueError, match="unsupported xquad language"):
         evalution.benchmarks.xquad(language="zzz")
 
 
 def test_xquad_rejects_dataset_name_mismatch() -> None:
+    """Verify XQuAD rejects dataset name mismatch."""
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.xquad(language="en", dataset_name="xquad.fr")

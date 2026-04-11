@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 toxigen_module = importlib.import_module("evalution.benchmarks.toxigen")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 4
         assert requests[0].context == (
@@ -33,6 +36,7 @@ class FakeSession:
 
 
 def test_toxigen_scores_binary_hate_classification(monkeypatch) -> None:
+    """Verify toxigen scores binary hate classification. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -78,6 +82,7 @@ def test_toxigen_scores_binary_hate_classification(monkeypatch) -> None:
 
 
 def test_toxigen_target_threshold_and_prompt() -> None:
+    """Verify toxigen target threshold and prompt."""
     assert toxigen_module._toxigen_label({"toxicity_ai": 3.0, "toxicity_human": 3.0}) == 1
     assert toxigen_module._toxigen_label({"toxicity_ai": 2.0, "toxicity_human": 3.0}) == 0
     assert toxigen_module._toxigen_prompt("quoted text") == (

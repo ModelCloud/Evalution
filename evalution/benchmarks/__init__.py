@@ -441,6 +441,7 @@ for _flores_pt_task in FLORES_PT_TASKS:
 
 del _flores_pt_task
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 __all__ = [
     "ANLI",
     "AIME",

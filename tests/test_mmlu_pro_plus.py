@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mmlu_pro_plus_module = importlib.import_module("evalution.benchmarks.mmlu_pro_plus")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 1
         assert len(requests) == 1
         assert "about math." in requests[0].prompt
@@ -24,10 +27,12 @@ class FakeSession:
         return [GenerationOutput(prompt=requests[0].prompt or "", text="After reasoning, the answer is (B).")]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_mmlu_pro_plus_reuses_mmlu_pro_prompting_and_metadata(monkeypatch) -> None:
+    """Verify MMLU pro plus reuses MMLU pro prompting and metadata."""
     validation = Dataset.from_list(
         [
             {
@@ -58,6 +63,7 @@ def test_mmlu_pro_plus_reuses_mmlu_pro_prompting_and_metadata(monkeypatch) -> No
     )
 
     def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del path, name, kwargs
         if split == "validation":
             return validation

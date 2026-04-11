@@ -18,10 +18,12 @@ from evalution.datasets import xlsum as xlsum_dataset
 from evalution.engines.base import GenerationOutput
 from evalution.scorers.summary_rouge import summary_rouge_scores
 
+# Keep shared test fixtures and expectations explicit at module scope.
 xlsum_es_module = importlib.import_module("evalution.benchmarks.xlsum_es")
 
 
 def _build_xlsum_archive(path: Path) -> str:
+    """Build XLSum archive."""
     train_rows = (
         '{"id":"train-1","url":"https://example.com/train","title":"Titulo  de  prueba","summary":"Resumen  de  prueba","text":"Texto  de  prueba"}\n'
     )
@@ -47,6 +49,7 @@ def _build_xlsum_archive(path: Path) -> str:
 
 
 def test_load_xlsum_dataset_reads_vendored_archive(monkeypatch, tmp_path: Path) -> None:
+    """Verify load XLSum dataset reads vendored archive."""
     archive_path = tmp_path / "spanish_XLSum_v2.0.tar.bz2"
     archive_sha256 = _build_xlsum_archive(archive_path)
     monkeypatch.setattr(
@@ -67,6 +70,7 @@ def test_load_xlsum_dataset_reads_vendored_archive(monkeypatch, tmp_path: Path) 
     xlsum_dataset._load_rows_cached.cache_clear()
 
     def fake_download(repo_id: str, filename: str, *, repo_type: str, cache_dir: str | None = None) -> str:
+        """Support the surrounding tests with fake download."""
         assert repo_id == "csebuetnlp/xlsum"
         assert filename == "data/spanish_XLSum_v2.0.tar.bz2"
         assert repo_type == "dataset"
@@ -94,6 +98,7 @@ def test_load_xlsum_dataset_reads_vendored_archive(monkeypatch, tmp_path: Path) 
 
 
 def test_safe_extract_archive_rejects_path_traversal(tmp_path: Path) -> None:
+    """Verify safe extract archive rejects path traversal."""
     archive_path = tmp_path / "unsafe.tar.bz2"
     with tarfile.open(archive_path, mode="w:bz2") as archive:
         encoded = b"owned\n"
@@ -106,6 +111,7 @@ def test_safe_extract_archive_rejects_path_traversal(tmp_path: Path) -> None:
 
 
 def test_xlsum_es_scores_generated_summary_rouge(monkeypatch) -> None:
+    """Verify XLSum es scores generated summary ROUGE. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     docs = [
         {
             "id": "row-1",
@@ -118,7 +124,9 @@ def test_xlsum_es_scores_generated_summary_rouge(monkeypatch) -> None:
     monkeypatch.setattr(xlsum_es_module, "load_xlsum_dataset", lambda *args, **kwargs: list(docs))
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 1
             assert len(requests) == 1
             assert requests[0].prompt == (
@@ -150,6 +158,7 @@ def test_xlsum_es_scores_generated_summary_rouge(monkeypatch) -> None:
 
 
 def test_xlsum_es_prompt_formats_article() -> None:
+    """Verify XLSum es prompt formats article."""
     assert xlsum_es_module._xlsum_es_prompt("  Texto con espacios.  ") == (
         "Texto: Texto con espacios.\n\nResumen:"
     )

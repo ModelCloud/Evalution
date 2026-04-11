@@ -47,28 +47,34 @@ _FLORES200_EXTRACT_LOCK = Lock()
 
 
 def _default_cache_root() -> Path:
+    """Implement default cache root for this module."""
     return Path.home() / ".cache" / "evalution" / "datasets"
 
 
 def _cache_root(cache_dir: str | None) -> Path:
+    """Implement cache root for this module."""
     if cache_dir is None:
         return _default_cache_root()
     return Path(cache_dir) / "evalution-vendored-datasets"
 
 
 def _archive_path(cache_dir: str | None) -> Path:
+    """Implement archive path for this module."""
     return _cache_root(cache_dir) / _FLORES200_ARCHIVE_NAME
 
 
 def _extracted_root(cache_dir: str | None) -> Path:
+    """Implement extracted root for this module."""
     return _cache_root(cache_dir) / f"flores200-extracted-{FLORES200_ARCHIVE_SHA256[:12]}"
 
 
 def _dataset_root(cache_dir: str | None) -> Path:
+    """Implement dataset root for this module."""
     return _extracted_root(cache_dir) / _FLORES200_DATASET_ROOT
 
 
 def _sha256_file(path: Path) -> str:
+    """Implement sha256 file for this module."""
     hasher = hashlib.sha256()
     with path.open("rb") as handle:
         while True:
@@ -80,6 +86,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _download_archive(cache_dir: str | None) -> Path:
+    """Implement download archive for this module."""
     archive_path = _archive_path(cache_dir)
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     if archive_path.exists() and _sha256_file(archive_path) == FLORES200_ARCHIVE_SHA256:
@@ -103,6 +110,7 @@ def _download_archive(cache_dir: str | None) -> Path:
 
 
 def _safe_extract_archive(archive_path: Path, destination: Path) -> None:
+    """Implement safe extract archive for this module. Preserve the fallback order expected by the surrounding caller."""
     destination.mkdir(parents=True, exist_ok=True)
     with tarfile.open(archive_path, mode="r:gz") as archive:
         for member in archive.getmembers():
@@ -133,6 +141,7 @@ def _safe_extract_archive(archive_path: Path, destination: Path) -> None:
 
 
 def ensure_local_flores200(cache_dir: str | None = None) -> Path:
+    """Ensure local flores200. Preserve the fallback order expected by the surrounding caller."""
     dataset_root = _dataset_root(cache_dir)
     marker_path = _extracted_root(cache_dir) / ".complete"
     if marker_path.exists() and dataset_root.exists():
@@ -159,6 +168,7 @@ def ensure_local_flores200(cache_dir: str | None = None) -> Path:
 
 
 def _resolved_split(split: str) -> str:
+    """Implement resolved split for this module."""
     normalized = split.strip().lower()
     resolved = _FLORES200_SPLIT_ALIASES.get(normalized)
     if resolved is None:
@@ -176,6 +186,7 @@ def _load_pair_docs_cached(
     target_language: str,
     cache_root_key: str,
 ) -> tuple[dict[str, Any], ...]:
+    """Load pair docs cached."""
     dataset_root = ensure_local_flores200(cache_root_key or None)
     metadata_path = dataset_root / f"metadata_{split}.tsv"
     source_path = dataset_root / split / f"{source_language}.{split}"
@@ -224,6 +235,7 @@ def load_flores200_pair(
     source_language: str,
     target_language: str,
 ) -> list[dict[str, Any]]:
+    """Load flores200 pair. Preserve the fallback order expected by the surrounding caller."""
     if dataset_path != "facebook/flores":
         raise ValueError(f"flores200 dataset_path must be 'facebook/flores', got {dataset_path!r}")
     if dataset_name not in {None, "all"}:

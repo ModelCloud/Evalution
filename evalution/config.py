@@ -11,6 +11,8 @@ from typing import Any
 
 @dataclass(slots=True, frozen=True)
 class Model:
+    """Define the model helper class."""
+    # Keep the class-level state explicit for this helper.
     path: str
     label: str | None = None
     tokenizer: Any | None = None
@@ -21,10 +23,12 @@ class Model:
     tokenizer_kwargs: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """Implement to dict for model."""
         return asdict(self)
 
 
 def coerce_model(model: Model | dict[str, Any]) -> Model:
+    """Implement coerce model for this module."""
     if isinstance(model, Model):
         return model
     if isinstance(model, dict):
@@ -33,6 +37,7 @@ def coerce_model(model: Model | dict[str, Any]) -> Model:
 
 
 def model_with_label(model: Model, *, label: str | None) -> Model:
+    """Implement model with label for this module."""
     if label is None:
         return model
     return replace(model, label=label)

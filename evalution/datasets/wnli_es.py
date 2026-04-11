@@ -38,6 +38,7 @@ _WNLI_ES_SPLIT_ALIASES = {
 
 
 def _sha256_file(path: Path) -> str:
+    """Implement sha256 file for this module."""
     hasher = hashlib.sha256()
     with path.open("rb") as handle:
         while True:
@@ -49,6 +50,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _resolved_split(split: str) -> str:
+    """Implement resolved split for this module."""
     normalized = split.strip().lower()
     resolved = _WNLI_ES_SPLIT_ALIASES.get(normalized)
     if resolved is None:
@@ -64,6 +66,7 @@ def _download_wnli_es_file(
     split: str,
     cache_dir: str | None,
 ) -> Path:
+    """Implement download WNLI es file for this module."""
     if dataset_path != WNLI_ES_DATASET_PATH:
         raise ValueError(
             f"wnli_es dataset_path must be {WNLI_ES_DATASET_PATH!r}, got {dataset_path!r}"
@@ -92,6 +95,7 @@ def _load_rows_cached(
     split: str,
     cache_root_key: str,
 ) -> tuple[dict[str, Any], ...]:
+    """Load rows cached."""
     csv_path = _download_wnli_es_file(
         WNLI_ES_DATASET_PATH,
         split=split,
@@ -122,6 +126,7 @@ def load_wnli_es_dataset(
     cache_dir: str | None = None,
     stream: bool = False,
 ) -> list[dict[str, Any]]:
+    """Load WNLI es dataset."""
     if dataset_name is not None:
         raise ValueError("wnli_es dataset_name must be None")
     if stream:

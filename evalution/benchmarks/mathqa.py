@@ -17,6 +17,7 @@ import pcre
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _MATHQA_ARCHIVE_URL = "https://math-qa.github.io/math-QA/data/MathQA.zip"
 _MATHQA_ARCHIVE_NAME = "MathQA.zip"
 _MATHQA_SPLIT_FILES = {
@@ -30,10 +31,12 @@ _MATHQA_OPTION_RE = pcre.compile(r"[abcd] \) .*?, |e \) .*?$")
 
 
 def _mathqa_prompt(problem: str) -> str:
+    """Implement mathqa prompt for this module."""
     return f"Question: {problem.strip()}\nAnswer:"
 
 
 def _mathqa_cache_path(cache_dir: str | None) -> Path:
+    """Implement mathqa cache path for this module."""
     if cache_dir is not None:
         base_dir = Path(cache_dir)
     else:
@@ -42,6 +45,7 @@ def _mathqa_cache_path(cache_dir: str | None) -> Path:
 
 
 def _ensure_mathqa_archive(*, cache_dir: str | None) -> Path:
+    """Ensure mathqa archive."""
     archive_path = _mathqa_cache_path(cache_dir)
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     if not archive_path.exists():
@@ -50,6 +54,7 @@ def _ensure_mathqa_archive(*, cache_dir: str | None) -> Path:
 
 
 def _parse_mathqa_options(options_text: str) -> list[str]:
+    """Parse mathqa options."""
     return [
         choice[4:].rstrip(" ,")
         for choice in _MATHQA_OPTION_RE.findall(options_text)
@@ -63,6 +68,7 @@ def _load_mathqa_dataset(
     cache_dir: str | None = None,
     stream: bool = (False),
 ) -> Dataset:
+    """Load mathqa dataset."""
     del stream
     if dataset_path != "math_qa":
         raise ValueError(f"unsupported MathQA dataset path: {dataset_path!r}")
@@ -80,18 +86,23 @@ def _load_mathqa_dataset(
 
 @dataclass(slots=True)
 class MathQA(BaseMultipleChoiceSuite):
+    """Implement the math QA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "math_qa"
     # Align the default split with current benchmark-style harness usage.
     split: str = "test"
     stream: bool = (False)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_mathqa_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "mathqa"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         options_text = str(doc["options"])
         choices = _parse_mathqa_options(options_text)
         if len(choices) != 5:
@@ -117,4 +128,5 @@ class MathQA(BaseMultipleChoiceSuite):
 
 
 def mathqa(**kwargs: Any) -> MathQA:
+    """Implement mathqa for this module."""
     return MathQA(**kwargs)

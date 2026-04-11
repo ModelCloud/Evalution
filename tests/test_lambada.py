@@ -14,10 +14,12 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 lambada_module = importlib.import_module("evalution.benchmarks.lambada")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(
         self,
         *,
@@ -25,11 +27,13 @@ class FakeSession:
         expected_continuation: str,
         output: LoglikelihoodOutput,
     ) -> None:
+        """Initialize this object."""
         self.expected_prompt = expected_prompt
         self.expected_continuation = expected_continuation
         self.output = output
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 1
         assert requests[0].context == self.expected_prompt
@@ -70,6 +74,7 @@ def test_lambada_scores_single_continuation_loglikelihood(
     expected_prompt: str,
     expected_target: str,
 ) -> None:
+    """Verify lambada scores single continuation loglikelihood. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list([doc])
     monkeypatch.setattr(lambada_module, "load_dataset", lambda *args, **kwargs: dataset)
 
@@ -124,6 +129,7 @@ def test_lambada_scores_single_continuation_loglikelihood(
 
 
 def test_lambada_marks_non_greedy_continuation_incorrect(monkeypatch) -> None:
+    """Verify lambada marks non greedy continuation incorrect."""
     dataset = Dataset.from_list(
         [
             {
@@ -156,6 +162,7 @@ def test_lambada_marks_non_greedy_continuation_incorrect(monkeypatch) -> None:
 
 
 def test_lambada_prompt_target_splits_final_token() -> None:
+    """Verify lambada prompt target splits final token."""
     assert lambada_module._lambada_prompt_target("alpha beta gamma") == (
         "alpha beta",
         " gamma",

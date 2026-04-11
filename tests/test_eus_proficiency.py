@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 eus_proficiency_module = importlib.import_module("evalution.benchmarks.eus_proficiency")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -38,6 +41,7 @@ class FakeSession:
 
 
 def test_eus_proficiency_scores_four_way_multiple_choice(monkeypatch) -> None:
+    """Verify eus proficiency scores four way multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -77,6 +81,7 @@ def test_eus_proficiency_scores_four_way_multiple_choice(monkeypatch) -> None:
 
 
 def test_eus_proficiency_prompt_matches_upstream_shape() -> None:
+    """Verify eus proficiency prompt matches upstream shape."""
     doc = {
         "question": "Nor da?",
         "candidates": ["Lehen aukera", "Bigarren aukera", "Hirugarren aukera", "Laugarren aukera"],
@@ -92,6 +97,7 @@ def test_eus_proficiency_prompt_matches_upstream_shape() -> None:
 
 
 def test_eus_proficiency_rejects_non_four_way_rows() -> None:
+    """Verify eus proficiency rejects non four way rows."""
     with pytest.raises(ValueError, match="exactly four candidates"):
         eus_proficiency_module._eus_proficiency_prompt(
             {"question": "Nor da?", "candidates": ["A", "B", "C"]}

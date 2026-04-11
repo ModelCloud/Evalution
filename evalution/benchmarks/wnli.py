@@ -15,26 +15,31 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 def _wnli_prompt(sentence1: str, sentence2: str) -> str:
     # Phrase the Winograd NLI pair as a direct true-or-false question over the second sentence.
+    """Implement WNLI prompt for this module."""
     return f"{sentence1.strip()}\nQuestion: {sentence2.strip()} True or False?\nAnswer:"
 
 
 @dataclass(slots=True)
 class WNLI(BaseMultipleChoiceSuite):
     # Evaluate Winograd NLI sentence-pair inference with False versus True label ranking.
+    """Implement the WNLI benchmark suite."""
     dataset_path: str = "nyu-mll/glue"
     dataset_name: str | None = "wnli"
     split: str = "validation"
 
     # Use the Hugging Face datasets loader for the canonical WNLI task inside GLUE.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used by logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "wnli"
 
     # Convert one WNLI row into the shared prompt and binary-choice structure used by the helper.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_wnli_prompt(doc["sentence1"], doc["sentence2"]),
@@ -46,4 +51,5 @@ class WNLI(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used by the rest of the package.
 def wnli(**kwargs: Any) -> WNLI:
+    """Implement WNLI for this module."""
     return WNLI(**kwargs)

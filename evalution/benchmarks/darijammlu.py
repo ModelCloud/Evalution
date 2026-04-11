@@ -75,12 +75,14 @@ _SUBSET_TO_TASK = dict(zip(DARIJAMMLU_SUBSETS, DARIJAMMLU_TASKS, strict=True))
 class DarijaMMLU(BaseMultipleChoiceSuite):
     """DarijaMMLU suite backed by a frozen subset registry to keep imports offline-safe."""
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "MBZUAI-Paris/DarijaMMLU"
     dataset_name: str | None = None
     split: str = "test"
     subset: str = "accounting"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in DARIJAMMLU_SUBSETS:
             raise ValueError(f"unsupported darijammlu subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -89,12 +91,15 @@ class DarijaMMLU(BaseMultipleChoiceSuite):
         raise ValueError("darijammlu dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _SUBSET_TO_TASK[self.subset]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(choice).strip() for choice in doc["choices"]]
         answer_index = int(doc["answer"])
         return MultipleChoiceSample(
@@ -122,11 +127,14 @@ class DarijaMMLU(BaseMultipleChoiceSuite):
 
 
 def darijammlu(*, subset: str, **kwargs: Any) -> DarijaMMLU:
+    """Implement darijammlu for this module."""
     return DarijaMMLU(subset=subset, dataset_name=subset, **kwargs)
 
 
 def _make_darijammlu_factory(subset: str) -> Any:
+    """Make darijammlu factory."""
     def factory(**kwargs: Any) -> DarijaMMLU:
+        """Implement factory for this module."""
         return darijammlu(subset=subset, **kwargs)
 
     factory.__name__ = _SUBSET_TO_TASK[subset]

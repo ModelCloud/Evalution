@@ -14,11 +14,13 @@ from evalution.datasets import wnli_es as wnli_es_dataset
 
 
 def _write_csv(path: Path, rows: str) -> str:
+    """Write CSV."""
     path.write_text(rows, encoding="utf-8")
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def test_load_wnli_es_dataset_reads_pinned_csv(monkeypatch, tmp_path: Path) -> None:
+    """Verify load WNLI es dataset reads pinned CSV."""
     train_sha = _write_csv(
         tmp_path / "wnli-train-es.csv",
         "index,sentence1,sentence2,label\n0,Uno,Dos,1\n",
@@ -43,6 +45,7 @@ def test_load_wnli_es_dataset_reads_pinned_csv(monkeypatch, tmp_path: Path) -> N
     wnli_es_dataset._load_rows_cached.cache_clear()
 
     def fake_download(repo_id: str, filename: str, *, repo_type: str, cache_dir: str | None = None) -> str:
+        """Support the surrounding tests with fake download."""
         assert repo_id == "PlanTL-GOB-ES/wnli-es"
         assert repo_type == "dataset"
         del cache_dir
@@ -67,6 +70,7 @@ def test_load_wnli_es_dataset_reads_pinned_csv(monkeypatch, tmp_path: Path) -> N
 
 
 def test_load_wnli_es_dataset_rejects_checksum_mismatch(monkeypatch, tmp_path: Path) -> None:
+    """Verify load WNLI es dataset rejects checksum mismatch."""
     csv_path = tmp_path / "wnli-dev-es.csv"
     csv_path.write_text("index,sentence1,sentence2,label\n0,A,B,1\n", encoding="utf-8")
     monkeypatch.setattr(

@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 bangla_module = importlib.import_module("evalution.benchmarks.bangla")
 
 
 class FakeBoolQSession:
+    """Provide the fake bool qsession helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake bool qsession."""
         assert batch_size == 6
         assert len(requests) == 2
         assert requests[0].context == (
@@ -31,7 +34,9 @@ class FakeBoolQSession:
 
 
 class FakeCommonsenseQASession:
+    """Provide the fake commonsense qasession helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake commonsense qasession."""
         assert batch_size == 6
         assert len(requests) == 5
         assert requests[0].context == (
@@ -54,7 +59,9 @@ class FakeCommonsenseQASession:
 
 
 class FakeOpenBookQASession:
+    """Provide the fake open book qasession helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake open book qasession."""
         assert batch_size == 6
         assert len(requests) == 4
         assert requests[0].context == (
@@ -75,7 +82,9 @@ class FakeOpenBookQASession:
 
 
 class FakePIQASession:
+    """Provide the fake piqasession helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake piqasession."""
         assert batch_size == 6
         assert len(requests) == 2
         assert requests[0].context == (
@@ -92,7 +101,9 @@ class FakePIQASession:
 
 
 class FakeMMLUSession:
+    """Provide the fake mmlusession helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake mmlusession."""
         assert batch_size == 6
         assert len(requests) == 4
         assert requests[0].context == (
@@ -109,6 +120,7 @@ class FakeMMLUSession:
 
 
 def test_bangla_boolqa_scores_yes_no_reading_comprehension(monkeypatch) -> None:
+    """Verify bangla boolqa scores yes no reading comprehension. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -136,6 +148,7 @@ def test_bangla_boolqa_scores_yes_no_reading_comprehension(monkeypatch) -> None:
 
 
 def test_bangla_commonsenseqa_scores_label_multiple_choice(monkeypatch) -> None:
+    """Verify bangla commonsenseqa scores label multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -165,6 +178,7 @@ def test_bangla_commonsenseqa_scores_label_multiple_choice(monkeypatch) -> None:
 
 
 def test_bangla_openbookqa_scores_label_multiple_choice(monkeypatch) -> None:
+    """Verify bangla openbookqa scores label multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -194,6 +208,7 @@ def test_bangla_openbookqa_scores_label_multiple_choice(monkeypatch) -> None:
 
 
 def test_bangla_piqa_scores_binary_label_multiple_choice(monkeypatch) -> None:
+    """Verify bangla PIQA scores binary label multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -219,6 +234,7 @@ def test_bangla_piqa_scores_binary_label_multiple_choice(monkeypatch) -> None:
 
 
 def test_bangla_mmlu_scores_four_way_label_multiple_choice(monkeypatch) -> None:
+    """Verify bangla MMLU scores four way label multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -246,16 +262,19 @@ def test_bangla_mmlu_scores_four_way_label_multiple_choice(monkeypatch) -> None:
 
 
 def test_bangla_rejects_unknown_subset() -> None:
+    """Verify bangla rejects unknown subset."""
     with pytest.raises(ValueError, match="unsupported bangla subset"):
         evalution.benchmarks.bangla(subset="unknown")
 
 
 def test_bangla_rejects_dataset_name_mismatch() -> None:
+    """Verify bangla rejects dataset name mismatch."""
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.bangla(subset="mmlu", dataset_name="history")
 
 
 def test_bangla_label_prompt_reorders_choice_texts() -> None:
+    """Verify bangla label prompt reorders choice texts."""
     suite = evalution.benchmarks.bangla_commonsenseqa()
     sample = bangla_module.MultipleChoiceSample(
         index=0,

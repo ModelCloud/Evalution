@@ -27,6 +27,7 @@ from evalution.benchmarks.execution import _prefetch_executor
 from evalution.benchmarks.execution import iter_prefetched_batches
 from evalution.benchmarks.execution import iter_prefetched_samples
 
+# Keep shared test fixtures and expectations explicit at module scope.
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 
 _BOXED_RE = pcre.compile(r"\\boxed\{(?:\\text\{)?([^\\{}]+)\}")
@@ -35,6 +36,7 @@ _TRAILING_ZERO_RE = pcre.compile(r"\.0+$")
 
 
 def _official_gsm8k_platinum_reference_answer(output: str) -> str:
+    """Support the surrounding tests with official GSM8K platinum reference answer. Preserve the fallback order expected by the surrounding caller."""
     text = output
     lowered_without_stars = text.lower().replace("*", "")
     if "answer:" in lowered_without_stars:
@@ -59,6 +61,7 @@ def _official_gsm8k_platinum_reference_answer(output: str) -> str:
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(
         self,
         responses: list[str],
@@ -66,6 +69,7 @@ class FakeSession:
         batch_size: int | None = None,
         resolved_batch_size: int | None = None,
     ) -> None:
+        """Initialize this object."""
         self.responses = responses
         self.requests = []
         self.batch_size = batch_size
@@ -76,11 +80,13 @@ class FakeSession:
         self.resolve_calls = 0
 
     def resolve_batch_size(self, requests) -> int:
+        """Resolve batch size."""
         self.resolve_calls += 1
         self.resolve_request_counts.append(len(requests))
         return self.resolved_batch_size
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         self.generate_batch_sizes.append(batch_size)
         self.requests.extend(requests)
         batch_responses = self.responses[self._response_index : self._response_index + len(requests)]
@@ -94,10 +100,12 @@ class FakeSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 class PreparingFakeSession(FakeSession):
+    """Define the preparing fake session helper used by the surrounding tests."""
     def __init__(
         self,
         responses: list[str],
@@ -105,6 +113,7 @@ class PreparingFakeSession(FakeSession):
         batch_size: int | None = None,
         resolved_batch_size: int | None = None,
     ) -> None:
+        """Initialize this object."""
         super().__init__(
             responses,
             batch_size=batch_size,
@@ -114,6 +123,7 @@ class PreparingFakeSession(FakeSession):
         self.prepare_batch_sizes: list[int] = []
 
     def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+        """Prepare requests."""
         self.prepare_thread_names.append(threading.current_thread().name)
         self.prepare_batch_sizes.append(len(requests))
         prepared: list[GenerationRequest] = []
@@ -137,6 +147,7 @@ class PreparingFakeSession(FakeSession):
 
 
 class ContinuousPreparingFakeSession(PreparingFakeSession):
+    """Define the continuous preparing fake session helper used by the surrounding tests."""
     def __init__(
         self,
         responses: list[str],
@@ -144,6 +155,7 @@ class ContinuousPreparingFakeSession(PreparingFakeSession):
         batch_size: int | None = None,
         resolved_batch_size: int | None = None,
     ) -> None:
+        """Initialize this object."""
         super().__init__(
             responses,
             batch_size=batch_size,
@@ -154,15 +166,18 @@ class ContinuousPreparingFakeSession(PreparingFakeSession):
         self.completion_order: list[int] = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         del requests, batch_size
         raise AssertionError("continuous sessions should not fall back to generate()")
 
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         self.continuous_batch_sizes.append(batch_size)
         request_iter = iter(requests)
         active: list[tuple[int, GenerationRequest, str]] = []
 
         def submit_one() -> bool:
+            """Implement submit one for continuous preparing fake session."""
             try:
                 request_key, request = next(request_iter)
             except StopIteration:
@@ -193,6 +208,7 @@ class ContinuousPreparingFakeSession(PreparingFakeSession):
 
 
 def test_gsm8k_platinum_cot_llama_uses_multiturn_chat_by_default(monkeypatch) -> None:
+    """Verify GSM8K platinum cot llama uses multiturn chat by default."""
     dataset = Dataset.from_list(
         [
             {
@@ -222,6 +238,7 @@ def test_gsm8k_platinum_cot_llama_uses_multiturn_chat_by_default(monkeypatch) ->
 
 
 def test_gsm8k_platinum_scores_numeric_primary(monkeypatch) -> None:
+    """Verify GSM8K platinum scores numeric primary. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -248,6 +265,7 @@ def test_gsm8k_platinum_scores_numeric_primary(monkeypatch) -> None:
 
 
 def test_gsm8k_platinum_reference_parser_matches_madrylab_release_cases() -> None:
+    """Verify GSM8K platinum reference parser matches madrylab release cases."""
     cases = [
         ("Answer: 42", "42"),
         ("Reasoning\n\\boxed{18}", "18"),
@@ -263,6 +281,7 @@ def test_gsm8k_platinum_reference_parser_matches_madrylab_release_cases() -> Non
 
 
 def test_gsm8k_platinum_uses_engine_batch_size_by_default(monkeypatch) -> None:
+    """Verify GSM8K platinum uses engine batch size by default."""
     dataset = Dataset.from_list(
         [
             {
@@ -287,6 +306,7 @@ def test_gsm8k_platinum_uses_engine_batch_size_by_default(monkeypatch) -> None:
 
 
 def test_gsm8k_platinum_suite_batch_size_overrides_engine_default(monkeypatch) -> None:
+    """Verify GSM8K platinum suite batch size overrides engine default."""
     dataset = Dataset.from_list(
         [
             {
@@ -312,6 +332,7 @@ def test_gsm8k_platinum_suite_batch_size_overrides_engine_default(monkeypatch) -
 
 
 def test_gsm8k_platinum_uses_session_batch_size_resolver(monkeypatch) -> None:
+    """Verify GSM8K platinum uses session batch size resolver."""
     dataset = Dataset.from_list(
         [
             {
@@ -337,6 +358,7 @@ def test_gsm8k_platinum_uses_session_batch_size_resolver(monkeypatch) -> None:
 
 
 def test_gsm8k_platinum_uses_bounded_preview_for_auto_batch_size_resolution(monkeypatch) -> None:
+    """Verify GSM8K platinum uses bounded preview for auto batch size resolution."""
     dataset = Dataset.from_list(
         [
             {
@@ -361,6 +383,7 @@ def test_gsm8k_platinum_uses_bounded_preview_for_auto_batch_size_resolution(monk
 
 
 def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> None:
+    """Verify GSM8K platinum passes streaming flag to load dataset."""
     dataset = Dataset.from_list(
         [
             {
@@ -373,6 +396,7 @@ def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> No
     calls: list[dict[str, object]] = []
 
     def fake_load_dataset(*args, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del args
         if "stream" in kwargs:
             raise TypeError("unexpected keyword argument 'stream'")
@@ -395,6 +419,7 @@ def test_gsm8k_platinum_passes_streaming_flag_to_load_dataset(monkeypatch) -> No
 
 
 def test_gsm8k_platinum_stream_rejects_non_native_order(monkeypatch) -> None:
+    """Verify GSM8K platinum stream rejects non native order."""
     dataset = Dataset.from_list(
         [
             {
@@ -418,6 +443,7 @@ def test_gsm8k_platinum_stream_rejects_non_native_order(monkeypatch) -> None:
 
 
 def test_gsm8k_platinum_prefetches_remaining_streaming_batches_on_background_thread(monkeypatch) -> None:
+    """Verify GSM8K platinum prefetches remaining streaming batches on background thread."""
     dataset = Dataset.from_list(
         [
             {
@@ -455,6 +481,7 @@ def test_gsm8k_platinum_prefetches_remaining_streaming_batches_on_background_thr
 def test_gsm8k_platinum_streaming_prefetch_and_generation_respect_resolved_batch_size(
     monkeypatch,
 ) -> None:
+    """Verify GSM8K platinum streaming prefetch and generation respect resolved batch size."""
     dataset = Dataset.from_list(
         [
             {
@@ -492,6 +519,7 @@ def test_gsm8k_platinum_streaming_prefetch_and_generation_respect_resolved_batch
 def test_gsm8k_platinum_streaming_uses_continuous_generation_to_refill_slots(
     monkeypatch,
 ) -> None:
+    """Verify GSM8K platinum streaming uses continuous generation to refill slots."""
     dataset = Dataset.from_list(
         [
             {
@@ -532,6 +560,7 @@ def test_gsm8k_platinum_streaming_uses_continuous_generation_to_refill_slots(
 def test_gsm8k_platinum_skips_auto_batch_preview_when_suite_batch_size_is_fixed(
     monkeypatch,
 ) -> None:
+    """Verify GSM8K platinum skips auto batch preview when suite batch size is fixed."""
     dataset = Dataset.from_list(
         [
             {
@@ -561,25 +590,33 @@ def test_gsm8k_platinum_skips_auto_batch_preview_when_suite_batch_size_is_fixed(
 
 
 def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> None:
+    """Verify iter prefetched batches closes promptly when consumer stops early."""
     class FakePrepareBar:
+        """Provide the fake prepare bar helper used by the surrounding tests."""
         def next(self) -> FakePrepareBar:
+            """Implement next for fake prepare bar."""
             return self
 
         def draw(self) -> FakePrepareBar:
+            """Implement draw for fake prepare bar."""
             return self
 
     class TrackingSession:
+        """Define the tracking session helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.prepare_calls = 0
             self.third_prepare_started = threading.Event()
 
         def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+            """Prepare requests."""
             self.prepare_calls += 1
             if self.prepare_calls >= 3:
                 self.third_prepare_started.set()
             return requests
 
     def make_sample(index: int) -> PreparedSample:
+        """Make sample."""
         prompt = f"Q: {index}\nA:"
         return PreparedSample(
             index=index,
@@ -609,6 +646,7 @@ def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> 
     close_errors: list[BaseException] = []
 
     def close_iterator() -> None:
+        """Support the surrounding tests with close iterator."""
         try:
             iterator.close()
         except BaseException as exc:  # pragma: no cover - asserted below
@@ -628,23 +666,30 @@ def test_iter_prefetched_batches_closes_promptly_when_consumer_stops_early() -> 
     reason="requires Python free-threading with GIL disabled",
 )
 def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_prepares() -> None:
+    """Verify iter prefetched batches allows no-GIL inflight work while next batch prepares. Preserve the fallback order expected by the surrounding caller."""
     batch_size = 32
     total_rows = 64
 
     class FakePrepareBar:
+        """Provide the fake prepare bar helper used by the surrounding tests."""
         def next(self) -> FakePrepareBar:
+            """Implement next for fake prepare bar."""
             return self
 
         def draw(self) -> FakePrepareBar:
+            """Implement draw for fake prepare bar."""
             return self
 
     class BlockingPrepareSession:
+        """Define the blocking prepare session helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.prepare_calls = 0
             self.next_batch_prepare_started = threading.Event()
             self.allow_next_batch_prepare_finish = threading.Event()
 
         def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+            """Prepare requests."""
             self.prepare_calls += 1
             if self.prepare_calls == 1:
                 self.next_batch_prepare_started.set()
@@ -659,6 +704,7 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
             ]
 
     def make_sample(index: int, *, prepared: bool) -> PreparedSample:
+        """Make sample."""
         prompt = f"Q: {index}\nA:"
         return PreparedSample(
             index=index,
@@ -689,6 +735,7 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
     completed_initial = 0
 
     def feed_ready_samples() -> None:
+        """Support the surrounding tests with feed ready samples."""
         try:
             for prefetched_batch in iterator:
                 for sample in prefetched_batch:
@@ -700,6 +747,7 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
                 ready_samples.put(None)
 
     def run_slot_worker() -> None:
+        """Run slot worker. Preserve the fallback order expected by the surrounding caller."""
         nonlocal completed_initial
         try:
             while True:
@@ -755,19 +803,26 @@ def test_iter_prefetched_batches_allows_nogil_inflight_work_while_next_batch_pre
 
 
 def test_iter_prefetched_samples_refills_partial_free_capacity_with_partial_tokenization() -> None:
+    """Verify iter prefetched samples refills partial free capacity with partial tokenization."""
     class FakePrepareBar:
+        """Provide the fake prepare bar helper used by the surrounding tests."""
         def next(self) -> FakePrepareBar:
+            """Implement next for fake prepare bar."""
             return self
 
         def draw(self) -> FakePrepareBar:
+            """Implement draw for fake prepare bar."""
             return self
 
     class TrackingSession:
+        """Define the tracking session helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.prepare_batch_sizes: list[int] = []
             self.second_prepare_started = threading.Event()
 
         def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+            """Prepare requests."""
             self.prepare_batch_sizes.append(len(requests))
             if len(self.prepare_batch_sizes) == 2:
                 self.second_prepare_started.set()
@@ -781,6 +836,7 @@ def test_iter_prefetched_samples_refills_partial_free_capacity_with_partial_toke
             ]
 
     def make_sample(index: int) -> PreparedSample:
+        """Make sample."""
         prompt = f"Q: {index}\nA:"
         return PreparedSample(
             index=index,
@@ -811,6 +867,7 @@ def test_iter_prefetched_samples_refills_partial_free_capacity_with_partial_toke
 
 
 def test_prefetch_executor_is_reused() -> None:
+    """Verify prefetch executor is reused."""
     first = _prefetch_executor()
     second = _prefetch_executor()
 

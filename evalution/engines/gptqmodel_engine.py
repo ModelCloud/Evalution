@@ -67,6 +67,7 @@ def _default_gptqmodel_path() -> str | None:
 @dataclass(slots=True)
 class _LoadedGPTQModelRuntime:
     # Bundle the GPTQModel runtime objects so session construction can stay deterministic.
+    """Define the loaded gptqmodel runtime helper class."""
     model_wrapper: Any
     model: Any
     tokenizer: Any
@@ -81,11 +82,13 @@ class _LoadedGPTQModelRuntime:
 @dataclass(slots=True)
 class GPTQModel(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
     # Load quantized Hugging Face-compatible checkpoints through GPTQModel.
+    """Define the gptqmodel helper class."""
     backend: str = "auto"
     gptqmodel_path: str | None = field(default_factory=_default_gptqmodel_path)
 
     # Reuse the same paged-attention feature gating as the native transformer engine.
     def build(self, model: Model) -> TransformersSession:
+        """Build build."""
         supports_continuous_batching, reason = transformers_continuous_batching_support()
         if not supports_continuous_batching and _requests_paged_attention(self.attn_implementation):
             raise ValueError(
@@ -107,6 +110,7 @@ class GPTQModel(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
 class GPTQModelSession(TransformersSession):
     # Keep the GPTQModel wrapper alive so quantized kernels and metadata outlive the inner HF
     # model, while inheriting the shared queued request/result path from TransformersSession.
+    """Define the gptqmodel session helper class."""
     model_wrapper: Any | None = field(default=None, repr=False)
     resolved_backend: str | None = None
     quant_method: str | None = None
@@ -120,6 +124,7 @@ class GPTQModelSession(TransformersSession):
         *,
         supports_continuous_batching: bool,
     ) -> GPTQModelSession:
+        """Implement from config for gptqmodel session."""
         runtime = load_gptqmodel_runtime(config, model_config)
         raw_attn_implementation = config.attn_implementation or runtime.requested_attn_implementation
         paged_attention_enabled = supports_continuous_batching and _resolve_paged_attention(
@@ -160,6 +165,7 @@ class GPTQModelSession(TransformersSession):
 
     # Surface GPTQModel-specific runtime details in addition to the shared transformer execution data.
     def describe_execution(self) -> dict[str, Any]:
+        """Implement describe execution for gptqmodel session."""
         execution = super(GPTQModelSession, self).describe_execution()
         execution.update(
             {
@@ -172,6 +178,7 @@ class GPTQModelSession(TransformersSession):
 
     # Release the outer GPTQModel wrapper along with the inherited paged-manager and HF resources.
     def close(self) -> None:
+        """Release the resources owned by this object."""
         with self._generation_lock:
             with self._prepare_tokenizer_lock:
                 with self._tokenizer_lock:
@@ -279,6 +286,7 @@ def load_gptqmodel_runtime(
 
 # Import the local checkout only as a fallback so installed environments keep working unchanged.
 def _import_gptqmodel(gptqmodel_path: str | None) -> Any:
+    """Implement import gptqmodel for this module."""
     try:
         return importlib.import_module("gptqmodel")
     except ModuleNotFoundError as exc:
@@ -342,6 +350,7 @@ def _resolve_gptqmodel_backend(config: GPTQModel) -> str:
 # External runtimes bypass the direct HF model API that Evalution uses for token scoring and paged
 # continuous batching, so keep this engine on GPTQModel's local kernels only.
 def _validate_gptqmodel_backend(backend: str) -> None:
+    """Validate gptqmodel backend."""
     if backend in _UNSUPPORTED_GPTQMODEL_BACKENDS:
         raise ValueError(
             "GPTQModel only supports native GPTQModel/HF-style backends; "

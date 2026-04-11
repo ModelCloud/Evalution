@@ -16,6 +16,7 @@ from evalution.yaml import python_from_yaml, run_yaml
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run the CLI entry point for this module. Preserve the fallback order expected by the surrounding caller."""
     normalized_argv = list(argv) if argv is not None else None
     if (
         normalized_argv
@@ -49,6 +50,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """Build parser."""
     parser = argparse.ArgumentParser(
         prog="evalution",
         description="Run Evalution YAML specs or emit equivalent Python code.",

@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 gpqa_module = importlib.import_module("evalution.benchmarks.gpqa")
 
 
 class FakeMainSession:
+    """Provide the fake main session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 1
         assert len(requests) == 1
         assert requests[0].prompt == (
@@ -40,11 +43,14 @@ class FakeMainSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 class FakeDiamondSession:
+    """Provide the fake diamond session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 1
         assert len(requests) == 1
         assert "(A) 10^-4 eV" in requests[0].prompt
@@ -52,10 +58,12 @@ class FakeDiamondSession:
         return [GenerationOutput(prompt=requests[0].prompt or "", text="10^-4 eV")]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_gpqa_main_uses_seeded_choice_shuffle_and_label_scoring(monkeypatch) -> None:
+    """Verify GPQA main uses seeded choice shuffle and label scoring."""
     dataset = Dataset.from_list(
         [
             {
@@ -91,6 +99,7 @@ def test_gpqa_main_uses_seeded_choice_shuffle_and_label_scoring(monkeypatch) -> 
 
 
 def test_gpqa_diamond_recovers_answer_from_choice_text(monkeypatch) -> None:
+    """Verify GPQA diamond recovers answer from choice text."""
     dataset = Dataset.from_list(
         [
             {
@@ -119,10 +128,12 @@ def test_gpqa_diamond_recovers_answer_from_choice_text(monkeypatch) -> None:
 
 
 def test_gpqa_rejects_unknown_subset() -> None:
+    """Verify GPQA rejects unknown subset."""
     with pytest.raises(ValueError, match="unsupported gpqa subset"):
         evalution.benchmarks.gpqa(subset="unknown_subset")
 
 
 def test_gpqa_rejects_dataset_name_mismatch() -> None:
+    """Verify GPQA rejects dataset name mismatch."""
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.gpqa(subset="main", dataset_name="gpqa_diamond")

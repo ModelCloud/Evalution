@@ -9,6 +9,7 @@ import torch
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse args."""
     parser = argparse.ArgumentParser(description="No-GIL CUDA context repro")
     parser.add_argument("--devices", nargs="+", required=True, help="CUDA devices to span")
     parser.add_argument("--threads", type=int, default=16)
@@ -20,6 +21,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def prepare_tensors(devices: list[str], modules_per_device: int) -> list[torch.Tensor]:
+    """Prepare tensors. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     tensors = []
     for device in devices:
         for _ in range(modules_per_device):
@@ -37,6 +39,7 @@ def worker(
     crash_flag: threading.Event,
     print_lock: threading.Lock,
 ) -> None:
+    """Implement worker for this module. Preserve the fallback order expected by the surrounding caller."""
     device = devices[worker_idx % len(devices)]
     other_device = devices[(devices.index(device) + 1) % len(devices)]
     null_ctx = nullcontext
@@ -77,6 +80,7 @@ def worker(
 
 
 def main() -> None:
+    """Run the CLI entry point for this module."""
     args = parse_args()
     shared = prepare_tensors(args.devices, args.modules_per_device)
     crash_flag = threading.Event()

@@ -16,21 +16,25 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 @dataclass(slots=True)
 class SWAG(BaseMultipleChoiceSuite):
     # Evaluate grounded commonsense inference by ranking four candidate next-event completions.
+    """Implement the swag benchmark suite."""
     dataset_path: str = "swag"
     dataset_name: str | None = "regular"
     split: str = "validation"
 
     # Use the Hugging Face datasets loader for the public SWAG benchmark.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used in logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "swag"
 
     # Match the upstream harness prompt shape where the model scores each candidate continuation
     # directly after the shared start phrase.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [
             doc["ending0"].strip(),
             doc["ending1"].strip(),
@@ -56,4 +60,5 @@ class SWAG(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used by the rest of the package.
 def swag(**kwargs: Any) -> SWAG:
+    """Implement swag for this module."""
     return SWAG(**kwargs)

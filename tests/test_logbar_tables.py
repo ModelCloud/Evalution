@@ -15,36 +15,47 @@ from evalution.results import (
 
 
 class FakeColumnsLevel:
+    """Provide the fake columns level helper used by the surrounding tests."""
     def __init__(self) -> None:
+        """Initialize this object."""
         self.simulated_rows: list[tuple[str, ...]] = []
         self.rows: list[tuple[str, ...]] = []
         self.header_calls = 0
 
     def simulate(self, *values: str) -> None:
+        """Implement simulate for fake columns level."""
         self.simulated_rows.append(tuple(values))
 
     def header(self) -> None:
+        """Implement header for fake columns level."""
         self.header_calls += 1
 
     def __call__(self, *values: str) -> None:
+        """Implement call for fake columns level."""
         self.rows.append(tuple(values))
 
 
 class FakeColumns:
+    """Provide the fake columns helper used by the surrounding tests."""
     def __init__(self) -> None:
+        """Initialize this object."""
         self.info = FakeColumnsLevel()
 
 
 class FakeLogger:
+    """Provide the fake logger helper used by the surrounding tests."""
     def __init__(self) -> None:
+        """Initialize this object."""
         self.info_messages: list[str] = []
         self.columns_calls: list[tuple[object, int]] = []
         self.tables: list[FakeColumns] = []
 
     def info(self, message: str, *args) -> None:
+        """Implement info for fake logger."""
         self.info_messages.append(message % args if args else message)
 
     def columns(self, *args, cols=None, padding=2):
+        """Implement columns for fake logger."""
         self.columns_calls.append((cols, padding))
         table = FakeColumns()
         self.tables.append(table)
@@ -52,6 +63,7 @@ class FakeLogger:
 
 
 def _sample_result(index: int = 0) -> SampleResult:
+    """Support the surrounding tests with sample result."""
     return SampleResult(
         index=index,
         prompt="prompt",
@@ -63,6 +75,7 @@ def _sample_result(index: int = 0) -> SampleResult:
 
 
 def test_render_test_result_table_uses_logbar_columns() -> None:
+    """Verify render test result table uses LogBar columns."""
     logger = FakeLogger()
     result = EvalutionTestResult(
         name="boolq",
@@ -90,6 +103,7 @@ def test_render_test_result_table_uses_logbar_columns() -> None:
 
 
 def test_render_test_summary_table_skips_single_suite() -> None:
+    """Verify render test summary table skips single suite."""
     logger = FakeLogger()
     result = EvalutionTestResult(
         name="boolq",
@@ -104,6 +118,7 @@ def test_render_test_summary_table_skips_single_suite() -> None:
 
 
 def test_render_test_summary_table_consolidates_multiple_suites() -> None:
+    """Verify render test summary table consolidates multiple suites."""
     logger = FakeLogger()
     results = [
         EvalutionTestResult(
@@ -130,6 +145,7 @@ def test_render_test_summary_table_consolidates_multiple_suites() -> None:
 
 
 def test_render_compare_result_table_uses_logbar_columns() -> None:
+    """Verify render compare result table uses LogBar columns."""
     logger = FakeLogger()
     result = CompareTestResult(
         name="boolq",
@@ -163,6 +179,7 @@ def test_render_compare_result_table_uses_logbar_columns() -> None:
 
 
 def test_render_compare_summary_table_consolidates_multiple_suites() -> None:
+    """Verify render compare summary table consolidates multiple suites."""
     logger = FakeLogger()
     results = [
         CompareTestResult(

@@ -16,6 +16,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.math_exact_match import extract_math_answer, math_exact_match, normalize_math_string
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _STOP_STRINGS = ("Problem:", "</s>", "<|im_end|>", "<|eot_id|>")
 HENDRYCKS_MATH_SUBSETS = (
     "algebra",
@@ -31,10 +32,12 @@ _SUBSET_TO_TASK = dict(zip(HENDRYCKS_MATH_SUBSETS, HENDRYCKS_MATH_TASKS, strict=
 
 
 def _hendrycks_math_prompt(problem: str) -> str:
+    """Implement hendrycks math prompt for this module."""
     return f"Problem: {problem}\nAnswer:"
 
 
 def _safe_normalize_math_string(text: str) -> str:
+    """Implement safe normalize math string for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     try:
         return normalize_math_string(text)
     except Exception:
@@ -43,6 +46,8 @@ def _safe_normalize_math_string(text: str) -> str:
 
 @dataclass(slots=True)
 class HendrycksMath(BaseTestSuite):
+    """Implement the hendrycks math benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "EleutherAI/hendrycks_math"
     dataset_name: str | None = None
     split: str = "test"
@@ -52,6 +57,7 @@ class HendrycksMath(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in HENDRYCKS_MATH_SUBSETS:
             raise ValueError(f"unsupported hendrycks_math subset: {self.subset!r}")
         if self.split != "test":
@@ -61,9 +67,11 @@ class HendrycksMath(BaseTestSuite):
         self.dataset_name = self.subset
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _SUBSET_TO_TASK[self.subset]
 
     def result_metadata(
@@ -71,6 +79,7 @@ class HendrycksMath(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_math_exact_match",
@@ -78,6 +87,7 @@ class HendrycksMath(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             yield PreparedSample(
                 index=index,
@@ -97,6 +107,7 @@ class HendrycksMath(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         target = prepared_sample.target
         extracted_answer = extract_math_answer(output.text)
         return SampleResult(
@@ -120,11 +131,14 @@ class HendrycksMath(BaseTestSuite):
 
 
 def hendrycks_math(*, subset: str, **kwargs: Any) -> HendrycksMath:
+    """Implement hendrycks math for this module."""
     return HendrycksMath(subset=subset, dataset_name=subset, **kwargs)
 
 
 def _make_hendrycks_math_factory(subset: str) -> Any:
+    """Make hendrycks math factory."""
     def factory(**kwargs: Any) -> HendrycksMath:
+        """Implement factory for this module."""
         return hendrycks_math(subset=subset, **kwargs)
 
     factory.__name__ = _SUBSET_TO_TASK[subset]

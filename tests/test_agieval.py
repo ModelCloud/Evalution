@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 agieval_module = importlib.import_module("evalution.benchmarks.agieval")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 5
         assert requests[0].context == (
@@ -41,6 +44,7 @@ class FakeSession:
 
 
 def test_agieval_scores_single_answer_multiple_choice_rows(monkeypatch) -> None:
+    """Verify agieval scores single answer multiple choice rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -81,10 +85,12 @@ def test_agieval_scores_single_answer_multiple_choice_rows(monkeypatch) -> None:
 
 
 def test_agieval_slugify_subset_name() -> None:
+    """Verify agieval slugify subset name."""
     assert agieval_module._slugify_subset_name("aqua-rat") == "aqua_rat"
     assert agieval_module._slugify_subset_name("logiqa-en") == "logiqa_en"
 
 
 def test_agieval_rejects_unsupported_subset() -> None:
+    """Verify agieval rejects unsupported subset."""
     with pytest.raises(ValueError, match="unsupported agieval subset"):
         evalution.benchmarks.agieval(subset="math")

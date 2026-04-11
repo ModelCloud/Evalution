@@ -14,10 +14,12 @@ from tests.models_support import (
     run_llama3_2_compare_suite,
 )
 
+# Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = LLAMA3_2_TRANSFORMERS_COMPARE_TEST_MARKS
 
 
 def test_llama3_2_transformers_gsm8k_platinum_full_model_compare_eval(capsys):
+    """Verify llama3 2 transformers GSM8K platinum full model compare eval."""
     suite = evalution.benchmarks.gsm8k_platinum(
         variant="cot",
         apply_chat_template=True,
@@ -40,11 +42,13 @@ def test_llama3_2_transformers_gsm8k_platinum_full_model_compare_eval(capsys):
 
 
 def test_llama3_2_transformers_gsm8k_platinum_compare_loop_uses_fresh_lane_threads(capsys, monkeypatch):
+    """Verify llama3 2 transformers GSM8K platinum compare loop uses fresh lane threads."""
     compare_module = importlib.import_module("evalution.compare")
     original_thread = compare_module.threading.Thread
     created_thread_ids: list[int] = []
 
     def _recording_thread(*args, **kwargs):
+        """Support the surrounding tests with recording thread."""
         thread = original_thread(*args, **kwargs)
         created_thread_ids.append(id(thread))
         return thread

@@ -12,12 +12,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 hellaswag_module = importlib.import_module("evalution.benchmarks.hellaswag")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == "Roof shingle removal: A man is sitting on a roof. He"
@@ -32,6 +35,7 @@ class FakeSession:
 
 
 def test_hellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
+    """Verify hellaswag scores raw and normalized accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -87,6 +91,7 @@ def test_hellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
 
 
 def test_hellaswag_text_cleaner_strips_artifacts() -> None:
+    """Verify hellaswag text cleaner strips artifacts."""
     cleaned = hellaswag_module._clean_hellaswag_text("  Intro [title] [noise] ending  ")
 
     assert cleaned == "Intro. ending"

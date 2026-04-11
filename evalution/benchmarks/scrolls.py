@@ -54,11 +54,13 @@ _CONTRACT_NLI_CHOICES = ["Not mentioned", "Entailment", "Contradiction"]
 
 
 def _scrolls_variant_token(value: str) -> str:
+    """Implement scrolls variant token for this module."""
     normalized = normalize_subset_token(value)
     return _SCROLLS_ALIASES.get(normalized, normalized)
 
 
 def _scrolls_dataset_name(variant: str) -> str:
+    """Implement scrolls dataset name for this module."""
     dataset_name = SCROLLS_DATASET_NAMES.get(_scrolls_variant_token(variant))
     if dataset_name is None:
         raise ValueError(f"unsupported scrolls variant: {variant!r}")
@@ -66,10 +68,12 @@ def _scrolls_dataset_name(variant: str) -> str:
 
 
 def _scrolls_task_name(variant: str) -> str:
+    """Implement scrolls task name for this module."""
     return f"scrolls_{_scrolls_variant_token(variant)}"
 
 
 def _dedupe_outputs(outputs: list[Any]) -> list[str]:
+    """Dedupe outputs."""
     deduped: list[str] = []
     for output in outputs:
         text = str(output).strip()
@@ -82,6 +86,7 @@ def _dedupe_outputs(outputs: list[Any]) -> list[str]:
 
 def _group_scrolls_outputs(dataset: list[dict[str, Any]] | Dataset) -> Dataset:
     # Collapse duplicate ids into one row with a list of reference outputs, matching the upstream task grouping.
+    """Group scrolls outputs."""
     grouped_rows: dict[str, dict[str, Any]] = {}
     row_order: list[str] = []
     for row in dataset:
@@ -109,6 +114,7 @@ def _load_scrolls_dataset(
     stream: bool = False,
 ) -> Dataset:
     # Materialize SCROLLS splits from the repo-hosted zip archives so no remote dataset scripts execute.
+    """Load scrolls dataset. Preserve the fallback order expected by the surrounding caller."""
     if stream:
         raise ValueError("scrolls requires stream=False to group duplicate reference rows")
     if dataset_name is None:
@@ -143,6 +149,7 @@ def _load_scrolls_dataset(
 
 
 def _scrolls_split_question_and_text(input_text: str) -> tuple[str, str]:
+    """Implement scrolls split question and text for this module."""
     split_index = input_text.find("\n\n")
     if split_index < 0:
         raise ValueError("scrolls input must contain a double-newline question/text separator")
@@ -152,10 +159,12 @@ def _scrolls_split_question_and_text(input_text: str) -> tuple[str, str]:
 
 
 def _scrolls_qa_prompt(*, text: str, question: str) -> str:
+    """Implement scrolls QA prompt for this module."""
     return f"{text.strip()}\n\nQuestion: {question.strip()}\nAnswer:"
 
 
 def _scrolls_summary_prompt(text: str) -> str:
+    """Implement scrolls summary prompt for this module."""
     return (
         f"{text.strip()}\n\n"
         "Question: What is a summary of the preceding text?\n"
@@ -164,6 +173,7 @@ def _scrolls_summary_prompt(text: str) -> str:
 
 
 def _scrolls_best_summary_scores(prediction: str, references: list[str]) -> dict[str, float]:
+    """Implement scrolls best summary scores for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     best_scores: dict[str, float] | None = None
     for reference in references:
         scores = summary_rouge_scores(prediction, reference)
@@ -182,6 +192,7 @@ def _scrolls_best_summary_scores(prediction: str, references: list[str]) -> dict
 
 
 def _quality_choices_and_context(text: str) -> tuple[list[str], str]:
+    """Implement quality choices and context for this module."""
     split_index = text.find("\n\n", text.find("(D)"))
     if split_index < 0:
         raise ValueError("scrolls quality rows must contain answer choices followed by the passage text")
@@ -197,11 +208,13 @@ def _quality_choices_and_context(text: str) -> tuple[list[str], str]:
 
 
 def _scrolls_outputs(doc: dict[str, Any]) -> list[str]:
+    """Implement scrolls outputs for this module."""
     return _dedupe_outputs(list(doc["outputs"]))
 
 
 def _init_scrolls_variant(instance: Any) -> None:
     # Keep dataset_name and the public task variant locked together because several SCROLLS names normalize.
+    """Implement init scrolls variant for this module."""
     canonical_variant = _scrolls_variant_token(instance.variant)
     dataset_name = _scrolls_dataset_name(canonical_variant)
     instance.variant = canonical_variant
@@ -214,21 +227,26 @@ def _init_scrolls_variant(instance: Any) -> None:
 @dataclass(slots=True)
 class ScrollsContractNLI(BaseMultipleChoiceSuite):
     # Score the ContractNLI subset with the benchmark's fixed three-way conclusion labels.
+    """Implement the scrolls contract nli benchmark suite."""
     dataset_path: str = "tau/scrolls"
     dataset_name: str | None = None
     split: str = "validation"
     variant: str = "contractnli"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         _init_scrolls_variant(self)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_scrolls_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _scrolls_task_name(self.variant)
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         question, text = _scrolls_split_question_and_text(str(doc["input"]))
         outputs = _scrolls_outputs(doc)
         return MultipleChoiceSample(
@@ -251,21 +269,26 @@ class ScrollsContractNLI(BaseMultipleChoiceSuite):
 @dataclass(slots=True)
 class ScrollsQuALITY(BaseMultipleChoiceSuite):
     # Score QuALITY rows by parsing the inline choice block and treating the passage as the shared context.
+    """Implement the scrolls qu ality benchmark suite."""
     dataset_path: str = "tau/scrolls"
     dataset_name: str | None = None
     split: str = "validation"
     variant: str = "quality"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         _init_scrolls_variant(self)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_scrolls_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _scrolls_task_name(self.variant)
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         question, raw_text = _scrolls_split_question_and_text(str(doc["input"]))
         choices, passage_text = _quality_choices_and_context(raw_text)
         outputs = _scrolls_outputs(doc)
@@ -290,6 +313,7 @@ class ScrollsQuALITY(BaseMultipleChoiceSuite):
 @dataclass(slots=True)
 class _BaseScrollsQASuite(BaseTestSuite):
     # Share one long-context QA pipeline for the SCROLLS extractive and abstractive question-answering tasks.
+    """Implement the base scrolls qasuite benchmark suite."""
     dataset_path: str = "tau/scrolls"
     dataset_name: str | None = None
     split: str = "validation"
@@ -299,12 +323,15 @@ class _BaseScrollsQASuite(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         _init_scrolls_variant(self)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_scrolls_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _scrolls_task_name(self.variant)
 
     def result_metadata(
@@ -312,6 +339,7 @@ class _BaseScrollsQASuite(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "variant": self.variant,
@@ -320,6 +348,7 @@ class _BaseScrollsQASuite(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             question, text = _scrolls_split_question_and_text(str(doc["input"]))
             outputs = _scrolls_outputs(doc)
@@ -341,6 +370,7 @@ class _BaseScrollsQASuite(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         question, text = _scrolls_split_question_and_text(str(prepared_sample.doc["input"]))
         outputs = _scrolls_outputs(prepared_sample.doc)
         exact, f1_score, best_index = best_qa_scores(output.text, outputs)
@@ -368,17 +398,22 @@ class _BaseScrollsQASuite(BaseTestSuite):
 
 @dataclass(slots=True)
 class ScrollsQasper(_BaseScrollsQASuite):
+    """Define the scrolls QASPER helper class."""
+    # Keep the class-level state explicit for this helper.
     variant: str = "qasper"
 
 
 @dataclass(slots=True)
 class ScrollsNarrativeQA(_BaseScrollsQASuite):
+    """Define the scrolls narrative QA helper class."""
+    # Keep the class-level state explicit for this helper.
     variant: str = "narrativeqa"
 
 
 @dataclass(slots=True)
 class _BaseScrollsSummarySuite(BaseTestSuite):
     # Share one long-context summarization pipeline for the SCROLLS summarization subsets.
+    """Implement the base scrolls summary suite benchmark suite."""
     dataset_path: str = "tau/scrolls"
     dataset_name: str | None = None
     split: str = "validation"
@@ -388,12 +423,15 @@ class _BaseScrollsSummarySuite(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         _init_scrolls_variant(self)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_scrolls_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _scrolls_task_name(self.variant)
 
     def result_metadata(
@@ -401,6 +439,7 @@ class _BaseScrollsSummarySuite(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "variant": self.variant,
@@ -409,9 +448,11 @@ class _BaseScrollsSummarySuite(BaseTestSuite):
         }
 
     def prompt_text(self, doc: dict[str, Any]) -> str:
+        """Implement prompt text for base scrolls summary suite."""
         return _scrolls_summary_prompt(str(doc["input"]))
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             outputs = _scrolls_outputs(doc)
             yield PreparedSample(
@@ -431,6 +472,7 @@ class _BaseScrollsSummarySuite(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         outputs = _scrolls_outputs(prepared_sample.doc)
         prediction = output.text.strip()
         return SampleResult(
@@ -456,26 +498,34 @@ class _BaseScrollsSummarySuite(BaseTestSuite):
 
 @dataclass(slots=True)
 class ScrollsGovReport(_BaseScrollsSummarySuite):
+    """Define the scrolls gov report helper class."""
+    # Keep the class-level state explicit for this helper.
     variant: str = "govreport"
     max_new_tokens: int = 1024
 
 
 @dataclass(slots=True)
 class ScrollsSummScreenFD(_BaseScrollsSummarySuite):
+    """Define the scrolls summ screen fd helper class."""
+    # Keep the class-level state explicit for this helper.
     variant: str = "summscreenfd"
 
 
 @dataclass(slots=True)
 class ScrollsQMSum(_BaseScrollsSummarySuite):
+    """Define the scrolls qmsum helper class."""
+    # Keep the class-level state explicit for this helper.
     variant: str = "qmsum"
 
     def prompt_text(self, doc: dict[str, Any]) -> str:
+        """Implement prompt text for scrolls qmsum."""
         question, text = _scrolls_split_question_and_text(str(doc["input"]))
         return _scrolls_qa_prompt(text=text, question=question)
 
 
 def scrolls(*, subset: str, **kwargs: Any) -> Any:
     # Dispatch the family-level constructor to the concrete SCROLLS task implementation.
+    """Implement scrolls for this module. Preserve the fallback order expected by the surrounding caller."""
     variant = _scrolls_variant_token(subset)
     if variant == "contractnli":
         return ScrollsContractNLI(variant=variant, **kwargs)
@@ -496,7 +546,9 @@ def scrolls(*, subset: str, **kwargs: Any) -> Any:
 
 def _make_scrolls_factory(variant: str) -> Any:
     # Register one import-stable zero-argument factory per SCROLLS task variant.
+    """Make scrolls factory."""
     def factory(**kwargs: Any) -> Any:
+        """Implement factory for this module."""
         return scrolls(subset=variant, **kwargs)
 
     factory.__name__ = _scrolls_task_name(variant)

@@ -7,8 +7,10 @@ from __future__ import annotations
 
 
 def exact_match(prediction: str, target: str) -> float:
+    """Implement exact match for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return float(prediction == target)
 
 
 def choice_label_exact_match(predicted_label: str, gold_label: str) -> float:
+    """Implement choice label exact match for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return exact_match(predicted_label, gold_label)

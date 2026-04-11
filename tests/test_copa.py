@@ -12,12 +12,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 copa_module = importlib.import_module("evalution.benchmarks.copa")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 2
         assert requests[0].context == "The man turned on the faucet therefore"
@@ -30,6 +33,7 @@ class FakeSession:
 
 
 def test_copa_scores_causal_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify COPA scores causal multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -69,5 +73,6 @@ def test_copa_scores_causal_multiple_choice_accuracy(monkeypatch) -> None:
 
 
 def test_copa_helpers_format_connectors_and_choices() -> None:
+    """Verify COPA helpers format connectors and choices."""
     assert copa_module._copa_connector("cause") == "because"
     assert copa_module._copa_choice_text("Water flowed.") == "water flowed."

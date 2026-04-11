@@ -21,6 +21,7 @@ from .transformers import Transformers
 from .transformers_compat import TransformersCompat
 from .vllm_engine import VLLM
 
+# Keep engine defaults and compatibility flags explicit at module scope.
 __all__ = [
     "BaseEngine",
     "BaseEngineDeviceConfig",

@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 copal_id_module = importlib.import_module("evalution.benchmarks.copal_id")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 2
         if requests[0].context == "Pria itu memangku tasnya saat menaiki angkutan umum karena":
@@ -37,6 +40,7 @@ class FakeSession:
 
 
 def test_copal_id_scores_standard_and_colloquial_rows(monkeypatch) -> None:
+    """Verify copal id scores standard and colloquial rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     standard_dataset = Dataset.from_list(
         [
             {
@@ -69,6 +73,7 @@ def test_copal_id_scores_standard_and_colloquial_rows(monkeypatch) -> None:
     )
 
     def fake_load_dataset(dataset_path, dataset_name, *, split, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         assert dataset_path == "haryoaw/COPAL"
         assert dataset_name == "id"
         if split == "test":
@@ -103,6 +108,7 @@ def test_copal_id_scores_standard_and_colloquial_rows(monkeypatch) -> None:
 
 
 def test_copal_id_helpers_format_connectors_choices_and_prompt() -> None:
+    """Verify copal id helpers format connectors choices and prompt."""
     assert copal_id_module._copal_id_connector("cause") == "karena"
     assert copal_id_module._copal_id_connector("effect") == "maka"
     assert copal_id_module._copal_id_choice_text("Pilihan Satu") == "pilihan Satu"
@@ -111,6 +117,7 @@ def test_copal_id_helpers_format_connectors_choices_and_prompt() -> None:
 
 
 def test_copal_id_rejects_unknown_variant_and_mismatched_split() -> None:
+    """Verify copal id rejects unknown variant and mismatched split."""
     with pytest.raises(ValueError, match="unsupported copal_id variant"):
         evalution.benchmarks.copal_id(variant="unknown")
 

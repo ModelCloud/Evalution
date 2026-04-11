@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput, GenerationRequest
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mmlu_pro_module = importlib.import_module("evalution.benchmarks.mmlu_pro")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 2
         assert len(requests) == 2
         assert "about math." in requests[0].prompt
@@ -33,10 +36,12 @@ class FakeSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_mmlu_pro_uses_subset_matched_cot_fewshots(monkeypatch) -> None:
+    """Verify MMLU pro uses subset matched cot fewshots."""
     validation = Dataset.from_list(
         [
             {
@@ -87,6 +92,7 @@ def test_mmlu_pro_uses_subset_matched_cot_fewshots(monkeypatch) -> None:
     )
 
     def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del path, name, kwargs
         if split == "validation":
             return validation
@@ -128,6 +134,7 @@ def test_mmlu_pro_uses_subset_matched_cot_fewshots(monkeypatch) -> None:
 
 
 def test_mmlu_pro_subset_leaf_filter_uses_canonical_path_name(monkeypatch) -> None:
+    """Verify MMLU pro subset leaf filter uses canonical path name."""
     validation = Dataset.from_list(
         [
             {
@@ -168,6 +175,7 @@ def test_mmlu_pro_subset_leaf_filter_uses_canonical_path_name(monkeypatch) -> No
     )
 
     def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del path, name, kwargs
         if split == "validation":
             return validation
@@ -176,13 +184,16 @@ def test_mmlu_pro_subset_leaf_filter_uses_canonical_path_name(monkeypatch) -> No
         raise AssertionError(f"unexpected split: {split}")
 
     class LeafSession:
+        """Define the leaf session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 1
             assert len(requests) == 1
             assert "about computer science." in requests[0].prompt
             return [GenerationOutput(prompt=requests[0].prompt or "", text="the answer is (B)")]
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
@@ -204,6 +215,7 @@ def test_mmlu_pro_subset_leaf_filter_uses_canonical_path_name(monkeypatch) -> No
 
 
 def test_mmlu_pro_subset_node_filter_uses_distinct_result_name(monkeypatch) -> None:
+    """Verify MMLU pro subset node filter uses distinct result name."""
     validation = Dataset.from_list(
         [
             {
@@ -274,6 +286,7 @@ def test_mmlu_pro_subset_node_filter_uses_distinct_result_name(monkeypatch) -> N
     )
 
     def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del path, name, kwargs
         if split == "validation":
             return validation
@@ -282,7 +295,9 @@ def test_mmlu_pro_subset_node_filter_uses_distinct_result_name(monkeypatch) -> N
         raise AssertionError(f"unexpected split: {split}")
 
     class StemSession:
+        """Define the stem session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 2
             assert len(requests) == 2
             assert all("about law." not in request.prompt for request in requests)
@@ -292,6 +307,7 @@ def test_mmlu_pro_subset_node_filter_uses_distinct_result_name(monkeypatch) -> N
             ]
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
@@ -311,6 +327,7 @@ def test_mmlu_pro_subset_node_filter_uses_distinct_result_name(monkeypatch) -> N
 
 
 def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
+    """Verify MMLU pro backs off fewshots to fit context window."""
     validation = Dataset.from_list(
         [
             {
@@ -359,6 +376,7 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
     )
 
     def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del path, name, kwargs
         if split == "validation":
             return validation
@@ -367,24 +385,34 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
         raise AssertionError(f"unexpected split: {split}")
 
     class TinyTokenizer:
+        """Define the tiny tokenizer helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         model_max_length = 55
 
         def __call__(self, text, add_special_tokens=False, padding=False):
+            """Implement call for tiny tokenizer."""
             del add_special_tokens, padding
             return {"input_ids": list(range(len(str(text).split())))}
 
     class TinyModelConfig:
+        """Define the tiny model config helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         max_position_embeddings = 55
 
     class TinyModel:
+        """Define the tiny model helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         config = TinyModelConfig()
 
     class BackoffSession:
+        """Define the backoff session helper used by the surrounding tests."""
+        # Keep the class-level test state explicit for the surrounding assertions.
         tokenizer = TinyTokenizer()
         prepare_tokenizer = None
         model = TinyModel()
 
         def prepare_requests(self, requests: list[GenerationRequest]):
+            """Prepare requests."""
             prepared = []
             for request in requests:
                 prompt = request.prompt or ""
@@ -406,6 +434,7 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
             return prepared
 
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 1
             assert len(requests) == 1
             assert requests[0].metadata["fewshot_count"] < 2
@@ -419,6 +448,7 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
             ]
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)
@@ -436,6 +466,7 @@ def test_mmlu_pro_backs_off_fewshots_to_fit_context_window(monkeypatch) -> None:
 
 
 def test_mmlu_pro_subsets_list_combines_multiple_paths(monkeypatch) -> None:
+    """Verify MMLU pro subsets list combines multiple paths."""
     validation = Dataset.from_list(
         [
             {
@@ -506,6 +537,7 @@ def test_mmlu_pro_subsets_list_combines_multiple_paths(monkeypatch) -> None:
     )
 
     def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del path, name, kwargs
         if split == "validation":
             return validation
@@ -514,7 +546,9 @@ def test_mmlu_pro_subsets_list_combines_multiple_paths(monkeypatch) -> None:
         raise AssertionError(f"unexpected split: {split}")
 
     class MultiSession:
+        """Define the multi session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 2
             assert len(requests) == 2
             prompts = [request.prompt or "" for request in requests]
@@ -527,6 +561,7 @@ def test_mmlu_pro_subsets_list_combines_multiple_paths(monkeypatch) -> None:
             ]
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     monkeypatch.setattr(mmlu_pro_module, "load_dataset", fake_load_dataset)

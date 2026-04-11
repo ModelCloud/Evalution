@@ -31,10 +31,12 @@ from evalution.runtime import EvaluationRun
 @dataclass(frozen=True, slots=True)
 class _EngineSpec:
     # Preserve the legacy registry shape used by CLI/YAML tests while still allowing bare classes.
+    """Define the engine spec helper class."""
     factory: type[BaseEngine]
     emit_alias: str | None = None
 
 
+# Keep module-level state explicit for this module.
 _EngineRegistryEntry = type[BaseEngine] | _EngineSpec
 
 # Keep engine lookup centralized, but derive YAML option inheritance directly
@@ -501,6 +503,7 @@ del _task_name
 
 
 def run_yaml(source: str | Path) -> EvaluationRun:
+    """Run YAML."""
     spec = _load_yaml_spec(source)
     model_config = _build_model(spec["model"])
     evaluation = _build_engine(spec["engine"]).model(**model_config.to_dict())
@@ -510,6 +513,7 @@ def run_yaml(source: str | Path) -> EvaluationRun:
 
 
 def python_from_yaml(source: str | Path) -> str:
+    """Implement python from YAML for this module."""
     spec = _load_yaml_spec(source)
     engine_spec = _coerce_named_mapping(spec.get("engine"), label="engine")
     engine_name = _normalize_engine_name(_extract_name(engine_spec, label="engine"))
@@ -543,6 +547,7 @@ def python_from_yaml(source: str | Path) -> str:
 
 
 def _load_yaml_spec(source: str | Path) -> dict[str, Any]:
+    """Load YAML spec. Preserve the fallback order expected by the surrounding caller."""
     path: Path | None = None
     if isinstance(source, Path):
         path = source
@@ -574,6 +579,7 @@ def _load_yaml_spec(source: str | Path) -> dict[str, Any]:
 
 
 def _build_engine(spec: Any) -> BaseEngine:
+    """Build engine."""
     mapping = _coerce_named_mapping(spec, label="engine")
     engine_name = _normalize_engine_name(_extract_name(mapping, label="engine"))
     engine_kwargs = _mapping_without_name(mapping)
@@ -583,12 +589,14 @@ def _build_engine(spec: Any) -> BaseEngine:
 
 
 def _build_model(spec: Any) -> Model:
+    """Build model."""
     if not isinstance(spec, dict):
         raise TypeError("model must be a mapping of model options")
     return Model(**spec)
 
 
 def _build_tests(specs: Any) -> list[Any]:
+    """Build tests."""
     if not isinstance(specs, list) or not specs:
         raise TypeError("tests must be a non-empty list of test suite mappings")
 
@@ -604,12 +612,14 @@ def _build_tests(specs: Any) -> list[Any]:
 
 
 def _coerce_named_mapping(spec: Any, *, label: str) -> dict[str, Any]:
+    """Implement coerce named mapping for this module."""
     if not isinstance(spec, dict):
         raise TypeError(f"{label} must be a mapping")
     return dict(spec)
 
 
 def _extract_name(mapping: dict[str, Any], *, label: str) -> str:
+    """Extract name."""
     raw_name = mapping.get("type", mapping.get("name"))
     if not isinstance(raw_name, str) or not raw_name:
         raise KeyError(f"{label} must define a non-empty 'type' or 'name'")
@@ -676,6 +686,7 @@ def _validate_engine_option_keys(engine_name: str, kwargs: dict[str, Any]) -> No
 
 
 def _mapping_without_name(mapping: dict[str, Any]) -> dict[str, Any]:
+    """Implement mapping without name for this module."""
     return {
         key: value
         for key, value in mapping.items()
@@ -684,6 +695,7 @@ def _mapping_without_name(mapping: dict[str, Any]) -> dict[str, Any]:
 
 
 def _emit_call(name: str, kwargs: dict[str, Any], *, indent: str) -> str:
+    """Implement emit call for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     if not kwargs:
         return f"{name}()"
 
@@ -699,6 +711,7 @@ def _emit_call(name: str, kwargs: dict[str, Any], *, indent: str) -> str:
 
 
 def _emit_keyword_call(name: str, kwargs: dict[str, Any], *, indent: str) -> list[str]:
+    """Implement emit keyword call for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     lines: list[str] = []
     if not kwargs:
         lines.append(f"{indent}.{name}()")
@@ -716,6 +729,7 @@ def _emit_keyword_call(name: str, kwargs: dict[str, Any], *, indent: str) -> lis
 
 
 def _build_model_emit_kwargs(model: Model) -> dict[str, Any]:
+    """Build model emit kwargs. Preserve the fallback order expected by the surrounding caller."""
     kwargs: dict[str, Any] = {"path": model.path}
     if model.tokenizer is not None:
         kwargs["tokenizer"] = model.tokenizer

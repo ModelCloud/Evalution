@@ -9,6 +9,7 @@ from importlib.metadata import PackageNotFoundError, version as package_version
 from typing import Iterable
 
 
+# Keep module-level state explicit for this module.
 ASCII_LOGO = r"""
 ┌─────────────┐    ┌────────────┐    ┌─────────────┐    ┌─────────────┐
 │  Evalution  │ -> │   Models   │ -> │   Suites    │ -> │   Metrics   │
@@ -34,6 +35,7 @@ DEPENDENCY_PACKAGE_CANDIDATES = (
 
 
 def resolve_installed_package_version(package_names: Iterable[str]) -> str | None:
+    """Resolve installed package version."""
     for package_name in package_names:
         try:
             resolved_version = package_version(package_name)
@@ -52,6 +54,7 @@ def build_startup_banner(
     evalution_version: str,
     dependency_versions: Iterable[tuple[str, str]],
 ) -> str:
+    """Build startup banner."""
     version_rows = [("Evalution", evalution_version), *list(dependency_versions)]
     label_width = max(len(label) for label, _ in version_rows)
     formatted_rows = [
@@ -65,6 +68,7 @@ def get_startup_banner(
     *,
     evalution_version: str,
 ) -> str:
+    """Get startup banner."""
     dependency_versions = []
     for label, package_candidates in DEPENDENCY_PACKAGE_CANDIDATES:
         resolved_version = resolve_installed_package_version(package_candidates)

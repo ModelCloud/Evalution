@@ -27,6 +27,7 @@ from .mediqa_qa import (
 from .wnli_es import WNLI_ES_DATASET_PATH, WNLI_ES_FILE_SPECS, load_wnli_es_dataset
 from .xlsum import XLSUM_ARCHIVES, XLSUM_DATASET_PATH, load_xlsum_dataset
 
+# Keep dataset loader defaults and archive metadata explicit at module scope.
 __all__ = [
     "FLORES200_ARCHIVE_SHA256",
     "FLORES200_ARCHIVE_URL",

@@ -9,4 +9,5 @@ import os
 
 
 def test_pytest_session_forces_cuda_device_order_to_pci_bus_id() -> None:
+    """Verify pytest session forces cuda device order to pci bus id."""
     assert os.environ["CUDA_DEVICE_ORDER"] == "PCI_BUS_ID"

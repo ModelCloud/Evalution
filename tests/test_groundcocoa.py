@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 groundcocoa_module = importlib.import_module("evalution.benchmarks.groundcocoa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 5
         assert len(requests) == 5
         assert "User Criteria: Need a direct business-class flight to Paris." in requests[0].context
@@ -37,6 +40,7 @@ class FakeSession:
 
 
 def test_groundcocoa_scores_flight_selection(monkeypatch) -> None:
+    """Verify groundcocoa scores flight selection. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -71,6 +75,7 @@ def test_groundcocoa_scores_flight_selection(monkeypatch) -> None:
 
 
 def test_groundcocoa_rejects_unknown_answer_label() -> None:
+    """Verify groundcocoa rejects unknown answer label."""
     try:
         groundcocoa_module._groundcocoa_gold_index("Z")
     except ValueError as exc:

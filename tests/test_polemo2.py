@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 polemo2_module = importlib.import_module("evalution.benchmarks.polemo2")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 2
         assert len(requests) == 2
         assert requests[0].prompt == (
@@ -37,6 +40,7 @@ class FakeSession:
 
 
 def test_polemo2_in_scores_generated_choice_labels(monkeypatch) -> None:
+    """Verify polemo2 in scores generated choice labels. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {"sentence": "Leczyla mnie zle.", "target": "__label__meta_minus_m"},
@@ -58,6 +62,7 @@ def test_polemo2_in_scores_generated_choice_labels(monkeypatch) -> None:
 
 
 def test_polemo2_prompt_and_prediction_normalization() -> None:
+    """Verify polemo2 prompt and prediction normalization."""
     assert polemo2_module._polemo2_prompt("Opinia") == (
         'Opinia: "Opinia"\n'
         "Określ sentyment podanej opinii. Możliwe odpowiedzi:\n"
@@ -72,6 +77,7 @@ def test_polemo2_prompt_and_prediction_normalization() -> None:
 
 
 def test_polemo2_rejects_invalid_variant_and_dataset_settings() -> None:
+    """Verify polemo2 rejects invalid variant and dataset settings."""
     with pytest.raises(ValueError, match="unsupported polemo2 variant"):
         evalution.benchmarks.polemo2(variant="bad")
     with pytest.raises(ValueError, match="dataset_path must match"):

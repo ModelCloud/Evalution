@@ -11,11 +11,14 @@ from itertools import permutations
 from math import ceil
 from typing import Iterable, Sequence
 
+# Keep scorer defaults and parser helpers explicit at module scope.
 _CHOICE_LABELS = tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 
 @dataclass(frozen=True, slots=True)
 class ChoiceScore:
+    """Define the choice score helper class."""
+    # Keep the class-level state explicit for this helper.
     index: int
     logprob: float
     logprob_norm: float
@@ -23,6 +26,8 @@ class ChoiceScore:
 
 @dataclass(frozen=True, slots=True)
 class MultipleChoiceOutcome:
+    """Define the multiple choice outcome helper class."""
+    # Keep the class-level state explicit for this helper.
     raw_best_index: int
     normalized_best_index: int
     raw_accuracy: float
@@ -31,12 +36,16 @@ class MultipleChoiceOutcome:
 
 @dataclass(frozen=True, slots=True)
 class ExamScoreOutcome:
+    """Define the exam score outcome helper class."""
+    # Keep the class-level state explicit for this helper.
     selected_indices: tuple[int, ...]
     exam_score: float
 
 
 @dataclass(frozen=True, slots=True)
 class LabelPermutationOutcome:
+    """Define the label permutation outcome helper class."""
+    # Keep the class-level state explicit for this helper.
     predicted_index: int
     accuracy: float
     averaged_choice_logprobs: tuple[float, ...]
@@ -44,6 +53,7 @@ class LabelPermutationOutcome:
 
 
 def normalized_logprob(logprob: float, token_count: int) -> float:
+    """Implement normalized logprob for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return logprob / max(token_count, 1)
 
 
@@ -53,6 +63,7 @@ def build_choice_score(
     logprob: float,
     token_count: int,
 ) -> ChoiceScore:
+    """Build choice score. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return ChoiceScore(
         index=choice_index,
         logprob=logprob,
@@ -63,6 +74,7 @@ def build_choice_score(
 def build_choice_scores(
     rows: Iterable[tuple[int, float, int]],
 ) -> list[ChoiceScore]:
+    """Build choice scores. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return sorted(
         (
             build_choice_score(
@@ -77,10 +89,12 @@ def build_choice_scores(
 
 
 def choice_logprobs(choice_scores: Sequence[ChoiceScore]) -> list[float]:
+    """Implement choice logprobs for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return [score.logprob for score in _sorted_choice_scores(choice_scores)]
 
 
 def choice_logprobs_norm(choice_scores: Sequence[ChoiceScore]) -> list[float]:
+    """Implement choice logprobs norm for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return [score.logprob_norm for score in _sorted_choice_scores(choice_scores)]
 
 
@@ -88,6 +102,7 @@ def multiple_choice_outcome(
     choice_scores: Sequence[ChoiceScore],
     gold_index: int,
 ) -> MultipleChoiceOutcome:
+    """Implement multiple choice outcome for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     ordered_choice_scores = _sorted_choice_scores(choice_scores)
     raw_best_index = max(ordered_choice_scores, key=lambda item: item.logprob).index
     normalized_best_index = max(
@@ -106,6 +121,7 @@ def exam_score_outcome(
     choice_scores: Sequence[ChoiceScore],
     gold_index: int,
 ) -> ExamScoreOutcome:
+    """Implement exam score outcome for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     ordered_choice_scores = _sorted_choice_scores(choice_scores)
     max_choice_score = max(score.logprob for score in ordered_choice_scores)
     selected_indices = tuple(
@@ -121,6 +137,7 @@ def exam_score_outcome(
 
 
 def choice_labels(choice_count: int) -> tuple[str, ...]:
+    """Implement choice labels for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if choice_count < 1:
         raise ValueError("at least one choice is required")
     if choice_count > len(_CHOICE_LABELS):
@@ -129,6 +146,7 @@ def choice_labels(choice_count: int) -> tuple[str, ...]:
 
 
 def normalize_label_permutation_fraction(fraction: float | int | str | None) -> float:
+    """Normalize label permutation fraction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if fraction is None:
         return 0.0
 
@@ -149,6 +167,7 @@ def normalize_label_permutation_fraction(fraction: float | int | str | None) -> 
 
 
 def format_label_permutation_fraction(fraction: float | int | str | None) -> str:
+    """Format label permutation fraction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     canonical_fraction = normalize_label_permutation_fraction(fraction)
     decimal_fraction = Decimal(str(canonical_fraction)).normalize()
     fraction_text = format(decimal_fraction, "f")
@@ -160,6 +179,7 @@ def format_label_permutation_fraction(fraction: float | int | str | None) -> str
 
 
 def label_permutation_metric_name(fraction: float | int | str | None) -> str:
+    """Implement label permutation metric name for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     canonical_fraction = normalize_label_permutation_fraction(fraction)
     if canonical_fraction == 0.0:
         raise ValueError("label_permutations=0.0 disables the extra label-permutation metric")
@@ -170,6 +190,7 @@ def label_permutations_for_mode(
     choice_count: int,
     fraction: float | int | str | None,
 ) -> list[tuple[int, ...]]:
+    """Implement label permutations for mode for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     canonical_fraction = normalize_label_permutation_fraction(fraction)
     if canonical_fraction == 0.0:
         return []
@@ -197,6 +218,7 @@ def label_permutation_outcome(
     permutation_label_logprobs: Sequence[Sequence[float]],
     gold_index: int,
 ) -> LabelPermutationOutcome:
+    """Implement label permutation outcome for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     if not permutations:
         raise ValueError("at least one permutation is required")
     if len(permutations) != len(permutation_label_logprobs):
@@ -226,6 +248,7 @@ def label_permutation_outcome(
 
 
 def _sorted_choice_scores(choice_scores: Sequence[ChoiceScore]) -> list[ChoiceScore]:
+    """Implement sorted choice scores for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     ordered_choice_scores = sorted(choice_scores, key=lambda item: item.index)
     if not ordered_choice_scores:
         raise ValueError("at least one choice score is required")
@@ -238,6 +261,7 @@ def _balanced_permutation_subset(
     choice_count: int,
     target_count: int,
 ) -> list[tuple[int, ...]]:
+    """Implement balanced permutation subset for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     if target_count >= len(all_permutations):
         return all_permutations
 
@@ -267,6 +291,7 @@ def _permutation_penalty(
     pair_counts: list[list[int]],
     target: float,
 ) -> float:
+    """Implement permutation penalty for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     penalty = 0.0
     for original_choice_index, label_counts in enumerate(pair_counts):
         for label_index, count in enumerate(label_counts):

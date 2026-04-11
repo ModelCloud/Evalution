@@ -17,6 +17,7 @@ _EUS_READING_LABELS = ("A", "B", "C", "D")
 
 
 def _eus_reading_prompt(doc: dict[str, Any]) -> str:
+    """Implement eus reading prompt for this module."""
     candidates = [str(candidate).strip() for candidate in doc["candidates"]]
     if len(candidates) < 2:
         raise ValueError("eus_reading requires at least two candidates")
@@ -37,17 +38,21 @@ def _eus_reading_prompt(doc: dict[str, Any]) -> str:
 @dataclass(slots=True)
 class EusReading(BaseMultipleChoiceSuite):
     # The benchmarked public evaluation split is the test set.
+    """Implement the eus reading benchmark suite."""
     dataset_path: str = "HiTZ/EusReading"
     dataset_name: str | None = "default"
     split: str = "test"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "eus_reading"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         candidates = [str(candidate).strip() for candidate in doc["candidates"]]
         choice_labels = list(_EUS_READING_LABELS[: len(candidates)])
         gold_index = int(doc["answer"])
@@ -69,4 +74,5 @@ class EusReading(BaseMultipleChoiceSuite):
 
 
 def eus_reading(**kwargs: Any) -> EusReading:
+    """Implement eus reading for this module."""
     return EusReading(**kwargs)

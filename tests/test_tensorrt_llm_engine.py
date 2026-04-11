@@ -53,6 +53,7 @@ class FakeLogprob:
     """Minimal prompt-logprob record that matches the engine's scoring expectations."""
 
     def __init__(self, logprob: float, rank: int | None = None) -> None:
+        """Initialize this object."""
         self.logprob = logprob
         self.rank = rank
 
@@ -61,6 +62,7 @@ class FakeSamplingParams:
     """Small stand-in for TensorRT-LLM SamplingParams that preserves passed kwargs."""
 
     def __init__(self, **kwargs) -> None:
+        """Initialize this object."""
         self.kwargs = kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -76,17 +78,21 @@ class FakeTokenizer:
     model_max_length = 32
 
     def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True):
+        """Implement apply chat template for fake tokenizer."""
         del tokenize, add_generation_prompt
         return "\n".join(f"{message['role']}: {message['content']}" for message in messages)
 
     def encode(self, text, add_special_tokens=False):
+        """Implement encode for fake tokenizer."""
         del add_special_tokens
         return [ord(char) for char in text]
 
     def __call__(self, text, add_special_tokens=False):
+        """Implement call for fake tokenizer."""
         return {"input_ids": self.encode(text, add_special_tokens=add_special_tokens)}
 
     def decode(self, ids, skip_special_tokens=False):
+        """Implement decode for fake tokenizer."""
         del skip_special_tokens
         if isinstance(ids, int):
             ids = [ids]
@@ -98,6 +104,7 @@ class FakeLLM:
 
     def __init__(self, tokenizer=None) -> None:
         # Mimic the small runtime surface the engine inspects for metadata and lifecycle hooks.
+        """Initialize this object."""
         self._tokenizer = tokenizer or FakeTokenizer()
         self.args = SimpleNamespace(backend="trt")
         self.generate_calls: list[tuple[list[object], list[FakeSamplingParams]]] = []
@@ -105,9 +112,11 @@ class FakeLLM:
         self.shutdown_calls = 0
 
     def get_tokenizer(self):
+        """Get tokenizer."""
         return self._tokenizer
 
     def generate(self, prompts, sampling_params, use_tqdm=False):
+        """Generate generate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         del use_tqdm
         prompts = list(prompts)
         sampling_params = list(sampling_params)
@@ -157,10 +166,12 @@ class FakeLLM:
         return results
 
     def reset_prefix_cache(self):
+        """Implement reset prefix cache for fake LLM."""
         self.reset_prefix_cache_calls += 1
         return True
 
     def shutdown(self):
+        """Implement shutdown for fake LLM."""
         self.shutdown_calls += 1
 
 
@@ -169,12 +180,14 @@ class FakeContinuousEngine:
 
     def __init__(self, *, prompt_delays: dict[str, int]) -> None:
         # Track in-flight prompts so continuous batching assertions can verify refill behavior.
+        """Initialize this object."""
         self.prompt_delays = dict(prompt_delays)
         self.inflight: dict[str, dict[str, object]] = {}
         self.max_inflight = 0
         self.abort_calls: list[tuple[list[str], bool]] = []
 
     def add_request(self, request_id, prompt, params, prompt_text=None, **kwargs):
+        """Implement add request for fake continuous engine."""
         del params, kwargs
         prompt_token_ids = list(prompt["prompt_token_ids"])
         rendered_prompt = prompt_text or prompt.get("prompt") or ""
@@ -187,6 +200,7 @@ class FakeContinuousEngine:
         return request_id
 
     def step(self):
+        """Implement step for fake continuous engine."""
         finished = []
         for request_id, state in list(self.inflight.items()):
             state["remaining_steps"] = int(state["remaining_steps"]) - 1
@@ -212,15 +226,18 @@ class FakeContinuousEngine:
         return sorted(finished, key=lambda output: output.request_id, reverse=True)
 
     def has_unfinished_requests(self):
+        """Implement has unfinished requests for fake continuous engine."""
         return bool(self.inflight)
 
     def abort_request(self, request_ids, internal=False):
+        """Implement abort request for fake continuous engine."""
         request_ids = list(request_ids)
         self.abort_calls.append((request_ids, internal))
         for request_id in request_ids:
             self.inflight.pop(request_id, None)
 
     def shutdown(self):
+        """Implement shutdown for fake continuous engine."""
         self.inflight.clear()
 
 
@@ -228,11 +245,13 @@ class FakeContinuousLLM(FakeLLM):
     """Fake LLM whose runtime exposes the request-level scheduler used by continuous tests."""
 
     def __init__(self, *, prompt_delays: dict[str, int], tokenizer=None) -> None:
+        """Initialize this object."""
         super().__init__(tokenizer=tokenizer)
         self.llm_engine = FakeContinuousEngine(prompt_delays=prompt_delays)
 
 
 def test_tensorrt_llm_engine_defaults_batch_size_to_auto() -> None:
+    """Verify tensorrt LLM engine defaults batch size to auto."""
     engine = TensorRTLLM()
 
     assert engine.batch_size == "auto"
@@ -244,9 +263,11 @@ def test_tensorrt_llm_engine_defaults_batch_size_to_auto() -> None:
 
 
 def test_import_tensorrt_llm_uses_checkout_fallback(monkeypatch, tmp_path) -> None:
+    """Verify import tensorrt LLM uses checkout fallback."""
     fake_module = object()
 
     def fake_import_module(name: str):
+        """Support the surrounding tests with fake import module."""
         assert name == "tensorrt_llm"
         if str(tmp_path) not in sys.path:
             raise ModuleNotFoundError("No module named 'tensorrt_llm'")
@@ -265,6 +286,7 @@ def test_import_tensorrt_llm_uses_checkout_fallback(monkeypatch, tmp_path) -> No
 
 
 def test_tensorrt_llm_session_generates_and_scores() -> None:
+    """Verify tensorrt LLM session generates and scores. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     llm = FakeLLM()
     session = TensorRTLLMSession(
         config=TensorRTLLM(batch_size=2),
@@ -299,6 +321,7 @@ def test_tensorrt_llm_session_generates_and_scores() -> None:
 
 
 def test_tensorrt_llm_generate_continuous_refills_request_slots() -> None:
+    """Verify tensorrt LLM generate continuous refills request slots."""
     llm = FakeContinuousLLM(prompt_delays={"A": 2, "B": 1, "C": 1})
     session = TensorRTLLMSession(
         config=TensorRTLLM(batch_size=2),
@@ -325,6 +348,7 @@ def test_tensorrt_llm_generate_continuous_refills_request_slots() -> None:
 
 
 def test_tensorrt_llm_session_gc_and_close_release_runtime_state() -> None:
+    """Verify tensorrt LLM session gc and close release runtime state."""
     llm = FakeLLM()
     session = TensorRTLLMSession(
         config=TensorRTLLM(batch_size=2),

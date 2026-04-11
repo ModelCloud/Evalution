@@ -15,10 +15,12 @@ import evalution
 from evalution.engines.base import GenerationOutput
 from evalution.scorers.summary_rouge import summary_rouge_scores
 
+# Keep shared test fixtures and expectations explicit at module scope.
 cocoteros_module = importlib.import_module("evalution.benchmarks.cocoteros_es")
 
 
 def test_cocoteros_es_scores_corpus_bleu_and_mean_rouge1(monkeypatch) -> None:
+    """Verify cocoteros es scores corpus bleu and mean rouge1. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -36,7 +38,9 @@ def test_cocoteros_es_scores_corpus_bleu_and_mean_rouge1(monkeypatch) -> None:
     monkeypatch.setattr(cocoteros_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 2
             assert len(requests) == 2
             assert requests[0].prompt == (
@@ -81,6 +85,7 @@ def test_cocoteros_es_scores_corpus_bleu_and_mean_rouge1(monkeypatch) -> None:
 
 
 def test_cocoteros_prompt_formats_generation_instruction() -> None:
+    """Verify cocoteros prompt formats generation instruction."""
     assert cocoteros_module._cocoteros_prompt("['sol']", "Hace calor.") == (
         "Genera una frase corta con estas palabras: ['sol']. El contexto es: Hace calor. \n\n"
         "Respuesta:"

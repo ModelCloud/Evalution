@@ -35,12 +35,14 @@ _CATEGORY_TO_TASK = dict(zip(CABBQ_CATEGORIES, CABBQ_TASKS, strict=True))
 class CaBBQ(BaseMultipleChoiceSuite):
     """CaBBQ suite backed by a frozen category registry to keep imports offline-safe."""
 
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "BSC-LT/CaBBQ"
     dataset_name: str | None = "Age"
     split: str = "test"
     category: str = "Age"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.category not in CABBQ_CATEGORIES:
             raise ValueError(f"unsupported cabbq category: {self.category!r}")
         if self.dataset_name in {None, self.category}:
@@ -49,12 +51,15 @@ class CaBBQ(BaseMultipleChoiceSuite):
         raise ValueError("cabbq dataset_name must match the configured category")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _CATEGORY_TO_TASK[self.category]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(doc["ans0"]).strip(), str(doc["ans1"]).strip(), str(doc["ans2"]).strip()]
         gold_index = int(doc["label"])
         return MultipleChoiceSample(
@@ -74,11 +79,14 @@ class CaBBQ(BaseMultipleChoiceSuite):
 
 
 def cabbq(*, category: str, **kwargs: Any) -> CaBBQ:
+    """Implement cabbq for this module."""
     return CaBBQ(category=category, dataset_name=category, **kwargs)
 
 
 def _make_cabbq_factory(category: str) -> Any:
+    """Make cabbq factory."""
     def factory(**kwargs: Any) -> CaBBQ:
+        """Implement factory for this module."""
         return cabbq(category=category, **kwargs)
 
     factory.__name__ = _CATEGORY_TO_TASK[category]

@@ -23,6 +23,7 @@ _NOTICIA_STOP_STRINGS = ("\n\n", "\n")
 
 
 def _noticia_prompt(headline: str, body: str) -> str:
+    """Implement noticia prompt for this module."""
     return (
         "Ahora eres una Inteligencia Artificial experta en desmontar titulares "
         "sensacionalistas o clickbait. Tu tarea consiste en analizar noticias con "
@@ -41,6 +42,7 @@ def _noticia_prompt(headline: str, body: str) -> str:
 
 
 def _clean_noticia_text(text: str) -> str:
+    """Implement clean noticia text for this module."""
     cleaned = text.translate(str.maketrans("", "", string.punctuation))
     cleaned = cleaned.replace("\n", " ").strip()
     cleaned = " ".join(cleaned.split()).strip()
@@ -50,10 +52,12 @@ def _clean_noticia_text(text: str) -> str:
 @lru_cache(maxsize=1)
 def _noticia_rouge1_scorer() -> rouge_scorer.RougeScorer:
     # Score the cleaned one-sentence summaries without stemming to match the upstream task intent.
+    """Implement noticia rouge1 scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return rouge_scorer.RougeScorer(["rouge1"], use_stemmer=False)
 
 
 def _noticia_rouge1(prediction: str, reference: str) -> float:
+    """Implement noticia rouge1 for this module."""
     cleaned_prediction = _clean_noticia_text(prediction)
     cleaned_reference = _clean_noticia_text(reference)
     score = _noticia_rouge1_scorer().score(cleaned_reference, cleaned_prediction)
@@ -63,6 +67,7 @@ def _noticia_rouge1(prediction: str, reference: str) -> float:
 @dataclass(slots=True)
 class Noticia(BaseTestSuite):
     # NoticIA checks whether the model can compress a clickbait headline into the article's true core fact.
+    """Implement the noticia benchmark suite."""
     dataset_path: str = "Iker/NoticIA"
     dataset_name: str | None = None
     split: str = "test"
@@ -71,9 +76,11 @@ class Noticia(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "noticia"
 
     def result_metadata(
@@ -81,6 +88,7 @@ class Noticia(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_clickbait_truth_summary",
@@ -89,6 +97,7 @@ class Noticia(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             headline = str(doc["web_headline"])
             body = str(doc["web_text"])
@@ -111,6 +120,7 @@ class Noticia(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         cleaned_prediction = _clean_noticia_text(output.text)
         cleaned_reference = _clean_noticia_text(prepared_sample.target)
         return SampleResult(
@@ -135,4 +145,5 @@ class Noticia(BaseTestSuite):
 
 
 def noticia(**kwargs: Any) -> Noticia:
+    """Implement noticia for this module."""
     return Noticia(**kwargs)

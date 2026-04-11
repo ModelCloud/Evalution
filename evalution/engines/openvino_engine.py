@@ -26,6 +26,7 @@ from evalution.logbar import get_logger
 @dataclass(slots=True)
 class _LoadedOpenVINORuntime:
     # Bundle the OpenVINO runtime objects so session construction stays deterministic.
+    """Define the loaded open vinoruntime helper class."""
     model: Any
     tokenizer: Any
     prepare_tokenizer: Any | None
@@ -35,18 +36,22 @@ class _LoadedOpenVINORuntime:
 @dataclass(slots=True)
 class _OpenVINOConfig(BaseEngineDeviceConfig, SharedEngineConfig):
     # Hold the shared OpenVINO engine controls and keep engine serialization stable.
+    """Define the open vinoconfig helper class."""
     def to_dict(self) -> dict[str, Any]:
+        """Implement to dict for open vinoconfig."""
         return asdict(self)
 
 
 @dataclass(slots=True)
 class OpenVINO(_OpenVINOConfig):
     # Load decoder-only models through Optimum Intel's OpenVINO backend.
+    """Define the open vino helper class."""
     compile: bool | None = None
     dynamic_shapes: bool | None = None
     ov_config: dict[str, Any] | None = None
 
     def build(self, model: Model) -> BaseTransformerSession:
+        """Build build."""
         self.resolved_engine = "OpenVINO"
         return OpenVINOSession.from_config(self, model)
 
@@ -55,9 +60,11 @@ class OpenVINO(_OpenVINOConfig):
 class OpenVINOSession(BaseTransformerSession):
     # Reuse the shared transformer session logic while tracking OpenVINO runtime settings.
 
+    """Define the open vinosession helper class."""
     @classmethod
     def from_config(cls, config: OpenVINO, model_config: Model) -> OpenVINOSession:
         # Build the OpenVINO runtime first so the session always receives fully initialized state.
+        """Implement from config for open vinosession."""
         runtime = load_openvino_runtime(config, model_config)
         return cls(
             config=config,

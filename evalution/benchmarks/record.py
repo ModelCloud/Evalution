@@ -14,16 +14,19 @@ from datasets import load_dataset
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 from evalution.scorers.qa_text import best_qa_scores
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _RECORD_HIGHLIGHT_AFTER_PUNCT_RE = pcre.compile(r"(\.|\?|\!|\"|')\n@highlight\n")
 _RECORD_HIGHLIGHT_RE = pcre.compile(r"\n@highlight\n")
 
 
 def _record_passage(passage: str) -> str:
+    """Implement record passage for this module."""
     passage = _RECORD_HIGHLIGHT_AFTER_PUNCT_RE.sub(r"\1 ", passage)
     return _RECORD_HIGHLIGHT_RE.sub(". ", passage)
 
 
 def _record_prompt(doc: dict[str, Any]) -> str:
+    """Implement record prompt for this module."""
     return " ".join(
         [
             "record query:",
@@ -37,6 +40,7 @@ def _record_prompt(doc: dict[str, Any]) -> str:
 
 
 def _record_answers(doc: dict[str, Any]) -> list[str]:
+    """Implement record answers for this module."""
     answers: list[str] = []
     for answer in doc["answers"]:
         text = str(answer).strip()
@@ -49,23 +53,29 @@ def _record_answers(doc: dict[str, Any]) -> list[str]:
 
 @dataclass(slots=True)
 class ReCoRD(BaseMultipleChoiceSuite):
+    """Implement the re co rd benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "super_glue"
     dataset_name: str | None = "record"
     split: str = "validation"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "record"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **super().result_metadata(),
             "primary_metric": "f1",
         }
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         answers = _record_answers(doc)
         metadata: dict[str, Any] = {
             "query": str(doc["query"]),
@@ -89,6 +99,7 @@ class ReCoRD(BaseMultipleChoiceSuite):
         raw_predictions: list[int],
         normalized_predictions: list[int],
     ) -> dict[str, float]:
+        """Compute extra metrics from the collected predictions. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         del normalized_predictions
         total_exact = 0.0
         total_f1 = 0.0
@@ -106,4 +117,5 @@ class ReCoRD(BaseMultipleChoiceSuite):
 
 
 def record(**kwargs: Any) -> ReCoRD:
+    """Implement record for this module."""
     return ReCoRD(**kwargs)

@@ -217,6 +217,7 @@ class RequestQueue:
         stop_event: threading.Event | None,
         poll_timeout_s: float,
     ) -> None:
+        """Implement put item for request queue."""
         while stop_event is None or not stop_event.is_set():
             try:
                 self._queue.put(item, timeout=poll_timeout_s)

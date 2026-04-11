@@ -13,11 +13,14 @@ import evalution
 from evalution.engines.base import GenerationOutput
 from evalution.scorers.bleu import smoothed_corpus_bleu_4
 
+# Keep shared test fixtures and expectations explicit at module scope.
 code_x_glue_module = importlib.import_module("evalution.benchmarks.code_x_glue")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 2
         assert len(requests) == 2
         assert requests[0].prompt == "func add ( a int , b int ) int { return a + b }"
@@ -38,6 +41,7 @@ class FakeSession:
 
 
 def test_code_x_glue_scores_corpus_bleu(monkeypatch) -> None:
+    """Verify code x glue scores corpus bleu. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -117,6 +121,7 @@ def test_code_x_glue_scores_corpus_bleu(monkeypatch) -> None:
 
 
 def test_code_x_glue_normalizes_code_and_docstring_tokens() -> None:
+    """Verify code x glue normalizes code and docstring tokens."""
     assert code_x_glue_module._normalized_code_text(
         ["func", "add", "(", "a", ",", "b", ")", "{", "\n", "return", "a", "+", "b", "}"]
     ) == "func add ( a , b ) { return a + b }"
@@ -126,6 +131,7 @@ def test_code_x_glue_normalizes_code_and_docstring_tokens() -> None:
 
 
 def test_smoothed_corpus_bleu_4_matches_perfect_prediction() -> None:
+    """Verify smoothed corpus bleu 4 matches perfect prediction."""
     assert smoothed_corpus_bleu_4(
         ["returns the sum of two integers"],
         ["returns the sum of two integers"],

@@ -13,15 +13,19 @@ import evalution
 from evalution.engines.base import GenerationOutput
 from evalution.scorers.qa_text import best_qa_scores
 
+# Keep shared test fixtures and expectations explicit at module scope.
 triviaqa_module = importlib.import_module("evalution.benchmarks.triviaqa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[str]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
         self.offset = 0
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size in {None, 1}
         request_list = list(requests)
         batch_outputs = self.outputs[self.offset : self.offset + len(request_list)]
@@ -33,6 +37,7 @@ class FakeSession:
 
 
 def test_triviaqa_scores_best_alias(monkeypatch) -> None:
+    """Verify triviaqa scores best alias. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -79,6 +84,7 @@ def test_triviaqa_scores_best_alias(monkeypatch) -> None:
 
 
 def test_triviaqa_qa_text_scorer_uses_best_alias() -> None:
+    """Verify triviaqa QA text scorer uses best alias. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     exact, f1_score, best_index = best_qa_scores("seville", ["David Seville", "Seville"])
     assert exact == 1.0
     assert f1_score == 1.0

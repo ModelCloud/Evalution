@@ -6,10 +6,12 @@
 from __future__ import annotations
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 CHOICE_LABELS = ("A", "B", "C", "D")
 
 
 def slugify_subset_name(subset: str) -> str:
+    """Implement slugify subset name for this module."""
     slug = subset.lower()
     for old, new in (
         ("(", ""),
@@ -30,6 +32,7 @@ def subject_mmlu_prompt(
     choices: list[str],
     context: str | None = None,
 ) -> str:
+    """Implement subject MMLU prompt for this module."""
     prompt_question = question.strip()
     if context and context.strip():
         prompt_question = f"{context.strip()}\n\n{prompt_question}"

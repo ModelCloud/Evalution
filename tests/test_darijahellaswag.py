@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 darijahellaswag_module = importlib.import_module("evalution.benchmarks.darijahellaswag")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == "قلع قرميد السطح: راجل گالس فوق السطح. هو"
@@ -31,6 +34,7 @@ class FakeSession:
 
 
 def test_darijahellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None:
+    """Verify darijahellaswag scores raw and normalized accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -71,6 +75,7 @@ def test_darijahellaswag_scores_raw_and_normalized_accuracy(monkeypatch) -> None
 
 
 def test_darijahellaswag_label_prompt_lists_explicit_choices() -> None:
+    """Verify darijahellaswag label prompt lists explicit choices."""
     suite = evalution.benchmarks.darijahellaswag()
     sample = evalution.benchmarks.MultipleChoiceSample(
         index=0,

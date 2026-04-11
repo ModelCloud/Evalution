@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 xnli_eu_module = importlib.import_module("evalution.benchmarks.xnli_eu")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 6
         assert requests[0].context == (
@@ -38,6 +41,7 @@ class FakeSession:
 
 
 def test_xnli_eu_scores_three_way_multiple_choice(monkeypatch) -> None:
+    """Verify XNLI eu scores three way multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -77,6 +81,7 @@ def test_xnli_eu_scores_three_way_multiple_choice(monkeypatch) -> None:
 
 
 def test_xnli_eu_prompt_helper_formats_nli_prompt() -> None:
+    """Verify XNLI eu prompt helper formats nli prompt."""
     assert (
         xnli_eu_module._xnli_eu_prompt("Premisa", "Hipotesia")
         == "Premisa, ezta? Hipotesia"

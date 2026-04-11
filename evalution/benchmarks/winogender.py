@@ -13,11 +13,13 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _SUPPORTED_VARIANTS = ("all", "gotcha")
 _SUPPORTED_GENDERS = ("male", "female", "neutral")
 
 
 def _winogender_prompt(sentence: str, pronoun: str) -> str:
+    """Implement winogender prompt for this module."""
     return f"{sentence.strip()} '{pronoun.strip().capitalize()}' refers to the"
 
 
@@ -30,6 +32,7 @@ def _load_winogender_dataset(
     stream: bool = True,
     gender_filter: str | None = None,
 ) -> Any:
+    """Load winogender dataset. Preserve the fallback order expected by the surrounding caller."""
     if dataset_path != "oskarvanderwal/winogender":
         raise ValueError(f"unsupported WinoGender dataset path: {dataset_path!r}")
     if dataset_name not in _SUPPORTED_VARIANTS:
@@ -50,6 +53,8 @@ def _load_winogender_dataset(
 
 @dataclass(slots=True)
 class WinoGender(BaseMultipleChoiceSuite):
+    """Implement the wino gender benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "oskarvanderwal/winogender"
     dataset_name: str | None = "all"
     split: str = "test"
@@ -57,6 +62,7 @@ class WinoGender(BaseMultipleChoiceSuite):
     gender_filter: str | None = None
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.variant not in _SUPPORTED_VARIANTS:
             raise ValueError(f"unsupported winogender variant: {self.variant!r}")
         if self.gender_filter is not None and self.gender_filter not in _SUPPORTED_GENDERS:
@@ -67,9 +73,11 @@ class WinoGender(BaseMultipleChoiceSuite):
         raise ValueError("winogender dataset_name must match the configured variant")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return partial(_load_winogender_dataset, gender_filter=self.gender_filter)
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         if self.variant == "gotcha":
             if self.gender_filter is None:
                 return "winogender_gotcha"
@@ -79,6 +87,7 @@ class WinoGender(BaseMultipleChoiceSuite):
         return f"winogender_{self.gender_filter}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata()
         metadata["prompt_variant"] = "pronoun_reference_prompt"
         if self.gender_filter is not None:
@@ -86,6 +95,7 @@ class WinoGender(BaseMultipleChoiceSuite):
         return metadata
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         occupation = str(doc["occupation"]).strip()
         participant = str(doc["participant"]).strip()
         return MultipleChoiceSample(
@@ -107,32 +117,40 @@ class WinoGender(BaseMultipleChoiceSuite):
 
 
 def winogender(*, variant: str = "all", gender_filter: str | None = None, **kwargs: Any) -> WinoGender:
+    """Implement winogender for this module."""
     return WinoGender(variant=variant, dataset_name=variant, gender_filter=gender_filter, **kwargs)
 
 
 def winogender_all(**kwargs: Any) -> WinoGender:
+    """Implement winogender all for this module."""
     return winogender(**kwargs)
 
 
 def winogender_female(**kwargs: Any) -> WinoGender:
+    """Implement winogender female for this module."""
     return winogender(gender_filter="female", **kwargs)
 
 
 def winogender_male(**kwargs: Any) -> WinoGender:
+    """Implement winogender male for this module."""
     return winogender(gender_filter="male", **kwargs)
 
 
 def winogender_neutral(**kwargs: Any) -> WinoGender:
+    """Implement winogender neutral for this module."""
     return winogender(gender_filter="neutral", **kwargs)
 
 
 def winogender_gotcha(**kwargs: Any) -> WinoGender:
+    """Implement winogender gotcha for this module."""
     return winogender(variant="gotcha", **kwargs)
 
 
 def winogender_gotcha_female(**kwargs: Any) -> WinoGender:
+    """Implement winogender gotcha female for this module."""
     return winogender(variant="gotcha", gender_filter="female", **kwargs)
 
 
 def winogender_gotcha_male(**kwargs: Any) -> WinoGender:
+    """Implement winogender gotcha male for this module."""
     return winogender(variant="gotcha", gender_filter="male", **kwargs)

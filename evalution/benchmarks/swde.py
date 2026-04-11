@@ -21,6 +21,7 @@ _SWDE_STOP_STRINGS = ("\n",)
 
 
 def _contains_target_prediction(prediction: str, target: str) -> bool:
+    """Implement contains target prediction for this module."""
     pattern = pcre.compile(pcre.escape(str(target)), pcre.IGNORECASE)
     return bool(pattern.search(prediction))
 
@@ -28,6 +29,7 @@ def _contains_target_prediction(prediction: str, target: str) -> bool:
 @dataclass(slots=True)
 class SWDE(BaseTestSuite):
     # Based-SWDE asks the model to continue partially extracted webpages until the target attribute appears.
+    """Implement the SWDE benchmark suite."""
     dataset_path: str = "hazyresearch/based-swde-v2"
     dataset_name: str | None = "default"
     split: str = "validation"
@@ -37,9 +39,11 @@ class SWDE(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "swde"
 
     def result_metadata(
@@ -47,6 +51,7 @@ class SWDE(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_contains_match",
@@ -55,6 +60,7 @@ class SWDE(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             target = str(doc["value"])
             yield PreparedSample(
@@ -75,6 +81,7 @@ class SWDE(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         contained = _contains_target_prediction(output.text, prepared_sample.target)
         return SampleResult(
             index=prepared_sample.index,
@@ -96,4 +103,5 @@ class SWDE(BaseTestSuite):
 
 
 def swde(**kwargs: Any) -> SWDE:
+    """Implement SWDE for this module."""
     return SWDE(**kwargs)

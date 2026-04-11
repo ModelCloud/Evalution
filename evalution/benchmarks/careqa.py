@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 CAREQA_CONFIGS = {
     "en": "CareQA_en",
     "es": "CareQA_es",
@@ -21,6 +22,7 @@ _CHOICE_LABELS = ("A", "B", "C", "D")
 
 
 def _careqa_prompt(question: str, choices: list[str]) -> str:
+    """Implement careqa prompt for this module."""
     lines = [f"Question: {question.strip()}"]
     lines.extend(
         f"{label}. {choice.strip()}"
@@ -32,12 +34,15 @@ def _careqa_prompt(question: str, choices: list[str]) -> str:
 
 @dataclass(slots=True)
 class CareQA(BaseMultipleChoiceSuite):
+    """Implement the care QA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "HPAI-BSC/CareQA"
     dataset_name: str | None = "CareQA_en"
     split: str = "test"
     language: str = "en"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in CAREQA_CONFIGS:
             raise ValueError(f"unsupported careqa language: {self.language!r}")
         expected_dataset_name = CAREQA_CONFIGS[self.language]
@@ -47,12 +52,15 @@ class CareQA(BaseMultipleChoiceSuite):
         raise ValueError("careqa dataset_name must match the configured language")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"careqa_{self.language}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(doc[field]).strip() for field in ("op1", "op2", "op3", "op4")]
         gold_index = int(doc["cop"]) - 1
         return MultipleChoiceSample(
@@ -72,6 +80,7 @@ class CareQA(BaseMultipleChoiceSuite):
 
 
 def careqa(*, language: str, **kwargs: Any) -> CareQA:
+    """Implement careqa for this module."""
     if language not in CAREQA_CONFIGS:
         raise ValueError(f"unsupported careqa language: {language!r}")
     kwargs.setdefault("dataset_name", CAREQA_CONFIGS[language])
@@ -79,8 +88,10 @@ def careqa(*, language: str, **kwargs: Any) -> CareQA:
 
 
 def careqa_en(**kwargs: Any) -> CareQA:
+    """Implement careqa en for this module."""
     return careqa(language="en", **kwargs)
 
 
 def careqa_es(**kwargs: Any) -> CareQA:
+    """Implement careqa es for this module."""
     return careqa(language="es", **kwargs)

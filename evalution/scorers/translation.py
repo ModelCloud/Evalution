@@ -14,6 +14,7 @@ def corpus_translation_metrics(
     references: Sequence[str],
     predictions: Sequence[str],
 ) -> dict[str, float]:
+    """Implement corpus translation metrics for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if len(references) != len(predictions):
         raise ValueError("references and predictions must have the same length")
     if not references:

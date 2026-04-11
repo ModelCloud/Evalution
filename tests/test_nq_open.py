@@ -13,15 +13,19 @@ import evalution
 from evalution.engines.base import GenerationOutput
 from evalution.scorers.qa_text import best_qa_scores
 
+# Keep shared test fixtures and expectations explicit at module scope.
 nq_open_module = importlib.import_module("evalution.benchmarks.nq_open")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[str]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
         self.offset = 0
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size in {None, 1}
         request_list = list(requests)
         batch_outputs = self.outputs[self.offset : self.offset + len(request_list)]
@@ -33,6 +37,7 @@ class FakeSession:
 
 
 def test_nq_open_scores_best_alias(monkeypatch) -> None:
+    """Verify nq open scores best alias. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -65,6 +70,7 @@ def test_nq_open_scores_best_alias(monkeypatch) -> None:
 
 
 def test_nq_open_qa_text_scorer_uses_best_alias() -> None:
+    """Verify nq open QA text scorer uses best alias. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     exact, f1_score, best_index = best_qa_scores(
         "December 1972",
         ["14 December 1972 UTC", "December 1972"],

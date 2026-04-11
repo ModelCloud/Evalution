@@ -97,6 +97,7 @@ _CMMLU_DESCRIPTION = "以下是单项选择题，请直接给出正确答案的�
 @lru_cache(maxsize=1)
 def _cmmlu_archive_path() -> str:
     # Reuse one cached archive path so repeated subset loads do not re-resolve the Hub file.
+    """Implement cmmlu archive path for this module."""
     return hf_hub_download(
         repo_id="haonan-li/cmmlu",
         filename="cmmlu_v1_0_1.zip",
@@ -107,6 +108,7 @@ def _cmmlu_archive_path() -> str:
 @lru_cache(maxsize=None)
 def _cmmlu_rows(dataset_name: str, split: str) -> tuple[dict[str, Any], ...]:
     # Materialize one subject split from the published CMMLU zip archive into plain row dicts.
+    """Implement cmmlu rows for this module."""
     member_name = f"{split}/{dataset_name}.csv"
     rows: list[dict[str, Any]] = []
     with ZipFile(_cmmlu_archive_path()) as archive:
@@ -128,6 +130,7 @@ def _load_cmmlu_dataset(
     stream: bool = False,
 ) -> Dataset:
     # Adapt the raw CMMLU archive to the standard Evalution dataset-loader contract.
+    """Load cmmlu dataset. Preserve the fallback order expected by the surrounding caller."""
     del cache_dir
     if dataset_path != "haonan-li/cmmlu":
         raise ValueError(f"unsupported CMMLU dataset path: {dataset_path!r}")
@@ -143,6 +146,7 @@ def _load_cmmlu_dataset(
 @dataclass(slots=True)
 class CMMLU(BaseFewshotMultipleChoiceSuite):
     # Keep CMMLU close to the upstream lm-eval setup by using per-subject dev examples as few-shot context.
+    """Define the cmmlu helper class."""
     dataset_path: str = "haonan-li/cmmlu"
     dataset_name: str | None = None
     split: str = "test"
@@ -151,6 +155,7 @@ class CMMLU(BaseFewshotMultipleChoiceSuite):
 
     def __post_init__(self) -> None:
         # Keep the factory subset and the dataset name locked together to avoid silent mismatches.
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in CMMLU_SUBSETS:
             raise ValueError(f"unsupported CMMLU subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -160,18 +165,22 @@ class CMMLU(BaseFewshotMultipleChoiceSuite):
 
     def dataset_loader(self) -> Any:
         # Route CMMLU through the archive-backed loader above.
+        """Return the dataset loader bound to this suite."""
         return _load_cmmlu_dataset
 
     def task_name(self) -> str:
         # Expose one stable task name per CMMLU subject factory.
+        """Return the exported task name for this suite."""
         return f"cmmlu_{self.subset}"
 
     def prompt_description(self) -> str:
         # Prefix each evaluation prompt with the benchmark's short Chinese instruction.
+        """Implement prompt description for cmmlu."""
         return _CMMLU_DESCRIPTION
 
     def format_question(self, doc: dict[str, Any], *, include_answer: bool) -> str:
         # Render one CMMLU question block in the same A/B/C/D layout used for few-shot examples.
+        """Format question."""
         answer_text = str(doc["Answer"]).strip() if include_answer else ""
         lines = [str(doc["Question"]).strip()]
         lines.extend(
@@ -183,10 +192,12 @@ class CMMLU(BaseFewshotMultipleChoiceSuite):
 
     def gold_label(self, doc: dict[str, Any]) -> str:
         # Normalize the gold answer key to one uppercase label token.
+        """Implement gold label for cmmlu."""
         return str(doc["Answer"]).strip().upper()
 
     def sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
         # Preserve the evaluated CMMLU subject and source question text for debugging.
+        """Implement sample metadata for cmmlu."""
         return {
             "subset": self.subset,
             "question": str(doc["Question"]).strip(),
@@ -195,13 +206,16 @@ class CMMLU(BaseFewshotMultipleChoiceSuite):
 
 def cmmlu(*, subset: str, **kwargs: Any) -> CMMLU:
     # Build the generic CMMLU suite while pinning the requested subject as the dataset name.
+    """Implement cmmlu for this module."""
     kwargs.setdefault("dataset_name", subset)
     return CMMLU(subset=subset, **kwargs)
 
 
 def _make_cmmlu_factory(subset: str) -> Any:
     # Emit one import-stable zero-argument factory per CMMLU subject.
+    """Make cmmlu factory."""
     def factory(**kwargs: Any) -> CMMLU:
+        """Implement factory for this module."""
         return cmmlu(subset=subset, **kwargs)
 
     factory.__name__ = f"cmmlu_{subset}"

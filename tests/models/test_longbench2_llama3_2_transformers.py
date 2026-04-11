@@ -10,6 +10,7 @@ import torch
 
 from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, run_suite_spec
 
+# Keep shared test fixtures and expectations explicit at module scope.
 _LONG_BENCH2_A100_TASKS = ("longbench2_legal_single",)
 _MIN_LONG_BENCH2_VRAM_BYTES = 90 * 1024**3
 
@@ -27,4 +28,5 @@ def test_llama3_2_transformers_longbench2_full_model_eval(
     capsys: pytest.CaptureFixture[str],
     suite_key: str,
 ) -> None:
+    """Verify llama3 2 transformers longbench2 full model eval."""
     run_suite_spec(capsys, suite_key)

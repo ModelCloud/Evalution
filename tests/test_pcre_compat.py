@@ -9,6 +9,7 @@ import importlib
 
 import pcre
 
+# Keep shared test fixtures and expectations explicit at module scope.
 _MATHQA_OPTIONS_RE = pcre.compile(r"[abcd] \) .*?, |e \) .*?$")
 _CAMEL_BOUNDARY_RE = pcre.compile(r"(?<!^)(?=[A-Z])")
 _NON_ALNUM_RE = pcre.compile(r"[^a-z0-9]+")
@@ -18,6 +19,7 @@ _RESULT_JSON_RE = pcre.compile(r"RESULT_JSON_START\n(.*?)\nRESULT_JSON_END", pcr
 
 
 def test_pcre_matches_affected_project_patterns() -> None:
+    """Verify PCRE matches affected project patterns."""
     option_label = pcre.compile(r"^\(?([A-Z])\)?(?:[.:：、]|．)?\s*")
     assert option_label.match("(C) choice").group(1) == "C"
 
@@ -57,6 +59,7 @@ def test_pcre_matches_affected_project_patterns() -> None:
 
 
 def test_recent_replacements_execute_compatibly_on_compiled_pcre_patterns() -> None:
+    """Verify recent replacements execute compatibly on compiled PCRE patterns."""
     xlsum_module = importlib.import_module("evalution.datasets.xlsum")
     qasper_module = importlib.import_module("evalution.benchmarks.qasper")
     longbench_module = importlib.import_module("evalution.scorers.longbench")

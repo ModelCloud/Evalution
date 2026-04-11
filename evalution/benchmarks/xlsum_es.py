@@ -17,12 +17,14 @@ from evalution.scorers.summary_rouge import summary_rouge_scores
 
 
 def _xlsum_es_prompt(text: str) -> str:
+    """Implement XLSum es prompt for this module."""
     return f"Texto: {text.strip()}\n\nResumen:"
 
 
 @dataclass(slots=True)
 class XLSUMES(BaseTestSuite):
     # Evaluate the Spanish XLSum split with the local audited archive loader and summary ROUGE scoring.
+    """Implement the xlsumes benchmark suite."""
     dataset_path: str = "csebuetnlp/xlsum"
     dataset_name: str | None = "spanish"
     split: str = "test"
@@ -30,15 +32,18 @@ class XLSUMES(BaseTestSuite):
     stop: tuple[str, ...] = ("\n",)
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.dataset_name not in {None, "spanish"}:
             raise ValueError("xlsum_es dataset_name must be None or 'spanish'")
         if self.dataset_name is None:
             self.dataset_name = "spanish"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_xlsum_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "xlsum_es"
 
     def result_metadata(
@@ -46,6 +51,7 @@ class XLSUMES(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         archive_spec = XLSUM_ARCHIVES["spanish"]
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
@@ -56,6 +62,7 @@ class XLSUMES(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             text = str(doc["text"]).strip()
             reference = str(doc["summary"]).strip()
@@ -75,6 +82,7 @@ class XLSUMES(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         prediction = output.text.strip()
         reference = prepared_sample.target.strip()
         return SampleResult(
@@ -98,4 +106,5 @@ class XLSUMES(BaseTestSuite):
 
 
 def xlsum_es(**kwargs: Any) -> XLSUMES:
+    """Implement XLSum es for this module."""
     return XLSUMES(**kwargs)

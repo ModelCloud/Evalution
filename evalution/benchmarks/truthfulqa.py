@@ -17,6 +17,7 @@ from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger, loglikelihood_progress_metadata
 from evalution.results import SampleResult, TestResult
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 TRUTHFULQA_TASKS = ("truthfulqa_mc1", "truthfulqa_mc2")
 _TRUTHFULQA_PROMPT_PREFIX = (
     "Q: What is human life expectancy in the United States?\n"
@@ -35,14 +36,17 @@ _TRUTHFULQA_PROMPT_PREFIX = (
 
 
 def _truthfulqa_prompt(question: str) -> str:
+    """Implement truthfulqa prompt for this module."""
     return f"{_TRUTHFULQA_PROMPT_PREFIX}\n\nQ: {question.strip()}\nA:"
 
 
 def _choice_continuation(choice: str) -> str:
+    """Implement choice continuation for this module."""
     return choice if choice[:1].isspace() else f" {choice}"
 
 
 def _normalized_probs(logprobs: list[float]) -> list[float]:
+    """Implement normalized probs for this module."""
     max_logprob = max(logprobs)
     weights = [exp(logprob - max_logprob) for logprob in logprobs]
     normalizer = sum(weights)
@@ -51,6 +55,8 @@ def _normalized_probs(logprobs: list[float]) -> list[float]:
 
 @dataclass(slots=True)
 class TruthfulQAMC(TestSuite):
+    """Define the truthful qamc helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "truthfulqa/truthful_qa"
     dataset_name: str | None = "multiple_choice"
     split: str = "validation"
@@ -60,6 +66,7 @@ class TruthfulQAMC(TestSuite):
     batch_size: int | None = None
     cache_dir: str | None = None
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.variant not in {"mc1", "mc2"}:
             raise ValueError(f"unsupported truthfulqa variant: {self.variant!r}")
         if self.dataset_name not in {None, "multiple_choice"}:
@@ -67,12 +74,15 @@ class TruthfulQAMC(TestSuite):
         self.dataset_name = "multiple_choice"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"truthfulqa_{self.variant}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -84,6 +94,7 @@ class TruthfulQAMC(TestSuite):
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -183,12 +194,15 @@ class TruthfulQAMC(TestSuite):
 
 
 def truthfulqa(*, variant: str, **kwargs: Any) -> TruthfulQAMC:
+    """Implement truthfulqa for this module."""
     return TruthfulQAMC(variant=variant, **kwargs)
 
 
 def truthfulqa_mc1(**kwargs: Any) -> TruthfulQAMC:
+    """Implement truthfulqa mc1 for this module."""
     return truthfulqa(variant="mc1", **kwargs)
 
 
 def truthfulqa_mc2(**kwargs: Any) -> TruthfulQAMC:
+    """Implement truthfulqa mc2 for this module."""
     return truthfulqa(variant="mc2", **kwargs)

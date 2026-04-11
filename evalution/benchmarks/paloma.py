@@ -44,20 +44,24 @@ PALOMA_TASKS = tuple(f"paloma_{token}" for token in PALOMA_SUBSET_BY_TOKEN)
 
 
 def _paloma_task_token(subset: str) -> str:
+    """Implement paloma task token for this module."""
     return normalize_subset_token(subset)
 
 
 def _paloma_word_count(text: str) -> int:
+    """Implement paloma word count for this module."""
     return len(text.split())
 
 
 def _paloma_byte_count(text: str) -> int:
+    """Implement paloma byte count for this module."""
     return len(text.encode("utf-8"))
 
 
 @dataclass(slots=True)
 class Paloma(BaseRollingPerplexitySuite):
     # Score one PALOMA subset as rolling perplexity over its raw text field.
+    """Define the paloma helper class."""
     dataset_path: str = "allenai/paloma"
     dataset_name: str | None = "c4_en"
     split: str = "test"
@@ -65,6 +69,7 @@ class Paloma(BaseRollingPerplexitySuite):
     subset: str = "c4_en"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         raw_subset = PALOMA_SUBSET_BY_TOKEN.get(_paloma_task_token(self.subset))
         if raw_subset is None:
             raise ValueError(f"unsupported paloma subset: {self.subset!r}")
@@ -75,17 +80,21 @@ class Paloma(BaseRollingPerplexitySuite):
         raise ValueError("paloma dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"paloma_{_paloma_task_token(self.subset)}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata()
         metadata["subset"] = self.subset
         return metadata
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> RollingPerplexitySample:
+        """Build one benchmark sample from a dataset row."""
         text = str(doc["text"])
         return RollingPerplexitySample(
             index=index,
@@ -103,13 +112,16 @@ class Paloma(BaseRollingPerplexitySuite):
 
 def paloma(*, subset: str = "c4_en", **kwargs: Any) -> Paloma:
     # Accept either the raw subset id or its normalized task token.
+    """Implement paloma for this module."""
     kwargs.setdefault("dataset_name", PALOMA_SUBSET_BY_TOKEN.get(_paloma_task_token(subset), subset))
     return Paloma(subset=subset, **kwargs)
 
 
 def _make_paloma_factory(subset: str) -> Any:
     # Register normalized factory names so YAML and Python lookups stay identifier-safe.
+    """Make paloma factory."""
     def factory(**kwargs: Any) -> Paloma:
+        """Implement factory for this module."""
         return paloma(subset=subset, **kwargs)
 
     factory.__name__ = f"paloma_{_paloma_task_token(subset)}"

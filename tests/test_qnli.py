@@ -12,12 +12,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 qnli_module = importlib.import_module("evalution.benchmarks.qnli")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 3
         assert len(requests) == 4
         assert requests[0].context == (
@@ -37,6 +40,7 @@ class FakeSession:
 
 
 def test_qnli_scores_answer_relevance_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify qnli scores answer relevance multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -82,6 +86,7 @@ def test_qnli_scores_answer_relevance_multiple_choice_accuracy(monkeypatch) -> N
 
 
 def test_qnli_prompt_helper_formats_question_answer_judgment() -> None:
+    """Verify qnli prompt helper formats question answer judgment."""
     assert (
         qnli_module._qnli_prompt("Who won?", "The home team won.")
         == "Who won?\nThe home team won.\nQuestion: Does this response answer the question?\nAnswer:"

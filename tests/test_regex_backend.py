@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 def _project_python_files(root: Path) -> list[Path]:
+    """Support the surrounding tests with project python files."""
     paths = {path for path in root.glob("*.py")}
     for relative_dir in ("benchmarks", "evalution", "scripts", "tests"):
         directory = root / relative_dir
@@ -20,6 +21,7 @@ def _project_python_files(root: Path) -> list[Path]:
 
 
 def test_project_python_files_do_not_import_stdlib_regex_module() -> None:
+    """Verify project python files do not import stdlib regex module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     root = Path(__file__).resolve().parent.parent
     offenders: list[str] = []
 
@@ -37,6 +39,7 @@ def test_project_python_files_do_not_import_stdlib_regex_module() -> None:
 
 
 def test_project_python_files_use_compiled_pcre_execution_apis() -> None:
+    """Verify project python files use compiled PCRE execution apis. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     root = Path(__file__).resolve().parent.parent
     offenders: list[str] = []
     forbidden_attrs = {"search", "match", "fullmatch", "findall", "finditer", "sub", "split"}

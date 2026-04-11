@@ -12,10 +12,12 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 haerae_module = importlib.import_module("evalution.benchmarks.haerae")
 
 
 def _haerae_row(*, query: str, answer: str, options: list[str]) -> dict[str, object]:
+    """Support the surrounding tests with haerae row."""
     return {
         "query": query,
         "options": str(options),
@@ -24,10 +26,13 @@ def _haerae_row(*, query: str, answer: str, options: list[str]) -> dict[str, obj
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, expected_text: str):
+        """Initialize this object."""
         self.expected_text = expected_text
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 2
         assert len(requests) == 5
         assert requests[0].context == self.expected_text
@@ -48,6 +53,7 @@ class FakeSession:
 
 
 def test_haerae_general_knowledge_scores_label_choices(monkeypatch) -> None:
+    """Verify haerae general knowledge scores label choices. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     suite = evalution.benchmarks.haerae_general_knowledge(batch_size=2, max_rows=1, stream=False)
     expected_prompt = (
         "다음 질문을 읽고 정답으로 가장 알맞은 것을 고르시요.\n\n"
@@ -78,6 +84,7 @@ def test_haerae_general_knowledge_scores_label_choices(monkeypatch) -> None:
 
 
 def test_haerae_group_loader_round_robins_subsets(monkeypatch) -> None:
+    """Verify haerae group loader round robins subsets."""
     datasets = {
         "general_knowledge": Dataset.from_list([_haerae_row(query="gk1", answer="(A)", options=["a", "b", "c", "d", "e"])]),
         "history": Dataset.from_list([
@@ -90,6 +97,7 @@ def test_haerae_group_loader_round_robins_subsets(monkeypatch) -> None:
     }
 
     def fake_load_dataset(path, name, split, cache_dir=None):
+        """Support the surrounding tests with fake load dataset."""
         assert path == "HAERAE-HUB/HAE_RAE_BENCH"
         assert split == "test"
         return datasets[name]

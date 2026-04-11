@@ -26,6 +26,8 @@ from evalution.benchmarks.base import TestSuite
 
 @dataclass(slots=True)
 class EvaluationRun:
+    """Define the evaluation run helper class."""
+    # Keep the class-level state explicit for this helper.
     _engine_impl: BaseEngine
     _model_config: Model
     _session: BaseInferenceSession | None = field(default=None, init=False, repr=False)
@@ -35,6 +37,7 @@ class EvaluationRun:
     _logging_context: LoggingContext | None = field(default=None, init=False, repr=False)
 
     def run(self, test: TestSuite) -> EvaluationRun:
+        """Run run."""
         with self._logging_scope():
             if self._closed:
                 raise RuntimeError("run is already closed")
@@ -54,23 +57,29 @@ class EvaluationRun:
 
     @property
     def model(self) -> dict[str, Any]:
+        """Implement model for evaluation run."""
         return self._materialize_result(close=True).model
 
     @property
     def engine(self) -> dict[str, Any]:
+        """Implement engine for evaluation run."""
         return self._materialize_result(close=True).engine
 
     @property
     def tests(self) -> list[Any]:
+        """Implement tests for evaluation run."""
         return self._materialize_result(close=True).tests
 
     def result(self, *, close: bool = True) -> RunResult:
+        """Implement result for evaluation run."""
         return self._materialize_result(close=close)
 
     def to_dict(self) -> dict[str, Any]:
+        """Implement to dict for evaluation run."""
         return self._materialize_result(close=True).to_dict()
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         with self._logging_scope():
             if self._closed:
                 return
@@ -85,12 +94,15 @@ class EvaluationRun:
             logger.info("finished evaluation run with %d test suite(s)", len(self._test_results))
 
     def __enter__(self) -> EvaluationRun:
+        """Enter the managed context for this object."""
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        """Exit the managed context for this object."""
         self.close()
 
     def _materialize_result(self, *, close: bool) -> RunResult:
+        """Implement materialize result for evaluation run."""
         if close:
             self.close()
 
@@ -106,10 +118,12 @@ class EvaluationRun:
         )
 
     def bind_logging_context(self, context: LoggingContext | None) -> EvaluationRun:
+        """Implement bind logging context for evaluation run."""
         self._logging_context = context
         return self
 
     def _logging_scope(self):
+        """Implement logging scope for evaluation run."""
         if self._logging_context is None:
             return nullcontext()
         return use_logging_context(self._logging_context)
@@ -121,6 +135,7 @@ def run(
     engine: BaseEngine,
     tests: Sequence[TestSuite],
 ) -> RunResult:
+    """Run run."""
     if not isinstance(engine, BaseEngine):
         raise TypeError("engine must inherit BaseEngine")
 
@@ -136,6 +151,7 @@ def run(
 
 
 def _build_session(engine: BaseEngine, model_config: Model) -> BaseInferenceSession:
+    """Build session."""
     logger = get_logger()
     logger.info("building engine %s for model %s", type(engine).__name__, model_config.path)
     with spinner(f"Loading {type(engine).__name__} engine"):
@@ -146,11 +162,13 @@ def _build_session(engine: BaseEngine, model_config: Model) -> BaseInferenceSess
 
 
 def _describe_execution(session: BaseInferenceSession) -> dict[str, Any] | None:
+    """Implement describe execution for this module."""
     execution = session.describe_execution()
     get_logger().info("engine execution=%s", execution)
     return execution
 
 
 def _gc_session(session: BaseInferenceSession) -> None:
+    """Implement gc session for this module."""
     get_logger().info("running engine gc before next test suite")
     session.gc()

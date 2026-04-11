@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mgsm_module = importlib.import_module("evalution.benchmarks.mgsm")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size in {1, 6}
         assert len(requests) == 1
         assert requests[0].prompt == (
@@ -31,10 +34,12 @@ class FakeSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_mgsm_direct_es_spanish_bench_scores_numeric_generation(monkeypatch) -> None:
+    """Verify mgsm direct es spanish bench scores numeric generation. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {

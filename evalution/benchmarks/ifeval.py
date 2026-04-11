@@ -57,6 +57,7 @@ def _load_ifeval_dataset(dataset_path: str, dataset_name: str | None = None, **k
         return load_dataset(dataset_path, **kwargs)
     return load_dataset(dataset_path, dataset_name, **kwargs)
 def _coerce_str(value: Any) -> str | None:
+    """Implement coerce str for this module."""
     if value is None:
         return None
     text = str(value).strip().lower()
@@ -64,6 +65,7 @@ def _coerce_str(value: Any) -> str | None:
 
 
 def _coerce_int(value: Any, *, fallback: int) -> int:
+    """Implement coerce int for this module."""
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -71,10 +73,12 @@ def _coerce_int(value: Any, *, fallback: int) -> int:
 
 
 def _contains_char_in_range(text: str, start: int, end: int) -> bool:
+    """Implement contains char in range for this module."""
     return any(start <= ord(char) <= end for char in text)
 
 
 def _to_bool(value: Any) -> bool:
+    """Implement to bool for this module."""
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
@@ -83,10 +87,12 @@ def _to_bool(value: Any) -> bool:
 
 
 def _normalize_language(value: Any) -> str:
+    """Normalize language. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _coerce_str(value) or "en"
 
 
 def _build_keyword_list(value: Any) -> list[str]:
+    """Build keyword list."""
     if value is None:
         return []
     if isinstance(value, list):
@@ -103,6 +109,7 @@ except Exception:  # pragma: no cover
 
 
 def _is_language_ok(text: str, *, language: str) -> bool:
+    """Implement is language ok for this module. Preserve the fallback order expected by the surrounding caller."""
     if not text.strip():
         return False
     language_code = _normalize_language(language)
@@ -127,10 +134,12 @@ def _is_language_ok(text: str, *, language: str) -> bool:
 
 
 def _count_words(text: str) -> int:
+    """Implement count words for this module."""
     return len(_WORD_RE.findall(text))
 
 
 def _count_sentences(text: str) -> int:
+    """Implement count sentences for this module."""
     stripped = text.strip()
     if not stripped:
         return 0
@@ -138,12 +147,14 @@ def _count_sentences(text: str) -> int:
 
 
 def _count_paragraphs(text: str) -> int:
+    """Implement count paragraphs for this module."""
     if not text.strip():
         return 0
     return len([chunk.strip() for chunk in _PARAGRAPH_SPLIT_RE.split(text.strip()) if chunk.strip()])
 
 
 def _strip_thought(text: str) -> str:
+    """Strip thought."""
     if not text:
         return text
     trimmed = text.strip()
@@ -154,15 +165,18 @@ def _strip_thought(text: str) -> str:
 
 
 def _remove_first_line(text: str) -> str:
+    """Implement remove first line for this module."""
     return _FIRST_LINE_RE.sub("", text, count=1).strip()
 
 
 def _remove_last_line(text: str) -> str:
+    """Implement remove last line for this module."""
     return _LAST_LINE_RE.sub("", text, count=1).strip()
 
 
 def _candidate_loose_outputs(text: str) -> list[str]:
     # IFEval loose checks retry strict rules after minimal cleanup.
+    """Implement candidate loose outputs for this module."""
     responses = [
         text,
         _ASTERISK_RE.sub("", text),
@@ -182,6 +196,7 @@ def _candidate_loose_outputs(text: str) -> list[str]:
 
 
 def _relation_check(count: int, *, threshold: int, relation: str) -> bool:
+    """Implement relation check for this module."""
     if relation == "less than":
         return count < threshold
     return count >= threshold
@@ -193,11 +208,13 @@ def _build_instruction_checker(
     prompt: str,
     kwargs: dict[str, Any],
 ) -> Callable[[str], bool]:
+    """Build instruction checker. Preserve the fallback order expected by the surrounding caller."""
     if instruction_id == "keywords:existence":
         keywords = _build_keyword_list(kwargs.get("keywords"))
         keyword_patterns = [pcre.compile(pcre.escape(keyword), pcre.IGNORECASE) for keyword in keywords]
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             if not keyword_patterns:
                 return False
             for pattern in keyword_patterns:
@@ -211,6 +228,7 @@ def _build_instruction_checker(
         forbidden = _build_keyword_list(kwargs.get("forbidden_words"))
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             for word in forbidden:
                 pattern = pcre.compile(rf"(?<!\w){pcre.escape(word)}(?!\w)", pcre.IGNORECASE)
                 if pattern.search(value):
@@ -226,6 +244,7 @@ def _build_instruction_checker(
         keyword_pattern = pcre.compile(pcre.escape(keyword), pcre.IGNORECASE) if keyword else None
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             if keyword_pattern is None:
                 return False
             count = len(keyword_pattern.findall(value))
@@ -239,6 +258,7 @@ def _build_instruction_checker(
         relation = _coerce_str(kwargs.get("let_relation")) or "at least"
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             if not letter:
                 return False
             return _relation_check(
@@ -253,6 +273,7 @@ def _build_instruction_checker(
         language = str(kwargs.get("language", ""))
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return _is_language_ok(value, language=language)
 
         return _check
@@ -262,6 +283,7 @@ def _build_instruction_checker(
         relation = _coerce_str(kwargs.get("relation")) or "at least"
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return _relation_check(
                 _count_words(value),
                 threshold=num_words,
@@ -275,6 +297,7 @@ def _build_instruction_checker(
         relation = _coerce_str(kwargs.get("relation")) or "at least"
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return _relation_check(
                 _count_sentences(value),
                 threshold=num_sentences,
@@ -287,6 +310,7 @@ def _build_instruction_checker(
         num_paragraphs = _coerce_int(kwargs.get("num_paragraphs"), fallback=1)
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return _count_paragraphs(value) == num_paragraphs
 
         return _check
@@ -297,6 +321,7 @@ def _build_instruction_checker(
         first_word = _coerce_str(kwargs.get("first_word")) or ""
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             paragraphs = [chunk.strip() for chunk in _PARAGRAPH_SPLIT_RE.split(value) if chunk.strip()]
             if nth_paragraph < 1 or nth_paragraph > len(paragraphs):
                 return False
@@ -313,6 +338,7 @@ def _build_instruction_checker(
         num_placeholders = _coerce_int(kwargs.get("num_placeholders"), fallback=1)
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return len(_PLACEHOLDER_RE.findall(value)) >= num_placeholders
 
         return _check
@@ -321,6 +347,7 @@ def _build_instruction_checker(
         postscript_marker = str(kwargs.get("postscript_marker", "P.S.")).strip()
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             if not postscript_marker:
                 return False
             lowered = value.lower()
@@ -337,6 +364,7 @@ def _build_instruction_checker(
         num_bullets = _coerce_int(kwargs.get("num_bullets"), fallback=1)
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return len(_BULLET_LINE_RE.findall(value)) == num_bullets
 
         return _check
@@ -345,6 +373,7 @@ def _build_instruction_checker(
         num_highlights = _coerce_int(kwargs.get("num_highlights"), fallback=1)
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             highlights = [* _BOLD_RE.findall(value), * _ITALIC_RE.findall(value)]
             return len(highlights) >= num_highlights
 
@@ -356,12 +385,14 @@ def _build_instruction_checker(
         pattern = pcre.compile(_SECTION_RE_TEMPLATE.format(section=pcre.escape(section_spliter)))
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return len(pattern.findall(value)) >= num_sections
 
         return _check
 
     if instruction_id == "detectable_format:json_format":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             candidate = value.strip()
             match = _JSON_RE.search(candidate)
             content = match.group(1) if match else candidate
@@ -375,6 +406,7 @@ def _build_instruction_checker(
 
     if instruction_id == "detectable_format:title":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return any(title.strip() for title in _TITLE_MARKER_RE.findall(value))
 
         return _check
@@ -383,12 +415,14 @@ def _build_instruction_checker(
         choices = ("My answer is yes.", "My answer is no.", "My answer is maybe.")
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return any(choice in value for choice in choices)
 
         return _check
 
     if instruction_id == "combination:two_responses":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             parts = value.split("******")
             if len(parts) != 2:
                 return False
@@ -402,6 +436,7 @@ def _build_instruction_checker(
         prompt_to_repeat = str(kwargs.get("prompt_to_repeat", "")).strip()
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return bool(prompt_to_repeat) and value.strip().startswith(prompt_to_repeat)
 
         return _check
@@ -410,6 +445,7 @@ def _build_instruction_checker(
         end_phrase = str(kwargs.get("end_phrase", "")).strip().lower()
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             if not end_phrase:
                 return False
             return value.strip().lower().endswith(end_phrase)
@@ -421,6 +457,7 @@ def _build_instruction_checker(
         relation = _coerce_str(kwargs.get("capital_relation")) or "at least"
 
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             capitals = [token for token in _WORD_RE.findall(value) if token.isupper() and len(token) > 1]
             return _relation_check(
                 len(capitals),
@@ -432,18 +469,21 @@ def _build_instruction_checker(
 
     if instruction_id == "change_case:english_capital":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return bool(value.strip()) and value.isupper() and _is_language_ok(value, language="en")
 
         return _check
 
     if instruction_id == "change_case:english_lowercase":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return bool(value.strip()) and value.islower() and _is_language_ok(value, language="en")
 
         return _check
 
     if instruction_id == "change_case:portuguese_capital":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             if not value.strip() or not value.isupper():
                 return False
             if _detect_language is not None:
@@ -457,6 +497,7 @@ def _build_instruction_checker(
 
     if instruction_id == "change_case:portuguese_lowercase":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             if not value.strip() or not value.islower():
                 return False
             if _detect_language is not None:
@@ -470,12 +511,14 @@ def _build_instruction_checker(
 
     if instruction_id == "punctuation:no_comma":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             return _PUNCTUATION_NO_COMMA_RE.search(value) is None
 
         return _check
 
     if instruction_id == "startend:quotation":
         def _check(value: str) -> bool:
+            """Check whether the response satisfies the current instruction rule. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             stripped = value.strip()
             return (
                 len(stripped) >= 2
@@ -495,6 +538,7 @@ def _compute_instruction_scores(
     kwargs_list: list[dict[str, Any]],
 ) -> dict[str, Any]:
     # Build strict and loose results for prompt-level and instruction-level scores.
+    """Compute instruction scores. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     response_clean = _strip_thought(response)
     strict_values: list[bool] = []
     loose_values: list[bool] = []
@@ -528,6 +572,7 @@ def _compute_instruction_scores(
 @dataclass(slots=True)
 class IFEval(BaseTestSuite):
     # IFEval benchmark instance with generation and instruction-level scoring.
+    """Implement the IFEval benchmark suite."""
     dataset_path: str = IFEVAL_DATASET_PATH
     dataset_name: str | None = None
     split: str = IFEVAL_SPLIT
@@ -542,12 +587,15 @@ class IFEval(BaseTestSuite):
     cache_dir: str | None = None
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "ifeval"
 
     def dataset_loader(self) -> Callable[..., Any]:
+        """Return the dataset loader bound to this suite."""
         return _load_ifeval_dataset
 
     def result_metadata(self, *, generation_submission_mode: str) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "instruction_following",
@@ -556,6 +604,7 @@ class IFEval(BaseTestSuite):
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
         # One request per IFEval sample using only the prompt text.
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             prompt = str(doc["prompt"]).strip()
             yield PreparedSample(
@@ -572,6 +621,7 @@ class IFEval(BaseTestSuite):
             )
 
     def score_sample(self, prepared_sample: PreparedSample, output: GenerationOutput) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         response = output.text
         instruction_id_list = [str(item) for item in prepared_sample.doc.get("instruction_id_list", [])]
         raw_kwargs = prepared_sample.doc.get("kwargs", [])
@@ -610,6 +660,7 @@ class IFEval(BaseTestSuite):
 
     def evaluate(self, session: InferenceSession) -> TestResult:
         # Recompute metrics so instruction-level accuracy is weighted by total instruction count.
+        """Evaluate evaluate."""
         result = super().evaluate(session)
         samples = list(result.samples)
         if not samples:
@@ -642,4 +693,5 @@ class IFEval(BaseTestSuite):
 
 
 def ifeval(**kwargs: Any) -> IFEval:
+    """Implement IFEval for this module."""
     return IFEval(**kwargs)

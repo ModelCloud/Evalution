@@ -23,6 +23,7 @@ from evalution.scorers.multiple_choice import (
     multiple_choice_outcome,
 )
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _SUPPORTED_LANGUAGES = ("en", "fr", "jp", "pt", "ru", "zh")
 _ANSWER_TO_INDEX = {"1": 0, "2": 1}
 
@@ -32,6 +33,7 @@ def _xwinograd_choice_contexts_and_suffix(
     option1: str,
     option2: str,
 ) -> tuple[list[str], str]:
+    """Implement xwinograd choice contexts and suffix for this module."""
     blank_index = sentence.index("_")
     suffix = sentence[blank_index + 1 :]
     prefix = sentence[:blank_index]
@@ -40,6 +42,8 @@ def _xwinograd_choice_contexts_and_suffix(
 
 @dataclass(slots=True)
 class XWinograd:
+    """Define the xwinograd helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "Muennighoff/xwinograd"
     dataset_name: str | None = "en"
     split: str = "test"
@@ -50,6 +54,7 @@ class XWinograd:
     language: str = "en"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in _SUPPORTED_LANGUAGES:
             raise ValueError(f"unsupported xwinograd language: {self.language!r}")
         if self.dataset_name in {None, self.language}:
@@ -58,12 +63,15 @@ class XWinograd:
         raise ValueError("xwinograd dataset_name must match the configured language")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"xwinograd_{self.language}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -74,6 +82,7 @@ class XWinograd:
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -198,28 +207,35 @@ class XWinograd:
 
 
 def xwinograd(*, language: str, **kwargs: Any) -> XWinograd:
+    """Implement xwinograd for this module."""
     return XWinograd(language=language, dataset_name=language, **kwargs)
 
 
 def xwinograd_en(**kwargs: Any) -> XWinograd:
+    """Implement xwinograd en for this module."""
     return xwinograd(language="en", **kwargs)
 
 
 def xwinograd_fr(**kwargs: Any) -> XWinograd:
+    """Implement xwinograd fr for this module."""
     return xwinograd(language="fr", **kwargs)
 
 
 def xwinograd_jp(**kwargs: Any) -> XWinograd:
+    """Implement xwinograd jp for this module."""
     return xwinograd(language="jp", **kwargs)
 
 
 def xwinograd_pt(**kwargs: Any) -> XWinograd:
+    """Implement xwinograd pt for this module."""
     return xwinograd(language="pt", **kwargs)
 
 
 def xwinograd_ru(**kwargs: Any) -> XWinograd:
+    """Implement xwinograd ru for this module."""
     return xwinograd(language="ru", **kwargs)
 
 
 def xwinograd_zh(**kwargs: Any) -> XWinograd:
+    """Implement xwinograd zh for this module."""
     return xwinograd(language="zh", **kwargs)

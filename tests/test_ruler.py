@@ -13,22 +13,28 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 ruler_module = importlib.import_module("evalution.benchmarks.ruler")
 
 
 class DummyTokenizer:
+    """Define the dummy tokenizer helper used by the surrounding tests."""
     def __call__(self, text: str, add_special_tokens: bool = False):
+        """Implement call for dummy tokenizer."""
         del add_special_tokens
         return {"input_ids": text.split()}
 
 
 class ContinuousSession:
+    """Define the continuous session helper used by the surrounding tests."""
     def __init__(self, prediction: str, expected_prompt: str) -> None:
+        """Initialize this object."""
         self.prediction = prediction
         self.expected_prompt = expected_prompt
         self.tokenizer = DummyTokenizer()
 
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         assert batch_size == 4
         items = list(requests)
         assert len(items) == 1
@@ -38,11 +44,13 @@ class ContinuousSession:
 
 
 def test_ruler_requires_a_tokenizer_for_generation() -> None:
+    """Verify ruler requires a tokenizer for generation."""
     with pytest.raises(ValueError, match="ruler requires a tokenizer"):
         evalution.benchmarks.ruler()._resolve_generation_tokenizer()
 
 
 def test_ruler_scores_niah_rows_with_contains_fraction(monkeypatch) -> None:
+    """Verify ruler scores niah rows with contains fraction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -84,6 +92,7 @@ def test_ruler_scores_niah_rows_with_contains_fraction(monkeypatch) -> None:
 
 
 def test_ruler_generates_repeat_haystack_rows_with_real_loader() -> None:
+    """Verify ruler generates repeat haystack rows with real loader."""
     dataset = ruler_module._load_ruler_dataset(
         "NVIDIA/RULER",
         "niah_single_1",
@@ -101,6 +110,7 @@ def test_ruler_generates_repeat_haystack_rows_with_real_loader() -> None:
 
 
 def test_ruler_scores_qa_rows_against_multiple_references(monkeypatch) -> None:
+    """Verify ruler scores QA rows against multiple references. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -128,6 +138,7 @@ def test_ruler_scores_qa_rows_against_multiple_references(monkeypatch) -> None:
 
 
 def test_ruler_factory_aliases_and_prompt_composition() -> None:
+    """Verify ruler factory aliases and prompt composition."""
     suite = evalution.benchmarks.ruler(variant="ruler_cwe")
     assert suite.dataset_name == "ruler_cwe"
     assert suite.task_name() == "ruler_cwe"

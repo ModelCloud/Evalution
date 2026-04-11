@@ -18,15 +18,19 @@ from evalution.benchmarks.rolling_perplexity import (
 
 
 def _c4_word_count(text: str) -> int:
+    """Implement c4 word count for this module."""
     return len(text.split())
 
 
 def _c4_byte_count(text: str) -> int:
+    """Implement c4 byte count for this module."""
     return len(text.encode("utf-8"))
 
 
 @dataclass(slots=True)
 class C4(BaseRollingPerplexitySuite):
+    """Define the c4 helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "allenai/c4"
     dataset_name: str | None = "en"
     split: str = "validation"
@@ -36,12 +40,15 @@ class C4(BaseRollingPerplexitySuite):
     stream: bool = True
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "c4"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> RollingPerplexitySample:
+        """Build one benchmark sample from a dataset row."""
         text = str(doc["text"])
         return RollingPerplexitySample(
             index=index,
@@ -59,4 +66,5 @@ class C4(BaseRollingPerplexitySuite):
 
 
 def c4(**kwargs: Any) -> C4:
+    """Implement c4 for this module."""
     return C4(**kwargs)

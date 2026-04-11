@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 belebele_module = importlib.import_module("evalution.benchmarks.belebele")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 4
         assert requests[0].context == (
@@ -39,6 +42,7 @@ class FakeSession:
 
 
 def test_belebele_scores_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify belebele scores multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -76,6 +80,7 @@ def test_belebele_scores_multiple_choice_accuracy(monkeypatch) -> None:
 
 
 def test_belebele_prompt_helper_formats_prompt() -> None:
+    """Verify belebele prompt helper formats prompt."""
     assert (
         belebele_module._belebele_prompt(
             {
@@ -92,16 +97,19 @@ def test_belebele_prompt_helper_formats_prompt() -> None:
 
 
 def test_belebele_rejects_empty_language() -> None:
+    """Verify belebele rejects empty language."""
     with pytest.raises(ValueError, match="non-empty dataset config"):
         evalution.benchmarks.belebele(language="")
 
 
 def test_belebele_rejects_dataset_name_mismatch() -> None:
+    """Verify belebele rejects dataset name mismatch."""
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.belebele(language="eng_Latn", dataset_name="fra_Latn")
 
 
 def test_belebele_language_aliases_bind_expected_dataset_configs() -> None:
+    """Verify belebele language aliases bind expected dataset configs."""
     portuguese = evalution.benchmarks.belebele_por_Latn(max_rows=1)
     spanish = evalution.benchmarks.belebele_spa_Latn(max_rows=1)
 

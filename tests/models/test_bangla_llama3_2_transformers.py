@@ -9,6 +9,7 @@ from dataclasses import replace
 
 import tests.models_support as model_support
 
+# Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = model_support.LLAMA3_2_TRANSFORMERS_TEST_MARKS
 
 
@@ -17,7 +18,9 @@ def _override_batch_size(
     *,
     batch_size: int,
 ) -> model_support.SuiteSpec:
+    """Support the surrounding tests with override batch size."""
     def suite_factory(spec: model_support.SuiteSpec = spec):
+        """Support the surrounding tests with suite factory."""
         suite = spec.suite_factory()
         suite.batch_size = batch_size
         return suite
@@ -26,6 +29,7 @@ def _override_batch_size(
 
 
 def test_llama3_2_transformers_bangla_full_model_eval(capsys):
+    """Verify llama3 2 transformers bangla full model eval."""
     specs = [
         _override_batch_size(model_support.SUITE_SPECS[suite_key], batch_size=4)
         for suite_key in model_support.BANGLA_TASKS

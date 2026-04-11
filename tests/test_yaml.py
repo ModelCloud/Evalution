@@ -29,6 +29,7 @@ from evalution.engines import (
 )
 from evalution.engines.base import BaseEngine, BaseInferenceSession, GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 _AIME_TASKS = ["aime", "aime24", "aime25", "aime26"]
 _HENDRYCKS_MATH_TASKS = [
@@ -55,16 +56,21 @@ _ARITHMETIC_TASKS = [
 
 
 class FakeEngine(BaseEngine):
+    """Provide the fake engine helper used by the surrounding tests."""
     def build(self, model):
+        """Build build."""
         self.model_config = model
         return FakeSession()
 
     def to_dict(self):
+        """Implement to dict for fake engine."""
         return {"name": "fake"}
 
 
 class FakeSession(BaseInferenceSession):
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         del batch_size
         return [
             GenerationOutput(
@@ -75,30 +81,37 @@ class FakeSession(BaseInferenceSession):
         ]
 
     def describe_execution(self):
+        """Implement describe execution for fake session."""
         return {"generation_backend": "fake"}
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         del requests, batch_size
         raise NotImplementedError
 
     def loglikelihood_rolling(self, requests, *, batch_size=None):
+        """Implement loglikelihood rolling for fake session."""
         del requests, batch_size
         raise NotImplementedError
 
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         request_items = list(requests)
         outputs = self.generate([request for _, request in request_items], batch_size=batch_size)
         for (item_id, _request), output in zip(request_items, outputs, strict=True):
             yield item_id, output
 
     def gc(self) -> None:
+        """Release reusable intermediate state for this object."""
         return None
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_run_yaml_executes_yaml_spec_and_returns_structured_result(monkeypatch) -> None:
+    """Verify run YAML executes YAML spec and returns structured result."""
     dataset = Dataset.from_list(
         [
             {
@@ -135,6 +148,7 @@ tests:
 
 
 def test_python_from_yaml_emits_fluent_python_api() -> None:
+    """Verify python from YAML emits fluent python API."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -775,6 +789,7 @@ tests:
 
 
 def test_python_from_yaml_emits_aime26_factory() -> None:
+    """Verify python from YAML emits aime26 factory."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -791,6 +806,7 @@ tests:
 
 
 def test_python_from_yaml_emits_ifeval_pt_factory() -> None:
+    """Verify python from YAML emits IFEval pt factory."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -807,6 +823,7 @@ tests:
 
 
 def test_python_from_yaml_emits_cmmlu_factories() -> None:
+    """Verify python from YAML emits cmmlu factories."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -827,6 +844,7 @@ tests:
 
 
 def test_python_from_yaml_emits_kmmlu_factories() -> None:
+    """Verify python from YAML emits kmmlu factories."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -847,6 +865,7 @@ tests:
 
 
 def test_python_from_yaml_emits_mgsm_factories() -> None:
+    """Verify python from YAML emits mgsm factories."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -867,6 +886,7 @@ tests:
 
 
 def test_python_from_yaml_emits_mmlu_cf_factories() -> None:
+    """Verify python from YAML emits MMLU cf factories."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -887,6 +907,7 @@ tests:
 
 
 def test_yaml_supports_belebele_language_aliases() -> None:
+    """Verify YAML supports belebele language aliases."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "belebele_por_Latn", "max_rows": 1},
@@ -918,6 +939,7 @@ tests:
 
 
 def test_yaml_supports_flores_pt_factories() -> None:
+    """Verify YAML supports flores pt factories."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "flores_pt", "direction": "en-pt", "max_rows": 1},
@@ -950,6 +972,7 @@ tests:
 
 
 def test_yaml_supports_flores_es_factories() -> None:
+    """Verify YAML supports flores es factories."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "flores_es", "direction": "en-es", "max_rows": 1},
@@ -982,6 +1005,7 @@ tests:
 
 
 def test_yaml_supports_phrases_es_factories() -> None:
+    """Verify YAML supports phrases es factories."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "phrases_es", "direction": "es-va", "max_rows": 1},
@@ -1014,6 +1038,7 @@ tests:
 
 
 def test_yaml_supports_remaining_spanish_bench_suite_factories() -> None:
+    """Verify YAML supports remaining spanish bench suite factories."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "wnli_es", "max_rows": 1},
@@ -1045,6 +1070,7 @@ tests:
 
 
 def test_yaml_supports_cocoteros_es_factory() -> None:
+    """Verify YAML supports cocoteros es factory."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "cocoteros_es", "max_rows": 1},
@@ -1069,6 +1095,7 @@ tests:
 
 
 def test_yaml_supports_xlsum_es_factory() -> None:
+    """Verify YAML supports XLSum es factory."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "xlsum_es", "max_rows": 1},
@@ -1093,6 +1120,7 @@ tests:
 
 
 def test_yaml_supports_small_backlog_suite_factories() -> None:
+    """Verify YAML supports small backlog suite factories."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "noticia", "max_rows": 1},
@@ -1149,6 +1177,7 @@ tests:
 
 
 def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
+    """Verify build tests supports new dynamic and generic suites."""
     suites = evalution_yaml._build_tests(
         [
             {"type": "storycloze_2016", "max_rows": 1},
@@ -1215,6 +1244,7 @@ def test_build_tests_supports_new_dynamic_and_generic_suites() -> None:
 
 
 def test_python_from_yaml_emits_new_suite_factories() -> None:
+    """Verify python from YAML emits new suite factories."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -1332,6 +1362,7 @@ tests:
 
 
 def test_python_from_yaml_emits_arithmetic_variants() -> None:
+    """Verify python from YAML emits arithmetic variants."""
     task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _ARITHMETIC_TASKS)
     script = evalution.python_from_yaml(
         f"""
@@ -1349,6 +1380,7 @@ tests:
 
 
 def test_python_from_yaml_emits_aime_variants() -> None:
+    """Verify python from YAML emits aime variants."""
     task_lines = "\n".join(f"  - type: {task}\n    max_rows: 8" for task in _AIME_TASKS)
     script = evalution.python_from_yaml(
         f"""
@@ -1366,6 +1398,7 @@ tests:
 
 
 def test_run_yaml_requires_tests_section() -> None:
+    """Verify run YAML requires tests section."""
     try:
         evalution.run_yaml(
             """
@@ -1382,6 +1415,7 @@ model:
 
 
 def test_python_from_yaml_emits_transformer_compat_name() -> None:
+    """Verify python from YAML emits transformer compat name."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -1399,6 +1433,7 @@ tests:
 
 
 def test_python_from_yaml_emits_gptqmodel_name() -> None:
+    """Verify python from YAML emits gptqmodel name."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -1417,6 +1452,7 @@ tests:
 
 
 def test_python_from_yaml_emits_openvino_name() -> None:
+    """Verify python from YAML emits OpenVINO name."""
     script = evalution.python_from_yaml(
         """
 engine:
@@ -1590,6 +1626,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
 
 
 def test_build_engine_constructs_openvino() -> None:
+    """Verify build engine constructs OpenVINO."""
     engine = evalution_yaml._build_engine(
         {
             "type": "OpenVINO",

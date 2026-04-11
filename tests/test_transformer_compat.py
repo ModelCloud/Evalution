@@ -15,6 +15,7 @@ from evalution.engines.transformers_compat import TransformersCompat, Transforme
 
 
 def test_transformer_compat_defaults_batch_size_to_auto() -> None:
+    """Verify transformer compat defaults batch size to auto."""
     engine = TransformersCompat()
 
     assert engine.batch_size == "auto"
@@ -23,6 +24,7 @@ def test_transformer_compat_defaults_batch_size_to_auto() -> None:
 
 
 def test_transformer_compat_session_describes_generate_compat_backend() -> None:
+    """Verify transformer compat session describes generate compat backend."""
     session = TransformersCompatSession(
         config=TransformersCompat(),
         model_config=Model(path="/tmp/model"),
@@ -42,6 +44,7 @@ def test_transformer_compat_session_describes_generate_compat_backend() -> None:
 
 
 def test_transformer_compat_rejects_paged_attn_implementation() -> None:
+    """Verify transformer compat rejects paged attn implementation."""
     with pytest.raises(ValueError, match="TransformersCompat does not support paged attn_implementation"):
         TransformersCompat(attn_implementation="paged|flash_attention_2").build(
             Model(path="/tmp/model")
@@ -49,6 +52,7 @@ def test_transformer_compat_rejects_paged_attn_implementation() -> None:
 
 
 def test_transformer_compat_session_emulates_continuous_generation(monkeypatch) -> None:
+    """Verify transformer compat session emulates continuous generation."""
     session = TransformersCompatSession(
         config=TransformersCompat(batch_size=2),
         model_config=Model(path="/tmp/model"),
@@ -59,6 +63,7 @@ def test_transformer_compat_session_emulates_continuous_generation(monkeypatch) 
     )
 
     def fake_generate(self, requests, *, batch_size):
+        """Support the surrounding tests with fake generate."""
         assert batch_size in {1, 2}
         return [
             GenerationOutput(

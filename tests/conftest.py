@@ -16,6 +16,7 @@ os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
 
 def pytest_sessionstart(session: pytest.Session) -> None:
     # The no-GIL test matrix must fail fast on the wrong interpreter instead of silently downgrading.
+    """Support the surrounding tests with pytest sessionstart. Preserve the fallback order expected by the surrounding caller."""
     del session
     # allow skip for tensorrt-llm requires py <= 3.12
     if os.environ.get("EVALUTION_SKIP_GIL_CHECK") == "1":

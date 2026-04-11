@@ -16,6 +16,7 @@ from datasets import Dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _SOCIAL_IQA_ARCHIVE_URL = (
     "https://storage.googleapis.com/ai2-mosaic/public/socialiqa/socialiqa-train-dev.zip"
 )
@@ -33,10 +34,12 @@ _SOCIAL_IQA_SPLIT_FILES = {
 
 
 def _social_iqa_prompt(context: str, question: str) -> str:
+    """Implement social iqa prompt for this module."""
     return f"Q: {context.strip()} {question.strip()}\nA:"
 
 
 def _social_iqa_cache_path(cache_dir: str | None) -> Path:
+    """Implement social iqa cache path for this module."""
     if cache_dir is not None:
         base_dir = Path(cache_dir)
     else:
@@ -45,6 +48,7 @@ def _social_iqa_cache_path(cache_dir: str | None) -> Path:
 
 
 def _ensure_social_iqa_archive(*, cache_dir: str | None) -> Path:
+    """Ensure social iqa archive."""
     archive_path = _social_iqa_cache_path(cache_dir)
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     if not archive_path.exists():
@@ -59,6 +63,7 @@ def _load_social_iqa_dataset(
     cache_dir: str | None = None,
     stream: bool = (False),
 ) -> Dataset:
+    """Load social iqa dataset."""
     del stream
     if dataset_path != "allenai/social_i_qa":
         raise ValueError(f"unsupported Social IQA dataset path: {dataset_path!r}")
@@ -83,17 +88,22 @@ def _load_social_iqa_dataset(
 
 @dataclass(slots=True)
 class SIQA(BaseMultipleChoiceSuite):
+    """Implement the SIQA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "allenai/social_i_qa"
     split: str = "validation"
     stream: bool = (False)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_social_iqa_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "siqa"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [doc["answerA"], doc["answerB"], doc["answerC"]]
         return MultipleChoiceSample(
             index=index,
@@ -109,4 +119,5 @@ class SIQA(BaseMultipleChoiceSuite):
 
 
 def siqa(**kwargs: Any) -> SIQA:
+    """Implement SIQA for this module."""
     return SIQA(**kwargs)

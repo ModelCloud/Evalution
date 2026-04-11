@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 wsc_module = importlib.import_module("evalution.benchmarks.wsc")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 9
         assert len(requests) == 2
         assert requests[0].context == (
@@ -33,6 +36,7 @@ class FakeSession:
 
 
 def test_wsc_scores_superglue_wsc_fixed_accuracy(monkeypatch) -> None:
+    """Verify WSC scores superglue WSC fixed accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -74,6 +78,7 @@ def test_wsc_scores_superglue_wsc_fixed_accuracy(monkeypatch) -> None:
 
 
 def test_wsc_prompt_matches_upstream_wsc_formatting() -> None:
+    """Verify WSC prompt matches upstream WSC formatting."""
     doc = {
         "text": "The fish ate the worm. It was tasty.",
         "span1_text": "the worm",

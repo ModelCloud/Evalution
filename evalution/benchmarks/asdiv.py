@@ -19,15 +19,18 @@ from evalution.benchmarks.single_continuation import (
 
 
 def _asdiv_numeric_target(doc: dict[str, Any]) -> str:
+    """Implement asdiv numeric target for this module."""
     answer = str(doc["answer"])
     return answer.split(" (", 1)[0].strip()
 
 
 def _asdiv_prompt(doc: dict[str, Any]) -> str:
+    """Implement asdiv prompt for this module."""
     return f"{str(doc['body'])}\nQuestion:{str(doc['question'])}\nAnswer:"
 
 
 def _asdiv_llama_prompt(doc: dict[str, Any]) -> str:
+    """Implement asdiv llama prompt for this module."""
     body = str(doc.get("body", "")).strip()
     question = str(doc["question"]).strip()
     problem = f"{body} {question}".strip()
@@ -38,6 +41,7 @@ def _asdiv_llama_prompt(doc: dict[str, Any]) -> str:
     )
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _ASDIV_VARIANTS = _build_variant_specs("asdiv")
 _ASDIV_COT_LLAMA_VARIANTS = {
     "cot_llama": replace(
@@ -50,23 +54,30 @@ _ASDIV_COT_LLAMA_VARIANTS = {
 
 @dataclass(slots=True)
 class ASDiv(BaseSingleContinuationSuite):
+    """Define the asdiv helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "EleutherAI/asdiv"
     dataset_name: str | None = None
     split: str = "validation"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "asdiv"
 
     def continuation_for_target(self, target: str) -> str:
+        """Implement continuation for target for asdiv."""
         return target
 
     def include_perplexity(self) -> bool:
+        """Implement include perplexity for asdiv."""
         return False
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> SingleContinuationSample:
+        """Build one benchmark sample from a dataset row."""
         return SingleContinuationSample(
             index=index,
             prompt=_asdiv_prompt(doc),
@@ -83,6 +94,8 @@ class ASDiv(BaseSingleContinuationSuite):
 
 @dataclass(slots=True)
 class ASDivCoTLlama(BaseGSM8KSuite):
+    """Define the asdiv co tllama helper class."""
+    # Keep the class-level state explicit for this helper.
     VARIANTS = _ASDIV_COT_LLAMA_VARIANTS
     SCORING_MODE = "numeric_format_insensitive"
     dataset_path: str = "EleutherAI/asdiv"
@@ -91,12 +104,15 @@ class ASDivCoTLlama(BaseGSM8KSuite):
     variant: GSM8KVariant = "cot_llama"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def numeric_target_from_doc(self, doc: dict[str, Any]) -> str:
+        """Implement numeric target from doc for asdiv co tllama."""
         return _asdiv_numeric_target(doc)
 
     def _sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
+        """Implement sample metadata for asdiv co tllama."""
         return {
             "solution_type": str(doc["solution_type"]),
             "formula": str(doc["formula"]),
@@ -104,8 +120,10 @@ class ASDivCoTLlama(BaseGSM8KSuite):
 
 
 def asdiv(**kwargs: Any) -> ASDiv:
+    """Implement asdiv for this module."""
     return ASDiv(**kwargs)
 
 
 def asdiv_cot_llama(**kwargs: Any) -> ASDivCoTLlama:
+    """Implement asdiv cot llama for this module."""
     return ASDivCoTLlama(**kwargs)

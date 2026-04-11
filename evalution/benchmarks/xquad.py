@@ -16,16 +16,19 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.qa_text import best_qa_scores, canonicalize_no_answer
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 XQUAD_LANGUAGES = ("ar", "de", "el", "en", "es", "hi", "ro", "ru", "th", "tr", "vi", "zh")
 XQUAD_TASKS = tuple(f"xquad_{language}" for language in XQUAD_LANGUAGES)
 _STOP_STRINGS = ("\n", "\nQuestion:", "\nContext:")
 
 
 def _xquad_prompt(*, context: str, question: str) -> str:
+    """Implement XQuAD prompt for this module."""
     return f"Context: {context.strip()}\n\nQuestion: {question.strip()}\n\nAnswer:"
 
 
 def _xquad_answer_texts(doc: dict[str, Any]) -> list[str]:
+    """Implement XQuAD answer texts for this module."""
     answers = doc["answers"]["text"]
     deduped: list[str] = []
     for answer in answers:
@@ -39,6 +42,8 @@ def _xquad_answer_texts(doc: dict[str, Any]) -> list[str]:
 
 @dataclass(slots=True)
 class XQuAD(BaseTestSuite):
+    """Implement the xqu ad benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "google/xquad"
     dataset_name: str | None = "xquad.en"
     split: str = "validation"
@@ -52,6 +57,7 @@ class XQuAD(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in XQUAD_LANGUAGES:
             raise ValueError(f"unsupported xquad language: {self.language!r}")
         expected_dataset_name = f"xquad.{self.language}"
@@ -61,9 +67,11 @@ class XQuAD(BaseTestSuite):
         raise ValueError("xquad dataset_name must match the configured language")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"xquad_{self.language}"
 
     def result_metadata(
@@ -71,6 +79,7 @@ class XQuAD(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_qa_exact_match_f1",
@@ -78,6 +87,7 @@ class XQuAD(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             answers = _xquad_answer_texts(doc)
             yield PreparedSample(
@@ -101,6 +111,7 @@ class XQuAD(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         answers = _xquad_answer_texts(prepared_sample.doc)
         exact, f1_score, best_index = best_qa_scores(output.text, answers)
         return SampleResult(
@@ -128,12 +139,15 @@ class XQuAD(BaseTestSuite):
 
 
 def xquad(*, language: str, **kwargs: Any) -> XQuAD:
+    """Implement XQuAD for this module."""
     kwargs.setdefault("dataset_name", f"xquad.{language}")
     return XQuAD(language=language, **kwargs)
 
 
 def _make_xquad_factory(language: str) -> Any:
+    """Make XQuAD factory."""
     def factory(**kwargs: Any) -> XQuAD:
+        """Implement factory for this module."""
         return xquad(language=language, **kwargs)
 
     factory.__name__ = f"xquad_{language}"

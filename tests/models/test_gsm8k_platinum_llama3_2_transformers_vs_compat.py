@@ -19,6 +19,7 @@ from tests.models_support import (
     assert_metrics_match_baseline,
 )
 
+# Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
 
 # Freeze the shared GSM8K Platinum settings so both engines run the exact same workload.

@@ -11,20 +11,24 @@ from collections import Counter
 from collections.abc import Iterable, Sequence
 import pcre
 
+# Keep scorer defaults and parser helpers explicit at module scope.
 _SPLIT_PUNCTS_PATTERN = pcre.compile(r"[\w]+|[^\s\w]")
 
 
 def _split_punct_tokens(text: str) -> list[str]:
+    """Split punct tokens. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _SPLIT_PUNCTS_PATTERN.findall(text.strip().lower())
 
 
 def _as_reference_texts(reference: str | Sequence[str]) -> list[str]:
+    """Implement as reference texts for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if isinstance(reference, str):
         return [reference]
     return [str(item) for item in reference]
 
 
 def _count_ngrams(tokens: Sequence[str], *, max_order: int) -> Counter[tuple[str, ...]]:
+    """Implement count ngrams for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     counts: Counter[tuple[str, ...]] = Counter()
     for order in range(1, max_order + 1):
         for index in range(len(tokens) - order + 1):
@@ -36,6 +40,7 @@ def smoothed_corpus_bleu_4(
     references: Sequence[str | Sequence[str]],
     predictions: Sequence[str],
 ) -> float:
+    """Implement smoothed corpus bleu 4 for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     if len(references) != len(predictions):
         raise ValueError("references and predictions must have the same length")
 
