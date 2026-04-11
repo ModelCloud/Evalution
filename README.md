@@ -6,14 +6,15 @@
 </div>
 <h1 align="center">Evalution</h1>
 
-Evalution is a modern LLM evaluation toolkit.
-Install:
+Evalution is a modern LLM evaluation toolkit for fast, benchmark-faithful, multi-engine model evaluation. 🚀
+
+Install ⚡
 
 ```bash
 pip install Evalution
 ```
 
-Install from source:
+Install from source 🛠️
 
 ```bash
 git clone https://github.com/modelcloud/Evalution.git
@@ -21,8 +22,21 @@ cd Evalution
 pip install .
 ```
 
-Runtime dependencies include `transformers`, `datasets`, `logbar`, and `PyPcre`.
-The package also depends on `tokenicer` for tokenizer loading and normalization.
+Core runtime dependencies stay lean: `transformers`, `datasets`, `logbar`, `PyPcre`, and `tokenicer`. 🪶
+
+## Why Evalution ✨
+
+**7 engines. 126 built-in benchmark families. 213 in-tree CUDA regression suite specs.**
+
+- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `GPTQModel`, and `OpenVINO`.
+- 📚 Broad benchmark coverage: 126 documented built-in benchmark families spanning reasoning, multilingual evals, coding, long-context, QA, perplexity, safety, and more.
+- 🧪 NVIDIA-first validation: the repo includes 213 Llama 3.2 single-suite CUDA regression specs, with RTX 4090 and A100-aware baselines where scores are pinned.
+- 🪶 Minimal core deps: the default install stays focused and avoids dragging in every backend dependency up front.
+- 🧼 Clean API: Python, YAML, CLI, single-model runs, and compare flows all share the same readable shape.
+- 📝 YAML support: run configs from YAML and emit Python back from YAML when you want a code path.
+- 🔌 Easy to extend: adding new engines and new benchmark suites follows a clear public contract with contributor docs in-tree.
+- ⚖️ Side-by-side compare mode: run threaded left/right model lanes against the same suite list and get one consolidated summary.
+- 🎯 Benchmark-faithful by default: suites aim to stay close to original papers and released reference behavior, not just headline numbers.
 
 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
 Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
@@ -30,7 +44,7 @@ scorer-module mapping live in [docs/scorers.md](docs/scorers.md).
 Contributor guidance for adding new eval/benchmark/test suites lives in
 [docs/new_suite_guidelines.md](docs/new_suite_guidelines.md).
 
-Simple usage:
+Simple usage 🧪
 
 ```python
 import evalution.benchmarks as benchmarks
@@ -43,7 +57,7 @@ result = (
 )
 ```
 
-Advanced usage:
+Advanced usage 🧠
 
 ```python
 import evalution as eval
@@ -82,7 +96,7 @@ result = (
 The chained object is already the completed run handle. Accessing `result.model`, `result.engine`,
 `result.tests`, or `result.to_dict()` finalizes the run and closes the engine session implicitly.
 
-Compare usage:
+Compare usage ⚖️
 
 ```python
 import evalution as eval
@@ -112,7 +126,7 @@ suite list on both lanes while allowing different engines and model configs on t
 When the terminal supports LogBar split panes, Evalution binds each lane to its own pane and
 renders a consolidated compare summary when the run closes.
 
-YAML usage:
+YAML usage 📝
 
 ```yaml
 engine:
@@ -144,7 +158,7 @@ result = eval.run_yaml("evalution.yaml")
 python_script = eval.python_from_yaml("evalution.yaml")
 ```
 
-CLI usage:
+CLI usage 💻
 
 ```bash
 evalution evalution.yaml
@@ -170,7 +184,7 @@ Per-benchmark options such as `apply_chat_template`, `batch_size`, `max_new_toke
 `order`, and scorer-specific options like `label_permutations` can be set directly on each benchmark
 call or in each YAML `tests` entry.
 
-## Benchmark Row Order
+## Benchmark Row Order 🔀
 
 Dataset-backed benchmarks support an `order` override that controls benchmark row traversal order.
 This is a benchmark-level dataset ordering control, separate from any engine-internal request
@@ -209,7 +223,7 @@ Notes:
 - Ordering is applied after the benchmark's selected rows are loaded and capped by `max_rows`.
 - When `stream=True`, `order` must stay `native`.
 
-## Subset Selection
+## Subset Selection 🧭
 
 Subset-aware benchmarks use a `subsets` selector instead of benchmark-specific selector names.
 Currently this applies to `mmlu` and `mmlu_pro`.
@@ -249,14 +263,14 @@ tests:
     num_fewshot: 5
 ```
 
-## Engine Samples
+## Engine Samples 🔌
 
 Each exported engine has a minimal sample below. `Transformers` covers both the modern
 `Transformers` engine and the fixed-batch `TransformersCompat` engine; swap `Transformers` for
 `TransformersCompat` or `type: Transformers` for `type: TransformersCompat` when you need the
 compatibility backend explicitly.
 
-### Transformers / TransformersCompat
+### Transformers / TransformersCompat 🤗
 
 Use `engines.Transformers()` in Python or `engine.type: Transformers` in YAML when you want the
 preferred Hugging Face runtime.
@@ -292,7 +306,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### SGLang
+### SGLang ⚡
 
 Use `engines.SGLang()` in Python or `engine.type: SGLang` in YAML when you want the SGLang runtime.
 Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
@@ -333,7 +347,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### VLLM
+### VLLM 🚀
 
 Use `engines.VLLM()` in Python or `engine.type: VLLM` in YAML when you want the vLLM runtime.
 Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelihood(...)`, and
@@ -377,7 +391,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### TensorRTLLM
+### TensorRTLLM 🧠
 
 Use `engines.TensorRTLLM()` in Python or `engine.type: TensorRTLLM` in YAML when you want the
 TensorRT-LLM runtime. Configure `tensorrt_llm_path` only when `tensorrt_llm` is not importable
@@ -416,7 +430,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### GPTQModel
+### GPTQModel 🪶
 
 Use `engines.GPTQModel()` in Python or `engine.type: GPTQModel` in YAML when you want to load a
 quantized checkpoint through GPTQModel's native loader. Configure `gptqmodel_path` only when the
@@ -456,7 +470,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-### OpenVINO
+### OpenVINO 🔧
 
 Use `engines.OpenVINO()` in Python or `engine.type: OpenVINO` in YAML when you want to run an
 Optimum Intel `OVModelForCausalLM` backend.
@@ -517,7 +531,7 @@ result = (
 
 YAML flows can only configure `tokenizer_path`; passing a live tokenizer object is Python-only.
 
-## Supported Benchmarks
+## Supported Benchmarks 📚
 
 Evalution currently ships the following built-in benchmarks:
 
@@ -696,9 +710,9 @@ Metric key glossary:
 - `macro`: macro-average across labels rather than a single positive class.
 - `boolean`: positive-class metric using the suite's positive boolean label.
 
-Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting.
+Evalution also includes the Hugging Face `transformers` inference engine, YAML execution, a packaged CLI, and `logbar`-powered runtime progress reporting. 📈
 
-## Citation
+## Citation 📎
 
 If you use Evalution, cite the project itself. If you use one or more built-in suites, also cite the
 original benchmark papers below.
