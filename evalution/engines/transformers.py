@@ -216,8 +216,18 @@ def _transformers_supports_flash_attention_auto_max_blocks() -> bool:
     except Exception:
         return False
 
-    max_blocks_field = ContinuousBatchingConfig.__dataclass_fields__.get("max_blocks_per_request")
-    return max_blocks_field is not None and max_blocks_field.default is None
+    dataclass_fields = getattr(ContinuousBatchingConfig, "__dataclass_fields__", None)
+    if isinstance(dataclass_fields, dict):
+        max_blocks_field = dataclass_fields.get("max_blocks_per_request")
+        return max_blocks_field is not None and max_blocks_field.default is None
+
+    try:
+        signature = inspect.signature(ContinuousBatchingConfig)
+    except (TypeError, ValueError):
+        return False
+
+    max_blocks_parameter = signature.parameters.get("max_blocks_per_request")
+    return max_blocks_parameter is not None and max_blocks_parameter.default is None
 
 
 def _patch_continuous_batching_flash_attention_decode_once() -> None:
