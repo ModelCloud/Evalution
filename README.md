@@ -442,12 +442,15 @@ such as `/v1/chat/completions` or `/v1/completions`, plus the Evalution scoring 
 Python:
 
 ```python
+import os
+
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
 result = (
     engines.OpenAICompatible(
         base_url="http://127.0.0.1:8000",
+        api_key=os.environ["OPENAI_API_KEY"],
         batch_size=4,
     )
     .model(path="meta-llama/Llama-3.2-1B-Instruct")
@@ -461,6 +464,7 @@ YAML:
 engine:
   type: OpenAICompatible
   base_url: http://127.0.0.1:8000
+  api_key: ${OPENAI_API_KEY}
   batch_size: 4
 
 model:
