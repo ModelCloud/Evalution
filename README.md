@@ -1,7 +1,11 @@
-# Evalution
+<p align=center>
+<div align=center>
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/0385a9b5-a249-49bf-943f-6ecfd3c7c73c" />
 
-Modern LLM evaluation with a small, explicit runtime API.
+</div>
+<h1 align="center">Evalution</h1>
 
+Evalution is a modern LLM evaluation toolkit.
 Install:
 
 ```bash
