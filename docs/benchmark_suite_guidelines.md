@@ -9,13 +9,6 @@ This document defines the minimum bar for adding new Evalution benchmark, eval, 
 - Do not invent a new metric name, extraction rule, or scoring pipeline when an existing Evalution score already represents the benchmark faithfully.
 - If the benchmark owner publishes a scoring rule, implement that rule clean-room and map it onto the closest existing Evalution score surface when possible.
 
-## Scope Fit For New Suites
-
-- Add a benchmark to Evalution only when it can be expressed through the current suite contract: dataset rows become `GenerationRequest` or log-likelihood requests, and each sample can be scored inside the suite itself.
-- Benchmarks like `GPQA` fit this model because they are standard dataset-backed question answering suites; Evalution already exposes `gpqa_main`, `gpqa_diamond`, and `gpqa_extended`.
-- Do not add agent-harness benchmarks such as `SWE-Bench` or `Terminal-Bench` as ordinary Evalution suites. Their official evaluations require repository checkout, environment setup, patch application, containerized or sandboxed execution, and benchmark-owned orchestration beyond Evalution's current `BaseTestSuite` and `InferenceSession` APIs.
-- If Evalution later adds a first-class agent runtime with repository, shell, and container lifecycle management, re-evaluate those benchmarks in that dedicated framework instead of forcing them into the current prompt-and-score path.
-
 ## Regex Policy For New Suites
 
 - Use the `pcre` module from `PyPcre` for all regex work. Do not add `import re` or `import regex`.
