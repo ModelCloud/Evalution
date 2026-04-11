@@ -6527,7 +6527,11 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_pt": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_pt(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_pt",
-        baseline={"acc,ll": 0.40625, "ppl,ll": 22.182617076504428},
+        baseline=_select_llama3_2_gpu_baseline(
+            default={"acc,ll": 0.40625, "ppl,ll": 22.182617076504428},
+            rtx4090={"acc,ll": 0.4140625, "ppl,ll": 22.15699203823154},
+            a100={"acc,ll": 0.40625, "ppl,ll": 22.182617076504428},
+        ),
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
