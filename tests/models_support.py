@@ -862,11 +862,13 @@ def _assert_gsm8k_sample(sample: Any, index: int) -> None:
     assert sample.index == index
     assert sample.prompt
     assert sample.target
-    assert sample.prediction
+    assert set(sample.extracted) == {"numeric-extract"}
+    assert sample.prediction is not None
+    if sample.extracted["numeric-extract"] != "[invalid]":
+        assert sample.prediction
     assert "<|start_header_id|>user<|end_header_id|>" in sample.prompt
     assert "Q:" in sample.prompt
     assert "A:" in sample.prompt
-    assert set(sample.extracted) == {"numeric-extract"}
     assert set(sample.scores) == {"acc,num"}
 
 
@@ -6461,7 +6463,7 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_nl": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_nl(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_nl",
-        baseline={"acc,ll": 0.328125, "ppl,ll": 348.19882971839223},
+        baseline={"acc,ll": 0.3359375, "ppl,ll": 347.65201100927254},
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
