@@ -180,6 +180,7 @@ def _build_session(
         llm=fake_llm,
         llama_module=fake_module,
         prepare_tokenizer=prepare_tokenizer,
+        requested_device=device or "auto",
         effective_device=device or "cpu",
         gpu_offload_supported=device == "cuda",
         effective_n_gpu_layers=-1 if device == "cuda" else 0,
@@ -258,23 +259,50 @@ def test_llama_cpp_build_enables_full_gpu_offload_when_available(monkeypatch) ->
             "logits_all": True,
         }
     ]
+    assert session.describe_execution()["requested_device"] == "cuda"
     assert session.describe_execution()["device"] == "cuda"
     assert session.describe_execution()["n_gpu_layers"] == -1
 
 
-def test_llama_cpp_build_rejects_cuda_without_gpu_offload(monkeypatch) -> None:
-    """Verify CUDA requests fail fast when the installed llama.cpp build is CPU-only."""
+def test_llama_cpp_build_falls_back_to_cpu_without_gpu_offload(monkeypatch) -> None:
+    """Verify CUDA requests degrade to CPU when the installed llama.cpp build is CPU-only."""
 
+    fake_module = FakeLlamaModule(gpu_offload_supported=False)
     monkeypatch.setattr(
         "evalution.engines.llama_cpp_engine._import_llama_cpp",
-        lambda llama_cpp_path: FakeLlamaModule(gpu_offload_supported=False),
+        lambda llama_cpp_path: fake_module,
+    )
+    monkeypatch.setattr(
+        "evalution.engines.llama_cpp_engine._maybe_load_prepare_tokenizer",
+        lambda **kwargs: None,
     )
 
-    with pytest.raises(
-        RuntimeError,
-        match="does not support GPU offload",
-    ):
-        LlamaCpp(device="cuda").build(Model(path="/tmp/model.gguf"))
+    session = LlamaCpp(device="cuda", n_gpu_layers=12).build(Model(path="/tmp/model.gguf"))
+
+    assert session.describe_execution()["requested_device"] == "cuda"
+    assert session.describe_execution()["device"] == "cpu"
+    assert session.describe_execution()["n_gpu_layers"] == 0
+    assert fake_module.init_kwargs[0]["n_gpu_layers"] == 0
+
+
+def test_llama_cpp_build_accepts_mlx_device_when_gpu_offload_is_available(monkeypatch) -> None:
+    """Verify MLX-style device requests are accepted as a GPU-backed llama.cpp mode."""
+
+    fake_module = FakeLlamaModule(gpu_offload_supported=True)
+    monkeypatch.setattr(
+        "evalution.engines.llama_cpp_engine._import_llama_cpp",
+        lambda llama_cpp_path: fake_module,
+    )
+    monkeypatch.setattr(
+        "evalution.engines.llama_cpp_engine._maybe_load_prepare_tokenizer",
+        lambda **kwargs: None,
+    )
+
+    session = LlamaCpp(device="mlx").build(Model(path="/tmp/model.gguf"))
+
+    assert session.describe_execution()["requested_device"] == "mlx"
+    assert session.describe_execution()["device"] == "mlx"
+    assert session.describe_execution()["n_gpu_layers"] == -1
 
 
 def test_llama_cpp_session_generate_uses_completion_and_chat_paths() -> None:

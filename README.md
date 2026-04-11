@@ -492,8 +492,8 @@ pip install --no-binary=:all: --force-reinstall llama-cpp-python
 
 Notes:
 
-- `device: cuda` requires a CUDA-enabled `llama-cpp-python` build. Evalution will fail fast when
-  the installed binding reports no GPU offload support.
+- `device` can be `auto`, `cuda`, `cpu`, or `mlx`. When a GPU-backed request is not available in
+  the installed binding, Evalution falls back to CPU instead of aborting engine construction.
 - `generate_continuous(...)` is emulated with Evalution-owned request/result queues because
   llama.cpp does not expose the same request-level scheduler API as vLLM.
 - `LlamaCpp` uses llama.cpp's native tokenizer for prompt tokenization and scoring. An optional

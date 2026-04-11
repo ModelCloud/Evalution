@@ -160,9 +160,10 @@ surfaces the resolved quantized runtime backend in execution metadata.
 generation plus both log-likelihood APIs fully in process. Since llama.cpp does not expose the
 same request-level scheduler primitives as vLLM or some TensorRT-LLM builds, Evalution preserves
 the `generate_continuous(...)` contract with an explicit request/result queue bridge around
-fixed-size execution batches. CUDA execution depends on a source-built `llama-cpp-python` install
-with `GGML_CUDA=on`; when the installed binding reports no GPU offload support, Evalution rejects
-`device="cuda"` up front instead of silently falling back to CPU.
+fixed-size execution batches. `LlamaCpp` accepts `device="auto"`, `device="cuda"`,
+`device="cpu"`, and `device="mlx"`. CUDA execution still depends on a source-built
+`llama-cpp-python` install with `GGML_CUDA=on`, but when the installed binding does not expose the
+requested GPU mode Evalution degrades to CPU instead of failing engine construction.
 
 `engines.OpenVINO()` loads decoder-only models through `optimum.intel.openvino.OVModelForCausalLM`
 while reusing Evalution's shared transformer-style generation, log-likelihood, and rolling

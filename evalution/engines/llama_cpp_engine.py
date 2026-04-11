@@ -97,6 +97,7 @@ class LlamaCppSession(BaseInferenceSession):
     llm: Any
     llama_module: Any
     prepare_tokenizer: Any | None
+    requested_device: str
     effective_device: str
     gpu_offload_supported: bool
     effective_n_gpu_layers: int
@@ -156,6 +157,7 @@ class LlamaCppSession(BaseInferenceSession):
             llm=llm,
             llama_module=llama_module,
             prepare_tokenizer=prepare_tokenizer,
+            requested_device=_normalize_requested_device(config.device),
             effective_device=effective_device,
             gpu_offload_supported=gpu_offload_supported,
             effective_n_gpu_layers=effective_n_gpu_layers,
@@ -173,6 +175,7 @@ class LlamaCppSession(BaseInferenceSession):
         return {
             "generation_backend": "llama_cpp_completion",
             "continuous_batching": "queue_emulated",
+            "requested_device": self.requested_device,
             "device": self.effective_device,
             "gpu_offload_supported": self.gpu_offload_supported,
             "n_gpu_layers": self.effective_n_gpu_layers,
@@ -755,16 +758,16 @@ def _llama_supports_gpu_offload(llama_module: Any) -> bool:
 def _resolve_effective_device(requested_device: str | None, gpu_offload_supported: bool) -> str:
     """Resolve the runtime device selection while validating CUDA-specific requests early."""
 
-    normalized = (requested_device or "").strip().lower()
-    if normalized in {"", "auto"}:
-        return "cuda" if gpu_offload_supported else "cpu"
-    if normalized in {"cuda", "gpu"} and not gpu_offload_supported:
-        raise RuntimeError(
-            "LlamaCpp requested CUDA execution but the installed llama.cpp build does not support GPU offload"
-        )
-    if normalized in {"cuda", "gpu"}:
-        return "cuda"
+    normalized = _normalize_requested_device(requested_device)
+    if normalized == "auto":
+        if not gpu_offload_supported:
+            return "cpu"
+        return "mlx" if sys.platform == "darwin" else "cuda"
     if normalized == "cpu":
+        return "cpu"
+    if normalized in {"cuda", "mlx"}:
+        if gpu_offload_supported:
+            return normalized
         return "cpu"
     raise ValueError(f"unsupported LlamaCpp device: {requested_device!r}")
 
@@ -779,13 +782,26 @@ def _resolve_n_gpu_layers(
 
     if requested_n_gpu_layers is not None:
         if requested_n_gpu_layers > 0 and not gpu_offload_supported:
-            raise RuntimeError(
-                "LlamaCpp requested GPU layer offload but the installed llama.cpp build does not support it"
-            )
+            return 0
         return requested_n_gpu_layers
-    if effective_device == "cuda" and gpu_offload_supported:
+    if effective_device in {"cuda", "mlx"} and gpu_offload_supported:
         return -1
     return 0
+
+
+def _normalize_requested_device(requested_device: str | None) -> str:
+    """Normalize the public device control into the small set of LlamaCpp runtime intents."""
+
+    normalized = (requested_device or "").strip().lower()
+    if normalized in {"", "auto"}:
+        return "auto"
+    if normalized in {"cuda", "gpu"}:
+        return "cuda"
+    if normalized in {"mlx", "metal"}:
+        return "mlx"
+    if normalized == "cpu":
+        return "cpu"
+    raise ValueError(f"unsupported LlamaCpp device: {requested_device!r}")
 
 
 def _maybe_load_prepare_tokenizer(
