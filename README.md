@@ -26,10 +26,10 @@ Core runtime dependencies stay lean: `transformers`, `datasets`, `logbar`, `PyPc
 
 ## Why Evalution ✨
 
-**8 engines. 126 built-in benchmark families. 213 in-repo GPU benchmark regression tests.**
+**8 engines. 153 built-in benchmark families. 213 in-repo GPU benchmark regression tests.**
 
 - 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `OpenAICompatible`, `GPTQModel`, and `OpenVINO`.
-- 📚 Broad benchmark coverage: 126 documented built-in benchmark families spanning reasoning, multilingual evals, coding, long-context, QA, perplexity, safety, and more.
+- 📚 Broad benchmark coverage: 153 documented built-in benchmark families spanning reasoning, multilingual evals, coding, long-context, QA, perplexity, safety, and more.
 - 🧪 GPU validated: the repo includes 213 in-repo GPU benchmark regression tests for individual Llama 3.2 benchmark runs, with RTX 4090 and A100-aware baselines where scores are pinned.
 - ⚡ Speed: Evalution is faster than many evaluators and attempts continuous batching by default when the selected engine supports it.
 - 🪶 Minimal core deps: the default install stays focused and avoids dragging in every backend dependency up front.
@@ -704,6 +704,7 @@ built-in suite names covered by that row.
 | <code>arithmetic_{1dc,<wbr>2da,<wbr>2dm,<wbr>2ds,<wbr>3da,<wbr>3ds,<wbr>4da,<wbr>4ds,<wbr>5da,<wbr>5ds}</code> | GPT-3 arithmetic `brown2020gpt3` |
 | `asdiv` | ASDiv `miao2021diverse` |
 | `asdiv_cot_llama` | ASDiv `miao2021diverse` |
+| `assin` | ASSIN `fonseca2016assin` |
 | `babi` | bAbI `weston2015towards` |
 | `babilong` | BABILong `kuratov2024babilong` |
 | `bbh` | BIG-Bench Hard `suzgun2022challenging` |
@@ -726,6 +727,7 @@ built-in suite names covered by that row.
 | `cnn_dailymail` | CNN/DailyMail `nallapati2016abstractive` |
 | `code_x_glue` | CodeXGLUE `lu2021codexglue` |
 | `commonsense_qa` | CommonsenseQA `talmor2019commonsenseqa` |
+| `cocoteros_es` | COCOTEROS `maestre2024cocoteros` |
 | `coqa` | CoQA `reddy2019coqa` |
 | `copa` | SuperGLUE `wang2019superglue` |
 | `copa_ar` | AlGhafa `almazrouei-etal-2023-alghafa` |
@@ -736,7 +738,9 @@ built-in suite names covered by that row.
 | `drop` | DROP `dua2019drop` |
 | `fld` | FLD `morishita2023learning` |
 | `fda` | BASED / FDA `arora2024simple` |
-| `french_bench_arc_challenge` | FrenchBench ARC-Challenge |
+| `flores_es` | FLORES-101 `goyal2021flores101` |
+| `flores_pt` | FLORES-101 `goyal2021flores101` |
+| `french_bench_arc_challenge` | FrenchBench ARC-Challenge dataset `manu_french_bench_arc_challenge` |
 | `gpqa` | GPQA `rein2024gpqa` |
 | `gsm_plus`, `gsm_plus_mini` | GSM-Plus `li2024gsmpluscomprehensivebenchmarkevaluating` |
 | <code>ethics_{cm,<wbr>deontology,<wbr>justice,<wbr>utilitarianism,<wbr>virtue}</code> | ETHICS `hendrycks2021ethics` |
@@ -744,7 +748,10 @@ built-in suite names covered by that row.
 | `gsm8k_fr` | GSM8K `cobbe2021trainingverifierssolvemath`, French translation dataset `cmh2025gsm8kfr` |
 | `gsm8k_ko` | GSM8K `cobbe2021trainingverifierssolvemath`, Korean translation dataset `kuotient2024gsm8kko` |
 | `gsm8k_platinum` | GSM8K-Platinum `vendrow2025largelanguagemodelbenchmarks` |
+| <code>graphwalks_{128k,<wbr>1M}</code> | GraphWalks dataset `openai_graphwalks_dataset` |
+| `groundcocoa` | GroundCocoa `kohli2025groundcocoabenchmarkevaluatingcompositional` |
 | `mgsm` | MGSM `shi2022multilingualchainofthought` |
+| `mgsm_direct_es_spanish_bench` | MGSM `shi2022multilingualchainofthought`, IberoBench `baucells-etal-2025-iberobench` |
 | `haerae` | HAE-RAE `son-etal-2024-hae` |
 | `hellaswag` | HellaSwag `zellers2019hellaswag` |
 | `headqa_{en,es}` | HEAD-QA `vilares-gomez-rodriguez-2019-head` |
@@ -758,32 +765,44 @@ built-in suite names covered by that row.
 | `kormedmcqa` | KorMedMCQA `kweon2024kormedmcqa` |
 | `icelandic_winogrande` | Icelandic WinoGrande `snaebjarnarson-etal-2022-warm` |
 | <code>lambada_{openai,<wbr>openai_cloze,<wbr>standard,<wbr>standard_cloze}</code> | LAMBADA `paperno2016lambada` |
-| <code>lambada_openai_mt_{de,<wbr>en,<wbr>es,<wbr>fr,<wbr>it}</code>, <code>lambada_openai_mt_stablelm_{de,<wbr>en,<wbr>es,<wbr>fr,<wbr>it,<wbr>nl,<wbr>pt}</code> | LAMBADA-MT |
+| <code>lambada_openai_mt_{de,<wbr>en,<wbr>es,<wbr>fr,<wbr>it}</code>, <code>lambada_openai_mt_stablelm_{de,<wbr>en,<wbr>es,<wbr>fr,<wbr>it,<wbr>nl,<wbr>pt}</code> | LAMBADA-MT datasets `eleutherai_lambada_multilingual_dataset`, `eleutherai_lambada_multilingual_stablelm_dataset` |
 | `inverse_scaling` | Inverse Scaling Prize `mckenzie2023inverse` |
 | `logiqa` | LogiQA `liu2020logiqa` |
 | `logiqa2` | LogiQA 2.0 `liu2022logiqa2` |
+| `longbench` | LongBench `bai2024longbench` |
+| `longbench2` | LongBench v2 `bai2024longbench2` |
 | `humaneval` | HumanEval `chen2021evaluatinglargelanguagemodels` |
 | `mbpp` | MBPP `austin2021program` |
-| `mastermind` | Mastermind |
+| `mastermind` | Mastermind dataset `flair_mastermind_datasets` |
 | `mathqa` | MathQA `amini2019mathqa` |
 | `mc_taco` | MC-TACO `zhou2019mctaco` |
 | `medmcqa` | MedMCQA `pmlr-v174-pal22a` |
 | `medqa_4options` | MedQA `jin2020disease` |
+| `mediqa_qa2019` | MEDIQA 2019 QA `ben-abacha-etal-2019-overview` |
+| `meqsum` | MeQSum `MeQSum` |
+| `mlqa` | MLQA `lewis2019mlqa` |
 | `mmlu` | MMLU `hendryckstest2021` |
 | `mmlu_cf` | MMLU-CF `zhao2024mmlucf` |
 | `mmlu_pro` | MMLU-Pro `wang2024mmlupro` |
+| `mmlu_pro_plus` | MMLU-Pro-Plus dataset `saeidasgari_mmlu_pro_plus_dataset` |
+| `mmlu_redux` | MMLU-Redux dataset `fxmarty_mmlu_redux_dataset` |
 | `mnli` | GLUE `wang-etal-2018-glue` |
 | `mrpc` | GLUE `wang-etal-2018-glue` |
 | `mutual` | MuTual `cui2020mutual` |
 | `nq_open` | Natural Questions `kwiatkowski2019natural` |
+| `noticia` | NoticIA `noticia2024` |
 | `openbookqa` | OpenBookQA `mihaylov2018openbookqa` |
+| `paloma` | Paloma `magnusson2023paloma` |
 | `paws_x` | PAWS-X `yang2019pawsx` |
+| `phrases_es` | Phrases-ES dataset `gplsi_phrases_es_dataset` |
 | `xcopa` | XCOPA `ponti2020xcopa` |
 | `polemo2` | KLEJ POLEMO 2.0 `kocon-etal-2019-multi` |
+| `qasper` | QASPER `Dasigi2021ADO` |
 | `xquad` | XQuAD `artetxe2020crosslingual` |
 | `xstorycloze` | XStoryCloze `lin2021fewshotmultilingual` |
 | `xnli` | XNLI `conneau2018xnli` |
 | `xnli_eu` | XNLI-EU `heredia-etal-2024-xnlieu` |
+| `xlsum_es` | XL-Sum `hasan-etal-2021-xl` |
 | `xwinograd` | XWinograd `tikhonov2021heads` |
 | `piqa` | PIQA `bisk2020piqa` |
 | `piqa_ar` | AlGhafa `almazrouei-etal-2023-alghafa` |
@@ -796,9 +815,16 @@ built-in suite names covered by that row.
 | `race` | RACE `lai-etal-2017-race` |
 | `record` | SuperGLUE ReCoRD `wang2019superglue` |
 | `rte` | SuperGLUE `wang2019superglue` |
+| `ruler` | RULER `hsieh2024ruler` |
 | `sciq` | SciQ `welbl2017crowdsourcing` |
+| `scrolls` | SCROLLS `shaham-etal-2022-scrolls` |
+| `simple_cooccurrence_bias` | Simple Cooccurrence Bias dataset `oskarvanderwal_simple_cooccurrence_bias_dataset` |
 | `siqa` | Social IQA `sap2019social` |
+| `spanish_bench` | IberoBench `baucells-etal-2025-iberobench` |
+| `storycloze` | Story Cloze Test `mostafazadeh2017lsdsem` |
 | `swag` | SWAG `zellers2018swagaf` |
+| `squad_completion` | BASED / Based-SQuAD `arora2024simple` |
+| `swde` | BASED / Based-SWDE `arora2024simple` |
 | `toxigen` | ToxiGen `hartvigsen-etal-2022-toxigen` |
 | `sst2` | GLUE `wang-etal-2018-glue` |
 | `squadv2` | SQuAD 2.0 `rajpurkar2018know` |
@@ -807,6 +833,7 @@ built-in suite names covered by that row.
 | `wic` | SuperGLUE `wang2019superglue` |
 | `webqs` | WebQuestions `berant-etal-2013-semantic` |
 | `wikitext` | WikiText-2 `merity2016pointer` |
+| `wmdp` | WMDP `li2024wmdp` |
 | `winogender` | WinoGender `rudinger2018winogender` |
 | `wsc` | SuperGLUE WSC `wang2019superglue` |
 | `wsc273` | WSC273 `levesque2012winograd` |
@@ -1872,6 +1899,268 @@ Comments inside the BibTeX block below note which built-in suites each citation 
   url = "https://aclanthology.org/2024.naacl-long.234/",
   doi = "10.18653/v1/2024.naacl-long.234",
   pages = "4177--4188",
+}
+
+% ASSIN. Suites: assin, assin_{entailment,paraphrase}.
+@inproceedings{fonseca2016assin,
+  title = {ASSIN: Avaliacao de similaridade semantica e inferencia textual},
+  author = {Fonseca, Erick and Santos, Leonardo and Criscuolo, Marcelo and Aluisio, Sandra},
+  booktitle = {Computational Processing of the Portuguese Language: 12th International Conference},
+  year = {2016},
+  pages = {13--15},
+  url = {http://propor2016.di.fc.ul.pt/wp-content/uploads/2015/10/assin-overview.pdf},
+}
+
+% COCOTEROS. Suites: cocoteros_es.
+@inproceedings{maestre2024cocoteros,
+  title = {COCOTEROS: A spanish corpus with contextual knowledge for natural language generation},
+  author = {Maestre, Mar{\'\i}a Mir{\'o} and Mart{\'\i}nez-Murillo, Iv{\'a}n and Lloret, Elena and Moreda, Paloma and Cueto, Armando Su{\'a}rez},
+  booktitle = {40th Annual Conference of the Spanish Association for Natural Language Processing},
+  pages = {2024},
+  year = {2024},
+  url = {https://besaya.infor.uva.es/sepln24/paper04.pdf},
+}
+
+% FLORES-101. Suites: flores_es and flores_pt task variants.
+@inproceedings{goyal2021flores101,
+  title = {The FLORES-101 Evaluation Benchmark for Low-Resource and Multilingual Machine Translation},
+  author = {Goyal, Naman and Gao, Cynthia and Chaudhary, Vishrav and Chen, Peng-Jen and Wenzek, Guillaume and Ju, Da and Krishnan, Sanjana and Ranzato, Marc'Aurelio and Guzm{\'a}n, Francisco and Fan, Angela},
+  year = {2021},
+}
+
+% FrenchBench ARC-Challenge. Suites: french_bench_arc_challenge.
+@misc{manu_french_bench_arc_challenge,
+  title = {FrenchBench ARC-Challenge},
+  author = {manu},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/manu/french_bench_arc_challenge},
+  note = {Accessed 2026-04-11},
+}
+
+% GraphWalks. Suites: graphwalks_{128k,1M}.
+@misc{openai_graphwalks_dataset,
+  title = {GraphWalks},
+  author = {OpenAI},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/openai/graphwalks},
+  note = {Accessed 2026-04-11},
+}
+
+% GroundCocoa. Suites: groundcocoa.
+@misc{kohli2025groundcocoabenchmarkevaluatingcompositional,
+  title = {GroundCocoa: A Benchmark for Evaluating Compositional \& Conditional Reasoning in Language Models},
+  author = {Harsh Kohli and Sachin Kumar and Huan Sun},
+  year = {2025},
+  eprint = {2404.04237},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2404.04237},
+}
+
+% IberoBench. Suites: spanish_bench and mgsm_direct_es_spanish_bench.
+@inproceedings{baucells-etal-2025-iberobench,
+  title = {IberoBench: A Benchmark for LLM Evaluation in Iberian Languages},
+  author = {Baucells, Irene and Aula-Blasco, Javier and de-Dios-Flores, Iria and Paniagua Su{\'a}rez, Silvia and Perez, Naiara and Salles, Anna and Sotelo Docio, Susana and Falc{\~a}o, J{\'u}lia and Saiz, Jose Javier and Sepulveda Torres, Robiert and Barnes, Jeremy and Gamallo, Pablo and Gonzalez-Agirre, Aitor and Rigau, German and Villegas, Marta},
+  booktitle = {Proceedings of the 31st International Conference on Computational Linguistics},
+  year = {2025},
+  address = {Abu Dhabi, UAE},
+  publisher = {Association for Computational Linguistics},
+  url = {https://aclanthology.org/2025.coling-main.699/},
+  pages = {10491--10519},
+}
+
+% LAMBADA-MT. Suites: lambada_openai_mt_* and lambada_openai_mt_stablelm_*.
+@misc{eleutherai_lambada_multilingual_dataset,
+  title = {LAMBADA-Multilingual},
+  author = {EleutherAI},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/EleutherAI/lambada_multilingual},
+  note = {Accessed 2026-04-11},
+}
+
+@misc{eleutherai_lambada_multilingual_stablelm_dataset,
+  title = {LAMBADA-Multilingual StableLM},
+  author = {EleutherAI},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/EleutherAI/lambada_multilingual_stablelm},
+  note = {Accessed 2026-04-11},
+}
+
+% LongBench. Suites: longbench and longbench_*.
+@inproceedings{bai2024longbench,
+  title = {LongBench: A Bilingual, Multitask Benchmark for Long Context Understanding},
+  author = {Bai, Yushi and Lv, Xin and Zhang, Jiajie and Lyu, Hongchang and Tang, Jiankai and Huang, Zhidian and Du, Zhengxiao and Liu, Xiao and Zeng, Aohan and Hou, Lei and Dong, Yuxiao and Tang, Jie and Li, Juanzi},
+  booktitle = {Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  year = {2024},
+  address = {Bangkok, Thailand},
+  publisher = {Association for Computational Linguistics},
+  url = {https://aclanthology.org/2024.acl-long.172},
+  doi = {10.18653/v1/2024.acl-long.172},
+  pages = {3119--3137},
+}
+
+% LongBench v2. Suites: longbench2 and longbench2_*.
+@article{bai2024longbench2,
+  title = {LongBench v2: Towards Deeper Understanding and Reasoning on Realistic Long-context Multitasks},
+  author = {Yushi Bai and Shangqing Tu and Jiajie Zhang and Hao Peng and Xiaozhi Wang and Xin Lv and Shulin Cao and Jiazheng Xu and Lei Hou and Yuxiao Dong and Jie Tang and Juanzi Li},
+  journal = {arXiv preprint arXiv:2412.15204},
+  year = {2024},
+  url = {https://arxiv.org/abs/2412.15204},
+}
+
+% Mastermind. Suites: mastermind and mastermind_*.
+@misc{flair_mastermind_datasets,
+  title = {Mastermind Multiple-Choice Datasets},
+  author = {flair},
+  howpublished = {Hugging Face datasets},
+  url = {https://huggingface.co/datasets/flair/mastermind_24_mcq_random},
+  note = {Accessed 2026-04-11},
+}
+
+% MEDIQA 2019 QA. Suites: mediqa_qa2019.
+@inproceedings{ben-abacha-etal-2019-overview,
+  title = {Overview of the MEDIQA 2019 Shared Task on Textual Inference, Question Entailment and Question Answering},
+  author = {Ben Abacha, Asma and Shivade, Chaitanya and Demner-Fushman, Dina},
+  booktitle = {Proceedings of the 18th BioNLP Workshop and Shared Task},
+  year = {2019},
+  address = {Florence, Italy},
+  publisher = {Association for Computational Linguistics},
+  url = {https://aclanthology.org/W19-5039/},
+  doi = {10.18653/v1/W19-5039},
+  pages = {370--379},
+}
+
+% MeQSum. Suites: meqsum.
+@inproceedings{MeQSum,
+  title = {On the Summarization of Consumer Health Questions},
+  author = {Asma Ben Abacha and Dina Demner-Fushman},
+  booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
+  year = {2019},
+  url = {https://aclanthology.org/P19-1215/},
+}
+
+% MLQA. Suites: mlqa and mlqa_*.
+@article{lewis2019mlqa,
+  title = {MLQA: Evaluating Cross-lingual Extractive Question Answering},
+  author = {Lewis, Patrick and O\u{g}uz, Barlas and Rinott, Ruty and Riedel, Sebastian and Schwenk, Holger},
+  journal = {arXiv preprint arXiv:1910.07475},
+  year = {2019},
+  url = {https://arxiv.org/abs/1910.07475},
+}
+
+% MMLU-Pro-Plus. Suites: mmlu_pro_plus.
+@misc{saeidasgari_mmlu_pro_plus_dataset,
+  title = {MMLU-Pro-Plus},
+  author = {saeidasgari},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/saeidasgari/mmlu-pro-plus},
+  note = {Accessed 2026-04-11},
+}
+
+% MMLU-Redux. Suites: mmlu_redux and mmlu_redux_*.
+@misc{fxmarty_mmlu_redux_dataset,
+  title = {MMLU-Redux 2.0},
+  author = {fxmarty},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/fxmarty/mmlu-redux-2.0-ok},
+  note = {Accessed 2026-04-11},
+}
+
+% NoticIA. Suites: noticia.
+@misc{noticia2024,
+  title = {NoticIA: A Clickbait Article Summarization Dataset in Spanish},
+  author = {Iker Garc{\'i}a-Ferrero and Bego{\~n}a Altuna},
+  year = {2024},
+  eprint = {2404.07611},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CL},
+  url = {https://arxiv.org/abs/2404.07611},
+}
+
+% Paloma. Suites: paloma and paloma_*.
+@article{magnusson2023paloma,
+  title = {Paloma: A Benchmark for Evaluating Language Model Fit},
+  author = {Magnusson, Ian and Hall, Edward and Soldaini, Luca and Walsh, Pete and Bhagia, Akshita and Hofmann, Valentine and Schwenk, Dustin and Schwenk, Martin and Elazar, Yanai and Heller, Max and others},
+  journal = {arXiv preprint arXiv:2312.10523},
+  year = {2023},
+  url = {https://arxiv.org/abs/2312.10523},
+}
+
+% Phrases-ES. Suites: phrases_es and phrases_es_*.
+@misc{gplsi_phrases_es_dataset,
+  title = {ES-VA Translation Test},
+  author = {GPLSI},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/gplsi/ES-VA_translation_test},
+  note = {Accessed 2026-04-11},
+}
+
+% QASPER. Suites: qasper, qasper_bool, qasper_freeform.
+@inproceedings{Dasigi2021ADO,
+  title = {A Dataset of Information-Seeking Questions and Answers Anchored in Research Papers},
+  author = {Pradeep Dasigi and Kyle Lo and Iz Beltagy and Arman Cohan and Noah A. Smith and Matt Gardner},
+  year = {2021},
+  url = {https://arxiv.org/abs/2105.03011},
+}
+
+% RULER. Suites: ruler and ruler_*.
+@article{hsieh2024ruler,
+  title = {RULER: What's the Real Context Size of Your Long-Context Language Models?},
+  author = {Cheng-Ping Hsieh and Simeng Sun and Samuel Kriman and Shantanu Acharya and Dima Rekesh and Fei Jia and Yang Zhang and Boris Ginsburg},
+  year = {2024},
+  journal = {arXiv preprint arXiv:2404.06654},
+  url = {https://arxiv.org/abs/2404.06654},
+}
+
+% SCROLLS. Suites: scrolls and scrolls_*.
+@inproceedings{shaham-etal-2022-scrolls,
+  title = {SCROLLS: Standardized CompaRison Over Long Language Sequences},
+  author = {Shaham, Uri and Segal, Elad and Ivgi, Maor and Efrat, Avia and Yoran, Ori and Haviv, Adi and Gupta, Ankit and Xiong, Wenhan and Geva, Mor and Berant, Jonathan and Levy, Omer},
+  booktitle = {Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing},
+  year = {2022},
+  address = {Abu Dhabi, United Arab Emirates},
+  publisher = {Association for Computational Linguistics},
+  url = {https://aclanthology.org/2022.emnlp-main.823},
+  pages = {12007--12021},
+}
+
+% Simple Cooccurrence Bias. Suites: simple_cooccurrence_bias.
+@misc{oskarvanderwal_simple_cooccurrence_bias_dataset,
+  title = {Simple Cooccurrence Bias},
+  author = {Oskar van der Wal},
+  howpublished = {Hugging Face dataset},
+  url = {https://huggingface.co/datasets/oskarvanderwal/simple-cooccurrence-bias},
+  note = {Accessed 2026-04-11},
+}
+
+% Story Cloze Test. Suites: storycloze and storycloze_{2016,2018}.
+@inproceedings{mostafazadeh2017lsdsem,
+  title = {Lsdsem 2017 shared task: The story cloze test},
+  author = {Mostafazadeh, Nasrin and Roth, Michael and Louis, Annie and Chambers, Nathanael and Allen, James},
+  booktitle = {Proceedings of the 2nd Workshop on Linking Models of Lexical, Sentential and Discourse-level Semantics},
+  pages = {46--51},
+  year = {2017},
+  url = {https://aclanthology.org/W17-0906/},
+}
+
+% WMDP. Suites: wmdp and wmdp_{bio,chem,cyber}.
+@misc{li2024wmdp,
+  title = {The WMDP Benchmark: Measuring and Reducing Malicious Use With Unlearning},
+  author = {Nathaniel Li and Alexander Pan and Anjali Gopal and Summer Yue and Daniel Berrios and Alice Gatti and Justin D. Li and Ann-Kathrin Dombrowski and Shashwat Goel and Long Phan and Gabriel Mukobi and Nathan Helm-Burger and Rassin Lababidi and Lennart Justen and Andrew B. Liu and Michael Chen and Isabelle Barrass and Oliver Zhang and Xiaoyuan Zhu and Rishub Tamirisa and Bhrugu Bharathi and Adam Khoja and Zhenqi Zhao and Ariel Herbert-Voss and Cort B. Breuer and Samuel Marks and Oam Patel and Andy Zou and Mantas Mazeika and Zifan Wang and Palash Oswal and Weiran Liu and Adam A. Hunt and Justin Tienken-Harder and Kevin Y. Shih and Kemper Talley and John Guan and Russell Kaplan and Ian Steneker and David Campbell and Brad Jokubaitis and Alex Levinson and Jean Wang and William Qian and Kallol Krishna Karmakar and Steven Basart and Stephen Fitz and Mindy Levine and Ponnurangam Kumaraguru and Uday Tupakula and Vijay Varadharajan and Yan Shoshitaishvili and Jimmy Ba and Kevin M. Esvelt and Alexandr Wang and Dan Hendrycks},
+  year = {2024},
+  eprint = {2403.03218},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.LG},
+  url = {https://arxiv.org/abs/2403.03218},
+}
+
+% XL-Sum. Suites: xlsum_es.
+@inproceedings{hasan-etal-2021-xl,
+  title = {XL-Sum: Large-Scale Multilingual Abstractive Summarization for 44 Languages},
+  author = {Hasan, Tahmid and Bhattacharjee, Abhik and Islam, Md. Saiful and Mubasshir, Kazi and Li, Yuan-Fang and Kang, Yong-Bin and Rahman, M. Sohel and Shahriyar, Rashedur},
+  booktitle = {Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021},
+  year = {2021},
+  url = {https://aclanthology.org/2021.findings-acl.413/},
 }
 
 ```
