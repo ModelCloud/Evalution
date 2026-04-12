@@ -161,11 +161,12 @@ def main() -> int:
 
     if monitor_state["forced_exit_code"]:
         append_github_env("ERROR", "22")
+        print(f"\n\n\nforced_exit_code: {monitor_state["forced_exit_code"]}\n\n\n")
         return 22
 
     if return_code != 0:
         append_github_env("ERROR", "22")
-        print(f"pipe status wrong: {return_code}")
+        print(f"\n\n\npipe status wrong: {return_code}\n\n\n")
         return 22
 
     execution_time = int(time.time() - start_time)
