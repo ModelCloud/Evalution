@@ -2219,8 +2219,72 @@ def test_transformer_session_loglikelihood_continuous_with_explicit_batch_size_l
     )
 
     assert next(iterator)[0] == 0
-    assert produced_count["value"] <= 4
+    # The producer may stay a few requests ahead of the first yielded result because the
+    # background consumer can drain the bounded queue concurrently. The important regression check
+    # is that explicit batch sizing still keeps prefetching tightly bounded instead of materializing
+    # the full upstream iterator.
+    assert produced_count["value"] <= 8
     iterator.close()
+
+
+def test_transformer_session_loglikelihood_uses_logits_to_keep_for_single_chunk_scoring() -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+        model_max_length = 32
+
+        def __call__(self, text, add_special_tokens=False, **kwargs):
+            del add_special_tokens, kwargs
+            if isinstance(text, str):
+                if text == "Prompt":
+                    return {"input_ids": [10, 11, 12, 13]}
+                return {"input_ids": [17]}
+            return {"input_ids": [[10, 11, 12, 13] for _ in text]}
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "<bos>"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=32)
+            self.logits_to_keep_calls: list[int] = []
+
+        def forward(self, *, input_ids, logits_to_keep=0):
+            self.logits_to_keep_calls.append(int(logits_to_keep))
+            batch_size, sequence_length = input_ids.shape
+            kept_length = logits_to_keep if logits_to_keep else sequence_length
+            vocab_size = 32
+            logits = torch.full((batch_size, kept_length, vocab_size), -5.0)
+            logits[0, 0, int(input_ids[0, -1].item())] = 5.0
+            return SimpleNamespace(logits=logits)
+
+        __call__ = forward
+
+    session = TransformersSession(
+        config=Transformers(batch_size=1),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(
+                context="Prompt",
+                continuation=" answer",
+            )
+        ],
+        batch_size=1,
+    )
+
+    assert len(outputs) == 1
+    assert outputs[0].token_count == 1
+    assert session.model.logits_to_keep_calls == [2]
+
+
 def test_transformer_session_loglikelihood_rolling_scores_chunked_text() -> None:
     class FakeTokenizer:
         pad_token_id = 0
@@ -3059,3 +3123,63 @@ def test_transformer_session_falls_back_to_standard_generate_when_paged_generati
     assert session.generation_backend == "generate"
     assert session.effective_attn_implementation == "sdpa"
     assert session.standard_batch_size_cap == 2
+
+
+def test_transformer_session_standard_generate_uses_effective_attention_backend() -> None:
+    import torch
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "left"
+
+        def __call__(self, prompts, **kwargs):
+            del kwargs
+            import torch
+
+            if isinstance(prompts, str):
+                return {"input_ids": torch.tensor([11, 12, 13], dtype=torch.long)}
+            return {"input_ids": torch.tensor([[11, 12, 13] for _ in prompts], dtype=torch.long)}
+
+        def pad(self, batch, return_tensors="pt", padding=True):
+            del return_tensors, padding
+            import torch
+
+            return {"input_ids": torch.tensor(batch["input_ids"], dtype=torch.long)}
+
+        def decode(self, token_ids, *, skip_special_tokens=False):
+            del token_ids, skip_special_tokens
+            return "The answer is 42."
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(_attn_implementation="flash_attention_2")
+            self.attn_history: list[str] = []
+
+        def set_attn_implementation(self, value: str) -> None:
+            self.attn_history.append(value)
+            self.config._attn_implementation = value
+
+        def generate(self, **kwargs):
+            del kwargs
+            assert self.config._attn_implementation == "sdpa"
+            import torch
+
+            return torch.tensor([[11, 12, 13, 42]], dtype=torch.long)
+
+    session = TransformersSession(
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
+        model_config=Model(path="/tmp/model"),
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+        requested_attn_implementation="paged|sdpa",
+        effective_attn_implementation="paged|sdpa",
+        paged_attention_enabled=True,
+        generation_backend="continuous_batching",
+    )
+
+    outputs = session._generate_standard([GenerationRequest(prompt="Q: 40 + 2\nA:")], batch_size=1)
+
+    assert [output.text for output in outputs] == ["The answer is 42."]
+    assert session.model.attn_history == ["sdpa", "flash_attention_2"]

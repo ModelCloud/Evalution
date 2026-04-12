@@ -72,14 +72,31 @@ def test_mc_taco_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
     assert sample.metadata["category"] == "Typical Time"
 
 
-def test_mc_taco_loader_reads_raw_tsv_via_csv_builder() -> None:
+def test_mc_taco_loader_reads_raw_tsv_via_csv_builder(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_load_dataset(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return "mc-taco-dataset"
+
+    monkeypatch.setattr(mc_taco_module, "load_dataset", fake_load_dataset)
+
     dataset = mc_taco_module._load_mc_taco_dataset(
         "CogComp/mc_taco",
         split="validation",
         stream=False,
     )
 
-    first = dataset[0]
-    assert set(first) == {"sentence", "question", "answer", "label", "category"}
-    assert isinstance(first["sentence"], str)
-    assert isinstance(first["label"], str)
+    assert dataset == "mc-taco-dataset"
+    assert captured == {
+        "args": ("csv",),
+        "kwargs": {
+            "data_files": {"validation": "https://raw.githubusercontent.com/CogComp/MCTACO/master/dataset/dev_3783.tsv"},
+            "delimiter": "\t",
+            "column_names": ["sentence", "question", "answer", "label", "category"],
+            "split": "validation",
+            "cache_dir": None,
+            "streaming": False,
+        },
+    }

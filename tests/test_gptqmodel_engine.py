@@ -148,21 +148,32 @@ def test_gptqmodel_session_generate_continuous_refills_paged_manager_while_calle
     monkeypatch,
 ) -> None:
     class FakeTokenizer:
+        # Match the tokenizer contract used by the generation path under test.
         pad_token_id = 0
         eos_token_id = 1
 
         def __call__(self, prompts, *, add_special_tokens=False, **kwargs):
+            import torch
+
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
-                return {"input_ids": [11, 12, 13]}
-            return {"input_ids": [[11, 12, 13] for _ in prompts]}
+                return {
+                    "input_ids": torch.tensor([[11, 12, 13]]),
+                    "attention_mask": torch.tensor([[1, 1, 1]]),
+                }
+            batch_size = len(prompts)
+            return {
+                "input_ids": torch.tensor([[11, 12, 13] for _ in range(batch_size)]),
+                "attention_mask": torch.tensor([[1, 1, 1] for _ in range(batch_size)]),
+            }
 
         def decode(self, token_ids, *, skip_special_tokens=False):
             del token_ids, skip_special_tokens
             return "The answer is 42."
 
     class FakeContinuousOutput:
+        # Continuous batching returns generated token ids keyed by request id.
         def __init__(self, request_id, tokens):
             self.request_id = request_id
             self.generated_tokens = tokens
@@ -172,9 +183,11 @@ def test_gptqmodel_session_generate_continuous_refills_paged_manager_while_calle
             return True
 
     class FakeModel:
+        # The fake model exposes only the surface area the session touches in this regression.
         def __init__(self) -> None:
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
+            self.device = "cuda"
 
         def eval(self):
             return self
@@ -186,6 +199,7 @@ def test_gptqmodel_session_generate_continuous_refills_paged_manager_while_calle
             self.config._attn_implementation = value
 
     class FakeContinuousBatchingManager:
+        # Keep the latest manager visible so the test can assert refill/cleanup behavior.
         last_instance: FakeContinuousBatchingManager | None = None
 
         def __init__(self, model, generation_config, **kwargs):

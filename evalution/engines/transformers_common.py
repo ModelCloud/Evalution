@@ -656,7 +656,9 @@ class BaseTransformerSession(BaseInferenceSession):
                 if stopping_criteria is not None:
                     generation_kwargs["stopping_criteria"] = stopping_criteria
 
-                with torch.inference_mode():
+                # Generation may need the session-selected attention backend before calling
+                # `model.generate()`, especially after loader compatibility fallbacks.
+                with self._generation_attention_context(), torch.inference_mode():
                     generated = self.model.generate(**encoded, **generation_kwargs)
 
                 input_length = encoded["input_ids"].shape[1]
@@ -966,13 +968,30 @@ class BaseTransformerSession(BaseInferenceSession):
                         device=self.input_device,
                     )
                 }
+                # Single-request scoring chunks only consume logits from the final continuation
+                # window, so ask modern transformers models to skip the unused prefix logits.
+                logits_to_keep = batch[0].score_count + 1 if len(batch) == 1 else None
 
                 with self._scoring_attention_context():
                     with torch.inference_mode():
-                        outputs = self.model(input_ids=encoded["input_ids"])
+                        model_kwargs = {"input_ids": encoded["input_ids"]}
+                        if logits_to_keep is not None:
+                            model_kwargs["logits_to_keep"] = logits_to_keep
+                        try:
+                            outputs = self.model(**model_kwargs)
+                        except TypeError as exc:
+                            if logits_to_keep is None or "logits_to_keep" not in str(exc):
+                                raise
+                            model_kwargs.pop("logits_to_keep", None)
+                            logits_to_keep = None
+                            outputs = self.model(**model_kwargs)
                 logits = outputs.logits
-                shift_log_probs = torch.log_softmax(logits[:, :-1, :], dim=-1)
-                shift_labels = encoded["input_ids"][:, 1:]
+                if logits_to_keep is not None:
+                    shift_log_probs = torch.log_softmax(logits[:, :-1, :], dim=-1)
+                    shift_labels = encoded["input_ids"][:, -batch[0].score_count :]
+                else:
+                    shift_log_probs = torch.log_softmax(logits[:, :-1, :], dim=-1)
+                    shift_labels = encoded["input_ids"][:, 1:]
 
                 for row_index, chunk in enumerate(batch):
                     target_start = chunk.score_start
@@ -1100,9 +1119,15 @@ class BaseTransformerSession(BaseInferenceSession):
             return min(candidate_lengths)
         return 2048
 
+
     # Standard and compat engines do not need to alter attention kernels during token scoring.
     @contextmanager
     def _scoring_attention_context(self) -> Any:
+        yield
+
+    # Standard and compat engines also leave generation attention unchanged unless a subclass opts in.
+    @contextmanager
+    def _generation_attention_context(self) -> Any:
         yield
 
     # Log the generation backend once per suite so repeated batches do not spam the output.
@@ -1228,11 +1253,21 @@ def load_transformer_runtime(
 
     _normalize_tokenizer_special_tokens(tokenizer=tokenizer, model=model)
 
-    requested_attn_implementation = (
-        raw_attn_implementation
-        or getattr(model.config, "_attn_implementation", None)
-        or getattr(model.config, "attn_implementation", None)
-    )
+    # Persist the attention mode the loader really managed to initialize so the session does not
+    # pretend paged FA2 is active after a compatibility retry switched backends.
+    requested_attn_implementation = getattr(model, "_evalution_loader_attn_implementation", None)
+    if requested_attn_implementation is None:
+        requested_attn_implementation = (
+            getattr(model.config, "_attn_implementation", None)
+            or getattr(model.config, "attn_implementation", None)
+            or raw_attn_implementation
+        )
+    # Preserve paged execution when the requested backend degrades from FA2 to SDPA.
+    if (
+        raw_attn_implementation == "paged|flash_attention_2"
+        and requested_attn_implementation == "sdpa"
+    ):
+        requested_attn_implementation = "paged|sdpa"
 
     return _LoadedTransformerRuntime(
         model=model,
@@ -1490,7 +1525,14 @@ def _load_model_with_compat_fallback(
     attempt_kwargs = dict(load_kwargs)
     while True:
         try:
-            return loader.from_pretrained(model_path, **attempt_kwargs)
+            model = loader.from_pretrained(model_path, **attempt_kwargs)
+            with suppress(Exception):
+                setattr(
+                    model,
+                    "_evalution_loader_attn_implementation",
+                    attempt_kwargs.get("attn_implementation"),
+                )
+            return model
         except TypeError as exc:
             fallback_kwargs, retry_action = _loader_kwargs_compat_fallback(attempt_kwargs, exc)
             if fallback_kwargs is None or retry_action is None:
@@ -1498,6 +1540,16 @@ def _load_model_with_compat_fallback(
             get_logger().warning(
                 "transformers model loader rejected %s; retrying %s",
                 sorted(_unexpected_loader_kwargs(exc)),
+                retry_action,
+            )
+            attempt_kwargs = fallback_kwargs
+        except (ImportError, OSError) as exc:
+            fallback_kwargs, retry_action = _loader_import_compat_fallback(attempt_kwargs, exc)
+            if fallback_kwargs is None or retry_action is None:
+                raise
+            get_logger().warning(
+                "transformers model loader failed importing optional attention backend: %s; retrying %s",
+                exc,
                 retry_action,
             )
             attempt_kwargs = fallback_kwargs
@@ -1533,6 +1585,16 @@ def _loader_kwargs_compat_fallback(
         return None, None
 
     return fallback_kwargs, ", then ".join(actions)
+
+
+def _loader_import_compat_fallback(
+    load_kwargs: dict[str, Any],
+    exc: ImportError | OSError,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Do not mask optional attention-backend import failures with a silent fallback."""
+
+    del load_kwargs, exc
+    return None, None
 
 
 def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:

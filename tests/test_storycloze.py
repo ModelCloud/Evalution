@@ -44,7 +44,7 @@ def test_storycloze_scores_year_specific_multiple_choice_rows(monkeypatch) -> No
             }
         ]
     )
-    monkeypatch.setattr(storycloze_module, "load_dataset", lambda *args, **kwargs: dataset)
+    monkeypatch.setattr(storycloze_module, "_load_storycloze_dataset", lambda *args, **kwargs: dataset)
 
     result = evalution.benchmarks.storycloze_2016(max_rows=1, batch_size=8).evaluate(FakeSession())
 
@@ -82,3 +82,40 @@ def test_storycloze_prompt_builder_and_year_validation() -> None:
 
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.storycloze(year="2016", dataset_name="2018")
+
+
+def test_storycloze_loader_reads_csv_without_dataset_script(monkeypatch, tmp_path) -> None:
+    csv_path = tmp_path / "cloze_test_val__spring2016 - cloze_test_ALL_val.csv"
+    csv_path.write_text(
+        "\n".join(
+            [
+                "InputStoryid,InputSentence1,InputSentence2,InputSentence3,InputSentence4,RandomFifthSentenceQuiz1,RandomFifthSentenceQuiz2,AnswerRightEnding",
+                '"story-1","One.","Two.","Three.","Four.","Bad ending.","Good ending.","2"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        storycloze_module,
+        "_storycloze_csv_path",
+        lambda dataset_name, *, split, cache_dir=None: str(csv_path),
+    )
+
+    dataset = storycloze_module._load_storycloze_dataset(
+        "LSDSem/story_cloze",
+        "2016",
+        split="validation",
+    )
+
+    assert list(dataset) == [
+        {
+            "story_id": "story-1",
+            "input_sentence_1": "One.",
+            "input_sentence_2": "Two.",
+            "input_sentence_3": "Three.",
+            "input_sentence_4": "Four.",
+            "sentence_quiz1": "Bad ending.",
+            "sentence_quiz2": "Good ending.",
+            "answer_right_ending": 2,
+        }
+    ]

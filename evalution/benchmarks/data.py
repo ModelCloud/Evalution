@@ -126,6 +126,48 @@ def load_suite_dataset(
     return loaded_docs, perf_counter() - dataset_load_started
 
 
+# Select an explicit row subset before applying the usual max_rows cap.
+def select_docs(
+    docs: Any,
+    *,
+    row_indices: tuple[int, ...] | None,
+    max_rows: int | None,
+) -> Any:
+    if row_indices is None:
+        return limit_docs(docs, max_rows)
+
+    normalized_indices = tuple(int(index) for index in row_indices)
+    if any(index < 0 for index in normalized_indices):
+        raise ValueError("benchmark row_indices must be non-negative")
+
+    if hasattr(docs, "select") and hasattr(docs, "__len__"):
+        doc_count_value = len(docs)
+        if any(index >= doc_count_value for index in normalized_indices):
+            raise IndexError("benchmark row_indices exceeded the available dataset rows")
+        selected_docs = docs.select(list(normalized_indices))
+        return limit_docs(selected_docs, max_rows)
+
+    selected_rows: list[Any] = []
+    wanted_positions = {
+        index: position
+        for position, index in enumerate(normalized_indices)
+    }
+    max_index = max(normalized_indices, default=-1)
+    for index, row in enumerate(docs):
+        if index > max_index and len(selected_rows) == len(normalized_indices):
+            break
+        position = wanted_positions.get(index)
+        if position is None:
+            continue
+        selected_rows.append((position, row))
+        if len(selected_rows) == len(normalized_indices):
+            break
+    if len(selected_rows) != len(normalized_indices):
+        raise IndexError("benchmark row_indices exceeded the available dataset rows")
+    ordered_rows = [row for _position, row in sorted(selected_rows, key=lambda item: item[0])]
+    return limit_docs(ordered_rows, max_rows)
+
+
 # Apply an optional row cap while preserving streaming datasets.
 def limit_docs(docs: Any, max_rows: int | None) -> Any:
     if max_rows is None:

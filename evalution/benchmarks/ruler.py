@@ -10,7 +10,7 @@ from functools import partial
 import json
 from pathlib import Path
 import random
-import re
+import pcre
 import string
 from typing import Any
 from urllib.request import urlopen
@@ -45,7 +45,7 @@ _DEFAULT_SAMPLE_COUNT = 500
 _RULER_RANDOM_SEED = 42
 _SQUAD_DEV_URL = "https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v2.0.json"
 _HOTPOT_DEV_URL = "http://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_distractor_v1.json"
-_CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f]+")
+_CONTROL_CHARS_RE = pcre.compile(r"[\x00-\x1f]+")
 _DOCUMENT_PROMPT = "Document {i}:\n{document}"
 _DEFAULT_ESSAY_SENTENCES = (
     "The city archive opens before sunrise and closes after the river traffic slows.",

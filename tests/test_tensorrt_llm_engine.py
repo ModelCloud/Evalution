@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -27,6 +28,7 @@ _LOCAL_TENSORRT_LLM_MODEL_CANDIDATES = (
     "TinyLlama-1.1B-Chat-v1.0",
     "Llama-3.2-1B-Instruct",
 )
+_HAS_TENSORRT_LLM_RUNTIME = importlib.util.find_spec("tensorrt_llm") is not None
 
 
 def _local_tensorrt_llm_model() -> Path:
@@ -344,13 +346,18 @@ def test_tensorrt_llm_session_gc_and_close_release_runtime_state() -> None:
 
 @pytest.mark.integration
 @pytest.mark.slow
+@pytest.mark.skipif(
+    not _HAS_TENSORRT_LLM_RUNTIME,
+    reason="tensorrt_llm is required for the TensorRT-LLM engine integration test",
+)
+@pytest.mark.skipif(
+    not torch.cuda.is_available(),
+    reason="CUDA is required for the TensorRT-LLM engine integration test",
+)
 def test_tensorrt_llm_engine_runs_real_cuda_smoke_path(capfd: pytest.CaptureFixture[str]) -> None:
     """Run the real TensorRT-LLM CUDA path and assert the current scoring limitation explicitly."""
 
     from tensorrt_llm.llmapi.llm_args import KvCacheConfig
-
-    if not torch.cuda.is_available():
-        pytest.fail("CUDA is required for the TensorRT-LLM engine integration test")
 
     model_path = _local_tensorrt_llm_model()
 

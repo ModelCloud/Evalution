@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from evalution.benchmarks.data import load_suite_dataset
+from datasets import Dataset
+
+from evalution.benchmarks.data import load_suite_dataset, select_docs
 
 
 def test_load_suite_dataset_forwards_streaming_flag() -> None:
@@ -81,3 +83,32 @@ def test_load_suite_dataset_falls_back_to_streaming_after_builder_config_error()
 
     assert rows == ["row"]
     assert captured["kwargs"]["streaming"] is True
+
+
+def test_select_docs_can_pick_explicit_dataset_rows_before_capping() -> None:
+    docs = Dataset.from_list(
+        [
+            {"value": "zero"},
+            {"value": "one"},
+            {"value": "two"},
+            {"value": "three"},
+        ]
+    )
+
+    selected = select_docs(
+        docs,
+        row_indices=(3, 1, 2),
+        max_rows=2,
+    )
+
+    assert [row["value"] for row in selected] == ["three", "one"]
+
+
+def test_select_docs_can_pick_explicit_streaming_rows() -> None:
+    selected = select_docs(
+        ({"value": value} for value in ("zero", "one", "two", "three")),
+        row_indices=(2, 0),
+        max_rows=None,
+    )
+
+    assert [row["value"] for row in selected] == ["two", "zero"]

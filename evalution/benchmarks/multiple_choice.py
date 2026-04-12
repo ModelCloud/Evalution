@@ -29,9 +29,9 @@ from evalution.benchmarks.base import BaseTestSuite, TestSuite
 from evalution.benchmarks.data import (
     apply_order,
     doc_count,
-    limit_docs,
     load_suite_dataset,
     normalize_order,
+    select_docs,
 )
 
 
@@ -58,6 +58,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     # Materialize datasets by default so non-stream benchmark metadata stays stable unless a suite opts in.
     stream: bool = (False)
     max_rows: int | None = None
+    # Allow deterministic test-only subsets when a benchmark's first rows are too large to score.
+    row_indices: tuple[int, ...] | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
     # Optional extra label-only scorer that averages over a subset of label permutations to reduce
@@ -119,6 +121,8 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             "stream": self.stream,
             "scoring_mode": "multiple_choice_loglikelihood",
         }
+        if self.row_indices is not None:
+            metadata["row_indices"] = list(self.row_indices)
         metadata.update(self._label_permutation_metadata())
         return metadata
 
@@ -222,7 +226,11 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
             stream=self.stream,
         )
 
-        docs = limit_docs(loaded_docs, self.max_rows)
+        docs = select_docs(
+            loaded_docs,
+            row_indices=self.row_indices,
+            max_rows=self.max_rows,
+        )
         if resolved_order != "native" and self.stream:
             raise ValueError("benchmark `stream=True` requires `order='native'`")
         if not isinstance(docs, list) or resolved_order != "native":
