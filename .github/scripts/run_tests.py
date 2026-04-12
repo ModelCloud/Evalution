@@ -100,6 +100,7 @@ def main() -> int:
     parser.add_argument("--test-file", required=True)
     parser.add_argument("--runner", required=True)
     parser.add_argument("--gpu-id", default="")
+    parser.add_argument("--enable-keepalive-monitor", action="store_true")
     parser.add_argument("--monitor-interval-sec", type=int, default=60)
     parser.add_argument("--artifacts-dir", default="artifacts")
     parser.add_argument("--clear-cuda", action="store_true")
@@ -142,12 +143,16 @@ def main() -> int:
     monitor_thread = None
     monitor_stop = None
     monitor_state = {"forced_exit_code": 0}
-    if env.get("CUDA_VISIBLE_DEVICES", ""):
+    if args.enable_keepalive_monitor and env.get("CUDA_VISIBLE_DEVICES", ""):
         monitor_thread, monitor_stop, monitor_state = start_keepalive_monitor(
             proc=proc,
             keep_alive_url=keep_alive_url,
             interval_sec=args.monitor_interval_sec,
         )
+    elif args.enable_keepalive_monitor:
+        print("Skip keepalive monitor because CUDA_VISIBLE_DEVICES is empty.")
+    else:
+        print("Keepalive monitor disabled for this test run.")
 
     start_time = time.time()
     try:
@@ -161,7 +166,7 @@ def main() -> int:
 
     if monitor_state["forced_exit_code"]:
         append_github_env("ERROR", "22")
-        print(f"\n\n\nforced_exit_code: {monitor_state["forced_exit_code"]}\n\n\n")
+        print(f"\n\n\nforced_exit_code: {monitor_state['forced_exit_code']}\n\n\n")
         return 22
 
     if return_code != 0:
