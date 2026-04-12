@@ -239,6 +239,7 @@ jobs:
             --test-file "${{ matrix.test-file }}" \
             --runner "${{ runner.name }}" \
             --gpu-id "${CUDA_VISIBLE_DEVICES:-}" \
+            ${{ steps.meta.outputs.requires-gpu == 'true' && '--enable-keepalive-monitor' || '' }} \
             --artifacts-dir artifacts
 
       - name: Release GPU
