@@ -11,7 +11,7 @@ from typing import Any
 from datasets import load_dataset
 
 from evalution.scorers.gsm8k import gsm8k_numeric_target
-from evalution.benchmarks.gsm8k_common import BaseGSM8KSuite, GSM8KVariant
+from evalution.benchmarks.gsm8k_common import BaseGSM8KSuite
 from evalution.benchmarks.gsm8k_common import build_variant_specs as _build_variant_specs
 
 # Keep benchmark defaults and public task ids explicit at module scope.

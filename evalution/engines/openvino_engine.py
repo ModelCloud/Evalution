@@ -20,7 +20,6 @@ from evalution.engines.transformers_common import (
     _seed_transformer_runtime,
     _seed_with_internal_apis,
 )
-from evalution.logbar import get_logger
 
 
 @dataclass(slots=True)

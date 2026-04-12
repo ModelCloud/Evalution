@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import os
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from shutil import copyfileobj, move, rmtree

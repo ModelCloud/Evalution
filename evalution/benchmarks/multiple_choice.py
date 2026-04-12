@@ -25,7 +25,7 @@ from evalution.scorers.multiple_choice import (
     multiple_choice_outcome,
     normalize_label_permutation_fraction,
 )
-from evalution.benchmarks.base import BaseTestSuite, TestSuite
+from evalution.benchmarks.base import TestSuite
 from evalution.benchmarks.data import (
     apply_order,
     doc_count,

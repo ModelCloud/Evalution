@@ -505,7 +505,7 @@ del _task_name
 
 
 def run_yaml(source: str | Path) -> EvaluationRun:
-    """Run YAML."""
+    """Load a YAML spec, execute its suites, and return the open evaluation handle."""
     spec = _load_yaml_spec(source)
     model_config = _build_model(spec["model"])
     evaluation = _build_engine(spec["engine"]).model(**model_config.to_dict())
@@ -515,7 +515,7 @@ def run_yaml(source: str | Path) -> EvaluationRun:
 
 
 def python_from_yaml(source: str | Path) -> str:
-    """Implement python from YAML for this module."""
+    """Render an executable Python equivalent for a YAML evaluation spec."""
     spec = _load_yaml_spec(source)
     engine_spec = _coerce_named_mapping(spec.get("engine"), label="engine")
     engine_name = _normalize_engine_name(_extract_name(engine_spec, label="engine"))

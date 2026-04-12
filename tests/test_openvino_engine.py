@@ -11,7 +11,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-import torch
 from transformers import PretrainedConfig
 
 from evalution.config import Model

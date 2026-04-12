@@ -10,7 +10,6 @@ from typing import Any, Callable
 
 from datasets import load_dataset
 
-from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger

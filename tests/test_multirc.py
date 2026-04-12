@@ -1,8 +1,6 @@
 # SPDX-FileCopyrightText: 2026 ModelCloud.ai
 # SPDX-License-Identifier: Apache-2.0
 # GPU=-1
-import pcre
-
 from evalution.benchmarks.multirc import (
     MultiRC,
     _extract_indices,

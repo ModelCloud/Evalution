@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import sys
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 import pcre
 
 # Keep scorer defaults and parser helpers explicit at module scope.
