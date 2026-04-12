@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from evalution.benchmarks.base import BaseTestSuite, TestSuite
+from evalution.benchmarks.base import TestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, RollingLoglikelihoodRequest
 from evalution.logbar import get_logger

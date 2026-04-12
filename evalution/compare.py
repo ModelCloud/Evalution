@@ -165,7 +165,7 @@ def compare(
     left: EvaluationRun,
     right: EvaluationRun,
 ) -> CompareRun:
-    """Compare compare."""
+    """Bind two fresh evaluation handles into one comparison session."""
     left_run = _coerce_compare_lane(left, lane_label="left")
     right_run = _coerce_compare_lane(right, lane_label="right")
     if left_run is right_run:
@@ -185,7 +185,7 @@ def run_compare(
     *,
     tests: Sequence[TestSuite],
 ) -> CompareRunResult:
-    """Run compare."""
+    """Execute multiple suites through `compare(...)` and return the closed result."""
     comparison = compare(left, right)
     try:
         for test in tests:

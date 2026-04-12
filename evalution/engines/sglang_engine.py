@@ -944,10 +944,6 @@ class SGLangSession(BaseInferenceSession):
                 requested_logprobs = _coerce_nested_position_entries(
                     meta_info.get("input_token_ids_logprobs")
                 )
-                requested_logits = _coerce_nested_position_entries(
-                    meta_info.get("input_token_ids_logits")
-                )
-                token_logits = _coerce_position_entries(meta_info.get("input_token_logits"))
                 output_top_logprobs = _coerce_nested_position_entries(meta_info.get("output_top_logprobs"))
                 output_requested_logprobs = _coerce_nested_position_entries(
                     meta_info.get("output_token_ids_logprobs")

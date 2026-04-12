@@ -11,7 +11,6 @@ from pathlib import Path
 from shutil import move
 from tempfile import NamedTemporaryFile
 from threading import Lock
-from typing import Any
 from urllib.request import urlopen
 import xml.etree.ElementTree as ET
 import zipfile

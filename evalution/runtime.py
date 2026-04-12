@@ -10,7 +10,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Any
 
-from evalution.config import Model
+from evalution.config import Model, coerce_model
 from evalution.engines.base import BaseEngine, BaseInferenceSession
 from evalution.logbar import (
     LoggingContext,
@@ -135,11 +135,12 @@ def run(
     engine: BaseEngine,
     tests: Sequence[TestSuite],
 ) -> RunResult:
-    """Run run."""
+    """Execute one engine/model pair against a sequence of test suites."""
+
     if not isinstance(engine, BaseEngine):
         raise TypeError("engine must inherit BaseEngine")
 
-    model_config = model if isinstance(model, Model) else Model(**model)
+    model_config = coerce_model(model)
     evaluation = engine.model(**model_config.to_dict())
     try:
         for test in tests:

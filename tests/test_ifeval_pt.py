@@ -9,7 +9,6 @@ import importlib
 
 from datasets import Dataset
 
-import evalution
 from evalution.engines.base import GenerationOutput
 
 # Patch the shared IFEval loader because the Portuguese suite inherits it directly.
