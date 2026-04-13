@@ -162,7 +162,7 @@ jobs:
           echo "::group::ls -alh /opt/uv/cache/uv"
             ls -alh /opt/uv/cache/uv
           echo "::endgroup::"
-          echo "::group::uv cache dir"
+          echo "::group::printenv"
             printenv | grep UV_
           echo "::endgroup::"
 
