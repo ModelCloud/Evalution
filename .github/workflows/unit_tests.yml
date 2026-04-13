@@ -173,24 +173,37 @@ jobs:
 
       - name: Setup uv env
         run: |
-          
-          /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
+          echo "::group::init env..."
+            /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
+          echo "::endgroup::"
 
           if [ "${UV_PYTHON}" = "3.14t" ]; then
-            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
+            echo "::group::installing flash_attn with 3.14t..."
+              uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
+            echo "::endgroup::"
           elif [ "${UV_PYTHON}" = "3.12" ]; then
             echo "EVALUTION_SKIP_GIL_CHECK=1" >> "$GITHUB_ENV"
-            uv pip install tensorrt_llm -U
-            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp312-cp312-linux_x86_64.whl
+            echo "::group::installing tensorrt_llm..."
+              uv pip install tensorrt_llm -U
+            echo "::endgroup::"
+
+            echo "::group::installing flash_attn with 3.12..."
+              uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp312-cp312-linux_x86_64.whl
+            echo "::endgroup::"
           else
-            echo "== installing flash-attn =="
-            uv pip install flash-attn
-            uv pip show flash-attn
+            echo "::group::installing flash_attn..."
+              uv pip install flash-attn
+              uv pip show flash-attn
+            echo "::endgroup::"
           fi
-          uv pip install accelerate -U
-          echo "== installing gptqmodel =="
-          uv pip install gptqmodel -U
-          uv pip show gptqmodel
+          echo "::group::installing accelerate..."
+            uv pip install accelerate -U
+          echo "::endgroup::"
+          
+          echo "::group::installing gptqmodel..."
+            uv pip install gptqmodel -U
+            uv pip show gptqmodel
+          echo "::endgroup::"
 
       - name: Print uv env
         run: |
