@@ -176,6 +176,8 @@ jobs:
 
       - name: Print uv env
         run: |
+          uv cache dir
+          ls $(uv cache dir)
           echo "::group::uv python list"
           uv python list
           echo "::endgroup::"
