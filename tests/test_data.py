@@ -9,9 +9,11 @@ from evalution.benchmarks.data import load_suite_dataset, select_docs
 
 
 def test_load_suite_dataset_forwards_streaming_flag() -> None:
+    """Verify load suite dataset forwards streaming flag."""
     captured: dict[str, Any] = {}
 
     def loader(dataset_path: str, dataset_name: str | None = None, **kwargs: Any) -> list[str]:
+        """Support the surrounding tests with loader."""
         captured["path"] = dataset_path
         captured["name"] = dataset_name
         captured["kwargs"] = kwargs
@@ -36,9 +38,11 @@ def test_load_suite_dataset_forwards_streaming_flag() -> None:
 
 
 def test_load_suite_dataset_falls_back_to_streaming_kwarg() -> None:
+    """Verify load suite dataset falls back to streaming kwarg."""
     captured: dict[str, Any] = {}
 
     def loader(dataset_path: str, dataset_name: str | None = None, **kwargs: Any) -> list[str]:
+        """Support the surrounding tests with loader."""
         if "stream" in kwargs:
             raise TypeError("unexpected keyword argument 'stream'")
         captured["path"] = dataset_path
@@ -61,9 +65,11 @@ def test_load_suite_dataset_falls_back_to_streaming_kwarg() -> None:
 
 
 def test_load_suite_dataset_falls_back_to_streaming_after_builder_config_error() -> None:
+    """Verify load suite dataset falls back to streaming after builder config error."""
     captured: dict[str, Any] = {}
 
     def loader(dataset_path: str, dataset_name: str | None = None, **kwargs: Any) -> list[str]:
+        """Support the surrounding tests with loader."""
         if "stream" in kwargs:
             raise ValueError("BuilderConfig Foo doesn't have a 'stream' key.")
         captured["path"] = dataset_path

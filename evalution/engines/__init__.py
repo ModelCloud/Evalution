@@ -14,6 +14,9 @@ from .base import (
     SharedEngineConfig,
 )
 from .gptqmodel_engine import GPTQModel
+from .llama_cpp_engine import LlamaCpp
+from .openai_engine import OpenAICompatible
+from .openai_server import OpenAICompatibleServer, build_openai_compatible_server
 from .openvino_engine import OpenVINO
 from .sglang_engine import SGLang
 from .tensorrt_llm_engine import TensorRTLLM
@@ -21,6 +24,7 @@ from .transformers import Transformers
 from .transformers_compat import TransformersCompat
 from .vllm_engine import VLLM
 
+# Keep engine defaults and compatibility flags explicit at module scope.
 __all__ = [
     "BaseEngine",
     "BaseEngineDeviceConfig",
@@ -30,6 +34,9 @@ __all__ = [
     "BaseEngineTransformersRuntimeConfig",
     "BaseInferenceSession",
     "GPTQModel",
+    "LlamaCpp",
+    "OpenAICompatible",
+    "OpenAICompatibleServer",
     "OpenVINO",
     "SGLang",
     "SharedEngineConfig",
@@ -37,4 +44,5 @@ __all__ = [
     "Transformers",
     "TransformersCompat",
     "VLLM",
+    "build_openai_compatible_server",
 ]

@@ -15,11 +15,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mlqa_module = importlib.import_module("evalution.benchmarks.mlqa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         assert batch_size == 4
         request_items = list(requests)
         assert len(request_items) == 1
@@ -33,6 +36,7 @@ class FakeSession:
 
 
 def test_mlqa_scores_language_paired_extractable_answers(monkeypatch) -> None:
+    """Verify MLQA scores language paired extractable answers. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -62,6 +66,7 @@ def test_mlqa_scores_language_paired_extractable_answers(monkeypatch) -> None:
 
 
 def test_mlqa_normalization_and_dataset_name_validation() -> None:
+    """Verify MLQA normalization and dataset name validation."""
     assert mlqa_module._normalize_mlqa_answer("The, cat!", "en") == "cat"
 
     with pytest.raises(ValueError, match="unsupported mlqa context language"):
@@ -79,6 +84,7 @@ def test_mlqa_loads_public_zip_without_dataset_scripts(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
+    """Verify MLQA loads public zip without dataset scripts."""
     archive_path = tmp_path / "MLQA_V1.zip"
     payload = {
         "version": "1.0",

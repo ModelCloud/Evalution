@@ -15,6 +15,7 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 def _split_winogrande_sentence(sentence: str) -> tuple[str, str]:
     # Split the cloze template once so each answer choice can reuse the shared trailing suffix.
+    """Split winogrande sentence."""
     prefix, suffix = sentence.split("_", maxsplit=1)
     return prefix.rstrip(), suffix.strip()
 
@@ -22,20 +23,24 @@ def _split_winogrande_sentence(sentence: str) -> tuple[str, str]:
 @dataclass(slots=True)
 class WinoGrande(BaseMultipleChoiceSuite):
     # Evaluate commonsense pronoun resolution by ranking the two blank-filled sentence variants.
+    """Implement the wino grande benchmark suite."""
     dataset_path: str = "winogrande"
     dataset_name: str | None = "winogrande_xl"
     split: str = "validation"
 
     # Use the Hugging Face datasets loader for the public WinoGrande benchmark.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used by logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "winogrande"
 
     # Convert one WinoGrande row into the shared prompt and binary-choice structure used by the helper.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         prefix, suffix = _split_winogrande_sentence(doc["sentence"])
         choices = [
             f"{doc['option1']} {suffix}",
@@ -61,6 +66,7 @@ class WinoGrande(BaseMultipleChoiceSuite):
         choice_order: tuple[int, ...],
         labels: tuple[str, ...],
     ) -> str:
+        """Implement label prompt for wino grande."""
         lines = [
             f"Sentence: {sample.metadata['sentence']}",
             "Question: Which option best fills the blank?",
@@ -73,4 +79,5 @@ class WinoGrande(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used by the rest of the package.
 def winogrande(**kwargs: Any) -> WinoGrande:
+    """Implement winogrande for this module."""
     return WinoGrande(**kwargs)

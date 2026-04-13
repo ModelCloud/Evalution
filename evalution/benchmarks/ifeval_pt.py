@@ -18,14 +18,17 @@ IFEVAL_PT_SPLIT = "train"
 @dataclass(slots=True)
 class IFEvalPT(IFEval):
     # Reuse the clean-room IFEval scorer against the Portuguese translation.
+    """Define the IFEval pt helper class."""
     dataset_path: str = IFEVAL_PT_DATASET_PATH
     split: str = IFEVAL_PT_SPLIT
 
     # Keep the registry-visible task name distinct from the English suite.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "ifeval_pt"
 
 
 # Expose the Portuguese translated suite through the public benchmark namespace.
 def ifeval_pt(**kwargs: Any) -> IFEvalPT:
+    """Implement IFEval pt for this module."""
     return IFEvalPT(**kwargs)

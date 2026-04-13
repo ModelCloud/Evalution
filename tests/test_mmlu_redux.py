@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mmlu_redux_module = importlib.import_module("evalution.benchmarks.mmlu_redux")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -38,6 +41,7 @@ class FakeSession:
 
 
 def test_mmlu_redux_scores_subject_shards_as_letter_choices(monkeypatch) -> None:
+    """Verify MMLU redux scores subject shards as letter choices. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -84,4 +88,5 @@ def test_mmlu_redux_scores_subject_shards_as_letter_choices(monkeypatch) -> None
 
 
 def test_mmlu_redux_exposes_resolved_all_subjects() -> None:
+    """Verify MMLU redux exposes resolved all subjects."""
     assert "abstract_algebra" in mmlu_redux_module._MMLU_REDUX_ALL_SUBJECTS

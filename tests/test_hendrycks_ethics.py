@@ -12,16 +12,20 @@ import pytest
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 ethics_module = importlib.import_module("evalution.benchmarks.hendrycks_ethics")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, *, prompt: str, continuations: list[str], correct_choice_index: int) -> None:
+        """Initialize this object."""
         self.prompt = prompt
         self.continuations = continuations
         self.correct_choice_index = correct_choice_index
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 2
         for request, continuation in zip(requests, self.continuations, strict=True):
@@ -144,6 +148,7 @@ def test_hendrycks_ethics_variants_score_binary_multiple_choice(
     expected_target,
     expected_metadata,
 ) -> None:
+    """Verify hendrycks ethics variants score binary multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     monkeypatch.setattr(
         ethics_module,
         "_load_hendrycks_ethics_dataset",
@@ -185,6 +190,7 @@ def test_hendrycks_ethics_variants_score_binary_multiple_choice(
 
 
 def test_ethics_cm_can_emit_label_permutation_metric(monkeypatch) -> None:
+    """Verify ethics cm can emit label permutation metric. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     monkeypatch.setattr(
         ethics_module,
         "_load_hendrycks_ethics_dataset",
@@ -199,10 +205,13 @@ def test_ethics_cm_can_emit_label_permutation_metric(monkeypatch) -> None:
     )
 
     class LabelPermutationSession:
+        """Define the label permutation session helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.calls = 0
 
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for label permutation session."""
             assert batch_size == 4
             self.calls += 1
             if self.calls == 1:
@@ -244,6 +253,7 @@ def test_ethics_cm_can_emit_label_permutation_metric(monkeypatch) -> None:
 
 
 def test_utilitarianism_preprocessing_is_deterministic() -> None:
+    """Verify utilitarianism preprocessing is deterministic."""
     doc = {
         "activity": "alpha",
         "baseline": "beta",

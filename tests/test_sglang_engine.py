@@ -28,6 +28,7 @@ from evalution.engines.sglang_engine import (
     _normalize_sglang_response,
 )
 
+# Keep shared test fixtures and expectations explicit at module scope.
 _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
 # Skip the CUDA integration smoke test when the optional runtime is not installed locally.
 _HAS_SGLANG_RUNTIME = importlib.util.find_spec("sglang") is not None
@@ -36,6 +37,7 @@ _HAS_SGLANG_RUNTIME = importlib.util.find_spec("sglang") is not None
 class FakeTokenizer:
     """Minimal tokenizer test double that makes SGLang payloads easy to assert against."""
 
+    # Keep the class-level test state explicit for the surrounding assertions.
     pad_token_id = 0
     pad_token = "<pad>"
     eos_token = "</s>"
@@ -46,22 +48,26 @@ class FakeTokenizer:
     model_max_length = 2048
 
     def __call__(self, text, add_special_tokens=True, padding=False):
+        """Implement call for fake tokenizer."""
         del padding
         if isinstance(text, list):
             return {"input_ids": [self._encode(item, add_special_tokens) for item in text]}
         return {"input_ids": self._encode(text, add_special_tokens)}
 
     def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True):
+        """Implement apply chat template for fake tokenizer."""
         del tokenize, add_generation_prompt
         return "".join(message["content"] for message in messages)
 
     def decode(self, ids, skip_special_tokens=False):
+        """Implement decode for fake tokenizer."""
         del skip_special_tokens
         if isinstance(ids, int):
             ids = [ids]
         return "".join(chr(96 + token_id) for token_id in ids if token_id > 0)
 
     def _encode(self, text: str, add_special_tokens: bool) -> list[int]:
+        """Implement encode for fake tokenizer."""
         tokens = [ord(char) - 96 for char in text]
         if add_special_tokens:
             return [self.bos_token_id] + tokens
@@ -105,7 +111,9 @@ def test_sglang_session_generate_uses_in_process_engine_and_strips_prompt() -> N
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
+        """Provide the fake client helper used by the surrounding tests."""
         def generate(self, **payload):
+            """Generate generate."""
             payloads.append(payload)
             return [
                 {
@@ -118,9 +126,11 @@ def test_sglang_session_generate_uses_in_process_engine_and_strips_prompt() -> N
             ]
 
         def gc(self) -> None:
+            """Release reusable intermediate state for this object."""
             return None
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     session = SGLangSession(
@@ -154,11 +164,14 @@ def test_sglang_session_generate_continuous_yields_completion_order() -> None:
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
+        """Provide the fake client helper used by the surrounding tests."""
         def generate(self, **payload):
+            """Generate generate."""
             del payload
             raise AssertionError("generate() should not be used for continuous generation")
 
         async def async_generate(self, **payload):
+            """Implement async generate for fake client."""
             payloads.append(payload)
             input_ids = list(payload["input_ids"])
             await asyncio.sleep(0.02 if input_ids[-1] == 2 else 0.0)
@@ -170,9 +183,11 @@ def test_sglang_session_generate_continuous_yields_completion_order() -> None:
             }
 
         def gc(self) -> None:
+            """Release reusable intermediate state for this object."""
             return None
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     session = SGLangSession(
@@ -222,11 +237,14 @@ def test_sglang_session_generate_continuous_refills_open_slots_immediately() -> 
     event_log: list[str] = []
 
     class FakeClient:
+        """Provide the fake client helper used by the surrounding tests."""
         def generate(self, **payload):
+            """Generate generate."""
             del payload
             raise AssertionError("generate() should not be used for continuous generation")
 
         async def async_generate(self, **payload):
+            """Implement async generate for fake client."""
             input_ids = list(payload["input_ids"])
             prompt_text = "".join(chr(96 + token_id) for token_id in input_ids)
             event_log.append(f"start:{prompt_text}")
@@ -240,9 +258,11 @@ def test_sglang_session_generate_continuous_refills_open_slots_immediately() -> 
             }
 
         def gc(self) -> None:
+            """Release reusable intermediate state for this object."""
             return None
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     session = SGLangSession(
@@ -279,7 +299,9 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
+        """Provide the fake client helper used by the surrounding tests."""
         def generate(self, **payload):
+            """Generate generate."""
             payloads.append(payload)
             return [
                 {
@@ -308,9 +330,11 @@ def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
             ]
 
         def gc(self) -> None:
+            """Release reusable intermediate state for this object."""
             return None
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     session = SGLangSession(
@@ -347,7 +371,9 @@ def test_sglang_session_loglikelihood_continuous_uses_auto_batch_size() -> None:
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
+        """Provide the fake client helper used by the surrounding tests."""
         def generate(self, **payload):
+            """Generate generate."""
             payloads.append(payload)
             responses = []
             for row in payload["input_ids"]:
@@ -376,9 +402,11 @@ def test_sglang_session_loglikelihood_continuous_uses_auto_batch_size() -> None:
             return responses
 
         def gc(self) -> None:
+            """Release reusable intermediate state for this object."""
             return None
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     session = SGLangSession(
@@ -427,7 +455,9 @@ def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
     """Greedy checks should still work when only patched logit views are present."""
 
     class FakeClient:
+        """Provide the fake client helper used by the surrounding tests."""
         def generate(self, **payload):
+            """Generate generate."""
             del payload
             return [
                 {
@@ -443,9 +473,11 @@ def test_sglang_session_loglikelihood_preserves_monkey_patched_logits() -> None:
             ]
 
         def gc(self) -> None:
+            """Release reusable intermediate state for this object."""
             return None
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     session = SGLangSession(
@@ -472,7 +504,9 @@ def test_sglang_session_loglikelihood_rolling_aggregates_window_scores() -> None
     payloads: list[dict[str, object]] = []
 
     class FakeClient:
+        """Provide the fake client helper used by the surrounding tests."""
         def generate(self, **payload):
+            """Generate generate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
             payloads.append(payload)
             rows = list(payload["input_ids"])
             responses = []
@@ -497,9 +531,11 @@ def test_sglang_session_loglikelihood_rolling_aggregates_window_scores() -> None
             return responses
 
         def gc(self) -> None:
+            """Release reusable intermediate state for this object."""
             return None
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     session = SGLangSession(

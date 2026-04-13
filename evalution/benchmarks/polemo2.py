@@ -17,6 +17,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.choice_label import exact_match
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 POLEMO2_VARIANTS = ("polemo2_in", "polemo2_out")
 _POLEMO2_DATASET_PATHS = {
     "polemo2_in": "allegro/klej-polemo2-in",
@@ -33,6 +34,7 @@ _POLEMO2_LABEL_RE = pcre.compile(r"\b([ABCD])\b")
 
 
 def _polemo2_prompt(sentence: str) -> str:
+    """Implement polemo2 prompt for this module."""
     return (
         f'Opinia: "{sentence}"\n'
         "Określ sentyment podanej opinii. Możliwe odpowiedzi:\n"
@@ -45,6 +47,7 @@ def _polemo2_prompt(sentence: str) -> str:
 
 
 def _normalize_polemo2_prediction(prediction: str) -> str:
+    """Normalize polemo2 prediction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     candidate = prediction.strip()
     match = _POLEMO2_LABEL_RE.search(candidate)
     if match is not None:
@@ -55,6 +58,7 @@ def _normalize_polemo2_prediction(prediction: str) -> str:
 @dataclass(slots=True)
 class Polemo2(BaseTestSuite):
     # POLEMO2 is evaluated by generating one label token for a four-way sentiment class.
+    """Implement the polemo2 benchmark suite."""
     dataset_path: str = "allegro/klej-polemo2-in"
     dataset_name: str | None = None
     split: str = "test"
@@ -65,6 +69,7 @@ class Polemo2(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.variant not in POLEMO2_VARIANTS:
             raise ValueError(f"unsupported polemo2 variant: {self.variant!r}")
         expected_path = _POLEMO2_DATASET_PATHS[self.variant]
@@ -74,9 +79,11 @@ class Polemo2(BaseTestSuite):
             raise ValueError("polemo2 does not use a dataset_name")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.variant
 
     def result_metadata(
@@ -84,6 +91,7 @@ class Polemo2(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_choice_label_micro_f1",
@@ -92,6 +100,7 @@ class Polemo2(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             target = _POLEMO2_LABELS[str(doc["target"])]
             yield PreparedSample(
@@ -112,6 +121,7 @@ class Polemo2(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         normalized_prediction = _normalize_polemo2_prediction(output.text)
         return SampleResult(
             index=prepared_sample.index,
@@ -132,14 +142,17 @@ class Polemo2(BaseTestSuite):
 
 
 def polemo2(*, variant: str, **kwargs: Any) -> Polemo2:
+    """Implement polemo2 for this module."""
     if variant not in POLEMO2_VARIANTS:
         raise ValueError(f"unsupported polemo2 variant: {variant!r}")
     return Polemo2(variant=variant, dataset_path=_POLEMO2_DATASET_PATHS[variant], **kwargs)
 
 
 def polemo2_in(**kwargs: Any) -> Polemo2:
+    """Implement polemo2 in for this module."""
     return polemo2(variant="polemo2_in", **kwargs)
 
 
 def polemo2_out(**kwargs: Any) -> Polemo2:
+    """Implement polemo2 out for this module."""
     return polemo2(variant="polemo2_out", **kwargs)

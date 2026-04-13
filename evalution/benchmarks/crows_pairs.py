@@ -10,12 +10,12 @@ from typing import Any, Callable
 
 from datasets import load_dataset
 
-from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger
 from evalution.results import SampleResult, TestResult
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _CROWS_PAIRS_DATASET_PATH = "jannalu/crows_pairs_multilingual"
 CROWS_PAIRS_LANGUAGES = ("english", "french")
 CROWS_PAIRS_BIAS_TYPES = (
@@ -45,16 +45,19 @@ _CROWS_PAIRS_BIAS_TYPE_PREFIXES = {
 
 
 def _normalized_sentence(text: Any) -> str:
+    """Implement normalized sentence for this module."""
     return str(text).strip()
 
 
 def _crows_pairs_task_name(language: str, bias_type: str | None) -> str:
+    """Implement crows pairs task name for this module."""
     if bias_type is None:
         return f"crows_pairs_{language}"
     return f"crows_pairs_{language}_{bias_type}"
 
 
 def _crows_pairs_bias_prefix(bias_type: str | None) -> str | None:
+    """Implement crows pairs bias prefix for this module."""
     if bias_type is None:
         return None
     try:
@@ -64,6 +67,7 @@ def _crows_pairs_bias_prefix(bias_type: str | None) -> str | None:
 
 
 def _crows_pairs_dataset_loader(*, bias_prefix: str | None) -> Callable[..., Any]:
+    """Implement crows pairs dataset loader for this module."""
     def _loader(
         dataset_path: str,
         dataset_name: str,
@@ -72,6 +76,7 @@ def _crows_pairs_dataset_loader(*, bias_prefix: str | None) -> Callable[..., Any
         cache_dir: str | None = None,
         stream: bool = (False),
     ) -> Any:
+        """Implement loader for this module."""
         dataset = load_dataset(
             dataset_path,
             dataset_name,
@@ -90,6 +95,8 @@ def _crows_pairs_dataset_loader(*, bias_prefix: str | None) -> Callable[..., Any
 
 @dataclass(slots=True)
 class CrowSPairs:
+    """Define the crow spairs helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = _CROWS_PAIRS_DATASET_PATH
     dataset_name: str | None = "english"
     split: str = "test"
@@ -101,6 +108,7 @@ class CrowSPairs:
     bias_type: str | None = None
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in CROWS_PAIRS_LANGUAGES:
             raise ValueError(f"unsupported crows_pairs language: {self.language!r}")
         if self.dataset_name in {None, self.language}:
@@ -110,14 +118,17 @@ class CrowSPairs:
         _crows_pairs_bias_prefix(self.bias_type)
 
     def dataset_loader(self) -> Callable[..., Any]:
+        """Return the dataset loader bound to this suite."""
         return _crows_pairs_dataset_loader(
             bias_prefix=_crows_pairs_bias_prefix(self.bias_type),
         )
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _crows_pairs_task_name(self.language, self.bias_type)
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -131,6 +142,7 @@ class CrowSPairs:
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -252,6 +264,7 @@ def crows_pairs(
     bias_type: str | None = None,
     **kwargs: Any,
 ) -> CrowSPairs:
+    """Implement crows pairs for this module."""
     return CrowSPairs(
         language=language,
         dataset_name=language,
@@ -261,7 +274,9 @@ def crows_pairs(
 
 
 def _make_crows_pairs_factory(language: str, bias_type: str | None) -> Callable[..., CrowSPairs]:
+    """Make crows pairs factory."""
     def _factory(**kwargs: Any) -> CrowSPairs:
+        """Implement factory for this module."""
         return crows_pairs(language=language, bias_type=bias_type, **kwargs)
 
     _factory.__name__ = _crows_pairs_task_name(language, bias_type)
@@ -269,6 +284,7 @@ def _make_crows_pairs_factory(language: str, bias_type: str | None) -> Callable[
     return _factory
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 CROWS_PAIRS_TASKS = (
     _crows_pairs_task_name("english", None),
     *(

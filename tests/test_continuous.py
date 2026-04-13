@@ -70,11 +70,13 @@ def test_stream_request_results_keeps_request_consumer_active_while_caller_is_pa
 
 
 def test_stream_request_results_applies_backpressure_to_request_producer() -> None:
+    """Verify stream request results applies backpressure to request producer."""
     fifth_request_seen = threading.Event()
     stop_seen = threading.Event()
     produced_count = {"value": 0}
 
     def iter_requests():
+        """Iterate over requests."""
         for index in range(100):
             produced_count["value"] += 1
             if produced_count["value"] >= 5:
@@ -82,6 +84,7 @@ def test_stream_request_results_applies_backpressure_to_request_producer() -> No
             yield index, GenerationRequest(prompt=f"prompt::{index}")
 
     def consume_requests(stop_event, request_queue, put_result) -> None:
+        """Support the surrounding tests with consume requests."""
         first = request_queue.get(timeout_s=1.0)
         assert first is not None
         threading.Event().wait(0.1)

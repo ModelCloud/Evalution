@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from functools import partial
 import json
 from pathlib import Path
-import pcre
 import string
 import sys
 from typing import Any
@@ -19,6 +18,7 @@ from urllib.request import urlopen
 import zipfile
 
 from datasets import Dataset
+import pcre
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
@@ -47,15 +47,17 @@ _MLQA_PUNCT = {
 }.union(string.punctuation)
 _WHITESPACE_LANGS = frozenset({"ar", "de", "en", "es", "hi", "vi"})
 _MIXED_SEGMENTATION_LANGS = frozenset({"zh"})
-_ZH_CHARACTER_RE = pcre.compile(r"[\x{4e00}-\x{9fa5}]")
-_EN_ARTICLES_RE = pcre.compile(r"\b(a|an|the)\b")
-_ES_ARTICLES_RE = pcre.compile(r"\b(un|una|unos|unas|el|la|los|las)\b")
-_VI_ARTICLES_RE = pcre.compile(r"\b(của|là|cái|chiếc|những)\b")
-_DE_ARTICLES_RE = pcre.compile(r"\b(ein|eine|einen|einem|eines|einer|der|die|das|den|dem|des)\b")
-_AR_ARTICLES_RE = pcre.compile(r"(?:^|\s)ال")
+# Keep language-specific normalizers compiled once because answer scoring hits them for every prediction/reference pair.
+_MLQA_CJK_RE = pcre.compile("[\u4e00-\u9fff]")
+_MLQA_ARTICLES_EN_RE = pcre.compile(r"\b(a|an|the)\b")
+_MLQA_ARTICLES_ES_RE = pcre.compile(r"\b(un|una|unos|unas|el|la|los|las)\b")
+_MLQA_ARTICLES_VI_RE = pcre.compile(r"\b(của|là|cái|chiếc|những)\b")
+_MLQA_ARTICLES_DE_RE = pcre.compile(r"\b(ein|eine|einen|einem|eines|einer|der|die|das|den|dem|des)\b")
+_MLQA_ARTICLES_AR_RE = pcre.compile(r"(?:^|\s)ال")
 
 
 def _mlqa_cache_dir(cache_dir: str | None) -> Path:
+    """Implement MLQA cache dir for this module."""
     base_dir = Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "evalution" / "datasets"
     target_dir = base_dir / "mlqa"
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -63,6 +65,7 @@ def _mlqa_cache_dir(cache_dir: str | None) -> Path:
 
 
 def _download_mlqa_archive(cache_dir: str | None) -> Path:
+    """Implement download MLQA archive for this module."""
     archive_path = _mlqa_cache_dir(cache_dir) / "MLQA_V1.zip"
     if archive_path.exists():
         return archive_path
@@ -73,6 +76,7 @@ def _download_mlqa_archive(cache_dir: str | None) -> Path:
 
 def _flatten_mlqa_payload(payload: dict[str, Any]) -> Dataset:
     # Flatten the official SQuAD-style archive into Evalution's one-row-per-question schema.
+    """Flatten MLQA payload. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     rows: list[dict[str, Any]] = []
     for article in payload["data"]:
         title = str(article.get("title", "")).strip()
@@ -110,11 +114,13 @@ def _load_mlqa_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
     context_language: str,
     question_language: str,
 ) -> Dataset:
-    if stream:
+    """Load MLQA dataset."""
+    effective_stream = False if stream is None else stream
+    if effective_stream:
         raise ValueError("mlqa does not support stream=True")
     expected_dataset_name = f"mlqa.{context_language}.{question_language}"
     if dataset_name not in {None, expected_dataset_name}:
@@ -134,10 +140,12 @@ def _load_mlqa_dataset(
 
 
 def _mlqa_prompt(*, context: str, question: str) -> str:
+    """Implement MLQA prompt for this module."""
     return f"Context: {context.strip()}\n\nQuestion: {question.strip()}\n\nAnswer:"
 
 
 def _mlqa_answer_texts(doc: dict[str, Any]) -> list[str]:
+    """Implement MLQA answer texts for this module."""
     answers = doc["answers"]
     if isinstance(answers, dict):
         values = answers.get("text", [])
@@ -154,14 +162,16 @@ def _mlqa_answer_texts(doc: dict[str, Any]) -> list[str]:
 
 
 def _whitespace_tokenize(text: str) -> list[str]:
+    """Implement whitespace tokenize for this module."""
     return text.split()
 
 
 def _mixed_segmentation(text: str) -> list[str]:
+    """Implement mixed segmentation for this module."""
     segments: list[str] = []
     buffered = ""
     for character in text:
-        if _ZH_CHARACTER_RE.search(character) or character in _MLQA_PUNCT:
+        if _MLQA_CJK_RE.search(character) or character in _MLQA_PUNCT:
             if buffered:
                 segments.extend(_whitespace_tokenize(buffered))
                 buffered = ""
@@ -174,20 +184,21 @@ def _mixed_segmentation(text: str) -> list[str]:
 
 
 def _normalize_mlqa_answer(text: str, language: str) -> str:
+    """Normalize MLQA answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     lowered = text.lower()
     stripped_punctuation = "".join(character for character in lowered if character not in _MLQA_PUNCT)
     if language == "en":
-        stripped_articles = _EN_ARTICLES_RE.sub(" ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_EN_RE.sub(" ", stripped_punctuation)
     elif language == "es":
-        stripped_articles = _ES_ARTICLES_RE.sub(" ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_ES_RE.sub(" ", stripped_punctuation)
     elif language == "hi":
         stripped_articles = stripped_punctuation
     elif language == "vi":
-        stripped_articles = _VI_ARTICLES_RE.sub(" ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_VI_RE.sub(" ", stripped_punctuation)
     elif language == "de":
-        stripped_articles = _DE_ARTICLES_RE.sub(" ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_DE_RE.sub(" ", stripped_punctuation)
     elif language == "ar":
-        stripped_articles = _AR_ARTICLES_RE.sub(" ", stripped_punctuation)
+        stripped_articles = _MLQA_ARTICLES_AR_RE.sub(" ", stripped_punctuation)
     elif language == "zh":
         stripped_articles = stripped_punctuation
     else:
@@ -203,10 +214,12 @@ def _normalize_mlqa_answer(text: str, language: str) -> str:
 
 
 def _mlqa_exact_match(prediction: str, answer: str, language: str) -> float:
+    """Implement MLQA exact match for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return float(_normalize_mlqa_answer(prediction, language) == _normalize_mlqa_answer(answer, language))
 
 
 def _mlqa_f1(prediction: str, answer: str, language: str) -> float:
+    """Implement MLQA F1 for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     prediction_tokens = _normalize_mlqa_answer(prediction, language).split()
     answer_tokens = _normalize_mlqa_answer(answer, language).split()
     common = Counter(prediction_tokens) & Counter(answer_tokens)
@@ -219,6 +232,7 @@ def _mlqa_f1(prediction: str, answer: str, language: str) -> float:
 
 
 def _best_mlqa_scores(prediction: str, answers: list[str], language: str) -> tuple[float, float, int]:
+    """Implement best MLQA scores for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     best_exact = 0.0
     best_f1 = 0.0
     best_index = 0
@@ -235,6 +249,7 @@ def _best_mlqa_scores(prediction: str, answers: list[str], language: str) -> tup
 @dataclass(slots=True)
 class MLQA(BaseTestSuite):
     # Recreate MLQA's language-paired extractive QA evaluation with context-language normalization.
+    """Implement the MLQA benchmark suite."""
     dataset_path: str = "facebook/mlqa"
     dataset_name: str | None = "mlqa.en.en"
     split: str = "test"
@@ -245,6 +260,7 @@ class MLQA(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.context_language not in MLQA_LANGUAGES:
             raise ValueError(f"unsupported mlqa context language: {self.context_language!r}")
         if self.question_language not in MLQA_LANGUAGES:
@@ -256,6 +272,7 @@ class MLQA(BaseTestSuite):
         raise ValueError("mlqa dataset_name must match the configured language pair")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return partial(
             _load_mlqa_dataset,
             context_language=self.context_language,
@@ -263,6 +280,7 @@ class MLQA(BaseTestSuite):
         )
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"mlqa_{self.context_language}_{self.question_language}"
 
     def result_metadata(
@@ -270,6 +288,7 @@ class MLQA(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_mlqa_exact_match_f1",
@@ -279,6 +298,7 @@ class MLQA(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             answers = _mlqa_answer_texts(doc)
             yield PreparedSample(
@@ -302,6 +322,7 @@ class MLQA(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         answers = _mlqa_answer_texts(prepared_sample.doc)
         exact, f1_score, best_index = _best_mlqa_scores(
             output.text,
@@ -335,6 +356,7 @@ class MLQA(BaseTestSuite):
 
 def mlqa(*, context_language: str, question_language: str, **kwargs: Any) -> MLQA:
     # Lock YAML and Python construction to one canonical dataset config string per language pair.
+    """Implement MLQA for this module."""
     kwargs.setdefault("dataset_name", f"mlqa.{context_language}.{question_language}")
     return MLQA(
         context_language=context_language,
@@ -345,7 +367,9 @@ def mlqa(*, context_language: str, question_language: str, **kwargs: Any) -> MLQ
 
 def _make_mlqa_factory(context_language: str, question_language: str) -> Any:
     # Emit one stable factory per context/question language pair for registry discovery.
+    """Make MLQA factory."""
     def factory(**kwargs: Any) -> MLQA:
+        """Implement factory for this module."""
         return mlqa(
             context_language=context_language,
             question_language=question_language,

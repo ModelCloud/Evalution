@@ -14,6 +14,7 @@ import pytest
 
 from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, run_suite_spec
 
+# Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
 # Resolve subprocess nodeids from the repository root so child pytest runs stay location-agnostic.
 _REPO_ROOT = Path(__file__).resolve().parents[2]

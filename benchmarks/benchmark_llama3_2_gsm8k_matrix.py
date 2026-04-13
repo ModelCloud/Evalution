@@ -26,11 +26,14 @@ from evalution.suites.gsm8k_platinum import GSM8KPlatinum
 
 @dataclass(frozen=True, slots=True)
 class BenchmarkConfig:
+    """Define the benchmark config helper class."""
+    # Keep the class-level state explicit for this helper.
     name: str
     mode: str
     attn_implementation: str
 
 
+# Keep module-level state explicit for this module.
 BENCHMARK_CONFIGS = (
     BenchmarkConfig(name="static_eager", mode="static", attn_implementation="eager"),
     BenchmarkConfig(name="static_sdpa", mode="static", attn_implementation="sdpa"),
@@ -45,11 +48,13 @@ BENCHMARK_CONFIGS = (
 
 
 def sync() -> None:
+    """Implement sync for this module."""
     if torch.cuda.is_available():
         torch.cuda.synchronize()
 
 
 def resolve_device(requested_device: str) -> str:
+    """Resolve device."""
     if not torch.cuda.is_available():
         return "cpu"
 
@@ -66,6 +71,7 @@ def resolve_device(requested_device: str) -> str:
 
 
 def describe_runtime(device: str) -> dict[str, Any]:
+    """Implement describe runtime for this module."""
     runtime: dict[str, Any] = {
         "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
         "resolved_device": device,
@@ -81,6 +87,7 @@ def describe_runtime(device: str) -> dict[str, Any]:
 
 
 def main() -> None:
+    """Run the CLI entry point for this module. Preserve the fallback order expected by the surrounding caller."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--model-path",
@@ -232,6 +239,7 @@ def benchmark_static(
     spec: Any,
     batch_size: str,
 ) -> dict[str, Any]:
+    """Implement benchmark static for this module."""
     engine = evalution.Transformers(
         dtype=dtype,
         attn_implementation=config.attn_implementation,
@@ -316,6 +324,7 @@ def benchmark_continuous(
     spec: Any,
     max_new_tokens: int,
 ) -> dict[str, Any]:
+    """Implement benchmark continuous for this module. Preserve the fallback order expected by the surrounding caller."""
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     if tokenizer.pad_token_id is None:
         if tokenizer.eos_token is not None:
@@ -413,6 +422,7 @@ def summarize_result(
     generated_token_lengths: list[int],
     effective_batch_size: int | None,
 ) -> dict[str, Any]:
+    """Implement summarize result for this module."""
     return {
         "name": config.name,
         "mode": config.mode,

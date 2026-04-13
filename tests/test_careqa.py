@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 careqa_module = importlib.import_module("evalution.benchmarks.careqa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -38,6 +41,7 @@ class FakeSession:
 
 
 def test_careqa_scores_closed_ended_question(monkeypatch) -> None:
+    """Verify careqa scores closed ended question. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -70,5 +74,6 @@ def test_careqa_scores_closed_ended_question(monkeypatch) -> None:
 
 
 def test_careqa_rejects_unknown_language() -> None:
+    """Verify careqa rejects unknown language."""
     with pytest.raises(ValueError, match="unsupported careqa language"):
         evalution.benchmarks.careqa(language="fr")

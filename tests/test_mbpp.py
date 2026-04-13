@@ -11,10 +11,12 @@ from datasets import Dataset
 
 import evalution
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mbpp_module = importlib.import_module("evalution.benchmarks.mbpp")
 
 
 def test_mbpp_scores_pass_at_1(monkeypatch):
+    """Verify MBPP scores pass at 1. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -36,7 +38,9 @@ def test_mbpp_scores_pass_at_1(monkeypatch):
     monkeypatch.setattr(mbpp_module, "_run_script", lambda script: True)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size):
+            """Generate generate."""
             assert batch_size == 1
             assert len(requests) == 1
             return [

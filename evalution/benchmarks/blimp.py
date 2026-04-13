@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 BLIMP_SUBSETS = (
     "adjunct_island",
     "anaphor_gender_agreement",
@@ -84,17 +85,21 @@ BLIMP_SUBSETS = (
 
 
 def _normalize_subset_name(subset: str) -> str:
+    """Normalize subset name. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return subset.lower()
 
 
 @dataclass(slots=True)
 class BLiMP(BaseMultipleChoiceSuite):
+    """Implement the bli mp benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "blimp"
     dataset_name: str | None = None
     split: str = "train"
     subset: str = ""
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in BLIMP_SUBSETS:
             raise ValueError(f"unsupported blimp subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -103,20 +108,25 @@ class BLiMP(BaseMultipleChoiceSuite):
         raise ValueError("blimp dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"blimp_{_normalize_subset_name(self.subset)}"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata()
         metadata["prompt_variant"] = "full_sentence_pair"
         return metadata
 
     def continuation_for_choice(self, choice: str) -> str:
+        """Implement continuation for choice for bli mp."""
         return choice
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt="",
@@ -140,4 +150,5 @@ class BLiMP(BaseMultipleChoiceSuite):
 
 
 def blimp(*, subset: str, **kwargs: Any) -> BLiMP:
+    """Implement blimp for this module."""
     return BLiMP(subset=subset, dataset_name=subset, **kwargs)

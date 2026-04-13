@@ -19,6 +19,7 @@ from evalution.results import SampleResult
 from evalution.scorers.choice_label import exact_match
 from evalution.scorers.gsm8k import INVALID_ANSWER
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 GSM_PLUS_TASKS = ("gsm_plus", "gsm_plus_mini")
 _STRICT_MATCH_RE = pcre.compile(r"#### (\-?[0-9\.,]+)")
 _FLEXIBLE_EXTRACT_RE = pcre.compile(r"(-?[$0-9.,]{2,})|(-?[0-9]+)")
@@ -27,16 +28,19 @@ _TRAILING_PERIOD_RE = pcre.compile(r"\.$")
 
 
 def _gsm_plus_prompt(doc: dict[str, Any]) -> str:
+    """Implement gsm plus prompt for this module."""
     return f"Question: {doc['question']}\nAnswer:"
 
 
 def _gsm_plus_target(doc: dict[str, Any]) -> str:
+    """Implement gsm plus target for this module."""
     return str(doc["solution"])
 
 
 @dataclass(slots=True)
 class _BaseGSMPlusSuite(BaseGSM8KSuite):
     # GSM-Plus reuses GSM8K prompting, but matches lm-eval's strict/flexible answer extraction.
+    """Define the base gsmplus suite helper class."""
     variant: str = "base"
     stream: bool = True
     SCORING_MODE = "generated_regex_extract_exact_match"
@@ -46,9 +50,11 @@ class _BaseGSMPlusSuite(BaseGSM8KSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         _, spec = self._resolved_variant()
         fewshot_docs = list(docs) if self.requires_full_doc_materialization() else list(spec.fewshots)
         fewshot_as_multiturn = self._resolved_fewshot_as_multiturn()
@@ -77,6 +83,7 @@ class _BaseGSMPlusSuite(BaseGSM8KSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         strict_prediction = _extract_strict_match(output.text)
         flexible_prediction = _extract_flexible_match(output.text)
         normalized_target = _normalize_gsm_plus_exact_match(prepared_sample.target)
@@ -104,9 +111,11 @@ class _BaseGSMPlusSuite(BaseGSM8KSuite):
         )
 
     def invalid_prediction_count(self, sample: SampleResult) -> int:
+        """Implement invalid prediction count for base gsmplus suite."""
         return int(sample.extracted["flexible-extract"] == INVALID_ANSWER)
 
     def _sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
+        """Implement sample metadata for base gsmplus suite."""
         return {
             "perturbation_type": str(doc.get("perturbation_type", "")),
             "seed_question": str(doc.get("seed_question", "")),
@@ -122,6 +131,7 @@ class _BaseGSMPlusSuite(BaseGSM8KSuite):
         doc: dict[str, Any],
         rng: random.Random,
     ) -> list[dict[str, str]]:
+        """Select fewshots like lm eval."""
         if spec.fewshots:
             return list(spec.fewshots[: spec.num_fewshot])
         if spec.num_fewshot == 0:
@@ -139,6 +149,7 @@ class _BaseGSMPlusSuite(BaseGSM8KSuite):
 
 
 def _normalize_gsm_plus_exact_match(text: str) -> str:
+    """Normalize gsm plus exact match. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = text.strip().lower().replace(",", "").replace("$", "")
     normalized = _TARGET_PREFIX_RE.sub("", normalized)
     normalized = _TRAILING_PERIOD_RE.sub("", normalized)
@@ -146,6 +157,7 @@ def _normalize_gsm_plus_exact_match(text: str) -> str:
 
 
 def _extract_strict_match(text: str) -> str:
+    """Extract strict match. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     match = _STRICT_MATCH_RE.search(text)
     if match is None:
         return INVALID_ANSWER
@@ -153,6 +165,7 @@ def _extract_strict_match(text: str) -> str:
 
 
 def _extract_flexible_match(text: str) -> str:
+    """Extract flexible match. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     matches = _FLEXIBLE_EXTRACT_RE.findall(text)
     if not matches:
         return INVALID_ANSWER
@@ -167,6 +180,8 @@ def _extract_flexible_match(text: str) -> str:
 
 @dataclass(slots=True)
 class GSMPlus(_BaseGSMPlusSuite):
+    """Define the gsmplus helper class."""
+    # Keep the class-level state explicit for this helper.
     VARIANTS = {
         "base": VariantSpec(
             task_name="gsm_plus",
@@ -184,6 +199,8 @@ class GSMPlus(_BaseGSMPlusSuite):
 
 @dataclass(slots=True)
 class GSMPlusMini(_BaseGSMPlusSuite):
+    """Define the gsmplus mini helper class."""
+    # Keep the class-level state explicit for this helper.
     VARIANTS = {
         "base": VariantSpec(
             task_name="gsm_plus_mini",
@@ -200,8 +217,10 @@ class GSMPlusMini(_BaseGSMPlusSuite):
 
 
 def gsm_plus(**kwargs: Any) -> GSMPlus:
+    """Implement gsm plus for this module."""
     return GSMPlus(**kwargs)
 
 
 def gsm_plus_mini(**kwargs: Any) -> GSMPlusMini:
+    """Implement gsm plus mini for this module."""
     return GSMPlusMini(**kwargs)

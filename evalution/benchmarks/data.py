@@ -14,6 +14,7 @@ import pcre
 
 from evalution.logbar import get_logger, spinner
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 T = TypeVar("T")
 _DEFAULT_SHUFFLE_SEED = 7
 _UNEXPECTED_LOADER_KWARG_PATTERN = pcre.compile(r"unexpected keyword argument '([^']+)'")
@@ -21,19 +22,23 @@ _UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN = pcre.compile(r"doesn't have a '([^']+)'
 
 
 def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
+    """Implement unexpected loader kwargs for this module."""
     return set(_UNEXPECTED_LOADER_KWARG_PATTERN.findall(str(exc)))
 
 
 def _unexpected_loader_config_keys(exc: ValueError) -> set[str]:
+    """Implement unexpected loader config keys for this module."""
     return set(_UNEXPECTED_BUILDER_CONFIG_KEY_PATTERN.findall(str(exc)))
 
 
 def _cached_stream_config_miss(exc: ValueError) -> bool:
+    """Implement cached stream config miss for this module."""
     message = str(exc)
     return "Couldn't find cache for" in message and "-stream=" in message
 
 
 def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
+    """Implement invoke dataset loader for this module."""
     try:
         return loader(*args, **kwargs)
     except TypeError as exc:
@@ -57,6 +62,7 @@ def _invoke_dataset_loader(loader: Any, *args: Any, **kwargs: Any) -> Any:
 
 
 def normalize_order(order: str) -> str:
+    """Normalize order. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = order.strip().lower()
     if normalized in {"native", "length|asc", "length|desc"}:
         return normalized
@@ -81,6 +87,7 @@ def apply_order(
     order: str,
     length_key: Callable[[T], int],
 ) -> list[T]:
+    """Implement apply order for this module."""
     normalized_order = normalize_order(order)
     ordered = list(items)
     if normalized_order == "native":
@@ -105,6 +112,7 @@ def load_suite_dataset(
     stream: bool,
     purpose: str | None = None,
 ) -> tuple[Any, float]:
+    """Load suite dataset."""
     logger = get_logger()
     dataset_ref = dataset_path if dataset_name is None else f"{dataset_path}/{dataset_name}"
     purpose_prefix = f"{purpose.strip()} " if isinstance(purpose, str) and purpose.strip() else ""
@@ -170,6 +178,7 @@ def select_docs(
 
 # Apply an optional row cap while preserving streaming datasets.
 def limit_docs(docs: Any, max_rows: int | None) -> Any:
+    """Implement limit docs for this module."""
     if max_rows is None:
         return docs
     if hasattr(docs, "select") and hasattr(docs, "__len__"):
@@ -185,6 +194,7 @@ def doc_count(
     max_rows: int | None,
     split: str,
 ) -> int:
+    """Implement doc count for this module."""
     if hasattr(docs, "__len__"):
         count = len(docs)
         return min(max_rows, count) if max_rows is not None else count

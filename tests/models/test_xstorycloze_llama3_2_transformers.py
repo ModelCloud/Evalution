@@ -7,8 +7,10 @@ import pytest
 
 from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, XSTORYCLOZE_TASKS, run_suite_specs
 
+# Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
 
 
 def test_xstorycloze_llama3_2_transformers(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify xstorycloze llama3 2 transformers."""
     run_suite_specs(capsys, XSTORYCLOZE_TASKS)

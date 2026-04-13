@@ -10,13 +10,13 @@ from functools import partial
 import json
 from pathlib import Path
 import random
-import pcre
 import string
 from typing import Any
 from urllib.request import urlopen
 import uuid
 
 from datasets import Dataset
+import pcre
 from transformers import AutoTokenizer
 
 from evalution.benchmarks.base import BaseTestSuite
@@ -265,10 +265,12 @@ _VARIANT_CONFIG: dict[str, dict[str, Any]] = {
 
 
 def _normalize_prediction(text: str) -> str:
+    """Normalize prediction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return _CONTROL_CHARS_RE.sub("\n", text).strip()
 
 
 def _contains_fraction(prediction: str, outputs: list[str]) -> float:
+    """Implement contains fraction for this module."""
     if not outputs:
         return 0.0
     lowered_prediction = prediction.lower()
@@ -276,6 +278,7 @@ def _contains_fraction(prediction: str, outputs: list[str]) -> float:
 
 
 def _compose_prompt(input_text: str, gen_prefix: str) -> str:
+    """Compose prompt."""
     stripped_input = input_text.rstrip()
     stripped_prefix = gen_prefix.strip()
     if stripped_input.endswith(stripped_prefix):
@@ -284,6 +287,7 @@ def _compose_prompt(input_text: str, gen_prefix: str) -> str:
 
 
 def _token_length(tokenizer: Any, text: str) -> int:
+    """Implement token length for this module."""
     encoded = tokenizer(text, add_special_tokens=False)
     input_ids = encoded["input_ids"] if isinstance(encoded, dict) else getattr(encoded, "input_ids")
     if input_ids and isinstance(input_ids[0], list):
@@ -292,12 +296,14 @@ def _token_length(tokenizer: Any, text: str) -> int:
 
 
 def _ruler_cache_root(cache_dir: str | None) -> Path:
+    """Implement ruler cache root for this module."""
     if cache_dir:
         return Path(cache_dir) / "ruler"
     return Path.home() / ".cache" / "evalution" / "ruler"
 
 
 def _download_json(url: str, *, cache_dir: str | None, file_name: str) -> Any:
+    """Implement download JSON for this module."""
     cache_root = _ruler_cache_root(cache_dir)
     cache_root.mkdir(parents=True, exist_ok=True)
     target_path = cache_root / file_name
@@ -309,6 +315,7 @@ def _download_json(url: str, *, cache_dir: str | None, file_name: str) -> Any:
 
 
 def _random_value(kind: str, rng: random.Random) -> str:
+    """Implement random value for this module."""
     if kind == "numbers":
         return str(rng.randint(1_000_000, 9_999_999))
     if kind == "words":
@@ -319,6 +326,7 @@ def _random_value(kind: str, rng: random.Random) -> str:
 
 
 def _sample_unique_values(kind: str, count: int, rng: random.Random) -> list[str]:
+    """Implement sample unique values for this module."""
     values: list[str] = []
     while len(values) < count:
         candidate = _random_value(kind, rng)
@@ -336,6 +344,7 @@ def _render_niah_context(
     needle_value_type: str,
     rng: random.Random,
 ) -> str:
+    """Render niah context."""
     if haystack_kind == "essay":
         sentences = [_DEFAULT_ESSAY_SENTENCES[index % len(_DEFAULT_ESSAY_SENTENCES)] for index in range(unit_count)]
         insert_positions = sorted(rng.sample(range(len(sentences) + 1), k=len(needles)))
@@ -374,6 +383,7 @@ def _render_niah_context(
 
 
 def _build_niah_row(sample_index: int, unit_count: int, config: dict[str, Any]) -> dict[str, Any]:
+    """Build niah row."""
     rng = random.Random(_RULER_RANDOM_SEED + sample_index)
     num_keys = max(int(config["num_keys"]), int(config["num_queries"]))
     keys = _sample_unique_values(str(config["needle_key_type"]), num_keys, rng)
@@ -425,6 +435,7 @@ def _build_niah_row(sample_index: int, unit_count: int, config: dict[str, Any]) 
 
 
 def _generate_variable_chain(rng: random.Random, *, num_hops: int = 4) -> tuple[list[str], list[str], str]:
+    """Generate variable chain."""
     variables = _sample_unique_values("uuids", num_hops + 1, rng)
     variables = [variable.replace("-", "")[:5].upper() for variable in variables]
     value = str(rng.randint(10_000, 99_999))
@@ -435,6 +446,7 @@ def _generate_variable_chain(rng: random.Random, *, num_hops: int = 4) -> tuple[
 
 
 def _build_vt_row(sample_index: int, unit_count: int) -> dict[str, Any]:
+    """Build vt row."""
     rng = random.Random(_RULER_RANDOM_SEED + sample_index)
     variables, chain, value = _generate_variable_chain(rng)
     noise_sentences = [
@@ -462,6 +474,7 @@ def _build_vt_row(sample_index: int, unit_count: int) -> dict[str, Any]:
 
 
 def _build_cwe_row(sample_index: int, unit_count: int) -> dict[str, Any]:
+    """Build cwe row."""
     rng = random.Random(_RULER_RANDOM_SEED + sample_index)
     selected_words = rng.sample(list(_FIXED_WORDS), min(unit_count, len(_FIXED_WORDS)))
     common = selected_words[:10]
@@ -480,10 +493,12 @@ def _build_cwe_row(sample_index: int, unit_count: int) -> dict[str, Any]:
 
 
 def _random_coded_word(rng: random.Random, *, length: int = 6) -> str:
+    """Implement random coded word for this module."""
     return "".join(rng.choice(string.ascii_lowercase) for _ in range(length))
 
 
 def _build_fwe_row(sample_index: int, unit_count: int) -> dict[str, Any]:
+    """Build fwe row."""
     rng = random.Random(_RULER_RANDOM_SEED + sample_index)
     outputs = [_random_coded_word(rng) for _ in range(3)]
     distractors: list[str] = []
@@ -507,6 +522,7 @@ def _build_fwe_row(sample_index: int, unit_count: int) -> dict[str, Any]:
 
 
 def _squad_material(cache_dir: str | None) -> tuple[list[dict[str, Any]], list[str]]:
+    """Implement SQuAD material for this module. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     payload = _download_json(_SQUAD_DEV_URL, cache_dir=cache_dir, file_name="squad-dev-v2.0.json")
     docs = sorted(
         {
@@ -536,6 +552,7 @@ def _squad_material(cache_dir: str | None) -> tuple[list[dict[str, Any]], list[s
 
 
 def _hotpot_material(cache_dir: str | None) -> tuple[list[dict[str, Any]], list[str]]:
+    """Implement hotpot material for this module."""
     payload = _download_json(_HOTPOT_DEV_URL, cache_dir=cache_dir, file_name="hotpot-dev-distractor-v1.json")
     docs = sorted(
         {
@@ -559,6 +576,7 @@ def _hotpot_material(cache_dir: str | None) -> tuple[list[dict[str, Any]], list[
 
 
 def _qa_material(dataset: str, cache_dir: str | None) -> tuple[list[dict[str, Any]], list[str]]:
+    """Implement QA material for this module."""
     if dataset == "squad":
         return _squad_material(cache_dir)
     if dataset == "hotpot":
@@ -567,6 +585,7 @@ def _qa_material(dataset: str, cache_dir: str | None) -> tuple[list[dict[str, An
 
 
 def _build_qa_row(sample_index: int, num_docs: int, *, dataset: str, cache_dir: str | None) -> dict[str, Any]:
+    """Build QA row."""
     rng = random.Random(_RULER_RANDOM_SEED + sample_index)
     qas, docs = _qa_material(dataset, cache_dir)
     qa = qas[sample_index % len(qas)]
@@ -604,6 +623,7 @@ def _fit_units(
     minimum_units: int = 1,
     maximum_units: int | None = None,
 ) -> int:
+    """Implement fit units for this module."""
     best_units = minimum_units
     units = minimum_units
     while True:
@@ -627,6 +647,7 @@ def _generate_rows(
     sample_count: int,
     cache_dir: str | None,
 ) -> list[dict[str, Any]]:
+    """Generate rows. Preserve the fallback order expected by the surrounding caller."""
     config = _VARIANT_CONFIG[variant]
     kind = str(config["kind"])
     max_new_tokens = int(config["max_new_tokens"])
@@ -705,18 +726,20 @@ def _load_ruler_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
     variant: str,
     tokenizer: Any,
     max_length: int,
     sample_count: int,
 ) -> Dataset:
+    """Load ruler dataset."""
     del dataset_name
+    effective_stream = False if stream is None else stream
     if dataset_path != "NVIDIA/RULER":
         raise ValueError(f"unsupported ruler dataset path: {dataset_path!r}")
     if split != "test":
         raise ValueError(f"unsupported ruler split: {split!r}")
-    if stream:
+    if effective_stream:
         raise ValueError("ruler does not support stream=True")
     return Dataset.from_list(
         _generate_rows(
@@ -730,16 +753,18 @@ def _load_ruler_dataset(
 
 
 def _session_tokenizer(session: InferenceSession) -> Any | None:
+    """Implement session tokenizer for this module."""
     return getattr(session, "prepare_tokenizer", None) or getattr(session, "tokenizer", None)
 
 
 @dataclass(slots=True)
 class RULER(BaseTestSuite):
     # Generate deterministic tokenizer-sized synthetic RULER samples for one upstream task id.
+    """Implement the ruler benchmark suite."""
     dataset_path: str = "NVIDIA/RULER"
     dataset_name: str | None = "niah_single_1"
     split: str = "test"
-    stream: bool = False
+    stream: bool = field(default=False)
     variant: str = "niah_single_1"
     max_length: int = 4096
     num_samples: int = _DEFAULT_SAMPLE_COUNT
@@ -748,6 +773,7 @@ class RULER(BaseTestSuite):
     _generation_tokenizer: Any | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.variant not in RULER_TASKS:
             raise ValueError(f"unsupported ruler variant: {self.variant!r}")
         if self.dataset_name in {None, self.variant}:
@@ -756,11 +782,13 @@ class RULER(BaseTestSuite):
             raise ValueError("ruler dataset_name must match the configured variant")
 
     def _effective_sample_count(self) -> int:
+        """Implement effective sample count for ruler."""
         if self.max_rows is None:
             return self.num_samples
         return min(self.num_samples, self.max_rows)
 
     def _resolve_generation_tokenizer(self, session: InferenceSession | None = None) -> Any:
+        """Resolve generation tokenizer."""
         if self._generation_tokenizer is not None:
             return self._generation_tokenizer
         tokenizer = _session_tokenizer(session) if session is not None else None
@@ -779,6 +807,7 @@ class RULER(BaseTestSuite):
         return tokenizer
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return partial(
             _load_ruler_dataset,
             variant=self.variant,
@@ -788,6 +817,7 @@ class RULER(BaseTestSuite):
         )
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.variant
 
     def result_metadata(
@@ -795,6 +825,7 @@ class RULER(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "variant": self.variant,
@@ -804,6 +835,7 @@ class RULER(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         max_new_tokens = int(_VARIANT_CONFIG[self.variant]["max_new_tokens"])
         for index, doc in enumerate(docs):
             outputs = [str(output).strip() for output in doc["outputs"]]
@@ -824,6 +856,7 @@ class RULER(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         normalized_prediction = _normalize_prediction(output.text)
         outputs = [str(item).strip() for item in prepared_sample.doc["outputs"]]
         score = _contains_fraction(normalized_prediction, outputs)
@@ -847,17 +880,21 @@ class RULER(BaseTestSuite):
         )
 
     def evaluate(self, session: InferenceSession) -> Any:
+        """Evaluate evaluate."""
         self._resolve_generation_tokenizer(session)
         return super().evaluate(session)
 
 
 def ruler(*, variant: str = "niah_single_1", **kwargs: Any) -> RULER:
+    """Implement ruler for this module."""
     kwargs.setdefault("dataset_name", variant)
     return RULER(variant=variant, **kwargs)
 
 
 def _make_ruler_factory(variant: str) -> Any:
+    """Make ruler factory."""
     def factory(**kwargs: Any) -> RULER:
+        """Implement factory for this module."""
         return ruler(variant=variant, **kwargs)
 
     factory.__name__ = variant

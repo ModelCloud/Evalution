@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 CEVAL_SUBSETS = (
     "accountant",
     "advanced_mathematics",
@@ -71,6 +72,7 @@ _CEVAL_LABELS = ("A", "B", "C", "D")
 
 
 def _ceval_prompt(doc: dict[str, Any]) -> str:
+    """Implement ceval prompt for this module."""
     lines = [str(doc["question"]).strip()]
     for label in _CEVAL_LABELS:
         lines.append(f"{label}. {str(doc[label]).strip()}")
@@ -80,12 +82,15 @@ def _ceval_prompt(doc: dict[str, Any]) -> str:
 
 @dataclass(slots=True)
 class CEval(BaseMultipleChoiceSuite):
+    """Implement the ceval benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "ceval/ceval-exam"
     dataset_name: str | None = None
     split: str = "val"
     subset: str = ""
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in CEVAL_SUBSETS:
             raise ValueError(f"unsupported ceval subset: {self.subset!r}")
         if self.dataset_name in {None, self.subset}:
@@ -94,12 +99,15 @@ class CEval(BaseMultipleChoiceSuite):
         raise ValueError("ceval dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"ceval_{self.subset}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         raw_choices = [str(doc[label]).strip() for label in _CEVAL_LABELS]
         answer_label = str(doc["answer"]).strip()
         return MultipleChoiceSample(
@@ -118,4 +126,5 @@ class CEval(BaseMultipleChoiceSuite):
 
 
 def ceval(*, subset: str, **kwargs: Any) -> CEval:
+    """Implement ceval for this module."""
     return CEval(subset=subset, dataset_name=subset, **kwargs)

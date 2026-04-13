@@ -9,7 +9,6 @@ import importlib
 
 from datasets import Dataset
 
-import evalution
 from evalution.engines.base import GenerationOutput
 
 # Patch the shared IFEval loader because the Portuguese suite inherits it directly.
@@ -20,11 +19,14 @@ ifeval_pt_module = importlib.import_module("evalution.benchmarks.ifeval_pt")
 
 class FakeSession:
     # Minimal generation session for single-sample instruction-following checks.
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, responses: list[str]) -> None:
+        """Initialize this object."""
         self.responses = responses
 
     def generate(self, requests, *, batch_size=None):
         # Mirror the benchmark session contract while returning fixed generations.
+        """Generate generate."""
         assert batch_size in {1, 2, 4}
         return [
             GenerationOutput(
@@ -36,10 +38,12 @@ class FakeSession:
 
     def close(self) -> None:
         # Match the engine interface used by the benchmark runner.
+        """Release the resources owned by this object."""
         return None
 
 
 def test_ifeval_pt_scores_instruction_following(monkeypatch) -> None:
+    """Verify IFEval pt scores instruction following. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -79,6 +83,7 @@ def test_ifeval_pt_scores_instruction_following(monkeypatch) -> None:
 
 
 def test_ifeval_pt_scores_portuguese_case_checks(monkeypatch) -> None:
+    """Verify IFEval pt scores portuguese case checks. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {

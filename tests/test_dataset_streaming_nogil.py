@@ -15,6 +15,7 @@ from datasets import IterableDataset, load_dataset
 
 
 def _is_runtime_nogil() -> bool:
+    """Support the surrounding tests with is runtime no-GIL."""
     if hasattr(sys, "_is_gil_enabled"):
         return not sys._is_gil_enabled()
     if "PYTHON_GIL" in os.environ:
@@ -25,6 +26,7 @@ def _is_runtime_nogil() -> bool:
 
 
 def test_streaming_dataset_supports_many_threads_in_nogil_mode(tmp_path) -> None:
+    """Verify streaming dataset supports many threads in no-GIL mode."""
     if not _is_runtime_nogil():
         pytest.skip(
             "This test validates free-threaded datasets behavior and must run with "
@@ -40,6 +42,7 @@ def test_streaming_dataset_supports_many_threads_in_nogil_mode(tmp_path) -> None
     rows_to_fetch = 128
 
     def worker(worker_index: int) -> tuple[int, int]:
+        """Support the surrounding tests with worker."""
         dataset = load_dataset(
             "json",
             data_files=str(source_path),

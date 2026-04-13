@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 record_module = importlib.import_module("evalution.benchmarks.record")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 7
         assert len(requests) == 3
         assert requests[0].context == (
@@ -35,6 +38,7 @@ class FakeSession:
 
 
 def test_record_scores_em_and_f1_over_answer_aliases(monkeypatch) -> None:
+    """Verify record scores em and F1 over answer aliases. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -69,6 +73,7 @@ def test_record_scores_em_and_f1_over_answer_aliases(monkeypatch) -> None:
 
 
 def test_record_helpers_match_upstream_prompt_cleanup() -> None:
+    """Verify record helpers match upstream prompt cleanup. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     passage = 'Lead sentence.\n@highlight\nSecond item\n@highlight\nThird item'
     assert record_module._record_passage(passage) == "Lead sentence. Second item. Third item"
     assert record_module._record_prompt(

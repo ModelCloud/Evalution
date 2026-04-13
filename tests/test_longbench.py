@@ -13,15 +13,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 longbench_module = importlib.import_module("evalution.benchmarks.longbench")
 
 
 class ContinuousSession:
+    """Define the continuous session helper used by the surrounding tests."""
     def __init__(self, prediction: str, expected_prompt: str) -> None:
+        """Initialize this object."""
         self.prediction = prediction
         self.expected_prompt = expected_prompt
 
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         assert batch_size == 4
         request_items = list(requests)
         assert len(request_items) == 1
@@ -42,6 +46,7 @@ def _row(
     all_classes=None,
     max_new_tokens: str = "32",
 ) -> dict[str, object]:
+    """Support the surrounding tests with row."""
     return {
         "context": context,
         "question": question,
@@ -58,6 +63,7 @@ def _row(
 
 
 def test_longbench_scores_english_qa_rows(monkeypatch) -> None:
+    """Verify longbench scores english QA rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             _row(
@@ -90,6 +96,7 @@ def test_longbench_scores_english_qa_rows(monkeypatch) -> None:
 
 
 def test_longbench_scores_chinese_qa_rows(monkeypatch) -> None:
+    """Verify longbench scores chinese QA rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             _row(
@@ -120,6 +127,7 @@ def test_longbench_scores_chinese_qa_rows(monkeypatch) -> None:
 
 
 def test_longbench_samsum_trims_first_line_and_avoids_duplicate_prefix(monkeypatch) -> None:
+    """Verify longbench samsum trims first line and avoids duplicate prefix."""
     dataset = Dataset.from_list(
         [
             _row(
@@ -149,6 +157,7 @@ def test_longbench_samsum_trims_first_line_and_avoids_duplicate_prefix(monkeypat
 
 
 def test_longbench_scores_classification_rows(monkeypatch) -> None:
+    """Verify longbench scores classification rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             _row(
@@ -215,6 +224,7 @@ def test_longbench_scores_specialized_modes(
     metric_name: str,
     expected_prompt: str,
 ) -> None:
+    """Verify longbench scores specialized modes. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     row = _row(
         context="Paragraphs...\n" if dataset_name != "repobench-p" else "Code context\n",
         question=(
@@ -256,6 +266,7 @@ def test_longbench_scores_specialized_modes(
 
 
 def test_longbench_dispatcher_accepts_base_e_and_hyphen_aliases() -> None:
+    """Verify longbench dispatcher accepts base e and hyphen aliases."""
     suite = evalution.benchmarks.longbench(subset="repobench-p_e")
     assert suite.dataset_name == "repobench-p_e"
     assert suite.task_name() == "longbench_repobench_p_e"

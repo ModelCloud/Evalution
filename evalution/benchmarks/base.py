@@ -36,16 +36,21 @@ from evalution.benchmarks.execution import (
 
 class TestSuite(ABC):
     # Run the suite against an initialized inference session.
+    """Define the test suite helper class."""
     @abstractmethod
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate."""
         raise NotImplementedError
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 DEFAULT_STREAM = False
 
 
 @dataclass(slots=True)
 class BaseTestSuite(TestSuite):
+    """Define the base test suite helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
@@ -61,19 +66,23 @@ class BaseTestSuite(TestSuite):
     # Return the callable used to fetch the underlying dataset rows.
     @abstractmethod
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         raise NotImplementedError
 
     # Return the stable result name for the concrete suite instance.
     @abstractmethod
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         raise NotImplementedError
 
     # Tell the pipeline whether the suite needs all rows materialized up front.
     def requires_full_doc_materialization(self) -> bool:
+        """Implement requires full doc materialization for base test suite."""
         return False
 
     # Let suites override how generation requests are length-ranked for benchmark-level ordering.
     def order_length(self, prepared_sample: PreparedSample) -> int:
+        """Implement order length for base test suite. Preserve the fallback order expected by the surrounding caller."""
         request = prepared_sample.request
         if request.input_ids is not None:
             return len(request.input_ids)
@@ -91,6 +100,7 @@ class BaseTestSuite(TestSuite):
     # Convert dataset rows into generation requests and scoring targets.
     @abstractmethod
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         raise NotImplementedError
 
     # Turn a model output into the per-sample result object.
@@ -100,10 +110,12 @@ class BaseTestSuite(TestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         raise NotImplementedError
 
     # Report how many invalid predictions a sample contributes to progress stats.
     def invalid_prediction_count(self, sample: SampleResult) -> int:
+        """Implement invalid prediction count for base test suite."""
         del sample
         return 0
 
@@ -115,6 +127,7 @@ class BaseTestSuite(TestSuite):
         aggregate_scores: dict[str, float],
         invalid_predictions: int,
     ) -> str:
+        """Score progress title. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         del processed, aggregate_scores, invalid_predictions
         return f"{self.task_name()}: scoring"
 
@@ -124,6 +137,7 @@ class BaseTestSuite(TestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return self.base_result_metadata(
             generation_submission_mode=generation_submission_mode,
         )
@@ -134,7 +148,8 @@ class BaseTestSuite(TestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
-        metadata = {
+        """Implement base result metadata for base test suite."""
+        return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
             "split": self.split,
@@ -148,6 +163,7 @@ class BaseTestSuite(TestSuite):
 
     # Execute the shared dataset, batching, generation, and scoring pipeline.
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Preserve the fallback order expected by the surrounding caller."""
         task_name = self.task_name()
         resolved_order = normalize_order(self.order)
         logger = get_logger()
@@ -268,6 +284,7 @@ class BaseTestSuite(TestSuite):
 
         # Keep scoring side effects centralized so both generation modes share them.
         def score_output(prepared_sample: PreparedSample, output: GenerationOutput) -> None:
+            """Score output. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
             nonlocal invalid_predictions
             nonlocal processed_count
             nonlocal scoring_wall_s
@@ -295,6 +312,7 @@ class BaseTestSuite(TestSuite):
 
                 # Feed requests lazily so continuous generation can refill slots as outputs finish.
                 def iter_request_stream() -> Any:
+                    """Yield request items for the continuous generation loop."""
                     request_key = 0
                     prefetched_samples = iter_prefetched_samples(
                         session,

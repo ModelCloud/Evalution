@@ -12,10 +12,12 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _SUPPORTED_LANGUAGES = ("et", "ht", "id", "it", "qu", "sw", "ta", "th", "tr", "vi", "zh")
 
 
 def _xcopa_relation_text(question: str) -> str:
+    """Implement XCOPA relation text for this module."""
     return {
         "cause": "cause",
         "effect": "effect",
@@ -28,6 +30,7 @@ def _xcopa_prompt(
     choice1: str,
     choice2: str,
 ) -> str:
+    """Implement XCOPA prompt for this module."""
     relation = _xcopa_relation_text(question)
     return (
         f"Premise: {premise.strip()}\n"
@@ -40,6 +43,8 @@ def _xcopa_prompt(
 
 @dataclass(slots=True)
 class XCOPA(BaseMultipleChoiceSuite):
+    """Implement the XCOPA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "xcopa"
     dataset_name: str | None = "it"
     # Align the default split with current benchmark-style harness usage.
@@ -47,6 +52,7 @@ class XCOPA(BaseMultipleChoiceSuite):
     language: str = "it"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.language not in _SUPPORTED_LANGUAGES:
             raise ValueError(f"unsupported xcopa language: {self.language!r}")
         if self.dataset_name in {None, self.language}:
@@ -55,12 +61,15 @@ class XCOPA(BaseMultipleChoiceSuite):
         raise ValueError("xcopa dataset_name must match the configured language")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"xcopa_{self.language}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         prompt = _xcopa_prompt(
             str(doc["premise"]),
             str(doc["question"]),
@@ -87,48 +96,60 @@ class XCOPA(BaseMultipleChoiceSuite):
 
 
 def xcopa(*, language: str, **kwargs: Any) -> XCOPA:
+    """Implement XCOPA for this module."""
     return XCOPA(language=language, dataset_name=language, **kwargs)
 
 
 def xcopa_et(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA et for this module."""
     return xcopa(language="et", **kwargs)
 
 
 def xcopa_ht(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA ht for this module."""
     return xcopa(language="ht", **kwargs)
 
 
 def xcopa_id(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA id for this module."""
     return xcopa(language="id", **kwargs)
 
 
 def xcopa_it(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA it for this module."""
     return xcopa(language="it", **kwargs)
 
 
 def xcopa_qu(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA qu for this module."""
     return xcopa(language="qu", **kwargs)
 
 
 def xcopa_sw(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA sw for this module."""
     return xcopa(language="sw", **kwargs)
 
 
 def xcopa_ta(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA ta for this module."""
     return xcopa(language="ta", **kwargs)
 
 
 def xcopa_th(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA th for this module."""
     return xcopa(language="th", **kwargs)
 
 
 def xcopa_tr(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA tr for this module."""
     return xcopa(language="tr", **kwargs)
 
 
 def xcopa_vi(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA vi for this module."""
     return xcopa(language="vi", **kwargs)
 
 
 def xcopa_zh(**kwargs: Any) -> XCOPA:
+    """Implement XCOPA zh for this module."""
     return xcopa(language="zh", **kwargs)

@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 logiqa2_module = importlib.import_module("evalution.benchmarks.logiqa2")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -45,6 +48,7 @@ class FakeSession:
 
 
 def test_logiqa2_scores_multiple_choice_reasoning(monkeypatch) -> None:
+    """Verify logiqa2 scores multiple choice reasoning. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {

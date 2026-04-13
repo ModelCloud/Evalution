@@ -50,28 +50,39 @@ from evalution.logbar import get_logger, loglikelihood_progress_title, manual_pr
 
 
 class _SGLangClient(ABC):
+    """Define the SGLang client helper class."""
     @abstractmethod
-    def generate(self, **payload: Any) -> list[dict[str, Any]]: ...
+    def generate(self, **payload: Any) -> list[dict[str, Any]]:
+        """Generate one or more SGLang responses from the provided payload."""
+        raise NotImplementedError
 
     @abstractmethod
-    async def async_generate(self, **payload: Any) -> dict[str, Any]: ...
+    async def async_generate(self, **payload: Any) -> dict[str, Any]:
+        """Generate one asynchronous SGLang response from the provided payload."""
+        raise NotImplementedError
 
     def gc(self) -> None:
+        """Release reusable intermediate state for this object."""
         return None
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 @dataclass(slots=True)
 class _SGLangPythonClient(_SGLangClient):
+    """Define the SGLang python client helper class."""
+    # Keep the class-level state explicit for this helper.
     engine: Any
 
     def generate(self, **payload: Any) -> list[dict[str, Any]]:
+        """Generate generate."""
         response = self.engine.generate(**payload)
         return _normalize_sglang_response(response)
 
     async def async_generate(self, **payload: Any) -> dict[str, Any]:
+        """Implement async generate for SGLang python client."""
         response = await self.engine.async_generate(**payload)
         normalized = _normalize_sglang_response(response)
         if len(normalized) != 1:
@@ -79,11 +90,13 @@ class _SGLangPythonClient(_SGLangClient):
         return normalized[0]
 
     def gc(self) -> None:
+        """Release reusable intermediate state for this object."""
         flush_cache = getattr(self.engine, "flush_cache", None)
         if callable(flush_cache):
             flush_cache()
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         shutdown = getattr(self.engine, "shutdown", None)
         if callable(shutdown):
             shutdown()
@@ -91,6 +104,8 @@ class _SGLangPythonClient(_SGLangClient):
 
 @dataclass(slots=True)
 class _LoadedSGLangRuntime:
+    """Define the loaded SGLang runtime helper class."""
+    # Keep the class-level state explicit for this helper.
     client: _SGLangClient
     tokenizer: Any
     prepare_tokenizer: Any | None
@@ -107,6 +122,7 @@ class SGLang(
 ):
     # SGLang integration stays in-process through `sglang.Engine`; no HTTP server is used.
     # Expose SGLang runtime kwargs using the same names as ServerArgs / Engine kwargs.
+    """Define the SGLang helper class."""
     base_url: str | None = None
     tokenizer_worker_num: int = 1
     skip_tokenizer_init: bool = False
@@ -123,15 +139,19 @@ class SGLang(
     sampling_params: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseInferenceSession:
+        """Build build."""
         self.resolved_engine = "SGLang"
         return SGLangSession.from_config(self, model)
 
     def to_dict(self) -> dict[str, Any]:
+        """Implement to dict for SGLang."""
         return asdict(self)
 
 
 @dataclass(slots=True)
 class SGLangSession(BaseInferenceSession):
+    """Define the SGLang session helper class."""
+    # Keep the class-level state explicit for this helper.
     config: SGLang
     model_config: Model
     model: Any
@@ -158,6 +178,7 @@ class SGLangSession(BaseInferenceSession):
 
     @classmethod
     def from_config(cls, config: SGLang, model_config: Model) -> SGLangSession:
+        """Implement from config for SGLang session."""
         runtime = load_sglang_runtime(config, model_config)
         return cls(
             config=config,
@@ -172,9 +193,11 @@ class SGLangSession(BaseInferenceSession):
 
     @property
     def batch_size(self) -> int | str:
+        """Implement batch size for SGLang session."""
         return self.config.batch_size
 
     def describe_execution(self) -> dict[str, Any]:
+        """Implement describe execution for SGLang session."""
         with self._state_lock:
             return {
                 "requested_attn_implementation": self.requested_attn_implementation,
@@ -233,6 +256,7 @@ class SGLangSession(BaseInferenceSession):
         """Keep fixed-size scoring batches full while the caller streams requests lazily."""
 
         def iterator() -> Iterator[tuple[Any, LoglikelihoodOutput]]:
+            """Implement iterator for SGLang session. Preserve the fallback order expected by the surrounding caller."""
             request_iter = iter(requests)
             if batch_size is not None:
                 effective_batch_size = batch_size
@@ -256,6 +280,7 @@ class SGLangSession(BaseInferenceSession):
                 request_queue: Any,
                 put_result: Any,
             ) -> None:
+                """Implement consume requests for SGLang session."""
                 with self._generation_lock:
                     prepared_batch: list[tuple[Any, tuple[list[int], list[int], dict[str, Any]]]] = []
                     for request_key, request in request_queue.iter_requests(stop_event=stop_event):
@@ -297,6 +322,7 @@ class SGLangSession(BaseInferenceSession):
         """Yield completions in finish order while keeping SGLang work in process."""
 
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
+            """Implement iterator for SGLang session. Preserve the fallback order expected by the surrounding caller."""
             request_iter = iter(requests)
             if batch_size is not None:
                 effective_batch_size = batch_size
@@ -383,6 +409,7 @@ class SGLangSession(BaseInferenceSession):
         return outputs
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         try:
             with self._generation_lock:
                 with self._prepare_tokenizer_lock:
@@ -402,6 +429,7 @@ class SGLangSession(BaseInferenceSession):
                 self.client.close()
 
     def gc(self) -> None:
+        """Release reusable intermediate state for this object."""
         with self._generation_lock:
             with self._state_lock:
                 self.stop_criteria_cache.clear()
@@ -420,11 +448,13 @@ class SGLangSession(BaseInferenceSession):
             self.client.gc()
 
     def _render_request(self, request: GenerationRequest) -> str:
+        """Render request."""
         if request.rendered_prompt is not None:
             return request.rendered_prompt
         return self._render_request_with_tokenizer(self.tokenizer, request)
 
     def _render_request_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> str:
+        """Render request with tokenizer."""
         if request.messages is not None:
             return tokenizer.apply_chat_template(
                 request.messages,
@@ -436,6 +466,7 @@ class SGLangSession(BaseInferenceSession):
         return request.prompt
 
     def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+        """Prepare requests."""
         tokenizer = self.prepare_tokenizer or self.tokenizer
         tokenizer_lock = self._lock_for_tokenizer(tokenizer)
         with tokenizer_lock:
@@ -476,6 +507,7 @@ class SGLangSession(BaseInferenceSession):
             return prepared
 
     def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
+        """Resolve batch size."""
         configured_batch_size = _normalize_batch_size(self.config.batch_size)
         if configured_batch_size != _AUTO_BATCH_SIZE:
             return int(configured_batch_size)
@@ -485,6 +517,7 @@ class SGLangSession(BaseInferenceSession):
         self,
         request: LoglikelihoodRequest,
     ) -> tuple[list[int], list[int], dict[str, Any]]:
+        """Prepare loglikelihood request. Preserve the fallback order expected by the surrounding caller."""
         with self._tokenizer_lock:
             if request.context_input_ids is not None:
                 prefix_ids = list(request.context_input_ids)
@@ -511,11 +544,13 @@ class SGLangSession(BaseInferenceSession):
         self,
         item: tuple[int, tuple[list[int], list[int], dict[str, Any]]],
     ) -> tuple[int, tuple[int, ...]]:
+        """Implement loglikelihood request sort key for SGLang session."""
         _request_index, (prefix_ids, target_ids, _metadata) = item
         combined = tuple(prefix_ids + target_ids)
         return (-len(combined), combined)
 
     def _tokenize_loglikelihood_context(self, text: str) -> list[int]:
+        """Implement tokenize loglikelihood context for SGLang session."""
         tokenizer_kwargs: dict[str, Any] = {}
         prefix_text = self._decoded_prefix_token_text()
         if prefix_text and text.startswith(prefix_text):
@@ -526,6 +561,7 @@ class SGLangSession(BaseInferenceSession):
         self,
         requests: list[tuple[list[int], list[int], dict[str, Any]]],
     ) -> int:
+        """Resolve scoring batch size."""
         batch_requests = [
             GenerationRequest(
                 rendered_prompt="",
@@ -544,6 +580,7 @@ class SGLangSession(BaseInferenceSession):
         target_ids: list[int],
         metadata: dict[str, Any],
     ) -> list[_ScoringChunk]:
+        """Build loglikelihood chunks."""
         max_input_length = self._max_scoring_input_length()
         max_scored_window = max_input_length + 1
         history_ids = list(prefix_ids)
@@ -578,6 +615,7 @@ class SGLangSession(BaseInferenceSession):
         self,
         token_list: list[int],
     ) -> Any:
+        """Implement rolling loglikelihood windows for SGLang session."""
         if not token_list:
             return
 
@@ -608,10 +646,12 @@ class SGLangSession(BaseInferenceSession):
         self,
         pair: tuple[list[int], list[int]],
     ) -> tuple[list[int], list[int]]:
+        """Make disjoint window."""
         context_ids, continuation_ids = pair
         return context_ids[: len(context_ids) - (len(continuation_ids) - 1)], continuation_ids
 
     def _prefix_token_id(self) -> int:
+        """Implement prefix token id for SGLang session."""
         for token_id in (
             getattr(self.tokenizer, "bos_token_id", None),
             getattr(self.tokenizer, "eos_token_id", None),
@@ -624,6 +664,7 @@ class SGLangSession(BaseInferenceSession):
         )
 
     def _decoded_prefix_token_text(self) -> str | None:
+        """Implement decoded prefix token text for SGLang session."""
         with suppress(Exception):
             decoded = self.tokenizer.decode(
                 [self._prefix_token_id()],
@@ -641,6 +682,7 @@ class SGLangSession(BaseInferenceSession):
         return None
 
     def _max_scoring_input_length(self) -> int:
+        """Implement max scoring input length for SGLang session."""
         model_length = getattr(getattr(self.model, "config", None), "max_position_embeddings", None)
         tokenizer_length = getattr(self.tokenizer, "model_max_length", None)
         candidate_lengths = [
@@ -653,6 +695,7 @@ class SGLangSession(BaseInferenceSession):
         return 2048
 
     def _log_generation_execution(self) -> None:
+        """Implement log generation execution for SGLang session."""
         with self._state_lock:
             if self.execution_logged:
                 return
@@ -668,11 +711,13 @@ class SGLangSession(BaseInferenceSession):
         )
 
     def _lock_for_tokenizer(self, tokenizer: Any) -> threading.RLock:
+        """Implement lock for tokenizer for SGLang session."""
         if tokenizer is not None and tokenizer is self.prepare_tokenizer and tokenizer is not self.tokenizer:
             return self._prepare_tokenizer_lock
         return self._tokenizer_lock
 
     def _prepare_request_for_generation(self, request: GenerationRequest) -> tuple[str, list[int]]:
+        """Prepare request for generation."""
         with self._tokenizer_lock:
             rendered_prompt = self._render_request(request)
             input_ids = (
@@ -691,6 +736,7 @@ class SGLangSession(BaseInferenceSession):
         *,
         batch_size: int,
     ) -> list[GenerationOutput]:
+        """Generate standard. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         prepared = self.prepare_requests(requests)
         outputs: list[GenerationOutput] = []
         for start in range(0, len(prepared), batch_size):
@@ -712,16 +758,20 @@ class SGLangSession(BaseInferenceSession):
         *,
         batch_size: int,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Generate SGLang continuous. Preserve the fallback order expected by the surrounding caller."""
         result_queue: queue.Queue[Any] = queue.Queue()
         stop_event = threading.Event()
         sentinel = object()
 
         def worker() -> None:
+            """Implement worker for SGLang session."""
             async def run() -> None:
+                """Run run. Keep the nested traversal explicit so ordering and metadata stay aligned."""
                 request_iter = iter(requests)
                 pending: set[asyncio.Task[tuple[Any, GenerationRequest, dict[str, Any]]]] = set()
 
                 async def submit_one() -> bool:
+                    """Implement submit one for SGLang session."""
                     if stop_event.is_set():
                         return False
                     try:
@@ -730,6 +780,7 @@ class SGLangSession(BaseInferenceSession):
                         return False
 
                     async def execute_one() -> tuple[Any, GenerationRequest, dict[str, Any]]:
+                        """Implement execute one for SGLang session."""
                         rendered_prompt, input_ids = self._prepare_request_for_generation(request)
                         response = await self.client.async_generate(
                             input_ids=list(input_ids),
@@ -793,6 +844,7 @@ class SGLangSession(BaseInferenceSession):
         request: GenerationRequest,
         response: dict[str, Any],
     ) -> GenerationOutput:
+        """Implement generation output from response for SGLang session."""
         meta_info = dict(response.get("meta_info") or {})
         text = str(response.get("text") or "")
         prompt = (
@@ -819,6 +871,7 @@ class SGLangSession(BaseInferenceSession):
         *,
         batch_size: int,
     ) -> list[LoglikelihoodOutput]:
+        """Score chunks. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         scored_chunks: list[LoglikelihoodOutput] = []
         if not chunks:
             return scored_chunks
@@ -891,10 +944,6 @@ class SGLangSession(BaseInferenceSession):
                 requested_logprobs = _coerce_nested_position_entries(
                     meta_info.get("input_token_ids_logprobs")
                 )
-                requested_logits = _coerce_nested_position_entries(
-                    meta_info.get("input_token_ids_logits")
-                )
-                token_logits = _coerce_position_entries(meta_info.get("input_token_logits"))
                 output_top_logprobs = _coerce_nested_position_entries(meta_info.get("output_top_logprobs"))
                 output_requested_logprobs = _coerce_nested_position_entries(
                     meta_info.get("output_token_ids_logprobs")
@@ -957,6 +1006,7 @@ class SGLangSession(BaseInferenceSession):
         *,
         batch_size: int,
     ) -> list[LoglikelihoodOutput]:
+        """Score prepared loglikelihood requests. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         chunks: list[_ScoringChunk] = []
         ordered_requests = list(enumerate(prepared_requests))
         ordered_requests.sort(key=self._loglikelihood_request_sort_key)
@@ -999,6 +1049,7 @@ class SGLangSession(BaseInferenceSession):
         prepared_batch: list[tuple[Any, tuple[list[int], list[int], dict[str, Any]]]],
         put_result: Any,
     ) -> None:
+        """Implement emit scored loglikelihood batch for SGLang session."""
         batch_outputs = self._score_prepared_loglikelihood_requests(
             [prepared_request for _request_key, prepared_request in prepared_batch],
             batch_size=len(prepared_batch),
@@ -1007,6 +1058,7 @@ class SGLangSession(BaseInferenceSession):
             put_result(request_key, output)
 
     def _build_sampling_params(self, request: GenerationRequest) -> dict[str, Any]:
+        """Build sampling params."""
         if request.num_beams != 1:
             raise ValueError("sglang engine does not support beam search; set num_beams=1")
         params = {
@@ -1025,6 +1077,7 @@ class SGLangSession(BaseInferenceSession):
 
 
 def load_sglang_runtime(config: SGLang, model_config: Model) -> _LoadedSGLangRuntime:
+    """Load SGLang runtime."""
     _seed_transformer_runtime(config.seed)
 
     trust_remote_code = (
@@ -1064,6 +1117,7 @@ def load_sglang_runtime(config: SGLang, model_config: Model) -> _LoadedSGLangRun
 
 
 def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
+    """Build SGLang client. Preserve the fallback order expected by the surrounding caller."""
     if config.base_url is not None:
         raise ValueError("sglang engine no longer supports server/http mode; use in-process Engine")
 
@@ -1115,6 +1169,7 @@ def _build_sglang_client(config: SGLang, model_config: Model) -> _SGLangClient:
 
 
 def _resolve_sglang_context_length(client: _SGLangClient, *, tokenizer: Any) -> int | None:
+    """Resolve SGLang context length."""
     engine = getattr(client, "engine", None)
     tokenizer_manager = getattr(engine, "tokenizer_manager", None)
     for candidate in (
@@ -1132,6 +1187,7 @@ def _resolve_sglang_context_length(client: _SGLangClient, *, tokenizer: Any) -> 
     return None
 
 def _normalize_sglang_response(payload: Any) -> list[dict[str, Any]]:
+    """Normalize SGLang response. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if isinstance(payload, list):
         return [dict(item) for item in payload]
     if not isinstance(payload, dict):
@@ -1152,6 +1208,7 @@ def _normalize_sglang_response(payload: Any) -> list[dict[str, Any]]:
 
 
 def _coerce_position_entries(raw_positions: Any) -> list[dict[str, Any]]:
+    """Implement coerce position entries for this module."""
     if raw_positions is None:
         return []
     output: list[dict[str, Any]] = []
@@ -1164,6 +1221,7 @@ def _coerce_position_entries(raw_positions: Any) -> list[dict[str, Any]]:
 
 
 def _coerce_nested_position_entries(raw_positions: Any) -> list[list[dict[str, Any]]]:
+    """Implement coerce nested position entries for this module."""
     if raw_positions is None:
         return []
     output: list[list[dict[str, Any]]] = []
@@ -1182,6 +1240,7 @@ def _coerce_nested_position_entries(raw_positions: Any) -> list[list[dict[str, A
 
 
 def _coerce_score_entry(entry: Any) -> dict[str, Any]:
+    """Implement coerce score entry for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if isinstance(entry, dict):
         token_id = entry.get("token_id", entry.get("id"))
         score = entry.get("score", entry.get("logprob", entry.get("logit")))
@@ -1200,6 +1259,7 @@ def _coerce_score_entry(entry: Any) -> dict[str, Any]:
 
 
 def _entries_to_score_map(entries: list[dict[str, Any]]) -> dict[int, float]:
+    """Implement entries to score map for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     output: dict[int, float] = {}
     for entry in entries:
         token_id = entry.get("token_id")
@@ -1211,6 +1271,7 @@ def _entries_to_score_map(entries: list[dict[str, Any]]) -> dict[int, float]:
 
 
 def _deduplicate_preserve_order(token_ids: list[int]) -> list[int]:
+    """Implement deduplicate preserve order for this module."""
     seen: set[int] = set()
     output: list[int] = []
     for token_id in token_ids:

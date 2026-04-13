@@ -13,19 +13,23 @@ from datasets import Dataset, load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _RACE_CHOICE_LABELS = ["A", "B", "C", "D"]
 _RACE_ANSWER_LABEL_TO_INDEX = {"A": 0, "B": 1, "C": 2, "D": 3}
 
 
 def _parse_race_problems(serialized_problems: str) -> list[dict[str, Any]]:
+    """Parse race problems."""
     return ast.literal_eval(serialized_problems)
 
 
 def _race_answer_option(problem: dict[str, Any]) -> str:
+    """Implement race answer option for this module."""
     return str(problem["options"][_RACE_ANSWER_LABEL_TO_INDEX[str(problem["answer"]).strip()]])
 
 
 def _race_prompt(article: str, previous_problems: list[dict[str, Any]], question: str) -> str:
+    """Implement race prompt for this module."""
     prompt = f"Article: {article}\n\n"
     for problem in previous_problems:
         if str(problem["question"])[-6:] == "  _  .":
@@ -45,6 +49,7 @@ def _load_race_dataset(
     cache_dir: str | None = None,
     stream: bool = False,
 ) -> Dataset:
+    """Load race dataset. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     if dataset_path != "EleutherAI/race":
         raise ValueError(f"unsupported RACE dataset path: {dataset_path!r}")
     if dataset_name != "high":
@@ -88,18 +93,23 @@ def _load_race_dataset(
 
 @dataclass(slots=True)
 class RACE(BaseMultipleChoiceSuite):
+    """Implement the race benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "EleutherAI/race"
     dataset_name: str | None = "high"
     split: str = "test"
     stream: bool = False
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_race_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "race"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_race_prompt(
@@ -121,4 +131,5 @@ class RACE(BaseMultipleChoiceSuite):
 
 
 def race(**kwargs: Any) -> RACE:
+    """Implement race for this module."""
     return RACE(**kwargs)

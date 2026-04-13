@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 prost_module = importlib.import_module("evalution.benchmarks.prost")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -37,6 +40,7 @@ class FakeSession:
 
 
 def test_prost_scores_answer_text_multiple_choice(monkeypatch) -> None:
+    """Verify prost scores answer text multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -83,16 +87,8 @@ def test_prost_scores_answer_text_multiple_choice(monkeypatch) -> None:
     assert sample.metadata["choice_texts"] == ["apple", "ball", "block", "bottle"]
 
 
-def test_prost_loader_reads_raw_jsonl_via_json_builder(monkeypatch) -> None:
-    captured: dict[str, object] = {}
-
-    def fake_load_dataset(*args, **kwargs):
-        captured["args"] = args
-        captured["kwargs"] = kwargs
-        return "prost-dataset"
-
-    monkeypatch.setattr(prost_module, "load_dataset", fake_load_dataset)
-
+def test_prost_loader_reads_raw_jsonl_via_json_builder() -> None:
+    """Verify prost loader reads raw jsonl via JSON builder."""
     dataset = prost_module._load_prost_dataset("corypaik/prost", split="test", streaming=False)
 
     assert dataset == "prost-dataset"

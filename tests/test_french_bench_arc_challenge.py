@@ -12,13 +12,16 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 french_bench_arc_challenge_module = importlib.import_module(
     "evalution.benchmarks.french_bench_arc_challenge"
 )
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 7
         assert len(requests) == 4
         assert requests[0].context == (
@@ -35,6 +38,7 @@ class FakeSession:
 
 
 def test_french_bench_arc_challenge_scores_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify french bench ARC challenge scores multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {

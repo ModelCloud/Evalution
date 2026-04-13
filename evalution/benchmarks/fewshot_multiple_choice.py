@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from evalution.benchmarks.base import TestSuite
@@ -25,47 +25,57 @@ from evalution.scorers.multiple_choice import (
 @dataclass(slots=True)
 class BaseFewshotMultipleChoiceSuite(TestSuite, ABC):
     # Share one clean-room evaluator for MMLU-style suites that prepend fixed few-shot exemplars.
+    """Define the base fewshot multiple choice suite helper class."""
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
     fewshot_split: str = "dev"
     num_fewshot: int = 5
-    stream: bool = False
+    stream: bool = field(default=False)
     max_rows: int | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
 
     @abstractmethod
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         raise NotImplementedError
 
     @abstractmethod
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         raise NotImplementedError
 
     @abstractmethod
     def format_question(self, doc: dict[str, Any], *, include_answer: bool) -> str:
+        """Format question."""
         raise NotImplementedError
 
     @abstractmethod
     def gold_label(self, doc: dict[str, Any]) -> str:
+        """Implement gold label for base fewshot multiple choice suite."""
         raise NotImplementedError
 
     def prompt_description(self) -> str:
+        """Implement prompt description for base fewshot multiple choice suite."""
         return ""
 
     def choice_labels(self) -> tuple[str, ...]:
+        """Implement choice labels for base fewshot multiple choice suite."""
         return ("A", "B", "C", "D")
 
     def choice_texts(self, doc: dict[str, Any]) -> list[str]:
+        """Implement choice texts for base fewshot multiple choice suite."""
         return [str(doc[label]).strip() for label in self.choice_labels()]
 
     def sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
+        """Implement sample metadata for base fewshot multiple choice suite."""
         del doc
         return {}
 
     # Keep the few-shot prefix construction centralized so concrete suites only define row formatting.
     def _fewshot_prompt(self, fewshot_docs: list[dict[str, Any]]) -> str:
+        """Implement fewshot prompt for base fewshot multiple choice suite."""
         sections: list[str] = []
         description = self.prompt_description().strip()
         if description:
@@ -80,6 +90,7 @@ class BaseFewshotMultipleChoiceSuite(TestSuite, ABC):
 
     # Return one stable metadata payload for every derived few-shot multiple-choice result.
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -92,6 +103,7 @@ class BaseFewshotMultipleChoiceSuite(TestSuite, ABC):
 
     # Materialize the few-shot prefix once, then score each answer label with log-likelihood.
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(

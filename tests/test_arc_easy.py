@@ -12,15 +12,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 arc_easy_module = importlib.import_module("evalution.benchmarks.arc_easy")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[LoglikelihoodOutput]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
         self.requests = []
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 9
         assert len(requests) == 4
         self.requests.extend(requests)
@@ -28,6 +32,7 @@ class FakeSession:
 
 
 def _dataset() -> Dataset:
+    """Support the surrounding tests with dataset."""
     return Dataset.from_list(
         [
             {
@@ -44,6 +49,7 @@ def _dataset() -> Dataset:
 
 
 def test_arc_easy_scores_original_style_exam_score(monkeypatch) -> None:
+    """Verify ARC easy scores original style exam score. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     monkeypatch.setattr(arc_easy_module, "load_dataset", lambda *args, **kwargs: _dataset())
 
     result = evalution.benchmarks.arc_easy(max_rows=1, batch_size=9).evaluate(
@@ -85,6 +91,7 @@ def test_arc_easy_scores_original_style_exam_score(monkeypatch) -> None:
 
 
 def test_arc_easy_awards_partial_credit_for_tied_top_choices(monkeypatch) -> None:
+    """Verify ARC easy awards partial credit for tied top choices."""
     monkeypatch.setattr(arc_easy_module, "load_dataset", lambda *args, **kwargs: _dataset())
 
     result = evalution.benchmarks.arc_easy(max_rows=1, batch_size=9).evaluate(

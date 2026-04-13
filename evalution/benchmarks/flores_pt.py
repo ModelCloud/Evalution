@@ -27,6 +27,7 @@ from evalution.logbar import get_logger, manual_progress
 from evalution.results import SampleResult, TestResult
 from evalution.scorers.translation import corpus_translation_metrics
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _LANGUAGE_CODE_BY_TOKEN = {
     "ca": "cat_Latn",
     "de": "deu_Latn",
@@ -79,6 +80,7 @@ _FLORES_PT_DIRECTION_BY_TASK = {
 
 
 def _normalize_direction(direction: str) -> str:
+    """Normalize direction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = direction.strip().lower()
     if normalized in FLORES_PT_DIRECTIONS:
         return normalized
@@ -88,12 +90,14 @@ def _normalize_direction(direction: str) -> str:
 
 
 def _translation_prompt(source_language: str, target_language: str, source_sentence: str) -> str:
+    """Implement translation prompt for this module."""
     return f"{source_language} sentence: {source_sentence.strip()}\n{target_language} sentence:"
 
 
 @dataclass(slots=True)
 class FloresPT(BaseTestSuite):
     # Evaluate PortugueseBench FLORES directions with a local audited FLORES-200 archive loader.
+    """Implement the flores pt benchmark suite."""
     dataset_path: str = "facebook/flores"
     dataset_name: str | None = "all"
     split: str = "devtest"
@@ -102,6 +106,7 @@ class FloresPT(BaseTestSuite):
     stop: tuple[str, ...] = ("\n",)
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         self.direction = _normalize_direction(self.direction)
         if self.dataset_path != "facebook/flores":
             raise ValueError("flores_pt dataset_path must be 'facebook/flores'")
@@ -111,9 +116,11 @@ class FloresPT(BaseTestSuite):
             self.dataset_name = "all"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         source_language, target_language = self.language_pair_tokens()
 
         def loader(dataset_path: str, dataset_name: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
+            """Implement loader for flores pt."""
             return load_flores200_pair(
                 dataset_path,
                 dataset_name,
@@ -125,9 +132,11 @@ class FloresPT(BaseTestSuite):
         return loader
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _FLORES_PT_TASK_BY_DIRECTION[self.direction]
 
     def language_pair_tokens(self) -> tuple[str, str]:
+        """Implement language pair tokens for flores pt."""
         return tuple(self.direction.split("-", maxsplit=1))  # type: ignore[return-value]
 
     def result_metadata(
@@ -135,6 +144,7 @@ class FloresPT(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         source_language, target_language = self.language_pair_tokens()
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
@@ -149,6 +159,7 @@ class FloresPT(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         source_token, target_token = self.language_pair_tokens()
         source_field = f"sentence_{_LANGUAGE_CODE_BY_TOKEN[source_token]}"
         target_field = f"sentence_{_LANGUAGE_CODE_BY_TOKEN[target_token]}"
@@ -173,6 +184,7 @@ class FloresPT(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         source_token, target_token = self.language_pair_tokens()
         prediction = output.text.strip()
         reference = prepared_sample.target.strip()
@@ -200,6 +212,7 @@ class FloresPT(BaseTestSuite):
         )
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Preserve the fallback order expected by the surrounding caller."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, dataset_load_wall_s = load_suite_dataset(
@@ -271,6 +284,7 @@ class FloresPT(BaseTestSuite):
         )
 
         def record_output(prepared_sample: PreparedSample, output: GenerationOutput) -> None:
+            """Implement record output for flores pt."""
             nonlocal processed_count
             nonlocal scoring_wall_s
 
@@ -286,6 +300,7 @@ class FloresPT(BaseTestSuite):
                 sample_by_request_key: dict[int, PreparedSample] = {}
 
                 def iter_request_stream() -> Any:
+                    """Yield request items for the continuous generation loop."""
                     request_key = 0
                     prefetched_samples = iter_prefetched_samples(
                         session,
@@ -374,11 +389,14 @@ class FloresPT(BaseTestSuite):
 
 
 def flores_pt(*, direction: str, **kwargs: Any) -> FloresPT:
+    """Implement flores pt for this module."""
     return FloresPT(direction=direction, **kwargs)
 
 
 def _make_flores_pt_factory(direction: str) -> Any:
+    """Make flores pt factory."""
     def factory(**kwargs: Any) -> FloresPT:
+        """Implement factory for this module."""
         return flores_pt(direction=direction, **kwargs)
 
     factory.__name__ = _FLORES_PT_TASK_BY_DIRECTION[direction]

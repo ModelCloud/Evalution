@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 def test_only_explicit_non_stream_benchmarks_keep_stream_false_defaults() -> None:
+    """Verify only explicit non stream benchmarks keep stream false defaults."""
     benchmark_dir = Path(__file__).resolve().parents[1] / "evalution" / "benchmarks"
     explicit_non_stream = {
         "aexams.py",

@@ -32,6 +32,7 @@ _ARITHMETIC_DATA_FILES = {
 
 
 def _normalize_arithmetic_context(context: str) -> str:
+    """Normalize arithmetic context. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return context.strip().replace("\n\n", "\n").replace("Q:", "Question:").replace("A:", "Answer:")
 
 
@@ -43,6 +44,7 @@ def _load_arithmetic_dataset(
     cache_dir: str | None = None,
     stream: bool = (False),
 ) -> Any:
+    """Load arithmetic dataset."""
     if dataset_path != "EleutherAI/arithmetic":
         raise ValueError(f"unsupported arithmetic dataset path: {dataset_path!r}")
     if split not in {"validation", "test"}:
@@ -71,6 +73,7 @@ def _load_arithmetic_dataset(
 class Arithmetic(BaseSingleContinuationSuite):
     # Arithmetic ships as small static JSONL files, so materializing by default keeps metadata and
     # score baselines aligned with the repository's non-stream regression expectations.
+    """Define the arithmetic helper class."""
     dataset_path: str = "EleutherAI/arithmetic"
     dataset_name: str | None = "arithmetic_1dc"
     split: str = "validation"
@@ -79,21 +82,26 @@ class Arithmetic(BaseSingleContinuationSuite):
     def __post_init__(self) -> None:
         # Keep the default unit-test metadata on the materialized path while preserving the
         # upstream `test` split label expected by the streaming model-regression suites.
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.stream and self.split == "validation":
             self.split = "test"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_arithmetic_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         if self.dataset_name is None:
             raise ValueError("Arithmetic requires a dataset_name variant")
         return self.dataset_name
 
     def include_perplexity(self) -> bool:
+        """Implement include perplexity for arithmetic."""
         return False
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> SingleContinuationSample:
+        """Build one benchmark sample from a dataset row."""
         if self.dataset_name is None:
             raise ValueError("Arithmetic requires a dataset_name variant")
         raw_context = str(doc["context"])
@@ -112,44 +120,55 @@ class Arithmetic(BaseSingleContinuationSuite):
 
 
 def _arithmetic_variant(dataset_name: str, **kwargs: Any) -> Arithmetic:
+    """Implement arithmetic variant for this module."""
     return Arithmetic(dataset_name=dataset_name, **kwargs)
 
 
 def arithmetic_1dc(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 1dc for this module."""
     return _arithmetic_variant("arithmetic_1dc", **kwargs)
 
 
 def arithmetic_2da(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 2da for this module."""
     return _arithmetic_variant("arithmetic_2da", **kwargs)
 
 
 def arithmetic_2dm(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 2dm for this module."""
     return _arithmetic_variant("arithmetic_2dm", **kwargs)
 
 
 def arithmetic_2ds(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 2ds for this module."""
     return _arithmetic_variant("arithmetic_2ds", **kwargs)
 
 
 def arithmetic_3da(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 3da for this module."""
     return _arithmetic_variant("arithmetic_3da", **kwargs)
 
 
 def arithmetic_3ds(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 3ds for this module."""
     return _arithmetic_variant("arithmetic_3ds", **kwargs)
 
 
 def arithmetic_4da(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 4da for this module."""
     return _arithmetic_variant("arithmetic_4da", **kwargs)
 
 
 def arithmetic_4ds(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 4ds for this module."""
     return _arithmetic_variant("arithmetic_4ds", **kwargs)
 
 
 def arithmetic_5da(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 5da for this module."""
     return _arithmetic_variant("arithmetic_5da", **kwargs)
 
 
 def arithmetic_5ds(**kwargs: Any) -> Arithmetic:
+    """Implement arithmetic 5ds for this module."""
     return _arithmetic_variant("arithmetic_5ds", **kwargs)

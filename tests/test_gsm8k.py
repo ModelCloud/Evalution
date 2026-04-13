@@ -17,12 +17,14 @@ from evalution.scorers.gsm8k import extract_format_insensitive_numeric_answer
 from evalution.scorers.gsm8k import extract_gsm8k_reference_answer
 from evalution.benchmarks import base as base_suite_module
 
+# Keep shared test fixtures and expectations explicit at module scope.
 gsm8k_module = importlib.import_module("evalution.benchmarks.gsm8k")
 
 _REFERENCE_ANS_RE = pcre.compile(r"#### (\-?[0-9\.\,]+)")
 
 
 def _official_gsm8k_extract_answer(completion: str) -> str:
+    """Support the surrounding tests with official GSM8K extract answer."""
     match = _REFERENCE_ANS_RE.search(completion)
     if match is None:
         return INVALID_ANSWER
@@ -30,11 +32,14 @@ def _official_gsm8k_extract_answer(completion: str) -> str:
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, responses: list[str]) -> None:
+        """Initialize this object."""
         self.responses = responses
         self.requests = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         del batch_size
         self.requests.extend(requests)
         return [
@@ -46,10 +51,12 @@ class FakeSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_gsm8k_reference_parser_matches_openai_release_cases() -> None:
+    """Verify GSM8K reference parser matches openai release cases."""
     cases = [
         ("Work...\n#### 1,234", "1234"),
         ("Reasoning first\n#### -7.5", "-7.5"),
@@ -63,6 +70,7 @@ def test_gsm8k_reference_parser_matches_openai_release_cases() -> None:
 
 
 def test_gsm8k_numeric_parser_is_format_insensitive() -> None:
+    """Verify GSM8K numeric parser is format insensitive."""
     assert extract_format_insensitive_numeric_answer("The answer is 42.") == "42"
     assert extract_format_insensitive_numeric_answer("Answer: 1,234") == "1234"
     assert extract_format_insensitive_numeric_answer("Reasoning...\n\\boxed{18}") == "18"
@@ -70,6 +78,7 @@ def test_gsm8k_numeric_parser_is_format_insensitive() -> None:
 
 
 def test_gsm8k_suite_scores_numeric_primary(monkeypatch) -> None:
+    """Verify GSM8K suite scores numeric primary. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -95,6 +104,7 @@ def test_gsm8k_suite_scores_numeric_primary(monkeypatch) -> None:
 
 
 def test_gsm8k_suite_scores_hash_formatted_answers(monkeypatch) -> None:
+    """Verify GSM8K suite scores hash formatted answers. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -113,6 +123,7 @@ def test_gsm8k_suite_scores_hash_formatted_answers(monkeypatch) -> None:
 
 
 def test_gsm8k_base_variant_omits_platinum_specific_cleaning_metadata(monkeypatch) -> None:
+    """Verify GSM8K base variant omits platinum specific cleaning metadata."""
     dataset = Dataset.from_list(
         [
             {
@@ -135,6 +146,7 @@ def test_gsm8k_base_variant_omits_platinum_specific_cleaning_metadata(monkeypatc
 
 
 def test_gsm8k_logs_executed_rows_and_warns_on_short_generation(monkeypatch) -> None:
+    """Verify GSM8K logs executed rows and warns on short generation."""
     dataset = Dataset.from_list(
         [
             {
@@ -150,18 +162,24 @@ def test_gsm8k_logs_executed_rows_and_warns_on_short_generation(monkeypatch) -> 
     monkeypatch.setattr(gsm8k_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class FakeLogger:
+        """Provide the fake logger helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.info_messages: list[str] = []
             self.warning_messages: list[str] = []
 
         def info(self, message: str, *args) -> None:
+            """Implement info for fake logger."""
             self.info_messages.append(message % args if args else message)
 
         def warning(self, message: str, *args) -> None:
+            """Implement warning for fake logger."""
             self.warning_messages.append(message % args if args else message)
 
     class ShortOutputSession:
+        """Define the short output session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             del batch_size
             request = requests[0]
             return [
@@ -172,6 +190,7 @@ def test_gsm8k_logs_executed_rows_and_warns_on_short_generation(monkeypatch) -> 
             ]
 
         def close(self) -> None:
+            """Release the resources owned by this object."""
             return None
 
     fake_logger = FakeLogger()

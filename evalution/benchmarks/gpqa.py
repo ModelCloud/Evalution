@@ -19,6 +19,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.choice_label import choice_label_exact_match
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 GPQA_SUBSETS = ("main", "diamond", "extended")
 GPQA_TASKS = tuple(f"gpqa_{subset}" for subset in GPQA_SUBSETS)
 _GPQA_DATASET_PATH = "Idavidrein/gpqa"
@@ -38,11 +39,13 @@ _HF_HUB_CACHE_ROOT = Path.home() / ".cache" / "huggingface" / "hub"
 
 
 def _dataset_name_for_subset(subset: str) -> str:
+    """Implement dataset name for subset for this module."""
     return f"gpqa_{subset}"
 
 
 def _gpqa_dataset_loader() -> Callable[..., Any]:
     # Prefer fully local cache artifacts first so concurrent shard runs never depend on Hub metadata lookups.
+    """Implement GPQA dataset loader for this module."""
     def _loader(
         dataset_path: str,
         dataset_name: str,
@@ -51,6 +54,7 @@ def _gpqa_dataset_loader() -> Callable[..., Any]:
         cache_dir: str | None = None,
         streaming: bool = False,
     ) -> Any:
+        """Implement loader for this module."""
         if getattr(load_dataset, "__module__", "").startswith("datasets"):
             cached_arrow_path = _cached_gpqa_arrow_path(dataset_name=dataset_name, split=split)
             if cached_arrow_path is not None and not streaming:
@@ -85,6 +89,7 @@ def _gpqa_dataset_loader() -> Callable[..., Any]:
 
 
 def _cached_gpqa_arrow_path(*, dataset_name: str, split: str) -> Path | None:
+    """Implement cached GPQA arrow path for this module."""
     if split != "train":
         return None
     dataset_cache_dir = _HF_DATASETS_CACHE_ROOT / "Idavidrein___gpqa" / dataset_name / "0.0.0"
@@ -93,17 +98,20 @@ def _cached_gpqa_arrow_path(*, dataset_name: str, split: str) -> Path | None:
 
 
 def _cached_gpqa_csv_path(*, dataset_name: str) -> Path | None:
+    """Implement cached GPQA CSV path for this module."""
     snapshot_root = _HF_HUB_CACHE_ROOT / "datasets--Idavidrein--gpqa" / "snapshots"
     candidates = sorted(snapshot_root.glob(f"*/{dataset_name}.csv"))
     return candidates[-1] if candidates else None
 
 
 def _normalize_choice_text(text: Any) -> str:
+    """Normalize choice text. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = _NON_ALNUM_PATTERN.sub(" ", str(text).lower())
     return normalized.strip()
 
 
 def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
+    """Extract choice label. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     response = text or ""
     for pattern in _EXPLICIT_ANSWER_PATTERNS:
         for match in pattern.findall(response):
@@ -120,6 +128,7 @@ def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
 
 
 def _extract_choice_label_from_text(text: str, choice_texts: list[str]) -> str:
+    """Extract choice label from text. Preserve the fallback order expected by the surrounding caller."""
     normalized_response = _normalize_choice_text(text)
     if not normalized_response:
         return _INVALID_CHOICE
@@ -148,6 +157,7 @@ def _extract_choice_label_from_text(text: str, choice_texts: list[str]) -> str:
 
 
 def _gpqa_prompt(question: str, choice_texts: list[str]) -> str:
+    """Implement GPQA prompt for this module."""
     lines = [f"What is the correct answer to this question: {question.strip()}", "", "Choices:"]
     for label, choice_text in zip(_CHOICE_LABELS, choice_texts, strict=True):
         lines.append(f"({label}) {choice_text.strip()}")
@@ -157,6 +167,7 @@ def _gpqa_prompt(question: str, choice_texts: list[str]) -> str:
 
 
 def _shuffled_choice_payload(doc: dict[str, Any], *, rng: random.Random) -> tuple[list[str], str]:
+    """Implement shuffled choice payload for this module."""
     shuffled_choices = [
         ("incorrect", str(doc["Incorrect Answer 1"]).strip()),
         ("incorrect", str(doc["Incorrect Answer 2"]).strip()),
@@ -171,6 +182,8 @@ def _shuffled_choice_payload(doc: dict[str, Any], *, rng: random.Random) -> tupl
 
 @dataclass(slots=True)
 class GPQA(BaseTestSuite):
+    """Implement the GPQA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = _GPQA_DATASET_PATH
     dataset_name: str | None = None
     split: str = "train"
@@ -181,6 +194,7 @@ class GPQA(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in GPQA_SUBSETS:
             raise ValueError(f"unsupported gpqa subset: {self.subset!r}")
         expected_dataset_name = _dataset_name_for_subset(self.subset)
@@ -190,9 +204,11 @@ class GPQA(BaseTestSuite):
         raise ValueError("gpqa dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _gpqa_dataset_loader()
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"gpqa_{self.subset}"
 
     def result_metadata(
@@ -200,6 +216,7 @@ class GPQA(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "subset": self.subset,
@@ -211,6 +228,7 @@ class GPQA(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         rng = random.Random(self.seed)
         for index, doc in enumerate(docs):
             choice_texts, gold_label = _shuffled_choice_payload(doc, rng=rng)
@@ -237,6 +255,7 @@ class GPQA(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         choice_texts = list(prepared_sample.doc["_choice_texts"])
         valid_labels = set(_CHOICE_LABELS[: len(choice_texts)])
         predicted_label = _extract_choice_label(output.text, valid_labels)
@@ -275,16 +294,20 @@ class GPQA(BaseTestSuite):
 
 
 def gpqa(*, subset: str, **kwargs: Any) -> GPQA:
+    """Implement GPQA for this module."""
     return GPQA(subset=subset, **kwargs)
 
 
 def gpqa_main(**kwargs: Any) -> GPQA:
+    """Implement GPQA main for this module."""
     return gpqa(subset="main", **kwargs)
 
 
 def gpqa_diamond(**kwargs: Any) -> GPQA:
+    """Implement GPQA diamond for this module."""
     return gpqa(subset="diamond", **kwargs)
 
 
 def gpqa_extended(**kwargs: Any) -> GPQA:
+    """Implement GPQA extended for this module."""
     return gpqa(subset="extended", **kwargs)

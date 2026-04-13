@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 alghafa_module = importlib.import_module("evalution.benchmarks.alghafa")
 
 
 class CopaArabicSession:
+    """Define the COPA arabic session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for COPA arabic session."""
         assert batch_size == 6
         assert len(requests) == 2
         assert requests[0].context == "السؤال: كان جسدي يلقي بظلّه على العشب لان\nالجواب:"
@@ -29,7 +32,9 @@ class CopaArabicSession:
 
 
 class PiqaArabicSession:
+    """Define the PIQA arabic session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for PIQA arabic session."""
         assert batch_size == 6
         assert len(requests) == 2
         assert requests[0].context == "السؤال: كيف أقوم بتجهيز قفص خنزير غينيا لشاغليه الجدد؟\nالجواب:"
@@ -42,6 +47,7 @@ class PiqaArabicSession:
 
 
 def test_copa_ar_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify COPA ar scores binary multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -73,6 +79,7 @@ def test_copa_ar_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
 
 
 def test_piqa_ar_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
+    """Verify PIQA ar scores binary multiple choice accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -107,4 +114,5 @@ def test_piqa_ar_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
 
 
 def test_alghafa_prompt_helper() -> None:
+    """Verify alghafa prompt helper."""
     assert alghafa_module._arabic_question_answer_prompt("ما السبب؟") == "السؤال: ما السبب؟\nالجواب:"

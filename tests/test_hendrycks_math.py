@@ -13,15 +13,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 hendrycks_math_module = importlib.import_module("evalution.benchmarks.hendrycks_math")
 
 
 class FakeGenerationSession:
+    """Provide the fake generation session helper used by the surrounding tests."""
     def __init__(self, responses: list[str]) -> None:
+        """Initialize this object."""
         self.responses = responses
         self.requests = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size in {1, 3}
         self.requests.extend(requests)
         return [
@@ -34,6 +38,7 @@ class FakeGenerationSession:
 
 
 def test_hendrycks_math_scores_boxed_answer_exact_match(monkeypatch) -> None:
+    """Verify hendrycks math scores boxed answer exact match. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -74,6 +79,7 @@ def test_hendrycks_math_scores_boxed_answer_exact_match(monkeypatch) -> None:
 
 
 def test_hendrycks_math_factory_uses_test_split() -> None:
+    """Verify hendrycks math factory uses test split."""
     suite = evalution.benchmarks.hendrycks_math(subset="geometry")
 
     assert suite.dataset_path == "EleutherAI/hendrycks_math"
@@ -83,5 +89,6 @@ def test_hendrycks_math_factory_uses_test_split() -> None:
 
 
 def test_hendrycks_math_rejects_unknown_subset() -> None:
+    """Verify hendrycks math rejects unknown subset."""
     with pytest.raises(ValueError, match="unsupported hendrycks_math subset"):
         evalution.benchmarks.hendrycks_math(subset="unknown")

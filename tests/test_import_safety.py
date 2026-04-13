@@ -12,11 +12,13 @@ import sys
 import textwrap
 
 
+# Keep shared test fixtures and expectations explicit at module scope.
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _BENCHMARKS_DIR = _REPO_ROOT / "evalution" / "benchmarks"
 
 
 def test_benchmark_modules_do_not_use_live_dataset_config_discovery() -> None:
+    """Verify benchmark modules do not use live dataset config discovery."""
     offenders: list[str] = []
     for path in sorted(_BENCHMARKS_DIR.glob("*.py")):
         if "get_dataset_config_names" in path.read_text(encoding="utf-8"):
@@ -25,6 +27,7 @@ def test_benchmark_modules_do_not_use_live_dataset_config_discovery() -> None:
 
 
 def test_importing_evalution_does_not_call_dataset_config_discovery() -> None:
+    """Verify importing Evalution does not call dataset config discovery."""
     script = textwrap.dedent(
         """
         import datasets

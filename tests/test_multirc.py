@@ -1,8 +1,6 @@
 # SPDX-FileCopyrightText: 2026 ModelCloud.ai
 # SPDX-License-Identifier: Apache-2.0
 # GPU=-1
-import pcre
-
 from evalution.benchmarks.multirc import (
     MultiRC,
     _extract_indices,
@@ -13,6 +11,7 @@ from evalution.engines.base import GenerationOutput
 
 
 def test_grouping_builds_questions():
+    """Verify grouping builds questions."""
     raw = [
         {
             "paragraph": "para",
@@ -38,12 +37,14 @@ def test_grouping_builds_questions():
 
 
 def test_extract_indices_handles_none_and_bounds():
+    """Verify extract indices handles none and bounds."""
     assert _extract_indices("none", 3) == set()
     assert _extract_indices("0,2", 3) == {0, 2}
     assert _extract_indices("5,1", 2) == {1}  # drops out-of-range
 
 
 def test_precision_recall_f1_basic():
+    """Verify precision recall F1 basic. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     p, r, f1 = _precision_recall_f1({0, 1}, {0, 2})
     assert round(p, 3) == 0.5
     assert round(r, 3) == 0.5
@@ -51,6 +52,7 @@ def test_precision_recall_f1_basic():
 
 
 def test_score_sample_exact_match_and_f1():
+    """Verify score sample exact match and F1. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     suite = MultiRC()
     raw_rows = [
         {

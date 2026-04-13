@@ -15,26 +15,31 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 def _rte_prompt(premise: str, hypothesis: str) -> str:
     # Format the entailment pair using the same True-or-False question style as the upstream benchmark prompt.
+    """Implement rte prompt for this module."""
     return f"{premise.strip()}\nQuestion: {hypothesis.strip()} True or False?\nAnswer:"
 
 
 @dataclass(slots=True)
 class RTE(BaseMultipleChoiceSuite):
     # Evaluate textual entailment by ranking True/False label continuations with token log-likelihood.
+    """Implement the rte benchmark suite."""
     dataset_path: str = "super_glue"
     dataset_name: str | None = "rte"
     split: str = "validation"
 
     # Use the Hugging Face datasets loader for the RTE task packaged inside SuperGLUE.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used by logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "rte"
 
     # Convert one RTE row into the shared prompt and binary-choice structure used by the helper.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_rte_prompt(doc["premise"], doc["hypothesis"]),
@@ -46,4 +51,5 @@ class RTE(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used by the rest of the package.
 def rte(**kwargs: Any) -> RTE:
+    """Implement rte for this module."""
     return RTE(**kwargs)

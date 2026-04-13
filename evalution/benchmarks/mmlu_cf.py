@@ -63,15 +63,17 @@ def _load_mmlu_cf_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    stream: bool | None = None,
 ) -> Any:
     # Resolve the published parquet shard for one MMLU-CF subject split.
+    """Load MMLU cf dataset."""
     if dataset_path != "microsoft/MMLU-CF":
         raise ValueError(f"unsupported MMLU-CF dataset path: {dataset_path!r}")
     if dataset_name not in MMLU_CF_FILE_PREFIXES:
         raise ValueError(f"unsupported MMLU-CF subject: {dataset_name!r}")
     if split not in {"dev", "val"}:
         raise ValueError(f"unsupported MMLU-CF split: {split!r}")
+    effective_stream = False if stream is None else stream
     file_prefix = MMLU_CF_FILE_PREFIXES[dataset_name]
     file_path = hf_hub_download(
         repo_id=dataset_path,
@@ -84,13 +86,14 @@ def _load_mmlu_cf_dataset(
         data_files={split: file_path},
         split=split,
         cache_dir=cache_dir,
-        streaming=stream,
+        streaming=effective_stream,
     )
 
 
 @dataclass(slots=True)
 class MMLUCF(BaseFewshotMultipleChoiceSuite):
     # Match the open PR's task shape by scoring the public validation rows with dev few-shots.
+    """Define the mmlucf helper class."""
     dataset_path: str = "microsoft/MMLU-CF"
     dataset_name: str | None = None
     split: str = "val"
@@ -99,6 +102,7 @@ class MMLUCF(BaseFewshotMultipleChoiceSuite):
 
     def __post_init__(self) -> None:
         # Keep the public subject slug and the dataset name locked together for safety.
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subject not in MMLU_CF_SUBJECTS:
             raise ValueError(f"unsupported MMLU-CF subject: {self.subject!r}")
         if self.dataset_name in {None, self.subject}:
@@ -108,18 +112,22 @@ class MMLUCF(BaseFewshotMultipleChoiceSuite):
 
     def dataset_loader(self) -> Any:
         # Route MMLU-CF through the parquet loader above.
+        """Return the dataset loader bound to this suite."""
         return _load_mmlu_cf_dataset
 
     def task_name(self) -> str:
         # Expose one stable task name per MMLU-CF subject factory.
+        """Return the exported task name for this suite."""
         return f"mmlu_cf_{self.subject}"
 
     def prompt_description(self) -> str:
         # Prefix each evaluation prompt with the benchmark's contamination-free instruction.
+        """Implement prompt description for mmlucf."""
         return _MMLU_CF_DESCRIPTION
 
     def format_question(self, doc: dict[str, Any], *, include_answer: bool) -> str:
         # Render one MMLU-CF question block in the benchmark's A/B/C/D layout.
+        """Format question."""
         answer_text = str(doc["Answer"]).strip() if include_answer else ""
         lines = [str(doc["Question"]).strip()]
         lines.extend(
@@ -131,10 +139,12 @@ class MMLUCF(BaseFewshotMultipleChoiceSuite):
 
     def gold_label(self, doc: dict[str, Any]) -> str:
         # Normalize the gold answer key to one uppercase label token.
+        """Implement gold label for mmlucf."""
         return str(doc["Answer"]).strip().upper()
 
     def sample_metadata(self, doc: dict[str, Any]) -> dict[str, Any]:
         # Preserve the evaluated subject and source question text for debugging.
+        """Implement sample metadata for mmlucf."""
         return {
             "subject": self.subject,
             "question": str(doc["Question"]).strip(),
@@ -143,13 +153,16 @@ class MMLUCF(BaseFewshotMultipleChoiceSuite):
 
 def mmlu_cf(*, subject: str, **kwargs: Any) -> MMLUCF:
     # Build the generic MMLU-CF suite while pinning the requested subject as the dataset name.
+    """Implement MMLU cf for this module."""
     kwargs.setdefault("dataset_name", subject)
     return MMLUCF(subject=subject, **kwargs)
 
 
 def _make_mmlu_cf_factory(subject: str) -> Any:
     # Emit one import-stable zero-argument factory per MMLU-CF subject.
+    """Make MMLU cf factory."""
     def factory(**kwargs: Any) -> MMLUCF:
+        """Implement factory for this module."""
         return mmlu_cf(subject=subject, **kwargs)
 
     factory.__name__ = f"mmlu_cf_{subject}"

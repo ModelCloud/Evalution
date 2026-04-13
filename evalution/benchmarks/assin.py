@@ -17,6 +17,7 @@ ASSIN_VARIANTS = ("assin_entailment", "assin_paraphrase")
 
 
 def _assin_entailment_choices(premise: str, hypothesis: str) -> list[str]:
+    """Implement assin entailment choices for this module."""
     return [
         f"{premise}, certo? Também, {hypothesis}",
         f"{premise}, certo? Sim, {hypothesis}",
@@ -24,12 +25,14 @@ def _assin_entailment_choices(premise: str, hypothesis: str) -> list[str]:
 
 
 def _assin_paraphrase_choices(premise: str, hypothesis: str) -> list[str]:
+    """Implement assin paraphrase choices for this module."""
     return [
         f"{premise}, certo? Não, {hypothesis}",
         f"{premise}, certo? Sim, {hypothesis}",
     ]
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _ASSIN_CHOICE_BUILDERS = {
     "assin_entailment": _assin_entailment_choices,
     "assin_paraphrase": _assin_paraphrase_choices,
@@ -39,24 +42,29 @@ _ASSIN_CHOICE_BUILDERS = {
 @dataclass(slots=True)
 class ASSIN(BaseMultipleChoiceSuite):
     # Score Portuguese ASSIN entailment and paraphrase with the benchmark's fixed two-choice verbalizations.
+    """Implement the assin benchmark suite."""
     dataset_path: str = "nilc-nlp/assin"
     dataset_name: str | None = None
     split: str = "test"
     variant: str = "assin_entailment"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.variant not in ASSIN_VARIANTS:
             raise ValueError(f"unsupported assin variant: {self.variant!r}")
         if self.dataset_name is not None:
             raise ValueError("assin does not use a dataset_name")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.variant
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         premise = str(doc["premise"]).strip()
         hypothesis = str(doc["hypothesis"]).strip()
         choices = _ASSIN_CHOICE_BUILDERS[self.variant](premise, hypothesis)
@@ -77,14 +85,17 @@ class ASSIN(BaseMultipleChoiceSuite):
 
 
 def assin(*, variant: str = "assin_entailment", **kwargs: Any) -> ASSIN:
+    """Implement assin for this module."""
     if variant not in ASSIN_VARIANTS:
         raise ValueError(f"unsupported assin variant: {variant!r}")
     return ASSIN(variant=variant, **kwargs)
 
 
 def assin_entailment(**kwargs: Any) -> ASSIN:
+    """Implement assin entailment for this module."""
     return assin(variant="assin_entailment", **kwargs)
 
 
 def assin_paraphrase(**kwargs: Any) -> ASSIN:
+    """Implement assin paraphrase for this module."""
     return assin(variant="assin_paraphrase", **kwargs)

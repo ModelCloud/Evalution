@@ -14,6 +14,7 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 
 def _histoires_morales_query(doc: dict[str, Any]) -> str:
+    """Implement histoires morales query for this module."""
     return " ".join(
         str(doc[field]).strip()
         for field in ("norm", "situation", "intention")
@@ -22,16 +23,21 @@ def _histoires_morales_query(doc: dict[str, Any]) -> str:
 
 @dataclass(slots=True)
 class HistoiresMorales(BaseMultipleChoiceSuite):
+    """Implement the histoires morales benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "LabHC/histoires_morales"
     split: str = "train"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "histoires_morales"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         moral_action = str(doc["moral_action"]).strip()
         immoral_action = str(doc["immoral_action"]).strip()
         return MultipleChoiceSample(
@@ -53,4 +59,5 @@ class HistoiresMorales(BaseMultipleChoiceSuite):
 
 
 def histoires_morales(**kwargs: Any) -> HistoiresMorales:
+    """Implement histoires morales for this module."""
     return HistoiresMorales(**kwargs)

@@ -25,7 +25,7 @@ from evalution.scorers.multiple_choice import (
     multiple_choice_outcome,
     normalize_label_permutation_fraction,
 )
-from evalution.benchmarks.base import BaseTestSuite, TestSuite
+from evalution.benchmarks.base import TestSuite
 from evalution.benchmarks.data import (
     apply_order,
     doc_count,
@@ -38,6 +38,7 @@ from evalution.benchmarks.data import (
 @dataclass(slots=True)
 class MultipleChoiceSample:
     # Represent one multiple-choice question after prompt formatting and choice extraction.
+    """Define the multiple choice sample helper class."""
     index: int
     prompt: str
     choices: list[str]
@@ -48,6 +49,7 @@ class MultipleChoiceSample:
 @dataclass(slots=True)
 class BaseMultipleChoiceSuite(TestSuite, ABC):
     # Dataset location and execution options shared by multiple-choice benchmark families.
+    """Define the base multiple choice suite helper class."""
     dataset_path: str = ""
     dataset_name: str | None = None
     # Concrete benchmarks must set their own canonical split. Many Hugging Face tasks expose
@@ -69,28 +71,34 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
     # Return the callable used to fetch the underlying dataset rows.
     @abstractmethod
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         raise NotImplementedError
 
     # Return the stable result name for the concrete suite instance.
     @abstractmethod
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         raise NotImplementedError
 
     # Convert one dataset row into the normalized prompt/choices form scored by the helper.
     @abstractmethod
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         raise NotImplementedError
 
     # Control how each choice is appended to the shared prompt during scoring.
     def continuation_for_choice(self, choice: str) -> str:
+        """Implement continuation for choice for base multiple choice suite."""
         return choice if choice[:1].isspace() else f" {choice}"
 
     # Control how each option-label continuation is appended when the optional label-permutation scorer is enabled.
     def continuation_for_choice_label(self, label: str) -> str:
+        """Implement continuation for choice label for base multiple choice suite."""
         return f" {label}"
 
     # Let suites override how prompt/choice payload length is measured for benchmark-level ordering.
     def order_length(self, sample: MultipleChoiceSample) -> int:
+        """Implement order length for base multiple choice suite."""
         return len(sample.prompt) + sum(len(self.continuation_for_choice(choice)) for choice in sample.choices)
 
     # Build the prompt used by the optional label-permutation scorer. The default keeps the original prompt
@@ -102,6 +110,7 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         choice_order: tuple[int, ...],
         labels: tuple[str, ...],
     ) -> str:
+        """Implement label prompt for base multiple choice suite."""
         prompt_stem = sample.prompt.rstrip()
         if prompt_stem.endswith("Answer:"):
             prompt_stem = prompt_stem[: -len("Answer:")].rstrip()
@@ -113,6 +122,7 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
 
     # Report suite-level metadata that is stable across all samples in the run.
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -134,13 +144,16 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         raw_predictions: list[int],
         normalized_predictions: list[int],
     ) -> dict[str, float]:
+        """Compute extra metrics from the collected predictions. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         del samples, raw_predictions, normalized_predictions
         return {}
 
     def _resolved_label_permutations(self) -> float:
+        """Implement resolved label permutations for base multiple choice suite."""
         return normalize_label_permutation_fraction(self.label_permutations)
 
     def _label_permutation_metadata(self) -> dict[str, Any]:
+        """Implement label permutation metadata for base multiple choice suite."""
         resolved_mode = self._resolved_label_permutations()
         if resolved_mode == 0.0:
             return {}
@@ -156,6 +169,7 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
         *,
         samples: list[MultipleChoiceSample],
     ) -> tuple[str | None, dict[int, Any]]:
+        """Implement label permutation scores for base multiple choice suite. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         resolved_mode = self._resolved_label_permutations()
         if resolved_mode == 0.0:
             return None, {}
@@ -213,6 +227,7 @@ class BaseMultipleChoiceSuite(TestSuite, ABC):
 
     # Execute the shared dataset loading, flattened choice scoring, and accuracy aggregation flow.
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         resolved_order = normalize_order(self.order)
         logger = get_logger()

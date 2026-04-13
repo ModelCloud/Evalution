@@ -7,6 +7,7 @@ from __future__ import annotations
 
 
 def extract_math_answer(text: str) -> str:
+    """Extract math answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     indices = [index for index, char in enumerate(text) if char == "$"]
     if len(indices) > 1:
         answer = text[indices[0] + 1 : indices[-1]]
@@ -25,10 +26,12 @@ def extract_math_answer(text: str) -> str:
 
 
 def math_exact_match(prediction: str, target: str) -> float:
+    """Implement math exact match for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return float(math_strings_equivalent(extract_math_answer(prediction), target))
 
 
 def math_strings_equivalent(left: str | None, right: str | None) -> bool:
+    """Implement math strings equivalent for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if left is None and right is None:
         return True
     if left is None or right is None:
@@ -41,6 +44,7 @@ def math_strings_equivalent(left: str | None, right: str | None) -> bool:
 
 
 def remove_boxed(text: str) -> str:
+    """Implement remove boxed for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if "\\boxed " in text:
         prefix = "\\boxed "
         assert text[: len(prefix)] == prefix
@@ -53,6 +57,7 @@ def remove_boxed(text: str) -> str:
 
 
 def last_boxed_only_string(text: str) -> str | None:
+    """Implement last boxed only string for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     index = text.rfind("\\boxed")
     if "\\boxed " in text:
         return "\\boxed " + text.split("\\boxed ")[-1].split("$")[0]
@@ -80,6 +85,7 @@ def last_boxed_only_string(text: str) -> str | None:
 
 
 def fix_fracs(text: str) -> str:
+    """Implement fix fracs for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     parts = text.split("\\frac")
     rebuilt = parts[0]
     if len(parts) == 1:
@@ -103,6 +109,7 @@ def fix_fracs(text: str) -> str:
 
 
 def fix_a_slash_b(text: str) -> str:
+    """Implement fix a slash b for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if len(text.split("/")) != 2:
         return text
     numerator, denominator = text.split("/")
@@ -117,12 +124,14 @@ def fix_a_slash_b(text: str) -> str:
 
 def remove_right_units(text: str) -> str:
     # Trim trailing unit annotations without assuming the marker appears only once.
+    """Implement remove right units for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if "\\text{ " in text:
         return text.split("\\text{ ", 1)[0]
     return text
 
 
 def fix_sqrt(text: str) -> str:
+    """Implement fix sqrt for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if "\\sqrt" not in text:
         return text
     parts = text.split("\\sqrt")
@@ -136,6 +145,7 @@ def fix_sqrt(text: str) -> str:
 
 
 def normalize_math_string(text: str) -> str:
+    """Normalize math string. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = text.replace("\n", "")
     normalized = normalized.replace("\\!", "")
     normalized = normalized.replace("\\\\", "\\")

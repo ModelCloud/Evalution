@@ -14,7 +14,6 @@ from urllib.request import urlretrieve
 
 from datasets import Dataset
 
-from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger
@@ -27,6 +26,7 @@ from evalution.scorers.multiple_choice import (
     multiple_choice_outcome,
 )
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _WSC273_XML_URL = "https://cs.nyu.edu/faculty/davise/papers/WinogradSchemas/WSCollection.xml"
 _WSC273_XML_NAME = "WSCollection.xml"
 _UPPER_PRONOUNS = [
@@ -45,10 +45,12 @@ _UPPER_PRONOUNS = [
 
 
 def _cleanup_whitespace(text: str) -> str:
+    """Implement cleanup whitespace for this module."""
     return " ".join(text.split())
 
 
 def _wsc273_cache_path(cache_dir: str | None) -> Path:
+    """Implement wsc273 cache path for this module."""
     if cache_dir is not None:
         base_dir = Path(cache_dir)
     else:
@@ -57,6 +59,7 @@ def _wsc273_cache_path(cache_dir: str | None) -> Path:
 
 
 def _ensure_wsc273_xml(*, cache_dir: str | None) -> Path:
+    """Ensure wsc273 xml."""
     xml_path = _wsc273_cache_path(cache_dir)
     xml_path.parent.mkdir(parents=True, exist_ok=True)
     if not xml_path.exists():
@@ -65,6 +68,7 @@ def _ensure_wsc273_xml(*, cache_dir: str | None) -> Path:
 
 
 def _normalize_wsc273_option(doc: dict[str, Any], option: str) -> str:
+    """Normalize wsc273 option. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = option
     if str(doc["pronoun"]).lower() in {"my", "his", "her", "our", "their"}:
         normalized += "'s"
@@ -83,6 +87,7 @@ def _load_wsc273_dataset(
     cache_dir: str | None = None,
     stream: bool = (False),
 ) -> Dataset:
+    """Load wsc273 dataset. Preserve the fallback order expected by the surrounding caller."""
     del stream
     if dataset_path != "winograd_wsc":
         raise ValueError(f"unsupported WSC dataset path: {dataset_path!r}")
@@ -124,6 +129,8 @@ def _load_wsc273_dataset(
 
 @dataclass(slots=True)
 class WSC273:
+    """Define the wsc273 helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = "winograd_wsc"
     dataset_name: str | None = "wsc273"
     split: str = "test"
@@ -132,12 +139,15 @@ class WSC273:
     batch_size: int | None = None
     cache_dir: str | None = None
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_wsc273_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "wsc273"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -148,6 +158,7 @@ class WSC273:
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
@@ -271,4 +282,5 @@ class WSC273:
 
 
 def wsc273(**kwargs: Any) -> WSC273:
+    """Implement wsc273 for this module."""
     return WSC273(**kwargs)

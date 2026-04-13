@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from evalution.benchmarks.base import BaseTestSuite, TestSuite
+from evalution.benchmarks.base import TestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, LoglikelihoodRequest
 from evalution.logbar import get_logger, loglikelihood_progress_metadata
@@ -20,6 +20,7 @@ from evalution.results import SampleResult, TestResult
 @dataclass(slots=True)
 class SingleContinuationSample:
     # Represent one prompt plus exactly one gold continuation scored by log-likelihood.
+    """Define the single continuation sample helper class."""
     index: int
     prompt: str
     target: str
@@ -29,6 +30,7 @@ class SingleContinuationSample:
 @dataclass(slots=True)
 class BaseSingleContinuationSuite(TestSuite, ABC):
     # Dataset-backed suites that score one fixed continuation per prompt.
+    """Define the base single continuation suite helper class."""
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
@@ -40,23 +42,29 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
 
     @abstractmethod
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         raise NotImplementedError
 
     @abstractmethod
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         raise NotImplementedError
 
     @abstractmethod
     def build_sample(self, doc: dict[str, Any], *, index: int) -> SingleContinuationSample:
+        """Build one benchmark sample from a dataset row."""
         raise NotImplementedError
 
     def continuation_for_target(self, target: str) -> str:
+        """Implement continuation for target for base single continuation suite."""
         return target if target[:1].isspace() else f" {target}"
 
     def include_perplexity(self) -> bool:
+        """Implement include perplexity for base single continuation suite."""
         return True
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -66,6 +74,7 @@ class BaseSingleContinuationSuite(TestSuite, ABC):
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(

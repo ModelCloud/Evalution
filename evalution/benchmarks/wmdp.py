@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 WMDP_SUBSETS = ("bio", "chem", "cyber")
 WMDP_TASKS = tuple(f"wmdp_{subset}" for subset in WMDP_SUBSETS)
 _SUBSET_TO_TASK = dict(zip(WMDP_SUBSETS, WMDP_TASKS, strict=True))
@@ -19,6 +20,7 @@ _CHOICE_LABELS = ("A", "B", "C", "D")
 
 
 def _wmdp_prompt(question: str, choices: list[str]) -> str:
+    """Implement WMDP prompt for this module."""
     lines = [f"Question: {question.strip()}"]
     for label, choice in zip(_CHOICE_LABELS, choices, strict=True):
         lines.append(f"{label}. {choice.strip()}")
@@ -28,6 +30,8 @@ def _wmdp_prompt(question: str, choices: list[str]) -> str:
 
 @dataclass(slots=True)
 class WMDP(BaseMultipleChoiceSuite):
+    """Implement the WMDP benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "walledai/WMDP"
     dataset_name: str | None = None
     split: str = "bio"
@@ -35,6 +39,7 @@ class WMDP(BaseMultipleChoiceSuite):
     stream: bool = True
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in WMDP_SUBSETS:
             raise ValueError(f"unsupported wmdp subset: {self.subset!r}")
         if self.split != self.subset:
@@ -43,12 +48,15 @@ class WMDP(BaseMultipleChoiceSuite):
             raise ValueError("wmdp does not use dataset_name")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _SUBSET_TO_TASK[self.subset]
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(choice).strip() for choice in doc["choices"]]
         return MultipleChoiceSample(
             index=index,
@@ -64,11 +72,14 @@ class WMDP(BaseMultipleChoiceSuite):
 
 
 def wmdp(*, subset: str, **kwargs: Any) -> WMDP:
+    """Implement WMDP for this module."""
     return WMDP(subset=subset, split=subset, **kwargs)
 
 
 def _make_wmdp_factory(subset: str) -> Any:
+    """Make WMDP factory."""
     def factory(**kwargs: Any) -> WMDP:
+        """Implement factory for this module."""
         return wmdp(subset=subset, **kwargs)
 
     factory.__name__ = _SUBSET_TO_TASK[subset]

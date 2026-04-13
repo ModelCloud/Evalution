@@ -14,21 +14,27 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 
 def _arabic_question_answer_prompt(question: str) -> str:
+    """Implement arabic question answer prompt for this module."""
     return f"السؤال: {question.strip()}\nالجواب:"
 
 
 @dataclass(slots=True)
 class COPAArabic(BaseMultipleChoiceSuite):
+    """Implement the copaarabic benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "Hennara/copa_ar"
     split: str = "test"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "copa_ar"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_arabic_question_answer_prompt(doc["query"]),
@@ -43,16 +49,21 @@ class COPAArabic(BaseMultipleChoiceSuite):
 
 @dataclass(slots=True)
 class PIQAArabic(BaseMultipleChoiceSuite):
+    """Implement the piqaarabic benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "Hennara/pica_ar"
     split: str = "test"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "piqa_ar"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_arabic_question_answer_prompt(doc["goal"]),
@@ -66,8 +77,10 @@ class PIQAArabic(BaseMultipleChoiceSuite):
 
 
 def copa_ar(**kwargs: Any) -> COPAArabic:
+    """Implement COPA ar for this module."""
     return COPAArabic(**kwargs)
 
 
 def piqa_ar(**kwargs: Any) -> PIQAArabic:
+    """Implement PIQA ar for this module."""
     return PIQAArabic(**kwargs)

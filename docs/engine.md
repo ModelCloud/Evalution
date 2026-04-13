@@ -118,6 +118,8 @@ Evalution ships these built-in engines:
 - `engines.Transformers()`: the modern backend
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
+- `engines.LlamaCpp()`: the llama.cpp backend through `llama-cpp-python`
+- `engines.OpenAICompatible()`: an OpenAI-style HTTP backend
 - `engines.OpenVINO()`: the Optimum Intel OpenVINO backend
 - `engines.SGLang()`: the in-process SGLang runtime backend
 - `engines.TensorRTLLM()`: the TensorRT-LLM runtime backend
@@ -155,6 +157,32 @@ the same shared generation, scoring, and paged continuous-batching path as the b
 transformer engines when the loaded quantized model exposes the required HF hooks. It also
 surfaces the resolved quantized runtime backend in execution metadata.
 
+`engines.LlamaCpp()` loads GGUF-compatible checkpoints through `llama_cpp.Llama(...)` and keeps
+generation plus both log-likelihood APIs fully in process. Since llama.cpp does expose a native
+multi-sequence batch API, Evalution drives `generate_continuous(...)` through the underlying
+`llama_batch` / `llama_decode` scheduler. Evalution reopens the low-level runtime with unified KV
+cache support for that path and admits requests against the shared `n_ctx` budget instead of
+assuming the configured benchmark batch size is always safe. `LlamaCpp` accepts
+`continuous_batching=True|False` plus `device="auto"`, `device="cuda"`, `device="cpu"`, and
+`device="mlx"`. CUDA execution still depends on a source-built
+`llama-cpp-python` install with `GGML_CUDA=on`, but when the installed binding does not expose the
+requested GPU mode Evalution degrades to CPU instead of failing engine construction.
+For chat-template benchmarks such as `gsm8k_platinum`, point `model.path` at the GGUF file and
+`model.tokenizer_path` at the matching dense Hugging Face tokenizer checkout. The shared full-model
+llama.cpp test fixture uses `bartowski/Llama-3.2-1B-Instruct-GGUF` with
+`Llama-3.2-1B-Instruct-Q4_K_M.gguf`.
+
+`engines.OpenAICompatible()` talks to an OpenAI-compatible HTTP endpoint for generation, while
+using Evalution-specific `/v1/eval/loglikelihood` and `/v1/eval/loglikelihood/rolling` routes for
+the scoring APIs that Evalution benchmarks require. Evalution also ships
+`engines.build_openai_compatible_server(...)` to wrap a local engine session, such as
+`engines.Transformers()`, in a queued microbatching HTTP server for local testing. The OpenAI
+engine defaults to `batch_size=4`, treating that as the client-side in-flight queue depth: it
+submits up to four requests at once and injects the next queued request whenever one result comes
+back. For this engine, Evalution's required `.model(path=...)` call is translated into the remote
+OpenAI-compatible HTTP `model` argument. Set `batch_size=0` to disable this emulated batching and
+fall back to single requests.
+
 `engines.OpenVINO()` loads decoder-only models through `optimum.intel.openvino.OVModelForCausalLM`
 while reusing Evalution's shared transformer-style generation, log-likelihood, and rolling
 log-likelihood session logic.
@@ -176,6 +204,12 @@ submitting request ids into `llm_engine.add_request(...)`, reading finished outp
 `llm_engine.step()`, and reconciling completions by request id instead of by positional order. If
 the installed vLLM runtime does not expose that lower-level request API, the engine falls back to
 fixed-batch emulation to preserve the `generate_continuous(...)` contract.
+
+`engines.LlamaCpp()` returns full request completions from `generate(...)` and
+`generate_continuous(...)`; it does not stream partial token text to callers. The current
+`llama-cpp-python` binding does not expose a higher-level whole-request continuous-batching API, so
+Evalution's native `LlamaCpp` path keeps the shared scheduler in Python while still honoring
+request-level completion semantics.
 
 The built-in vLLM engine currently expects `num_beams=1`. Benchmarks or custom requests that
 require beam search should use another engine until vLLM beam routing is added to this backend.

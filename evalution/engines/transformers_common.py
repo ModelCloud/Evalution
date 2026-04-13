@@ -37,6 +37,7 @@ from evalution.engines.continuous import stream_request_results
 from evalution.engines.memory import build_memory_profile, gib_to_bytes, resolve_dtype
 from evalution.logbar import get_logger, loglikelihood_progress_title, manual_progress
 
+# Keep engine defaults and compatibility flags explicit at module scope.
 _AUTO_BATCH_SIZE = "auto"
 # PyPI source distributions first ship `generation/continuous_batching` in transformers 4.56.0.
 _CONTINUOUS_BATCHING_MIN_TRANSFORMERS_VERSION = Version("4.56.0")
@@ -84,6 +85,7 @@ _LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY = (
 @dataclass(slots=True)
 class _ScoringChunk:
     # Track one model forward slice plus which token span contributes to the score.
+    """Define the scoring chunk helper class."""
     request_index: int
     input_ids: list[int]
     score_start: int
@@ -94,6 +96,7 @@ class _ScoringChunk:
 @dataclass(slots=True)
 class _LoadedTransformerRuntime:
     # Bundle the shared runtime objects returned by the common model/tokenizer loader.
+    """Define the loaded transformer runtime helper class."""
     model: Any
     tokenizer: Any
     prepare_tokenizer: Any | None
@@ -106,13 +109,16 @@ class _TransformersCommonConfig(BaseEngineTransformersRuntimeConfig, SharedEngin
     # Hold the load and generation controls shared by both transformer engine variants.
 
     # Keep engine serialization stable across runtime APIs and test assertions.
+    """Define the transformers common config helper class."""
     def to_dict(self) -> dict[str, Any]:
+        """Implement to dict for transformers common config."""
         return asdict(self)
 
 
 @dataclass(slots=True)
 class BaseTransformerSession(BaseInferenceSession):
     # Share standard generation, scoring, and resource-management behavior across transformer engines.
+    """Define the base transformer session helper class."""
     config: Any
     model_config: Model
     model: Any
@@ -143,6 +149,7 @@ class BaseTransformerSession(BaseInferenceSession):
         *,
         batch_size: int | None = None,
     ) -> list[GenerationOutput]:
+        """Generate generate."""
         if not requests:
             return []
 
@@ -162,6 +169,7 @@ class BaseTransformerSession(BaseInferenceSession):
         *,
         batch_size: int | None = None,
     ) -> list[LoglikelihoodOutput]:
+        """Implement loglikelihood for base transformer session."""
         if not requests:
             return []
 
@@ -181,7 +189,9 @@ class BaseTransformerSession(BaseInferenceSession):
         *,
         batch_size: int | None = None,
     ) -> Any:
+        """Implement loglikelihood continuous for base transformer session. Preserve the fallback order expected by the surrounding caller."""
         def iterator() -> Any:
+            """Implement iterator for base transformer session. Preserve the fallback order expected by the surrounding caller."""
             request_iter = iter(requests)
             if batch_size is not None:
                 effective_batch_size = batch_size
@@ -205,6 +215,7 @@ class BaseTransformerSession(BaseInferenceSession):
                 request_queue: Any,
                 put_result: Any,
             ) -> None:
+                """Implement consume requests for base transformer session."""
                 with self._generation_lock:
                     prepared_batch: list[tuple[Any, tuple[list[int], list[int], dict[str, Any]]]] = []
                     for request_key, request in request_queue.iter_requests(stop_event=stop_event):
@@ -242,6 +253,7 @@ class BaseTransformerSession(BaseInferenceSession):
         self,
         item: tuple[int, tuple[list[int], list[int], dict[str, Any]]],
     ) -> tuple[int, tuple[int, ...]]:
+        """Implement loglikelihood request sort key for base transformer session."""
         _request_index, (prefix_ids, target_ids, _metadata) = item
         combined = tuple(prefix_ids + target_ids)
         return (-len(combined), combined)
@@ -253,6 +265,7 @@ class BaseTransformerSession(BaseInferenceSession):
         *,
         batch_size: int | None = None,
     ) -> list[RollingLoglikelihoodOutput]:
+        """Implement loglikelihood rolling for base transformer session."""
         if not requests:
             return []
 
@@ -310,7 +323,9 @@ class BaseTransformerSession(BaseInferenceSession):
         *,
         batch_size: int | None = None,
     ) -> Any:
+        """Generate continuous. Preserve the fallback order expected by the surrounding caller."""
         def iterator() -> Any:
+            """Implement iterator for base transformer session. Preserve the fallback order expected by the surrounding caller."""
             request_iter = iter(requests)
             if batch_size is not None:
                 effective_batch_size = batch_size
@@ -336,6 +351,7 @@ class BaseTransformerSession(BaseInferenceSession):
                 request_queue: Any,
                 put_result: Any,
             ) -> None:
+                """Implement consume requests for base transformer session."""
                 with self._generation_lock:
                     with self._state_lock:
                         standard_batch_size_cap = self.standard_batch_size_cap
@@ -364,6 +380,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Close standard session state and release model/tokenizer references.
     def close(self) -> None:
+        """Release the resources owned by this object."""
         with self._generation_lock:
             with self._prepare_tokenizer_lock:
                 with self._tokenizer_lock:
@@ -380,6 +397,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Drop per-suite caches and ask the CUDA allocator to release unused memory.
     def gc(self) -> None:
+        """Release reusable intermediate state for this object."""
         with self._generation_lock:
             with self._state_lock:
                 self.stop_criteria_cache.clear()
@@ -397,12 +415,14 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Render one request into the text prompt that the tokenizer/model should consume.
     def _render_request(self, request: GenerationRequest) -> str:
+        """Render request."""
         if request.rendered_prompt is not None:
             return request.rendered_prompt
         return self._render_request_with_tokenizer(self.tokenizer, request)
 
     # Use the supplied tokenizer so preparation can tokenize without mutating the live tokenizer state.
     def _render_request_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> str:
+        """Render request with tokenizer."""
         if request.messages is not None:
             return tokenizer.apply_chat_template(
                 request.messages,
@@ -415,10 +435,12 @@ class BaseTransformerSession(BaseInferenceSession):
 
     @property
     def batch_size(self) -> int | str:
+        """Implement batch size for base transformer session."""
         return self.config.batch_size
 
     # Report the runtime execution mode used by the active session.
     def describe_execution(self) -> dict[str, Any]:
+        """Implement describe execution for base transformer session."""
         with self._state_lock:
             return {
                 "requested_attn_implementation": self.requested_attn_implementation,
@@ -430,6 +452,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Let suite execution pre-render and pretokenize requests before generation starts.
     def prepare_requests(self, requests: list[GenerationRequest]) -> list[GenerationRequest]:
+        """Prepare requests."""
         tokenizer = self.prepare_tokenizer or self.tokenizer
         tokenizer_lock = self._lock_for_tokenizer(tokenizer)
         with tokenizer_lock:
@@ -471,6 +494,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Resolve the concrete batch size for this suite using either an explicit value or the auto heuristic.
     def resolve_batch_size(self, requests: list[GenerationRequest]) -> int:
+        """Resolve batch size. Preserve the fallback order expected by the surrounding caller."""
         configured_batch_size = _normalize_batch_size(self.config.batch_size)
         if configured_batch_size != _AUTO_BATCH_SIZE:
             return configured_batch_size
@@ -519,6 +543,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Cache per-stop-string stopping criteria when the installed transformers build exposes them.
     def _get_stop_criteria(self, stop_strings: list[str]) -> Any | None:
+        """Get stop criteria."""
         cache_key = tuple(stop_strings)
         with self._state_lock:
             criteria = self.stop_criteria_cache.get(cache_key)
@@ -535,6 +560,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Gather the prompt and memory statistics used by the auto batch-size estimator.
     def _batch_size_stats(self, requests: list[GenerationRequest]) -> dict[str, Any]:
+        """Implement batch size stats for base transformer session."""
         prompt_lengths = [
             len(request.input_ids)
             if request.input_ids is not None
@@ -585,6 +611,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Estimate a friendly batch size from prompt lengths and the live memory profile.
     def _estimate_auto_batch_size(self, stats: dict[str, Any]) -> int:
+        """Implement estimate auto batch size for base transformer session. Preserve the fallback order expected by the surrounding caller."""
         row_count = stats["row_count"]
         tokens_per_request = (
             stats["avg_prompt_tokens"] + stats["max_new_tokens"]
@@ -638,6 +665,7 @@ class BaseTransformerSession(BaseInferenceSession):
         *,
         batch_size: int,
     ) -> list[GenerationOutput]:
+        """Generate standard. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         import torch
 
         outputs: list[GenerationOutput] = []
@@ -693,6 +721,7 @@ class BaseTransformerSession(BaseInferenceSession):
         batch_size: int,
         stop_event: threading.Event | None = None,
     ) -> Any:
+        """Generate standard continuous. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         batch: list[tuple[Any, GenerationRequest]] = []
         for item in requests:
             if stop_event is not None and stop_event.is_set():
@@ -724,6 +753,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Build the per-batch generation kwargs shared by both transformer engines.
     def _build_generation_kwargs(self, batch: list[GenerationRequest]) -> dict[str, Any]:
+        """Build generation kwargs."""
         max_new_tokens = max(
             request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
             for request in batch
@@ -748,6 +778,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Prefer pretokenized ids when available so repeated prompt encoding stays off the hot path.
     def _encode_standard_batch(self, batch: list[GenerationRequest]) -> dict[str, Any]:
+        """Implement encode standard batch for base transformer session."""
         if all(request.input_ids is not None for request in batch):
             return self.tokenizer.pad(
                 {"input_ids": [list(request.input_ids) for request in batch]},
@@ -762,6 +793,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Mirror the active generation kwargs onto a GenerationConfig object when upstream APIs require it.
     def _build_generation_config(self, batch: list[GenerationRequest]) -> Any:
+        """Build generation config."""
         from transformers import GenerationConfig
 
         generation_kwargs = self._build_generation_kwargs(batch)
@@ -774,6 +806,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Build batch stopping criteria only when all requests share the same stop strings.
     def _build_stopping_criteria(self, batch: list[GenerationRequest]) -> Any | None:
+        """Build stopping criteria."""
         common_stop_strings = _common_stop_strings(batch)
         if not common_stop_strings:
             return None
@@ -793,6 +826,7 @@ class BaseTransformerSession(BaseInferenceSession):
         self,
         request: LoglikelihoodRequest,
     ) -> tuple[list[int], list[int], dict[str, Any]]:
+        """Prepare loglikelihood request. Preserve the fallback order expected by the surrounding caller."""
         with self._tokenizer_lock:
             if request.context_input_ids is not None:
                 prefix_ids = list(request.context_input_ids)
@@ -817,6 +851,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Use tokenizer defaults for scored contexts while avoiding a doubled BOS prefix.
     def _tokenize_loglikelihood_context(self, text: str) -> list[int]:
+        """Implement tokenize loglikelihood context for base transformer session."""
         tokenizer_kwargs: dict[str, Any] = {}
         prefix_text = self._decoded_prefix_token_text()
         if prefix_text and text.startswith(prefix_text):
@@ -828,6 +863,7 @@ class BaseTransformerSession(BaseInferenceSession):
         self,
         requests: list[tuple[list[int], list[int], dict[str, Any]]],
     ) -> int:
+        """Resolve scoring batch size."""
         batch_requests = [
             GenerationRequest(
                 rendered_prompt="",
@@ -847,6 +883,7 @@ class BaseTransformerSession(BaseInferenceSession):
         target_ids: list[int],
         metadata: dict[str, Any],
     ) -> list[_ScoringChunk]:
+        """Build loglikelihood chunks."""
         max_input_length = self._max_scoring_input_length()
         # Decoder-only scoring can carry one extra request token because the model input drops the
         # final token while still predicting the full continuation span in that window.
@@ -884,6 +921,7 @@ class BaseTransformerSession(BaseInferenceSession):
         self,
         token_list: list[int],
     ) -> Any:
+        """Implement rolling loglikelihood windows for base transformer session."""
         if not token_list:
             return
 
@@ -915,6 +953,7 @@ class BaseTransformerSession(BaseInferenceSession):
         self,
         pair: tuple[list[int], list[int]],
     ) -> tuple[list[int], list[int]]:
+        """Make disjoint window."""
         context_ids, continuation_ids = pair
         return context_ids[: len(context_ids) - (len(continuation_ids) - 1)], continuation_ids
 
@@ -925,6 +964,7 @@ class BaseTransformerSession(BaseInferenceSession):
         *,
         batch_size: int,
     ) -> list[LoglikelihoodOutput]:
+        """Score chunks. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         import torch
 
         scored_chunks: list[LoglikelihoodOutput] = []
@@ -1025,6 +1065,7 @@ class BaseTransformerSession(BaseInferenceSession):
         *,
         batch_size: int,
     ) -> list[LoglikelihoodOutput]:
+        """Score prepared loglikelihood requests. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         chunks: list[_ScoringChunk] = []
         ordered_requests = list(enumerate(prepared_requests))
         ordered_requests.sort(key=self._loglikelihood_request_sort_key)
@@ -1068,6 +1109,7 @@ class BaseTransformerSession(BaseInferenceSession):
         prepared_batch: list[tuple[Any, tuple[list[int], list[int], dict[str, Any]]]],
         put_result: Any,
     ) -> None:
+        """Implement emit scored loglikelihood batch for base transformer session."""
         batch_outputs = self._score_prepared_loglikelihood_requests(
             [prepared_request for _request_key, prepared_request in prepared_batch],
             batch_size=len(prepared_batch),
@@ -1077,6 +1119,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Pick the token used as synthetic left context when a scored request has no explicit prefix.
     def _prefix_token_id(self) -> int:
+        """Implement prefix token id for base transformer session."""
         for token_id in (
             getattr(self.tokenizer, "bos_token_id", None),
             getattr(self.tokenizer, "eos_token_id", None),
@@ -1090,6 +1133,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Decode the synthetic prefix token once so callers can detect explicit BOS-prefixed text.
     def _decoded_prefix_token_text(self) -> str | None:
+        """Implement decoded prefix token text for base transformer session."""
         with suppress(Exception):
             decoded = self.tokenizer.decode(
                 [self._prefix_token_id()],
@@ -1108,6 +1152,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Resolve the finite scoring window the model/tokenizer expose, with a conservative fallback.
     def _max_scoring_input_length(self) -> int:
+        """Implement max scoring input length for base transformer session."""
         model_length = getattr(getattr(self.model, "config", None), "max_position_embeddings", None)
         tokenizer_length = getattr(self.tokenizer, "model_max_length", None)
         candidate_lengths = [
@@ -1123,6 +1168,7 @@ class BaseTransformerSession(BaseInferenceSession):
     # Standard and compat engines do not need to alter attention kernels during token scoring.
     @contextmanager
     def _scoring_attention_context(self) -> Any:
+        """Implement scoring attention context for base transformer session."""
         yield
 
     # Standard and compat engines also leave generation attention unchanged unless a subclass opts in.
@@ -1132,6 +1178,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Log the generation backend once per suite so repeated batches do not spam the output.
     def _log_generation_execution(self) -> None:
+        """Implement log generation execution for base transformer session."""
         with self._state_lock:
             if self.execution_logged:
                 return
@@ -1148,12 +1195,14 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Choose the lock that matches the tokenizer instance currently doing the work.
     def _lock_for_tokenizer(self, tokenizer: Any) -> threading.RLock:
+        """Implement lock for tokenizer for base transformer session."""
         if tokenizer is not None and tokenizer is self.prepare_tokenizer and tokenizer is not self.tokenizer:
             return self._prepare_tokenizer_lock
         return self._tokenizer_lock
 
     # Render and tokenize one generation request for APIs that consume explicit prompt ids.
     def _prepare_request_for_generation(self, request: GenerationRequest) -> tuple[str, list[int]]:
+        """Prepare request for generation."""
         with self._tokenizer_lock:
             rendered_prompt = self._render_request(request)
             input_ids = (
@@ -1172,6 +1221,7 @@ def load_transformer_runtime(
     config: _TransformersCommonConfig,
     model_config: Model,
 ) -> _LoadedTransformerRuntime:
+    """Load transformer runtime. Preserve the fallback order expected by the surrounding caller."""
     import torch
     from transformers import AutoModelForCausalLM
     _patch_transformers_no_tie_weights_context_once()
@@ -1314,6 +1364,7 @@ def _patch_transformers_no_tie_weights_context_once() -> None:
         original_tie_weights = current_tie_weights
 
         def _context_scoped_tie_weights(self: Any, *args: Any, **kwargs: Any) -> Any:
+            """Implement context scoped tie weights for this module."""
             if _TRANSFORMERS_NO_TIE_WEIGHTS_ACTIVE.get():
                 return None
             return original_tie_weights(self, *args, **kwargs)
@@ -1324,6 +1375,7 @@ def _patch_transformers_no_tie_weights_context_once() -> None:
 
         @contextmanager
         def _context_scoped_no_tie_weights():
+            """Implement context scoped no tie weights for this module."""
             token = _TRANSFORMERS_NO_TIE_WEIGHTS_ACTIVE.set(True)
             try:
                 yield
@@ -1336,6 +1388,7 @@ def _patch_transformers_no_tie_weights_context_once() -> None:
 
 
 def _resolve_tokenizer_source(model_config: Model) -> Any:
+    """Resolve tokenizer source."""
     if model_config.tokenizer is not None:
         return model_config.tokenizer
     if model_config.tokenizer_path is not None:
@@ -1345,6 +1398,7 @@ def _resolve_tokenizer_source(model_config: Model) -> Any:
 
 def _is_dense_weight_file(path_or_name: str) -> bool:
     # Detect dense checkpoint payloads so GGUF-only repos do not get mixed with standard HF weights.
+    """Implement is dense weight file for this module."""
     filename = Path(path_or_name).name
     return filename.endswith(".safetensors") or filename in {
         "pytorch_model.bin",
@@ -1357,6 +1411,7 @@ def _is_dense_weight_file(path_or_name: str) -> bool:
 
 def _single_gguf_file_from_entries(entries: list[str]) -> str | None:
     # Infer the one GGUF payload only when no dense checkpoint files are present alongside it.
+    """Implement single gguf file from entries for this module."""
     if any(_is_dense_weight_file(entry) for entry in entries):
         return None
     gguf_files = [entry for entry in entries if entry.lower().endswith(".gguf")]
@@ -1368,6 +1423,7 @@ def _single_gguf_file_from_entries(entries: list[str]) -> str | None:
 def _list_local_source_entries(path: Path) -> list[str]:
     # Walk local model directories once so direct GGUF files and unpacked repo snapshots normalize
     # to the same Hugging Face `gguf_file` contract.
+    """Implement list local source entries for this module."""
     if path.is_file():
         return [path.name]
     if not path.is_dir():
@@ -1378,6 +1434,7 @@ def _list_local_source_entries(path: Path) -> list[str]:
 def _list_hub_repo_entries(repo_id: str, *, revision: str | None) -> list[str]:
     # Query Hub file names lazily only for retry fallback paths so normal repo loads avoid extra
     # network round-trips.
+    """Implement list hub repo entries for this module."""
     from huggingface_hub import HfApi
 
     return list(HfApi().list_repo_files(repo_id=repo_id, revision=revision, repo_type="model"))
@@ -1391,6 +1448,7 @@ def _normalize_single_gguf_tokenizer_source(
 ) -> tuple[Any, dict[str, Any]]:
     # Convert direct `.gguf` files or single-GGUF-only repos into the `(source, gguf_file)` shape
     # expected by HF and Tokenicer.
+    """Normalize single gguf tokenizer source. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized_kwargs = dict(kwargs or {})
     if normalized_kwargs.get("gguf_file"):
         return pretrained_model_name_or_path_or_tokenizer, normalized_kwargs
@@ -1422,6 +1480,7 @@ def _load_tokenizer_from_model(
     pretrained_model_name_or_path_or_tokenizer: Any,
     **kwargs: Any,
 ) -> Any:
+    """Load tokenizer from model."""
     try:
         return Tokenicer.load(pretrained_model_name_or_path_or_tokenizer, strict=False, **kwargs)
     except Exception:
@@ -1439,6 +1498,7 @@ def _load_tokenizer_from_model(
 
 
 def _normalize_tokenizer_special_tokens(tokenizer: Any, *, model: Any | None = None) -> None:
+    """Normalize tokenizer special tokens. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if tokenizer is None:
         return
 
@@ -1458,6 +1518,7 @@ def _normalize_tokenizer_special_tokens(tokenizer: Any, *, model: Any | None = N
 
 
 def _seed_transformer_runtime(seed: int | None) -> None:
+    """Implement seed transformer runtime for this module."""
     if seed is None:
         return
 
@@ -1483,6 +1544,7 @@ def _seed_transformer_runtime(seed: int | None) -> None:
 
 
 def _seed_with_internal_apis(obj: Any, seed: int | None) -> None:
+    """Implement seed with internal apis for this module."""
     if seed is None:
         return
     for method_name in ("set_seed", "manual_seed", "seed", "reset_rng"):
@@ -1495,6 +1557,7 @@ def _seed_with_internal_apis(obj: Any, seed: int | None) -> None:
 
 # Guard modern paged-attention engines with the package version that first shipped continuous batching.
 def transformers_continuous_batching_support() -> tuple[bool, str]:
+    """Implement transformers continuous batching support for this module."""
     import transformers
 
     installed_version = Version(transformers.__version__)
@@ -1522,6 +1585,7 @@ def _load_model_with_compat_fallback(
     model_path: str,
     load_kwargs: dict[str, Any],
 ) -> Any:
+    """Load model with compat fallback."""
     attempt_kwargs = dict(load_kwargs)
     while True:
         try:
@@ -1557,6 +1621,7 @@ def _load_model_with_compat_fallback(
 
 # Detect specific loader kwargs that older transformers builds report as unexpected.
 def _unexpected_loader_kwargs(exc: TypeError) -> set[str]:
+    """Implement unexpected loader kwargs for this module."""
     return set(_UNEXPECTED_LOADER_KWARG_PATTERN.findall(str(exc)))
 
 
@@ -1564,6 +1629,7 @@ def _loader_kwargs_compat_fallback(
     load_kwargs: dict[str, Any],
     exc: TypeError,
 ) -> tuple[dict[str, Any] | None, str | None]:
+    """Implement loader kwargs compat fallback for this module. Preserve the fallback order expected by the surrounding caller."""
     unexpected_kwargs = _unexpected_loader_kwargs(exc)
     if not unexpected_kwargs:
         return None, None
@@ -1598,6 +1664,7 @@ def _loader_import_compat_fallback(
 
 
 def _resolve_input_device(model: Any, *, prefer: str | None = None) -> Any:
+    """Resolve input device. Preserve the fallback order expected by the surrounding caller."""
     import torch
 
     if prefer is not None:
@@ -1646,6 +1713,7 @@ def _clone_prepare_tokenizer(
     trust_remote_code: bool | None,
     model: Any | None = None,
 ) -> Any | None:
+    """Implement clone prepare tokenizer for this module."""
     with suppress(Exception):
         resolved_trust_remote_code = (
             trust_remote_code if trust_remote_code is not None else False
@@ -1665,6 +1733,7 @@ def _clone_prepare_tokenizer(
 
 # Build stop-string criteria only when the installed transformers release exposes that API.
 def _build_stop_criteria(tokenizer: Any, stop_strings: list[str]) -> Any | None:
+    """Build stop criteria."""
     with suppress(Exception):
         from transformers import StopStringCriteria
 
@@ -1673,6 +1742,7 @@ def _build_stop_criteria(tokenizer: Any, stop_strings: list[str]) -> Any | None:
 
 
 def _common_stop_strings(batch: list[GenerationRequest]) -> list[str] | None:
+    """Implement common stop strings for this module."""
     if not batch:
         return None
 
@@ -1683,6 +1753,7 @@ def _common_stop_strings(batch: list[GenerationRequest]) -> list[str] | None:
 
 
 def _truncate_at_stop(text: str, stop_strings: list[str]) -> str:
+    """Implement truncate at stop for this module."""
     if not stop_strings:
         return text
 
@@ -1693,6 +1764,7 @@ def _truncate_at_stop(text: str, stop_strings: list[str]) -> str:
 
 
 def _base_attn_implementation(attn_implementation: str | None) -> str | None:
+    """Implement base attn implementation for this module."""
     if attn_implementation is None:
         return None
     if attn_implementation.startswith("paged|"):
@@ -1701,16 +1773,19 @@ def _base_attn_implementation(attn_implementation: str | None) -> str | None:
 
 
 def _requests_paged_attention(attn_implementation: str | None) -> bool:
+    """Implement requests paged attention for this module."""
     return isinstance(attn_implementation, str) and attn_implementation.startswith("paged|")
 
 
 def _fallback_batch_size(batch_size: int) -> int:
+    """Implement fallback batch size for this module."""
     if batch_size <= 1:
         return 1
     return _friendly_batch_size(max(1, batch_size // 2))
 
 
 def _normalize_batch_size(batch_size: int | str) -> int | str:
+    """Normalize batch size. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     if batch_size == _AUTO_BATCH_SIZE:
         return _AUTO_BATCH_SIZE
     if not isinstance(batch_size, int) or batch_size <= 0:
@@ -1719,6 +1794,7 @@ def _normalize_batch_size(batch_size: int | str) -> int | str:
 
 
 def _friendly_batch_size(raw_batch_size: int) -> int:
+    """Implement friendly batch size for this module."""
     friendly = 1
     for candidate in _AUTO_BATCH_LADDER:
         if candidate > raw_batch_size:

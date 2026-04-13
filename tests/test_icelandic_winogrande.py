@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 icelandic_winogrande_module = importlib.import_module("evalution.benchmarks.icelandic_winogrande")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 2
         assert requests[0].context == "Valmundur var að læra að hjóla og Bernharður var með honum af því að Valmundur"
@@ -29,6 +32,7 @@ class FakeSession:
 
 
 def test_icelandic_winogrande_scores_partial_evaluation_accuracy(monkeypatch) -> None:
+    """Verify icelandic winogrande scores partial evaluation accuracy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -64,6 +68,7 @@ def test_icelandic_winogrande_scores_partial_evaluation_accuracy(monkeypatch) ->
 
 
 def test_blank_choice_contexts_and_suffix_handles_spaced_and_unspaced_blanks() -> None:
+    """Verify blank choice contexts and suffix handles spaced and unspaced blanks."""
     assert icelandic_winogrande_module._blank_choice_contexts_and_suffix(
         "Valmundur var að læra að hjóla og Bernharður var með honum af því að _ hafði enga reynslu af því að hjóla.",
         "Valmundur",

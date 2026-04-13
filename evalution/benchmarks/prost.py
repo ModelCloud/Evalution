@@ -12,11 +12,13 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _PROST_DATA_URL = "https://huggingface.co/datasets/corypaik/prost/resolve/main/data/default.jsonl"
 _PROST_CHOICE_LABELS = ["A", "B", "C", "D"]
 
 
 def _prost_prompt(context: str, ex_question: str) -> str:
+    """Implement prost prompt for this module."""
     return f"{context.strip()}\nQuestion: {ex_question.strip()}\nAnswer:"
 
 
@@ -28,6 +30,7 @@ def _load_prost_dataset(
     stream: bool = (False),
     streaming: bool | None = None,
 ) -> Any:
+    """Load prost dataset."""
     if dataset_path != "corypaik/prost":
         raise ValueError(f"unsupported PROST dataset path: {dataset_path!r}")
     if split != "test":
@@ -46,17 +49,21 @@ def _load_prost_dataset(
 @dataclass(slots=True)
 class Prost(BaseMultipleChoiceSuite):
     # Score PROST by ranking the answer text choices after the zero-shot prompt stem.
+    """Implement the prost benchmark suite."""
     dataset_path: str = "corypaik/prost"
     split: str = "test"
     stream: bool = (False)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_prost_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "prost"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(doc[label]).strip() for label in _PROST_CHOICE_LABELS]
         context = str(doc["context"]).strip()
         ex_question = str(doc["ex_question"]).strip()
@@ -78,4 +85,5 @@ class Prost(BaseMultipleChoiceSuite):
 
 
 def prost(**kwargs: Any) -> Prost:
+    """Implement prost for this module."""
     return Prost(**kwargs)

@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 eus_trivia_module = importlib.import_module("evalution.benchmarks.eus_trivia")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -38,6 +41,7 @@ class FakeSession:
 
 
 def test_eus_trivia_scores_label_choice_benchmark(monkeypatch) -> None:
+    """Verify eus trivia scores label choice benchmark. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -80,6 +84,7 @@ def test_eus_trivia_scores_label_choice_benchmark(monkeypatch) -> None:
 
 
 def test_eus_trivia_prompt_matches_upstream_shape() -> None:
+    """Verify eus trivia prompt matches upstream shape."""
     doc = {
         "question": "Nor da?",
         "candidates": [
@@ -100,6 +105,7 @@ def test_eus_trivia_prompt_matches_upstream_shape() -> None:
 
 
 def test_eus_trivia_rejects_invalid_candidate_count() -> None:
+    """Verify eus trivia rejects invalid candidate count."""
     with pytest.raises(ValueError, match="at least two candidates"):
         eus_trivia_module._eus_trivia_prompt({"question": "Nor da?", "candidates": ["Bakarra"]})
 

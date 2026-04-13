@@ -45,6 +45,7 @@ _LONG_BENCH2_ALIAS_TO_TASK = {
 
 
 def _longbench2_task_name(value: str) -> str:
+    """Implement longbench2 task name for this module."""
     task_name = _LONG_BENCH2_ALIAS_TO_TASK.get(value)
     if task_name is None:
         raise ValueError(f"unsupported longbench2 subset: {value!r}")
@@ -52,6 +53,7 @@ def _longbench2_task_name(value: str) -> str:
 
 
 def _longbench2_prompt(*, context: str, question: str, choice_texts: list[str]) -> str:
+    """Implement longbench2 prompt for this module."""
     if len(choice_texts) != len(_CHOICE_LABELS):
         raise ValueError(f"longbench2 expects four choices, got {len(choice_texts)}")
     lines = [
@@ -73,12 +75,14 @@ def _longbench2_prompt(*, context: str, question: str, choice_texts: list[str]) 
 @dataclass(slots=True)
 class LongBench2(BaseMultipleChoiceSuite):
     # Score one LongBench v2 config by ranking answer labels against the shared author prompt.
+    """Implement the long bench2 benchmark suite."""
     dataset_path: str = "recursal/longbench-v2"
     dataset_name: str | None = "academic_single"
     split: str = "train"
     subset: str = "academic_single"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         task_name = _longbench2_task_name(self.subset)
         dataset_name = LONG_BENCH2_TASK_TO_DATASET[task_name]
         self.subset = task_name
@@ -88,12 +92,15 @@ class LongBench2(BaseMultipleChoiceSuite):
         raise ValueError("longbench2 dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.subset
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choice_texts = [str(choice).strip() for choice in doc["choices"]]
         prompt = _longbench2_prompt(
             context=str(doc["context"]),
@@ -117,13 +124,16 @@ class LongBench2(BaseMultipleChoiceSuite):
 
 
 def longbench2(*, subset: str = "academic_single", **kwargs: Any) -> LongBench2:
+    """Implement longbench2 for this module."""
     task_name = _longbench2_task_name(subset)
     kwargs.setdefault("dataset_name", LONG_BENCH2_TASK_TO_DATASET[task_name])
     return LongBench2(subset=task_name, **kwargs)
 
 
 def _make_longbench2_factory(task_name: str) -> Any:
+    """Make longbench2 factory."""
     def factory(**kwargs: Any) -> LongBench2:
+        """Implement factory for this module."""
         return longbench2(subset=task_name, **kwargs)
 
     factory.__name__ = task_name

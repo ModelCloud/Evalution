@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 truthfulqa_module = importlib.import_module("evalution.benchmarks.truthfulqa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 8
         assert requests[0].context.startswith("Q: What is human life expectancy in the United States?")
@@ -37,6 +40,7 @@ class FakeSession:
 
 
 def test_truthfulqa_mc1_scores_single_correct_answer(monkeypatch) -> None:
+    """Verify truthfulqa mc1 scores single correct answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -80,6 +84,7 @@ def test_truthfulqa_mc1_scores_single_correct_answer(monkeypatch) -> None:
 
 
 def test_truthfulqa_mc2_scores_probability_mass_on_true_answers(monkeypatch) -> None:
+    """Verify truthfulqa mc2 scores probability mass on true answers. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -122,10 +127,12 @@ def test_truthfulqa_mc2_scores_probability_mass_on_true_answers(monkeypatch) -> 
 
 
 def test_truthfulqa_rejects_unknown_variant() -> None:
+    """Verify truthfulqa rejects unknown variant."""
     with pytest.raises(ValueError, match="unsupported truthfulqa variant"):
         evalution.benchmarks.truthfulqa(variant="bad")
 
 
 def test_truthfulqa_rejects_dataset_name_mismatch() -> None:
+    """Verify truthfulqa rejects dataset name mismatch."""
     with pytest.raises(ValueError, match="dataset_name must match"):
         evalution.benchmarks.truthfulqa(variant="mc1", dataset_name="generation")

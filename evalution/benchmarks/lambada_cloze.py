@@ -17,13 +17,17 @@ from evalution.benchmarks.single_continuation import SingleContinuationSample
 @dataclass(slots=True)
 class LAMBADACloze(LAMBADA):
     # Evaluate the cloze-prompted LAMBADA variant that appends a blank and arrow marker.
+    """Define the lambadacloze helper class."""
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"lambada_{self.variant_name}_cloze"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> SingleContinuationSample:
+        """Build one benchmark sample from a dataset row."""
         text = str(doc["text"])
         prompt, target = _lambada_prompt_target(text)
         metadata = {
@@ -41,6 +45,7 @@ class LAMBADACloze(LAMBADA):
         )
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **super().result_metadata(),
             "prompt_variant": "cloze",
@@ -48,10 +53,12 @@ class LAMBADACloze(LAMBADA):
 
 
 def lambada_openai_cloze(**kwargs: Any) -> LAMBADACloze:
+    """Implement lambada openai cloze for this module."""
     return LAMBADACloze(**kwargs)
 
 
 def lambada_standard_cloze(**kwargs: Any) -> LAMBADACloze:
+    """Implement lambada standard cloze for this module."""
     return LAMBADACloze(
         dataset_path="cimec/lambada",
         dataset_name=None,

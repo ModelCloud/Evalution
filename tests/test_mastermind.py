@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mastermind_module = importlib.import_module("evalution.benchmarks.mastermind")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 4
         assert requests[0].context.endswith("\n\nThe secret code is:")
@@ -54,6 +57,7 @@ def test_mastermind_variant_scores_multiple_choice(
     expected_shape,
     expected_difficulty,
 ) -> None:
+    """Verify mastermind variant scores multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -99,10 +103,12 @@ def test_mastermind_variant_scores_multiple_choice(
 
 
 def test_mastermind_prompt_helper_formats_instruction() -> None:
+    """Verify mastermind prompt helper formats instruction."""
     assert mastermind_module._mastermind_prompt("Solve it") == "Solve it\n\nThe secret code is:"
 
 
 def test_mastermind_rejects_invalid_variant_and_dataset_settings() -> None:
+    """Verify mastermind rejects invalid variant and dataset settings."""
     with pytest.raises(ValueError, match="unsupported mastermind variant"):
         evalution.benchmarks.mastermind(variant="bad")
     with pytest.raises(ValueError, match="mastermind dataset_path must match the configured variant"):

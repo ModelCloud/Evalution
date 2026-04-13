@@ -12,10 +12,12 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput, LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 asdiv_module = importlib.import_module("evalution.benchmarks.asdiv")
 
 
 class FakeLoglikelihoodSession:
+    """Provide the fake loglikelihood session helper used by the surrounding tests."""
     def __init__(
         self,
         *,
@@ -23,11 +25,13 @@ class FakeLoglikelihoodSession:
         expected_continuation: str,
         output: LoglikelihoodOutput,
     ) -> None:
+        """Initialize this object."""
         self.expected_prompt = expected_prompt
         self.expected_continuation = expected_continuation
         self.output = output
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake loglikelihood session."""
         assert batch_size == 6
         assert len(requests) == 1
         assert requests[0].context == self.expected_prompt
@@ -36,11 +40,14 @@ class FakeLoglikelihoodSession:
 
 
 class FakeGenerationSession:
+    """Provide the fake generation session helper used by the surrounding tests."""
     def __init__(self, responses: list[str]) -> None:
+        """Initialize this object."""
         self.responses = responses
         self.requests = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size in {1, 5}
         self.requests.extend(requests)
         return [
@@ -53,6 +60,7 @@ class FakeGenerationSession:
 
 
 def test_asdiv_scores_single_continuation_loglikelihood_without_prefix_space(monkeypatch) -> None:
+    """Verify asdiv scores single continuation loglikelihood without prefix space. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -118,6 +126,7 @@ def test_asdiv_scores_single_continuation_loglikelihood_without_prefix_space(mon
 
 
 def test_asdiv_cot_llama_scores_numeric_generation_with_chat_fewshots(monkeypatch) -> None:
+    """Verify asdiv cot llama scores numeric generation with chat fewshots. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -180,4 +189,5 @@ def test_asdiv_cot_llama_scores_numeric_generation_with_chat_fewshots(monkeypatc
 
 
 def test_asdiv_numeric_target_strips_parenthesized_units() -> None:
+    """Verify asdiv numeric target strips parenthesized units."""
     assert asdiv_module._asdiv_numeric_target({"answer": "15 (balls)"}) == "15"

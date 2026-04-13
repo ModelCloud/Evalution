@@ -11,10 +11,12 @@ from datasets import Dataset
 
 import evalution
 
+# Keep shared test fixtures and expectations explicit at module scope.
 humaneval_module = importlib.import_module("evalution.benchmarks.humaneval")
 
 
 def test_humaneval_scores_pass_at_1(monkeypatch):
+    """Verify humaneval scores pass at 1. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -31,7 +33,9 @@ def test_humaneval_scores_pass_at_1(monkeypatch):
     monkeypatch.setattr(humaneval_module, "_run_script", lambda script, timeout=10: True)
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size):
+            """Generate generate."""
             assert batch_size == 1
             assert len(requests) == 1
             return [

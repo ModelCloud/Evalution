@@ -51,8 +51,8 @@ def start_keepalive_monitor(
         print(f"start to keep alive... {keep_alive_url}")
         while not stop_event.wait(interval_sec):
             resp = fetch_text(keep_alive_url, timeout=10, suppress_error=True)
-            if resp.strip() == "-1":
-                print("Server returned -1, terminating job...")
+            if int(resp.strip()) < 0:
+                print(f"\n\n\nServer returned {resp.strip()}, terminating job...\n\n\n")
                 state["forced_exit_code"] = 3
                 kill_process_group(proc)
                 stop_event.set()
@@ -100,6 +100,7 @@ def main() -> int:
     parser.add_argument("--test-file", required=True)
     parser.add_argument("--runner", required=True)
     parser.add_argument("--gpu-id", default="")
+    parser.add_argument("--enable-keepalive-monitor", action="store_true")
     parser.add_argument("--monitor-interval-sec", type=int, default=60)
     parser.add_argument("--artifacts-dir", default="artifacts")
     parser.add_argument("--clear-cuda", action="store_true")
@@ -142,12 +143,16 @@ def main() -> int:
     monitor_thread = None
     monitor_stop = None
     monitor_state = {"forced_exit_code": 0}
-    if env.get("CUDA_VISIBLE_DEVICES", ""):
+    if args.enable_keepalive_monitor and env.get("CUDA_VISIBLE_DEVICES", ""):
         monitor_thread, monitor_stop, monitor_state = start_keepalive_monitor(
             proc=proc,
             keep_alive_url=keep_alive_url,
             interval_sec=args.monitor_interval_sec,
         )
+    elif args.enable_keepalive_monitor:
+        print("Skip keepalive monitor because CUDA_VISIBLE_DEVICES is empty.")
+    else:
+        print("Keepalive monitor disabled for this test run.")
 
     start_time = time.time()
     try:
@@ -161,11 +166,12 @@ def main() -> int:
 
     if monitor_state["forced_exit_code"]:
         append_github_env("ERROR", "22")
+        print(f"\n\n\nforced_exit_code: {monitor_state['forced_exit_code']}\n\n\n")
         return 22
 
     if return_code != 0:
         append_github_env("ERROR", "22")
-        print(f"pipe status wrong: {return_code}")
+        print(f"\n\n\npipe status wrong: {return_code}\n\n\n")
         return 22
 
     execution_time = int(time.time() - start_time)

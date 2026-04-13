@@ -15,6 +15,7 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 def _format_boolq_question(question: str) -> str:
     # Normalize trailing punctuation so prompts stay readable even if the source row already ends with a question mark.
+    """Format boolq question."""
     stripped = question.strip()
     return stripped if stripped.endswith("?") else f"{stripped}?"
 
@@ -22,20 +23,24 @@ def _format_boolq_question(question: str) -> str:
 @dataclass(slots=True)
 class BoolQ(BaseMultipleChoiceSuite):
     # Evaluate yes-or-no reading comprehension by ranking boolean answers with token log-likelihood.
+    """Implement the bool q benchmark suite."""
     dataset_path: str = "super_glue"
     dataset_name: str | None = "boolq"
     split: str = "validation"
 
     # Use the Hugging Face datasets loader for the canonical BoolQ task packaged inside SuperGLUE.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used by logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "boolq"
 
     # Convert one BoolQ row into the shared prompt and binary-choice structure used by the helper.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=f"{doc['passage']}\nQuestion: {_format_boolq_question(doc['question'])}\nAnswer:",
@@ -47,4 +52,5 @@ class BoolQ(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used by the rest of the package.
 def boolq(**kwargs: Any) -> BoolQ:
+    """Implement boolq for this module."""
     return BoolQ(**kwargs)

@@ -9,6 +9,7 @@ import pytest
 
 from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, XNLI_TASKS, run_suite_spec
 
+# Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
 
 
@@ -17,4 +18,5 @@ def test_llama3_2_transformers_xnli_full_model_eval(
     capsys: pytest.CaptureFixture[str],
     suite_key: str,
 ) -> None:
+    """Verify llama3 2 transformers XNLI full model eval."""
     run_suite_spec(capsys, suite_key)

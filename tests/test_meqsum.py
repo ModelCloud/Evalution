@@ -16,10 +16,12 @@ import evalution
 from evalution.datasets import meqsum as meqsum_dataset
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 meqsum_module = importlib.import_module("evalution.benchmarks.meqsum")
 
 
 def _build_minimal_meqsum_xlsx(path: Path) -> str:
+    """Build minimal meqsum xlsx."""
     files = {
         "[Content_Types].xml": """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -91,6 +93,7 @@ MESSAGE: I need to know who manufactures aspirin.</t></si>
 
 
 def test_load_meqsum_dataset_reads_pinned_xlsx(monkeypatch, tmp_path: Path) -> None:
+    """Verify load meqsum dataset reads pinned xlsx."""
     xlsx_path = tmp_path / "meqsum.xlsx"
     xlsx_sha256 = _build_minimal_meqsum_xlsx(xlsx_path)
     monkeypatch.setattr(meqsum_dataset, "MEQSUM_SOURCE_SHA256", xlsx_sha256)
@@ -119,6 +122,7 @@ def test_load_meqsum_dataset_reads_pinned_xlsx(monkeypatch, tmp_path: Path) -> N
 
 
 def test_load_meqsum_dataset_rejects_checksum_mismatch(monkeypatch, tmp_path: Path) -> None:
+    """Verify load meqsum dataset rejects checksum mismatch."""
     xlsx_path = tmp_path / "meqsum.xlsx"
     _build_minimal_meqsum_xlsx(xlsx_path)
     monkeypatch.setattr(meqsum_dataset, "MEQSUM_SOURCE_SHA256", "0" * 64)
@@ -130,6 +134,7 @@ def test_load_meqsum_dataset_rejects_checksum_mismatch(monkeypatch, tmp_path: Pa
 
 
 def test_meqsum_scores_medical_question_summary(monkeypatch) -> None:
+    """Verify meqsum scores medical question summary. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     docs = [
         {
             "File": "row-1.txt",
@@ -140,7 +145,9 @@ def test_meqsum_scores_medical_question_summary(monkeypatch) -> None:
     monkeypatch.setattr(meqsum_module, "load_meqsum_dataset", lambda *args, **kwargs: list(docs))
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 1
             assert len(requests) == 1
             assert requests[0].prompt == (
@@ -173,5 +180,6 @@ def test_meqsum_scores_medical_question_summary(monkeypatch) -> None:
 
 
 def test_meqsum_question_text_prefers_message_body() -> None:
+    """Verify meqsum question text prefers message body."""
     assert meqsum_module._meqsum_question_text("SUBJECT: aspirin\nMESSAGE: Hello there") == "Hello there"
     assert meqsum_module._meqsum_question_text("Standalone question") == "Standalone question"

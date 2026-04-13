@@ -14,25 +14,30 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 
 def _headqa_prompt(question: str) -> str:
+    """Implement headqa prompt for this module."""
     return f"Question: {question.strip()}\nAnswer:"
 
 
 @dataclass(slots=True)
 class HEADQA(BaseMultipleChoiceSuite):
     # Evaluate healthcare-domain multiple-choice reasoning in English and Spanish.
+    """Implement the headqa benchmark suite."""
     dataset_path: str = "EleutherAI/headqa"
     dataset_name: str | None = "en"
     split: str = "test"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         if self.dataset_name is None:
             return "headqa"
         return f"headqa_{self.dataset_name}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         answers = sorted(doc["answers"], key=lambda answer: int(answer["aid"]))
         choices = [answer["atext"].strip() for answer in answers]
         return MultipleChoiceSample(
@@ -53,12 +58,15 @@ class HEADQA(BaseMultipleChoiceSuite):
 
 
 def _headqa_variant(dataset_name: str, **kwargs: Any) -> HEADQA:
+    """Implement headqa variant for this module."""
     return HEADQA(dataset_name=dataset_name, **kwargs)
 
 
 def headqa_en(**kwargs: Any) -> HEADQA:
+    """Implement headqa en for this module."""
     return _headqa_variant("en", **kwargs)
 
 
 def headqa_es(**kwargs: Any) -> HEADQA:
+    """Implement headqa es for this module."""
     return _headqa_variant("es", **kwargs)

@@ -17,6 +17,7 @@ _EUS_TRIVIA_LABELS = ("A", "B", "C", "D")
 
 
 def _eus_trivia_prompt(doc: dict[str, Any]) -> str:
+    """Implement eus trivia prompt for this module."""
     candidates = [str(candidate).strip() for candidate in doc["candidates"]]
     if len(candidates) < 2:
         raise ValueError("eus_trivia requires at least two candidates")
@@ -32,17 +33,21 @@ def _eus_trivia_prompt(doc: dict[str, Any]) -> str:
 @dataclass(slots=True)
 class EusTrivia(BaseMultipleChoiceSuite):
     # The public EusTrivia evaluation split is a four-way multiple-choice test set.
+    """Implement the eus trivia benchmark suite."""
     dataset_path: str = "HiTZ/EusTrivia"
     dataset_name: str | None = "default"
     split: str = "test"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "eus_trivia"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         candidates = [str(candidate).strip() for candidate in doc["candidates"]]
         choice_labels = list(_EUS_TRIVIA_LABELS[: len(candidates)])
         gold_index = int(doc["answer"])
@@ -65,4 +70,5 @@ class EusTrivia(BaseMultipleChoiceSuite):
 
 
 def eus_trivia(**kwargs: Any) -> EusTrivia:
+    """Implement eus trivia for this module."""
     return EusTrivia(**kwargs)

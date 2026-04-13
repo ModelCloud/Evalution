@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _QA4MRE_CONFIGS = {
     "2011": "2011.main.EN",
     "2012": "2012.main.EN",
@@ -20,17 +21,21 @@ _QA4MRE_CONFIGS = {
 
 
 def _qa4mre_prompt(document: str, question: str) -> str:
+    """Implement qa4mre prompt for this module."""
     return f"{document.strip()}\nQuestion: {question.strip()}\nAnswer:"
 
 
 @dataclass(slots=True)
 class QA4MRE(BaseMultipleChoiceSuite):
+    """Implement the qa4 mre benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "qa4mre"
     dataset_name: str | None = "2011.main.EN"
     split: str = "train"
     year: str = "2011"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         expected_name = _QA4MRE_CONFIGS.get(self.year)
         if expected_name is None:
             raise ValueError(f"unsupported qa4mre year: {self.year!r}")
@@ -40,12 +45,15 @@ class QA4MRE(BaseMultipleChoiceSuite):
         raise ValueError("qa4mre dataset_name must match the configured year")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"qa4mre_{self.year}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [str(choice).strip() for choice in doc["answer_options"]["answer_str"]]
         correct_answer_id = int(doc["correct_answer_id"]) - 1
         return MultipleChoiceSample(
@@ -69,16 +77,20 @@ class QA4MRE(BaseMultipleChoiceSuite):
 
 
 def qa4mre(*, year: str, **kwargs: Any) -> QA4MRE:
+    """Implement qa4mre for this module."""
     return QA4MRE(year=year, dataset_name=_QA4MRE_CONFIGS[year], **kwargs)
 
 
 def qa4mre_2011(**kwargs: Any) -> QA4MRE:
+    """Implement qa4mre 2011 for this module."""
     return qa4mre(year="2011", **kwargs)
 
 
 def qa4mre_2012(**kwargs: Any) -> QA4MRE:
+    """Implement qa4mre 2012 for this module."""
     return qa4mre(year="2012", **kwargs)
 
 
 def qa4mre_2013(**kwargs: Any) -> QA4MRE:
+    """Implement qa4mre 2013 for this module."""
     return qa4mre(year="2013", **kwargs)

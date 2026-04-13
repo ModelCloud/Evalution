@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 xcopa_module = importlib.import_module("evalution.benchmarks.xcopa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 4
         assert requests[0].context == (
@@ -39,6 +42,7 @@ class FakeSession:
 
 
 def test_xcopa_scores_label_choices(monkeypatch) -> None:
+    """Verify XCOPA scores label choices. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -87,6 +91,7 @@ def test_xcopa_scores_label_choices(monkeypatch) -> None:
 
 
 def test_xcopa_helpers_format_prompt_and_relation() -> None:
+    """Verify XCOPA helpers format prompt and relation."""
     assert xcopa_module._xcopa_relation_text("cause") == "cause"
     assert xcopa_module._xcopa_relation_text("effect") == "effect"
     assert xcopa_module._xcopa_prompt(
@@ -104,5 +109,6 @@ def test_xcopa_helpers_format_prompt_and_relation() -> None:
 
 
 def test_xcopa_rejects_unknown_language() -> None:
+    """Verify XCOPA rejects unknown language."""
     with pytest.raises(ValueError, match="unsupported xcopa language"):
         evalution.benchmarks.xcopa(language="en")

@@ -13,15 +13,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 bbh_module = importlib.import_module("evalution.benchmarks.bbh")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, responses: list[str]) -> None:
+        """Initialize this object."""
         self.responses = responses
         self.requests = []
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         assert batch_size == 2
         assert len(requests) == 2
         self.requests.extend(requests)
@@ -34,10 +38,12 @@ class FakeSession:
         ]
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_bbh_scores_generated_exact_match(monkeypatch) -> None:
+    """Verify BBH scores generated exact match. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -91,11 +97,13 @@ def test_bbh_scores_generated_exact_match(monkeypatch) -> None:
 
 
 def test_bbh_normalizer_handles_common_answer_formats() -> None:
+    """Verify BBH normalizer handles common answer formats."""
     assert bbh_module._normalize_bbh_prediction("The answer is False.", target="False") == "False"
     assert bbh_module._normalize_bbh_prediction("Answer: (C)", target="(C)") == "(C)"
     assert bbh_module._normalize_bbh_prediction("A: sort, these, words", target="sort, these, words") == "sort, these, words"
 
 
 def test_bbh_rejects_unknown_subset() -> None:
+    """Verify BBH rejects unknown subset."""
     with pytest.raises(ValueError, match="unsupported bbh subset"):
         evalution.benchmarks.bbh(subset="unknown")

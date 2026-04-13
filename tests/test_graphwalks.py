@@ -14,10 +14,13 @@ from evalution.engines.base import GenerationOutput
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, text: str) -> None:
+        """Initialize this object."""
         self.text = text
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         return [GenerationOutput(prompt=request.prompt, text=self.text, metadata={}) for request in requests]
 
 
@@ -33,6 +36,7 @@ class FakeSession:
     ],
 )
 def test_graphwalks_parses_node_sets(monkeypatch, generation_text, expected_f1, expected_flexible) -> None:
+    """Verify graphwalks parses node sets."""
     dataset = Dataset.from_list(
         [
             {

@@ -52,6 +52,7 @@ _STORYCLOZE_COLUMN_MAP = {
 
 def _storycloze_prompt(doc: dict[str, Any]) -> str:
     # Concatenate the observed story sentences once so each ending is scored against identical context.
+    """Implement storycloze prompt for this module."""
     return " ".join(
         str(doc[field]).strip()
         for field in (
@@ -123,12 +124,14 @@ def _load_storycloze_dataset(
 @dataclass(slots=True)
 class StoryCloze(BaseMultipleChoiceSuite):
     # Mirror the public yearly StoryCloze releases while keeping dataset_name and year locked together.
+    """Implement the story cloze benchmark suite."""
     dataset_path: str = "LSDSem/story_cloze"
     dataset_name: str | None = "2016"
     split: str = "validation"
     year: str = "2016"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.year not in STORYCLOZE_YEARS:
             raise ValueError(f"unsupported storycloze year: {self.year!r}")
         if self.dataset_name in {None, self.year}:
@@ -137,12 +140,15 @@ class StoryCloze(BaseMultipleChoiceSuite):
         raise ValueError("storycloze dataset_name must match the configured year")
 
     def dataset_loader(self) -> Any:
-        return _load_storycloze_dataset
+        """Return the dataset loader bound to this suite."""
+        return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"storycloze_{self.year}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choices = [
             str(doc["sentence_quiz1"]).strip(),
             str(doc["sentence_quiz2"]).strip(),
@@ -168,13 +174,16 @@ class StoryCloze(BaseMultipleChoiceSuite):
 
 def storycloze(*, year: str = "2016", **kwargs: Any) -> StoryCloze:
     # Default the dataset config to the requested public release year.
+    """Implement storycloze for this module."""
     kwargs.setdefault("dataset_name", year)
     return StoryCloze(year=year, **kwargs)
 
 
 def _make_storycloze_factory(year: str) -> Any:
     # Publish one import-stable zero-argument factory per yearly release.
+    """Make storycloze factory."""
     def factory(**kwargs: Any) -> StoryCloze:
+        """Implement factory for this module."""
         return storycloze(year=year, **kwargs)
 
     factory.__name__ = f"storycloze_{year}"

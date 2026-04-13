@@ -7,16 +7,19 @@ import importlib.util
 from pathlib import Path
 
 
+# Keep shared test fixtures and expectations explicit at module scope.
 MODULE_PATH = Path(__file__).resolve().parents[1] / "evalution" / "_banner.py"
 MODULE_SPEC = importlib.util.spec_from_file_location("evalution_banner_test_module", MODULE_PATH)
 assert MODULE_SPEC is not None
 assert MODULE_SPEC.loader is not None
 
+# Keep shared test fixtures and expectations explicit at module scope.
 banner_module = importlib.util.module_from_spec(MODULE_SPEC)
 MODULE_SPEC.loader.exec_module(banner_module)
 
 
 def test_build_startup_banner_aligns_versions() -> None:
+    """Verify build startup banner aligns versions."""
     banner = banner_module.build_startup_banner(
         "LOGO\n",
         evalution_version="0.0.1",
@@ -53,6 +56,7 @@ def test_build_startup_banner_aligns_versions() -> None:
 
 
 def test_build_startup_banner_handles_project_only() -> None:
+    """Verify build startup banner handles project only."""
     banner = banner_module.build_startup_banner(
         "LOGO\n",
         evalution_version="0.0.1",
@@ -66,6 +70,7 @@ def test_build_startup_banner_handles_project_only() -> None:
 
 
 def test_get_startup_banner_resolves_dependency_versions(monkeypatch) -> None:
+    """Verify get startup banner resolves dependency versions."""
     resolved_versions = {
         ("transformers",): "5.3.0",
         ("datasets",): "4.8.3",
@@ -77,6 +82,7 @@ def test_get_startup_banner_resolves_dependency_versions(monkeypatch) -> None:
     }
 
     def fake_resolve(package_names):
+        """Support the surrounding tests with fake resolve."""
         return resolved_versions.get(tuple(package_names))
 
     monkeypatch.setattr(

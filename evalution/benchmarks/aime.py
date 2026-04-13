@@ -16,6 +16,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.math_exact_match import extract_math_answer, math_exact_match, normalize_math_string
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _STOP_STRINGS = ("Question:", "</s>", "<|im_end|>", "<|eot_id|>")
 _AIME_VARIANTS = {
     "aime": {
@@ -54,11 +55,14 @@ _AIME_VARIANTS = {
 
 
 def _aime_prompt(question: str) -> str:
+    """Implement aime prompt for this module."""
     return f"Question: {question}\nAnswer:"
 
 
 @dataclass(slots=True)
 class AIME(BaseTestSuite):
+    """Implement the aime benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "gneubig/aime-1983-2024"
     dataset_name: str | None = None
     split: str = "train"
@@ -72,9 +76,11 @@ class AIME(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.variant_name
 
     def result_metadata(
@@ -82,6 +88,7 @@ class AIME(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_math_exact_match",
@@ -89,6 +96,7 @@ class AIME(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             yield PreparedSample(
                 index=index,
@@ -108,6 +116,7 @@ class AIME(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         target = prepared_sample.target
         extracted_answer = extract_math_answer(output.text)
         return SampleResult(
@@ -134,6 +143,7 @@ class AIME(BaseTestSuite):
 
 
 def _aime_variant(variant_name: str, **kwargs: Any) -> AIME:
+    """Implement aime variant for this module."""
     variant = _AIME_VARIANTS[variant_name]
     return AIME(
         dataset_path=variant["dataset_path"],
@@ -148,17 +158,21 @@ def _aime_variant(variant_name: str, **kwargs: Any) -> AIME:
 
 
 def aime(**kwargs: Any) -> AIME:
+    """Implement aime for this module."""
     return _aime_variant("aime", **kwargs)
 
 
 def aime24(**kwargs: Any) -> AIME:
+    """Implement aime24 for this module."""
     return _aime_variant("aime24", **kwargs)
 
 
 def aime25(**kwargs: Any) -> AIME:
+    """Implement aime25 for this module."""
     return _aime_variant("aime25", **kwargs)
 
 
 def aime26(**kwargs: Any) -> AIME:
     # Expose the standalone AIME 2026 dataset variant shipped in the recent lm-eval PR.
+    """Implement aime26 for this module."""
     return _aime_variant("aime26", **kwargs)

@@ -18,10 +18,12 @@ import evalution
 from evalution.datasets import flores200 as flores200_dataset
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 flores_pt_module = importlib.import_module("evalution.benchmarks.flores_pt")
 
 
 def _build_flores_archive(path: Path) -> str:
+    """Build flores archive."""
     metadata_devtest = (
         "URL\tdomain\ttopic\thas_image\thas_hyperlink\n"
         "https://example.com/1\tnews\tmedicine\tno\tyes\n"
@@ -60,6 +62,7 @@ def _build_flores_archive(path: Path) -> str:
 
 
 def test_load_flores200_pair_reads_vendored_archive(monkeypatch, tmp_path: Path) -> None:
+    """Verify load flores200 pair reads vendored archive."""
     archive_path = tmp_path / "flores200_dataset.tar.gz"
     archive_sha256 = _build_flores_archive(archive_path)
     monkeypatch.setattr(flores200_dataset, "FLORES200_ARCHIVE_URL", archive_path.as_uri())
@@ -85,6 +88,7 @@ def test_load_flores200_pair_reads_vendored_archive(monkeypatch, tmp_path: Path)
 
 
 def test_safe_extract_archive_rejects_path_traversal(tmp_path: Path) -> None:
+    """Verify safe extract archive rejects path traversal."""
     archive_path = tmp_path / "unsafe.tar.gz"
     with tarfile.open(archive_path, mode="w:gz") as archive:
         encoded = b"owned\n"
@@ -97,6 +101,7 @@ def test_safe_extract_archive_rejects_path_traversal(tmp_path: Path) -> None:
 
 
 def test_flores_pt_scores_translation_metrics(monkeypatch) -> None:
+    """Verify flores pt scores translation metrics. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     docs = [
         {
             "id": 1,
@@ -122,7 +127,9 @@ def test_flores_pt_scores_translation_metrics(monkeypatch) -> None:
     monkeypatch.setattr(flores_pt_module, "load_flores200_pair", lambda *args, **kwargs: list(docs))
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 2
             assert len(requests) == 2
             assert requests[0].prompt == (
@@ -164,6 +171,7 @@ def test_flores_pt_scores_translation_metrics(monkeypatch) -> None:
 
 
 def test_flores_pt_dispatcher_and_validation() -> None:
+    """Verify flores pt dispatcher and validation."""
     suite = evalution.benchmarks.flores_pt(direction="pt-en", max_rows=1)
     alias_suite = evalution.benchmarks.flores_pt_pt_en(max_rows=1)
 

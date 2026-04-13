@@ -37,6 +37,8 @@ _PREFETCH_EXECUTOR: ThreadPoolExecutor | None = None
 
 @dataclass(frozen=True, slots=True)
 class PreparedSample:
+    """Define the prepared sample helper class."""
+    # Keep the class-level state explicit for this helper.
     index: int
     doc: dict[str, Any]
     target: str
@@ -45,6 +47,8 @@ class PreparedSample:
 
 @dataclass(frozen=True, slots=True)
 class PrefetchFailure:
+    """Define the prefetch failure helper class."""
+    # Keep the class-level state explicit for this helper.
     error: BaseException
 
 
@@ -53,6 +57,7 @@ def session_batch_size(
     session: InferenceSession,
     requests: list[GenerationRequest],
 ) -> int | None:
+    """Implement session batch size for this module. Preserve the fallback order expected by the surrounding caller."""
     resolver = getattr(session, "resolve_batch_size", None)
     if callable(resolver):
         resolved_batch_size = resolver(requests)
@@ -75,6 +80,7 @@ def needs_batch_size_preview(
     suite_batch_size: int | None,
     session: InferenceSession,
 ) -> bool:
+    """Implement needs batch size preview for this module."""
     if suite_batch_size is not None:
         return False
 
@@ -97,6 +103,7 @@ def collect_preview_samples(
     preview_size: int,
     prepare_bar: Any,
 ) -> list[PreparedSample]:
+    """Collect preview samples."""
     preview_samples: list[PreparedSample] = []
     for sample in islice(prepared_iter, preview_size):
         preview_samples.append(sample)
@@ -109,6 +116,7 @@ def prepare_batch_for_session(
     session: InferenceSession,
     batch: list[PreparedSample],
 ) -> list[PreparedSample]:
+    """Prepare batch for session."""
     if not batch:
         return batch
 
@@ -125,11 +133,13 @@ def prepare_batch_for_session(
 
 # Size the pretokenized queue so the worker can stay ahead of generation.
 def _pretokenized_pool_size(batch_size: int) -> int:
+    """Implement pretokenized pool size for this module."""
     return max(batch_size, batch_size * _PRETOKENIZED_POOL_MULTIPLIER)
 
 
 # Reuse a single prefetch thread across suites to avoid executor churn.
 def _prefetch_executor() -> ThreadPoolExecutor:
+    """Implement prefetch executor for this module."""
     global _PREFETCH_EXECUTOR
     with _PREFETCH_EXECUTOR_LOCK:
         if _PREFETCH_EXECUTOR is None:
@@ -142,6 +152,7 @@ def _prefetch_executor() -> ThreadPoolExecutor:
 
 # Tear down the shared prefetch executor when the process exits.
 def _shutdown_prefetch_executor() -> None:
+    """Implement shutdown prefetch executor for this module."""
     global _PREFETCH_EXECUTOR
     with _PREFETCH_EXECUTOR_LOCK:
         executor = _PREFETCH_EXECUTOR
@@ -163,6 +174,7 @@ def iter_prefetched_samples(
     prepare_bar: Any,
     pool_size: int | None = None,
 ) -> Any:
+    """Iterate over prefetched samples. Preserve the fallback order expected by the surrounding caller."""
     sentinel = object()
     queue_maxsize = pool_size or _pretokenized_pool_size(batch_size)
     queue: Queue[Any] = Queue(maxsize=queue_maxsize)
@@ -170,6 +182,7 @@ def iter_prefetched_samples(
 
     # Retry bounded queue puts so the worker can stop promptly on cancellation.
     def put_prefetched(item: Any) -> bool:
+        """Implement put prefetched for this module."""
         while not cancelled.is_set():
             try:
                 queue.put(item, timeout=_BATCH_PREFETCH_PUT_TIMEOUT_S)
@@ -180,6 +193,7 @@ def iter_prefetched_samples(
 
     # Tokenize future work in chunks sized to the available queue capacity.
     def worker() -> None:
+        """Implement worker for this module. Preserve the fallback order expected by the surrounding caller."""
         try:
             while not cancelled.is_set():
                 available_slots = max(0, queue_maxsize - queue.qsize())
@@ -236,6 +250,7 @@ def iter_prefetched_batches(
     prepare_bar: Any,
     pool_size: int | None = None,
 ) -> Any:
+    """Iterate over prefetched batches."""
     batch: list[PreparedSample] = []
     for sample in iter_prefetched_samples(
         session,

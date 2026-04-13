@@ -13,31 +13,37 @@ from datasets import load_dataset
 from evalution.scorers.classification import macro_f1
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _CB_CHOICES = ["True", "False", "Neither"]
 
 
 def _cb_prompt(premise: str, hypothesis: str) -> str:
     # Match the benchmark's textual entailment framing with an explicit three-way answer slot.
+    """Implement cb prompt for this module."""
     return f"{premise.strip()}\nQuestion: {hypothesis.strip()}. True, False, or Neither?\nAnswer:"
 
 
 @dataclass(slots=True)
 class CB(BaseMultipleChoiceSuite):
     # Evaluate commitment bank entailment as a three-choice log-likelihood ranking task.
+    """Implement the cb benchmark suite."""
     dataset_path: str = "super_glue"
     dataset_name: str | None = "cb"
     split: str = "validation"
 
     # Use the Hugging Face datasets loader for the canonical CommitmentBank task.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used by logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "cb"
 
     # Convert one CB row into the shared prompt and three-choice structure used by the helper.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_cb_prompt(doc["premise"], doc["hypothesis"]),
@@ -54,6 +60,7 @@ class CB(BaseMultipleChoiceSuite):
         raw_predictions: list[int],
         normalized_predictions: list[int],
     ) -> dict[str, float]:
+        """Compute extra metrics from the collected predictions. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         gold_labels = [sample.gold_index for sample in samples]
         label_indices = list(range(len(_CB_CHOICES)))
         return {
@@ -72,4 +79,5 @@ class CB(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used by the rest of the package.
 def cb(**kwargs: Any) -> CB:
+    """Implement cb for this module."""
     return CB(**kwargs)

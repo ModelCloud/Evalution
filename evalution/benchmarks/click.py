@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 CLICK_LANG_SUBSETS = ("text", "grammar", "function")
 CLICK_CUL_SUBSETS = (
     "economy",
@@ -43,6 +44,7 @@ _CLICK_CHOICE_LABELS = ("A", "B", "C", "D", "E")
 
 
 def _click_prompt(doc: dict[str, Any]) -> str:
+    """Implement click prompt for this module."""
     context = str(doc["paragraph"]).strip()
     question = str(doc["question"]).strip()
     choices = [str(choice).strip() for choice in doc["choices"]]
@@ -66,6 +68,7 @@ def _click_prompt(doc: dict[str, Any]) -> str:
 
 
 def _click_choice_labels(doc: dict[str, Any]) -> list[str]:
+    """Implement click choice labels for this module."""
     choice_count = len(doc["choices"])
     if choice_count < 2 or choice_count > len(_CLICK_CHOICE_LABELS):
         raise ValueError("click supports between two and five answer choices")
@@ -75,6 +78,7 @@ def _click_choice_labels(doc: dict[str, Any]) -> list[str]:
 
 
 def _click_gold_index(doc: dict[str, Any]) -> int:
+    """Implement click gold index for this module."""
     answer = str(doc["answer"])
     choices = [str(choice) for choice in doc["choices"]]
     try:
@@ -84,6 +88,7 @@ def _click_gold_index(doc: dict[str, Any]) -> int:
 
 
 def _is_click_lang_text(doc: dict[str, Any]) -> bool:
+    """Implement is click lang text for this module."""
     doc_id = str(doc["id"])
     return (
         "CSAT_korean_22" in doc_id
@@ -93,6 +98,7 @@ def _is_click_lang_text(doc: dict[str, Any]) -> bool:
 
 
 def _is_click_lang_grammar(doc: dict[str, Any]) -> bool:
+    """Implement is click lang grammar for this module."""
     doc_id = str(doc["id"])
     question = str(doc["question"])
     return (
@@ -113,6 +119,7 @@ def _is_click_lang_grammar(doc: dict[str, Any]) -> bool:
 
 
 def _is_click_lang_function(doc: dict[str, Any]) -> bool:
+    """Implement is click lang function for this module."""
     doc_id = str(doc["id"])
     question = str(doc["question"])
     return (
@@ -135,39 +142,48 @@ def _is_click_lang_function(doc: dict[str, Any]) -> bool:
 
 
 def _is_click_cul_economy(doc: dict[str, Any]) -> bool:
+    """Implement is click cul economy for this module."""
     return "economy" in str(doc["id"]).lower()
 
 
 def _is_click_cul_geography(doc: dict[str, Any]) -> bool:
+    """Implement is click cul geography for this module."""
     return "geography" in str(doc["id"]).lower()
 
 
 def _is_click_cul_history(doc: dict[str, Any]) -> bool:
+    """Implement is click cul history for this module."""
     doc_id = str(doc["id"])
     return "KHB" in doc_id or "history" in doc_id.lower()
 
 
 def _is_click_cul_kpop(doc: dict[str, Any]) -> bool:
+    """Implement is click cul kpop for this module."""
     return "popular" in str(doc["id"]).lower()
 
 
 def _is_click_cul_law(doc: dict[str, Any]) -> bool:
+    """Implement is click cul law for this module."""
     doc_id = str(doc["id"])
     return "law" in doc_id.lower() or "PSAT" in doc_id
 
 
 def _is_click_cul_politics(doc: dict[str, Any]) -> bool:
+    """Implement is click cul politics for this module."""
     return "politics" in str(doc["id"]).lower()
 
 
 def _is_click_cul_society(doc: dict[str, Any]) -> bool:
+    """Implement is click cul society for this module."""
     return "society" in str(doc["id"]).lower()
 
 
 def _is_click_cul_tradition(doc: dict[str, Any]) -> bool:
+    """Implement is click cul tradition for this module."""
     return "tradition" in str(doc["id"]).lower()
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _CLICK_FILTERS: dict[str, Callable[[dict[str, Any]], bool]] = {
     "click": lambda _doc: True,
     "click_lang": lambda doc: (
@@ -202,6 +218,7 @@ _CLICK_FILTERS: dict[str, Callable[[dict[str, Any]], bool]] = {
 @dataclass(slots=True)
 class Click(BaseMultipleChoiceSuite):
     # CLIcK scores Korean linguistic and cultural knowledge with label-only answer continuations.
+    """Implement the click benchmark suite."""
     dataset_path: str = "EunsuKim/CLIcK"
     dataset_name: str | None = None
     split: str = "train"
@@ -209,13 +226,16 @@ class Click(BaseMultipleChoiceSuite):
     subset: str = "click"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if self.subset not in CLICK_TASKS:
             raise ValueError(f"unsupported click subset: {self.subset!r}")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         subset = self.subset
 
         def loader(*args: Any, **kwargs: Any) -> Any:
+            """Implement loader for click."""
             stream = kwargs.pop("stream", None)
             if stream is not None:
                 kwargs["streaming"] = bool(stream)
@@ -227,14 +247,17 @@ class Click(BaseMultipleChoiceSuite):
         return loader
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.subset
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = super().result_metadata()
         metadata["subset"] = self.subset
         return metadata
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         choice_labels = _click_choice_labels(doc)
         raw_choices = [str(choice).strip() for choice in doc["choices"]]
         return MultipleChoiceSample(
@@ -255,19 +278,24 @@ class Click(BaseMultipleChoiceSuite):
 
 
 def click(**kwargs: Any) -> Click:
+    """Implement click for this module."""
     return Click(subset="click", **kwargs)
 
 
 def click_lang(**kwargs: Any) -> Click:
+    """Implement click lang for this module."""
     return Click(subset="click_lang", **kwargs)
 
 
 def click_cul(**kwargs: Any) -> Click:
+    """Implement click cul for this module."""
     return Click(subset="click_cul", **kwargs)
 
 
 def _make_click_factory(task_name: str) -> Any:
+    """Make click factory."""
     def factory(**kwargs: Any) -> Click:
+        """Implement factory for this module."""
         return Click(subset=task_name, **kwargs)
 
     factory.__name__ = task_name

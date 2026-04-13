@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _BELEBELE_LABELS = ("A", "B", "C", "D")
 # Add the explicit regional-suite aliases that upstream family bundles reference directly.
 BELEBELE_LANGUAGE_TASKS = (
@@ -21,6 +22,7 @@ BELEBELE_LANGUAGE_TASKS = (
 
 
 def _belebele_prompt(doc: dict[str, Any]) -> str:
+    """Implement belebele prompt for this module."""
     return (
         f"P: {str(doc['flores_passage']).strip()}\n"
         f"Q: {str(doc['question']).strip()}\n"
@@ -34,12 +36,15 @@ def _belebele_prompt(doc: dict[str, Any]) -> str:
 
 @dataclass(slots=True)
 class Belebele(BaseMultipleChoiceSuite):
+    """Implement the belebele benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "facebook/belebele"
     dataset_name: str | None = "eng_Latn"
     split: str = "test"
     language: str = "eng_Latn"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         if not self.language.strip():
             raise ValueError("belebele language must be a non-empty dataset config")
         if self.dataset_name in {None, self.language}:
@@ -48,12 +53,15 @@ class Belebele(BaseMultipleChoiceSuite):
         raise ValueError("belebele dataset_name must match the configured language")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"belebele_{self.language}"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         raw_choices = [str(doc[f"mc_answer{i}"]).strip() for i in range(1, 5)]
         correct_answer_num = str(doc["correct_answer_num"]).strip()
         return MultipleChoiceSample(
@@ -75,12 +83,15 @@ class Belebele(BaseMultipleChoiceSuite):
 
 
 def belebele(*, language: str, **kwargs: Any) -> Belebele:
+    """Implement belebele for this module."""
     kwargs.setdefault("dataset_name", language)
     return Belebele(language=language, **kwargs)
 
 
 def _make_belebele_language_factory(language: str) -> Any:
+    """Make belebele language factory."""
     def factory(**kwargs: Any) -> Belebele:
+        """Implement factory for this module."""
         return belebele(language=language, **kwargs)
 
     factory.__name__ = f"belebele_{language}"

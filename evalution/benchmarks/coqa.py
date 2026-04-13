@@ -16,6 +16,7 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 from evalution.scorers.qa_text import best_qa_scores, canonicalize_no_answer
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _STOP_STRINGS = ("\n", "\nQuestion:", "\nStory:")
 
 
@@ -26,6 +27,7 @@ def _coqa_prompt(
     history_answers: list[str],
     question: str,
 ) -> str:
+    """Implement coqa prompt for this module."""
     if len(history_questions) != len(history_answers):
         raise ValueError("coqa history question/answer counts must match")
 
@@ -45,6 +47,7 @@ dataset_path: str,
     cache_dir: str | None,
     stream: bool,
 ) -> Dataset:
+    """Load coqa turns. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     if stream:
         raise ValueError("coqa turn flattening requires non-stream dataset loading")
 
@@ -95,6 +98,8 @@ dataset_path: str,
 
 @dataclass(slots=True)
 class CoQA(BaseTestSuite):
+    """Implement the co QA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "coqa"
     dataset_name: str | None = None
     split: str = "validation"
@@ -107,9 +112,11 @@ class CoQA(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_coqa_turns
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "coqa"
 
     def result_metadata(
@@ -117,6 +124,7 @@ class CoQA(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_qa_exact_match_f1",
@@ -125,6 +133,7 @@ class CoQA(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             yield PreparedSample(
                 index=index,
@@ -149,6 +158,7 @@ class CoQA(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         answer = str(prepared_sample.doc["answer"])
         exact, f1_score, best_index = best_qa_scores(output.text, [answer])
         return SampleResult(
@@ -179,4 +189,5 @@ class CoQA(BaseTestSuite):
 
 
 def coqa(**kwargs: Any) -> CoQA:
+    """Implement coqa for this module."""
     return CoQA(**kwargs)

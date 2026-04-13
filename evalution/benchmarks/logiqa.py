@@ -14,6 +14,7 @@ from datasets import Dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _LOGIQA_SOURCE_URLS = {
     "train": "https://raw.githubusercontent.com/lgw863/LogiQA-dataset/master/Train.txt",
     "validation": "https://raw.githubusercontent.com/lgw863/LogiQA-dataset/master/Eval.txt",
@@ -24,10 +25,12 @@ _LOGIQA_ANSWER_LABELS = ["a", "b", "c", "d"]
 
 
 def _normalize_logiqa_text(text: str) -> str:
+    """Normalize logiqa text. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     return text.replace(".", ". ").strip()
 
 
 def _logiqa_prompt(context: str, question: str, options: list[str]) -> str:
+    """Implement logiqa prompt for this module."""
     lines = [
         f"Passage: {context}",
         f"Question: {question}",
@@ -40,12 +43,14 @@ def _logiqa_prompt(context: str, question: str, options: list[str]) -> str:
 
 
 def _logiqa_cache_dir(cache_dir: str | None) -> Path:
+    """Implement logiqa cache dir for this module."""
     if cache_dir is not None:
         return Path(cache_dir)
     return Path.home() / ".cache" / "evalution" / "downloads" / "logiqa"
 
 
 def _ensure_logiqa_split_file(split: str, *, cache_dir: str | None) -> Path:
+    """Ensure logiqa split file."""
     source_url = _LOGIQA_SOURCE_URLS.get(split)
     if source_url is None:
         raise ValueError(f"unsupported LogiQA split: {split!r}")
@@ -65,6 +70,7 @@ def _load_logiqa_dataset(
     cache_dir: str | None = None,
     stream: bool = (False),
 ) -> Dataset:
+    """Load logiqa dataset."""
     del stream
     if dataset_path != "EleutherAI/logiqa":
         raise ValueError(f"unsupported LogiQA dataset path: {dataset_path!r}")
@@ -89,18 +95,23 @@ def _load_logiqa_dataset(
 
 @dataclass(slots=True)
 class LogiQA(BaseMultipleChoiceSuite):
+    """Implement the logi QA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "EleutherAI/logiqa"
     dataset_name: str | None = "logiqa"
     split: str = "validation"
     stream: bool = (False)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_logiqa_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "logiqa"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         options = [str(option) for option in doc["options"]]
         answer_key = str(doc["label"]).strip()
         return MultipleChoiceSample(
@@ -119,4 +130,5 @@ class LogiQA(BaseMultipleChoiceSuite):
 
 
 def logiqa(**kwargs: Any) -> LogiQA:
+    """Implement logiqa for this module."""
     return LogiQA(**kwargs)

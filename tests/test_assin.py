@@ -13,15 +13,19 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 assin_module = importlib.import_module("evalution.benchmarks.assin")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, expected_continuations: list[str], scores: list[float]) -> None:
+        """Initialize this object."""
         self.expected_continuations = expected_continuations
         self.scores = scores
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         request_items = list(requests)
         assert [request.context for request in request_items] == [""] * len(request_items)
@@ -33,6 +37,7 @@ class FakeSession:
 
 
 def test_assin_entailment_scores_two_choice_rows(monkeypatch) -> None:
+    """Verify assin entailment scores two choice rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -77,6 +82,7 @@ def test_assin_entailment_scores_two_choice_rows(monkeypatch) -> None:
 
 
 def test_assin_paraphrase_scores_two_choice_rows(monkeypatch) -> None:
+    """Verify assin paraphrase scores two choice rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -111,6 +117,7 @@ def test_assin_paraphrase_scores_two_choice_rows(monkeypatch) -> None:
 
 
 def test_assin_dispatcher_and_validation() -> None:
+    """Verify assin dispatcher and validation."""
     suite = evalution.benchmarks.assin(variant="assin_paraphrase")
     assert suite.task_name() == "assin_paraphrase"
     assert suite.dataset_path == "nilc-nlp/assin"

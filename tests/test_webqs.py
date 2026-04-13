@@ -12,21 +12,26 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 webqs_module = importlib.import_module("evalution.benchmarks.webqs")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[LoglikelihoodOutput]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
         self.requests = []
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         self.requests.extend(requests)
         assert batch_size == 5
         return list(self.outputs)
 
 
 def test_webqs_scores_exact_match_when_any_alias_is_greedy(monkeypatch) -> None:
+    """Verify webqs scores exact match when any alias is greedy. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -77,6 +82,7 @@ def test_webqs_scores_exact_match_when_any_alias_is_greedy(monkeypatch) -> None:
 
 
 def test_webqs_marks_non_greedy_alias_set_incorrect(monkeypatch) -> None:
+    """Verify webqs marks non greedy alias set incorrect."""
     dataset = Dataset.from_list(
         [
             {
@@ -104,6 +110,7 @@ def test_webqs_marks_non_greedy_alias_set_incorrect(monkeypatch) -> None:
 
 
 def test_webqs_removes_prefix_aliases_like_upstream() -> None:
+    """Verify webqs removes prefix aliases like upstream."""
     assert webqs_module._remove_prefix_answers(
         [
             "Jamaican Creole English",

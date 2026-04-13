@@ -103,6 +103,7 @@ _LONG_BENCH_DEFAULT_MAX_NEW_TOKENS = {
 @dataclass(frozen=True, slots=True)
 class _LongBenchMetricSpec:
     # Keep per-task metric behavior explicit because LongBench mixes QA, summarization, retrieval, and code scoring.
+    """Define the long bench metric spec helper class."""
     metric_name: str
     scoring_mode: str
     stop_strings: tuple[str, ...] = ()
@@ -156,6 +157,7 @@ _LONG_BENCH_METRICS = {
 
 
 def _longbench_task_name(value: str) -> str:
+    """Implement longbench task name for this module."""
     task_name = _LONG_BENCH_ALIAS_TO_TASK.get(normalize_subset_token(value))
     if task_name is None:
         raise ValueError(f"unsupported longbench subset: {value!r}")
@@ -163,10 +165,12 @@ def _longbench_task_name(value: str) -> str:
 
 
 def _longbench_task_root(dataset_name: str) -> str:
+    """Implement longbench task root for this module."""
     return dataset_name[:-2] if dataset_name.endswith("_e") else dataset_name
 
 
 def _longbench_answers(doc: dict[str, Any]) -> list[str]:
+    """Implement longbench answers for this module."""
     raw_answers = doc.get("answers", [])
     values = raw_answers if isinstance(raw_answers, list) else [raw_answers]
     deduped: list[str] = []
@@ -180,6 +184,7 @@ def _longbench_answers(doc: dict[str, Any]) -> list[str]:
 
 
 def _longbench_all_classes(doc: dict[str, Any]) -> list[str]:
+    """Implement longbench all classes for this module."""
     raw_classes = doc.get("all_classes", [])
     if not isinstance(raw_classes, list):
         return []
@@ -187,6 +192,7 @@ def _longbench_all_classes(doc: dict[str, Any]) -> list[str]:
 
 
 def _longbench_prompt(doc: dict[str, Any]) -> str:
+    """Implement longbench prompt for this module."""
     context = str(doc.get("context", ""))
     question = str(doc.get("question", doc.get("input", "")))
     answer_prefix = str(doc.get("answer_prefix", ""))
@@ -202,6 +208,7 @@ def _longbench_max_new_tokens(
     task_root: str,
     override: int | None,
 ) -> int:
+    """Implement longbench max new tokens for this module."""
     if override is not None:
         return override
     raw_value = doc.get("max_new_tokens")
@@ -214,6 +221,7 @@ def _longbench_max_new_tokens(
 
 
 def _trim_prediction(prediction: str, *, single_line: bool) -> str:
+    """Implement trim prediction for this module."""
     if not single_line:
         return prediction
     return prediction.lstrip("\n").split("\n")[0]
@@ -226,6 +234,7 @@ def _best_longbench_score(
     metric_name: str,
     all_classes: list[str],
 ) -> tuple[float, int]:
+    """Implement best longbench score for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     best_score = 0.0
     best_index = 0
     for index, reference in enumerate(references):
@@ -262,6 +271,7 @@ def _best_longbench_score(
 @dataclass(slots=True)
 class LongBench(BaseTestSuite):
     # Evaluate one normalized LongBench or LongBench-E subset using the author task-specific metric.
+    """Implement the long bench benchmark suite."""
     dataset_path: str = "Xnhyacinth/LongBench"
     dataset_name: str | None = "qasper"
     split: str = "test"
@@ -271,6 +281,7 @@ class LongBench(BaseTestSuite):
     temperature: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         task_name = _longbench_task_name(self.subset)
         dataset_name = LONG_BENCH_TASK_TO_DATASET[task_name]
         self.subset = task_name
@@ -280,9 +291,11 @@ class LongBench(BaseTestSuite):
         raise ValueError("longbench dataset_name must match the configured subset")
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.subset
 
     def result_metadata(
@@ -290,6 +303,7 @@ class LongBench(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         if self.dataset_name is None:
             raise ValueError("longbench dataset_name cannot be None")
         task_root = _longbench_task_root(self.dataset_name)
@@ -305,6 +319,7 @@ class LongBench(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         if self.dataset_name is None:
             raise ValueError("longbench dataset_name cannot be None")
         task_root = _longbench_task_root(self.dataset_name)
@@ -332,6 +347,7 @@ class LongBench(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         if self.dataset_name is None:
             raise ValueError("longbench dataset_name cannot be None")
         task_root = _longbench_task_root(self.dataset_name)
@@ -374,13 +390,16 @@ class LongBench(BaseTestSuite):
 
 
 def longbench(*, subset: str = "qasper", **kwargs: Any) -> LongBench:
+    """Implement longbench for this module."""
     task_name = _longbench_task_name(subset)
     kwargs.setdefault("dataset_name", LONG_BENCH_TASK_TO_DATASET[task_name])
     return LongBench(subset=task_name, **kwargs)
 
 
 def _make_longbench_factory(task_name: str) -> Any:
+    """Make longbench factory."""
     def factory(**kwargs: Any) -> LongBench:
+        """Implement factory for this module."""
         return longbench(subset=task_name, **kwargs)
 
     factory.__name__ = task_name

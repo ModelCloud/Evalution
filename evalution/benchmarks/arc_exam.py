@@ -34,12 +34,15 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
     # The original ARC exam score treats each question as a multiple-choice item: select all
     # top-scoring answer options and award 1/k credit when the gold answer appears in a k-way tie.
     # We apply that same tie-aware rule to the model's per-choice log-likelihood scores here.
+    """Implement the base arcexam suite benchmark suite."""
     dataset_path: str = "allenai/ai2_arc"
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         labels = list(doc["choices"]["label"])
         texts = list(doc["choices"]["text"])
         return MultipleChoiceSample(
@@ -51,6 +54,7 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
         )
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         metadata = {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -64,6 +68,7 @@ class BaseARCExamSuite(BaseMultipleChoiceSuite):
         return metadata
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         task_name = self.task_name()
         resolved_order = normalize_order(self.order)
         logger = get_logger()

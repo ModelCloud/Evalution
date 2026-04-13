@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from evalution.benchmarks.base import BaseTestSuite, TestSuite
+from evalution.benchmarks.base import TestSuite
 from evalution.benchmarks.data import doc_count, limit_docs, load_suite_dataset
 from evalution.engines.base import InferenceSession, RollingLoglikelihoodRequest
 from evalution.logbar import get_logger
@@ -19,6 +19,8 @@ from evalution.results import SampleResult, TestResult
 
 @dataclass(slots=True)
 class RollingPerplexitySample:
+    """Define the rolling perplexity sample helper class."""
+    # Keep the class-level state explicit for this helper.
     index: int
     source_text: str
     scored_text: str
@@ -28,6 +30,7 @@ class RollingPerplexitySample:
 
 
 def preview_text(text: str, *, limit: int = 160) -> str:
+    """Implement preview text for this module."""
     preview = text.replace("\n", "\\n")
     if len(preview) <= limit:
         return preview
@@ -36,6 +39,8 @@ def preview_text(text: str, *, limit: int = 160) -> str:
 
 @dataclass(slots=True)
 class BaseRollingPerplexitySuite(TestSuite, ABC):
+    """Define the base rolling perplexity suite helper class."""
+    # Keep the class-level state explicit for this helper.
     dataset_path: str = ""
     dataset_name: str | None = None
     split: str = "test"
@@ -47,20 +52,25 @@ class BaseRollingPerplexitySuite(TestSuite, ABC):
 
     @abstractmethod
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         raise NotImplementedError
 
     @abstractmethod
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         raise NotImplementedError
 
     @abstractmethod
     def build_sample(self, doc: dict[str, Any], *, index: int) -> RollingPerplexitySample:
+        """Build one benchmark sample from a dataset row."""
         raise NotImplementedError
 
     def primary_metric(self) -> str:
+        """Implement primary metric for base rolling perplexity suite. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         return "word_perplexity"
 
     def result_metadata(self) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             "dataset_path": self.dataset_path,
             "dataset_name": self.dataset_name,
@@ -71,6 +81,7 @@ class BaseRollingPerplexitySuite(TestSuite, ABC):
         }
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(

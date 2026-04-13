@@ -46,6 +46,7 @@ _FLORES_ES_DIRECTION_BY_TASK = {
 
 
 def _normalize_direction(direction: str) -> str:
+    """Normalize direction. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     normalized = direction.strip().lower()
     if normalized in FLORES_ES_DIRECTIONS:
         return normalized
@@ -57,9 +58,11 @@ def _normalize_direction(direction: str) -> str:
 @dataclass(slots=True)
 class FloresES(FloresPT):
     # Reuse the audited FLORES-200 pipeline for the SpanishBench translation directions.
+    """Define the flores es helper class."""
     direction: str = "en-es"
 
     def __post_init__(self) -> None:
+        """Normalize and validate the dataclass configuration after initialization."""
         self.direction = _normalize_direction(self.direction)
         if self.dataset_path != "facebook/flores":
             raise ValueError("flores_es dataset_path must be 'facebook/flores'")
@@ -69,12 +72,15 @@ class FloresES(FloresPT):
             self.dataset_name = "all"
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return _FLORES_ES_TASK_BY_DIRECTION[self.direction]
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         source_language, target_language = self.language_pair_tokens()
 
         def loader(dataset_path: str, dataset_name: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
+            """Implement loader for flores es."""
             return load_flores200_pair(
                 dataset_path,
                 dataset_name,
@@ -90,6 +96,7 @@ class FloresES(FloresPT):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         source_language, target_language = self.language_pair_tokens()
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
@@ -105,11 +112,14 @@ class FloresES(FloresPT):
 
 
 def flores_es(*, direction: str, **kwargs: Any) -> FloresES:
+    """Implement flores es for this module."""
     return FloresES(direction=direction, **kwargs)
 
 
 def _make_flores_es_factory(direction: str) -> Any:
+    """Make flores es factory."""
     def factory(**kwargs: Any) -> FloresES:
+        """Implement factory for this module."""
         return flores_es(direction=direction, **kwargs)
 
     factory.__name__ = _FLORES_ES_TASK_BY_DIRECTION[direction]

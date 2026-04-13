@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
 @dataclass(slots=True)
 class GenerationRequest:
+    """Define the generation request helper class."""
+    # Keep the class-level state explicit for this helper.
     prompt: str | None = None
     messages: list[dict[str, str]] | None = None
     rendered_prompt: str | None = None
@@ -32,6 +34,8 @@ class GenerationRequest:
 
 @dataclass(slots=True)
 class GenerationOutput:
+    """Define the generation output helper class."""
+    # Keep the class-level state explicit for this helper.
     prompt: str
     text: str
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -40,6 +44,7 @@ class GenerationOutput:
 @dataclass(slots=True)
 class LoglikelihoodRequest:
     # Score `continuation` conditioned on `context`, optionally reusing pretokenized ids.
+    """Define the loglikelihood request helper class."""
     context: str = ""
     continuation: str = ""
     context_input_ids: list[int] | None = None
@@ -50,6 +55,7 @@ class LoglikelihoodRequest:
 @dataclass(slots=True)
 class LoglikelihoodOutput:
     # Report the summed continuation log-probability plus whether greedy decoding agrees.
+    """Define the loglikelihood output helper class."""
     logprob: float
     is_greedy: bool
     token_count: int
@@ -59,6 +65,7 @@ class LoglikelihoodOutput:
 @dataclass(slots=True)
 class RollingLoglikelihoodRequest:
     # Score a full text span token-by-token for perplexity-style evaluations.
+    """Define the rolling loglikelihood request helper class."""
     text: str
     input_ids: list[int] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -67,6 +74,7 @@ class RollingLoglikelihoodRequest:
 @dataclass(slots=True)
 class RollingLoglikelihoodOutput:
     # Report the total rolling log-probability across every scored token.
+    """Define the rolling loglikelihood output helper class."""
     logprob: float
     token_count: int
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -77,8 +85,10 @@ class BaseInferenceSession(ABC):
     # Runtime code and test suites talk to this interface instead of branching on engine type.
 
     # RequestExecutor work must stay off the Python main thread by default.
+    """Define the base inference session helper class."""
     @property
     def request_executor_requires_non_main_thread(self) -> bool:
+        """Implement request executor requires non main thread for base inference session."""
         return True
 
     @abstractmethod
@@ -87,7 +97,9 @@ class BaseInferenceSession(ABC):
         requests: list[GenerationRequest],
         *,
         batch_size: int | None = None,
-    ) -> list[GenerationOutput]: ...
+    ) -> list[GenerationOutput]:
+        """Generate outputs for the provided requests."""
+        raise NotImplementedError
 
     @abstractmethod
     def loglikelihood(
@@ -95,7 +107,9 @@ class BaseInferenceSession(ABC):
         requests: list[LoglikelihoodRequest],
         *,
         batch_size: int | None = None,
-    ) -> list[LoglikelihoodOutput]: ...
+    ) -> list[LoglikelihoodOutput]:
+        """Score continuations for the provided loglikelihood requests."""
+        raise NotImplementedError
 
     # Stream scored continuations back to the caller while the session keeps refilling fixed-size
     # batches in the background.
@@ -107,6 +121,7 @@ class BaseInferenceSession(ABC):
     ) -> Iterator[tuple[Any, LoglikelihoodOutput]]:
         # Fall back to the batched log-likelihood API so simple engines and test doubles do not
         # need a dedicated continuous implementation when refill behavior is irrelevant.
+        """Implement loglikelihood continuous for base inference session."""
         request_items = list(requests)
         outputs = self.loglikelihood(
             [request for _, request in request_items],
@@ -121,7 +136,9 @@ class BaseInferenceSession(ABC):
         requests: list[RollingLoglikelihoodRequest],
         *,
         batch_size: int | None = None,
-    ) -> list[RollingLoglikelihoodOutput]: ...
+    ) -> list[RollingLoglikelihoodOutput]:
+        """Score rolling loglikelihood requests token by token."""
+        raise NotImplementedError
 
     # Implementations should keep backend progress decoupled from caller iteration. In
     # particular, do not hold engine/session locks across user-visible yields; use a queued
@@ -133,18 +150,25 @@ class BaseInferenceSession(ABC):
         requests: Iterable[tuple[Any, GenerationRequest]],
         *,
         batch_size: int | None = None,
-    ) -> Iterator[tuple[Any, GenerationOutput]]: ...
+    ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Stream generated outputs for the provided request items."""
+        raise NotImplementedError
 
     # Let engines release reusable caches between suites without fully unloading model state.
     @abstractmethod
-    def gc(self) -> None: ...
+    def gc(self) -> None:
+        """Release reusable intermediate state for this session."""
+        raise NotImplementedError
 
     # Tear down the full session state and release heavyweight runtime objects.
     @abstractmethod
-    def close(self) -> None: ...
+    def close(self) -> None:
+        """Release the resources owned by this session."""
+        raise NotImplementedError
 
     # Return engine-specific execution metadata for logs and result payloads.
     def describe_execution(self) -> dict[str, Any] | None:
+        """Implement describe execution for base inference session."""
         return None
 
 
@@ -152,11 +176,13 @@ class BaseEngine(ABC):
     # Define the engine-level contract shared by transformers, vLLM, SGLang, and vendor runtimes.
     # A BaseEngine owns configuration and builds a reusable BaseInferenceSession for one model.
 
+    """Define the base engine helper class."""
     @abstractmethod
     def build(self, model: Model) -> BaseInferenceSession:
         # Construct a reusable inference session for one model configuration.
         # The returned object must inherit BaseInferenceSession because runtime orchestration,
         # suite execution, and result materialization depend on the common inference APIs.
+        """Build build."""
         raise NotImplementedError
 
     def model(
@@ -171,6 +197,7 @@ class BaseEngine(ABC):
         tokenizer_kwargs: dict[str, Any] | None = None,
         label: str | None = None,
     ) -> EvaluationRun:
+        """Implement model for base engine."""
         from evalution.config import Model, model_with_label
         from evalution.runtime import EvaluationRun
 
@@ -190,6 +217,7 @@ class BaseEngine(ABC):
 
     # Serialize engine controls into the public run result payload.
     def to_dict(self) -> dict[str, Any]:
+        """Implement to dict for base engine."""
         if is_dataclass(self):
             return asdict(self)
         return {}
@@ -198,6 +226,7 @@ class BaseEngine(ABC):
 @dataclass(slots=True)
 class SharedEngineConfig(BaseEngine):
     # Hold engine controls shared across the major runtime families.
+    """Implement the shared engine config engine adapter."""
     dtype: str | None = "auto"
     batch_size: int | str = "auto"
     max_new_tokens: int = 256
@@ -210,24 +239,28 @@ class SharedEngineConfig(BaseEngine):
 @dataclass
 class BaseEngineDeviceConfig:
     # Share the simple explicit runtime device override across engine families.
+    """Define the base engine device config helper class."""
     device: str | None = None
 
 
 @dataclass
 class BaseEngineTokenizerModeConfig:
     # Share tokenizer runtime mode selection across backends that expose it.
+    """Define the base engine tokenizer mode config helper class."""
     tokenizer_mode: str = "auto"
 
 
 @dataclass
 class BaseEngineQuantizationConfig:
     # Share runtime quantization mode selection across backends that expose it.
+    """Define the base engine quantization config helper class."""
     quantization: str | None = None
 
 
 @dataclass
 class BaseEngineTransformersRuntimeConfig(BaseEngineDeviceConfig):
     # Group the Hugging Face style runtime controls shared by transformer-like backends.
+    """Define the base engine transformers runtime config helper class."""
     attn_implementation: str | None = None
     device_map: str | dict[str, Any] | None = None
 
@@ -235,6 +268,7 @@ class BaseEngineTransformersRuntimeConfig(BaseEngineDeviceConfig):
 @dataclass
 class BaseEnginePagedBatchingConfig:
     # Group the paged-batching controls shared by engines that expose the same scheduler knobs.
+    """Define the base engine paged batching config helper class."""
     manual_eviction: bool = False
     allow_block_sharing: bool = True
     max_blocks_per_request: int | None = None

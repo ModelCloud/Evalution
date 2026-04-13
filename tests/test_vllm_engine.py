@@ -18,6 +18,7 @@ from evalution.config import Model
 from evalution.engines.base import GenerationRequest, LoglikelihoodRequest, RollingLoglikelihoodRequest
 from evalution.engines.vllm_engine import VLLM, VLLMSession, _import_vllm
 
+# Keep shared test fixtures and expectations explicit at module scope.
 _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
 
 
@@ -45,6 +46,7 @@ class FakeSamplingParams:
 class FakeTokenizer:
     """Tokenizer stub that turns characters into token ids and back."""
 
+    # Keep the class-level test state explicit for the surrounding assertions.
     bos_token_id = 1
     eos_token_id = 2
     pad_token_id = 0
@@ -470,6 +472,7 @@ def test_vllm_build_loads_local_checkout(monkeypatch) -> None:
     class FakeVLLMModule:
         """Minimal imported vLLM module stub used during engine construction."""
 
+        # Keep the class-level test state explicit for the surrounding assertions.
         SamplingParams = FakeSamplingParams
 
         @staticmethod
@@ -506,6 +509,7 @@ def test_vllm_build_accepts_custom_tokenizer_object(monkeypatch) -> None:
     class FakeVLLMModule:
         """Minimal imported vLLM module stub for the custom-tokenizer path."""
 
+        # Keep the class-level test state explicit for the surrounding assertions.
         SamplingParams = FakeSamplingParams
 
         @staticmethod

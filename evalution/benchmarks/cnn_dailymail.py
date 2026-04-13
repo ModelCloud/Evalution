@@ -18,6 +18,7 @@ from evalution.scorers.summary_rouge import summary_rouge_scores
 
 
 def _cnn_dailymail_prompt(article: str) -> str:
+    """Implement CNN dailymail prompt for this module."""
     return (
         "Summarize the following news article.\n\n"
         f"Article:\n{article.strip()}\n\n"
@@ -27,6 +28,8 @@ def _cnn_dailymail_prompt(article: str) -> str:
 
 @dataclass(slots=True)
 class CNNDailyMail(BaseTestSuite):
+    """Implement the cnndaily mail benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "cnn_dailymail"
     dataset_name: str | None = "3.0.0"
     split: str = "validation"
@@ -35,9 +38,11 @@ class CNNDailyMail(BaseTestSuite):
     temperature: float = 0.0
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "cnn_dailymail"
 
     def result_metadata(
@@ -45,6 +50,7 @@ class CNNDailyMail(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_summary_rouge",
@@ -52,6 +58,7 @@ class CNNDailyMail(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             article = str(doc["article"]).strip()
             reference = str(doc["highlights"]).strip()
@@ -72,6 +79,7 @@ class CNNDailyMail(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         prediction = output.text.strip()
         reference = prepared_sample.target.strip()
         return SampleResult(
@@ -93,4 +101,5 @@ class CNNDailyMail(BaseTestSuite):
 
 
 def cnn_dailymail(**kwargs: Any) -> CNNDailyMail:
+    """Implement CNN dailymail for this module."""
     return CNNDailyMail(**kwargs)

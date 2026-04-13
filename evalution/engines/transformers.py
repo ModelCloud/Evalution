@@ -34,6 +34,7 @@ from evalution.engines.transformers_common import (
 )
 from evalution.logbar import get_logger
 
+# Keep engine defaults and compatibility flags explicit at module scope.
 _PENDING_NOGIL_TRANSFORMERS_PR_URL = "https://github.com/huggingface/transformers/pull/44924"
 _PENDING_NOGIL_TRANSFORMERS_PR_WARNED = False
 _PENDING_NOGIL_TRANSFORMERS_PR_WARN_LOCK = threading.Lock()
@@ -49,20 +50,24 @@ _FLASH_ATTENTION_LARGE_BLOCKS_PER_REQUEST = 16
 @dataclass(slots=True)
 class _PagedContinuousBatchingFailure(RuntimeError):
     # Preserve requests already submitted to paged batching so fallback can replay them safely.
+    """Define the paged continuous batching failure exception."""
     cause: Exception
     pending_requests: list[tuple[Any, GenerationRequest]]
 
     def __str__(self) -> str:
+        """Return the display string for this object."""
         return str(self.cause)
 
 
 @dataclass(slots=True)
 class Transformers(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
     # Use the modern transformers engine path that can enable paged attention and continuous batching.
+    """Define the transformers helper class."""
     continuous_batching: bool = True
 
     # Build the modern session, or fall back to the compat engine when the installed package is too old.
     def build(self, model: Model) -> BaseTransformerSession:
+        """Build build."""
         supports_continuous_batching, reason = transformers_continuous_batching_support()
         if not supports_continuous_batching:
             if _requests_paged_attention(self.attn_implementation):
@@ -85,6 +90,7 @@ class Transformers(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
 
 
 def _warn_pending_nogil_transformers_pr_once() -> None:
+    """Implement warn pending no-GIL transformers pr once for this module."""
     is_gil_enabled = getattr(sys, "_is_gil_enabled", None)
     if not callable(is_gil_enabled) or is_gil_enabled():
         return
@@ -135,6 +141,7 @@ def _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManag
 
         @wraps(current)
         def _wrapped_run_generation_loop(self: Any, *args: Any, **kwargs: Any) -> Any:
+            """Implement wrapped run generation loop for this module."""
             import torch
 
             model_device = getattr(getattr(self, "model", None), "device", None)
@@ -156,12 +163,14 @@ def _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManag
 
 
 def _flash_attention_cb_default_max_blocks(max_batch_tokens: int | None) -> int:
+    """Implement flash attention cb default max blocks for this module."""
     if max_batch_tokens is not None and max_batch_tokens > _FLASH_ATTENTION_SMALL_MAX_BATCH_TOKENS:
         return _FLASH_ATTENTION_LARGE_BLOCKS_PER_REQUEST
     return _FLASH_ATTENTION_SMALL_BLOCKS_PER_REQUEST
 
 
 def _is_supported_flash_attention(attn_implementation: str | None) -> bool:
+    """Implement is supported flash attention for this module."""
     return attn_implementation in {"flash_attention_2", "flash_attention_3"}
 
 
@@ -213,10 +222,12 @@ def _transformers_supports_flash_attention_auto_max_blocks() -> bool:
         return max_blocks_field is not None and max_blocks_field.default is None
 
     try:
-        parameter = inspect.signature(ContinuousBatchingConfig).parameters.get("max_blocks_per_request")
+        signature = inspect.signature(ContinuousBatchingConfig)
     except (TypeError, ValueError):
         return False
-    return parameter is not None and parameter.default is None
+
+    max_blocks_parameter = signature.parameters.get("max_blocks_per_request")
+    return max_blocks_parameter is not None and max_blocks_parameter.default is None
 
 
 def _patch_continuous_batching_flash_attention_decode_once() -> None:
@@ -250,6 +261,7 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
         ):
             @wraps(current_create_batch_processor)
             def _create_batch_processor_with_flash_attention_defaults(self: Any, *args: Any, **kwargs: Any) -> Any:
+                """Implement create batch processor with flash attention defaults for this module."""
                 cb_config = getattr(self, "continuous_batching_config", None)
                 model_config = getattr(getattr(self, "model", None), "config", None)
                 attn_implementation = getattr(model_config, "_attn_implementation", None)
@@ -272,6 +284,7 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
             False,
         ):
             def _ensure_decode_fast_path_is_available(self) -> None:
+                """Implement ensure decode fast path is available for this module."""
                 if self.cache.max_blocks_per_request <= 0:
                     return
 
@@ -320,6 +333,7 @@ def _patch_flash_attn_varlen_fwd_cuda_context_once() -> None:
             return
 
         def _wrapped_varlen_fwd(*args: Any, **kwargs: Any) -> Any:
+            """Implement wrapped varlen fwd for this module."""
             import torch
 
             query = args[0] if args else None
@@ -333,6 +347,7 @@ def _patch_flash_attn_varlen_fwd_cuda_context_once() -> None:
 @dataclass(slots=True)
 class TransformersSession(BaseTransformerSession):
     # Keep the session-owned continuous batching manager alive while request settings stay compatible.
+    """Define the transformers session helper class."""
     continuous_batching_manager: Any | None = field(default=None, repr=False)
     continuous_batching_signature: tuple[Any, ...] | None = field(default=None, repr=False)
     # Track completed request ids whose cache blocks remain resident until explicit manual eviction.
@@ -341,6 +356,7 @@ class TransformersSession(BaseTransformerSession):
 
     @classmethod
     def from_config(cls, config: Transformers, model_config: Model) -> TransformersSession:
+        """Implement from config for transformers session."""
         runtime = load_transformer_runtime(config, model_config)
         raw_attn_implementation = runtime.requested_attn_implementation or config.attn_implementation
         paged_attention_enabled = config.continuous_batching and _resolve_paged_attention(
@@ -381,6 +397,7 @@ class TransformersSession(BaseTransformerSession):
         *,
         batch_size: int | None = None,
     ) -> list[GenerationOutput]:
+        """Generate generate."""
         if not requests:
             return []
 
@@ -410,7 +427,9 @@ class TransformersSession(BaseTransformerSession):
         *,
         batch_size: int | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Generate continuous. Preserve the fallback order expected by the surrounding caller."""
         def iterator() -> Iterator[tuple[Any, GenerationOutput]]:
+            """Implement iterator for transformers session. Preserve the fallback order expected by the surrounding caller."""
             request_iter = iter(requests)
             if batch_size is not None:
                 effective_batch_size = batch_size
@@ -436,6 +455,7 @@ class TransformersSession(BaseTransformerSession):
                 request_queue: Any,
                 put_result: Any,
             ) -> None:
+                """Implement consume requests for transformers session."""
                 request_source = request_queue.iter_requests(stop_event=stop_event)
                 with self._generation_lock:
                     with self._state_lock:
@@ -480,12 +500,14 @@ class TransformersSession(BaseTransformerSession):
 
     # Stop the paged manager before clearing shared caches and allocator state.
     def gc(self) -> None:
+        """Release reusable intermediate state for this object."""
         with self._generation_lock:
             self._stop_continuous_batching_manager()
         super(TransformersSession, self).gc()
 
     # Stop paged generation state before tearing down the model and tokenizer.
     def close(self) -> None:
+        """Release the resources owned by this object."""
         with self._generation_lock:
             self._stop_continuous_batching_manager()
             with self._prepare_tokenizer_lock:
@@ -508,6 +530,7 @@ class TransformersSession(BaseTransformerSession):
         *,
         batch_size: int,
     ) -> list[GenerationOutput]:
+        """Generate paged."""
         outputs_by_position: list[GenerationOutput | None] = [None] * len(requests)
         for position, output in self._generate_paged_continuous(
             enumerate(requests),
@@ -526,6 +549,7 @@ class TransformersSession(BaseTransformerSession):
         batch_size: int,
         stop_event: threading.Event | None = None,
     ) -> Iterator[tuple[Any, GenerationOutput]]:
+        """Generate paged continuous. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         request_iter = iter(requests)
         inflight_requests: dict[str, tuple[Any, GenerationRequest, str, list[str], dict[str, Any]]] = {}
         source_exhausted = False
@@ -533,12 +557,14 @@ class TransformersSession(BaseTransformerSession):
         manager: Any | None = None
 
         def pending_requests() -> list[tuple[Any, GenerationRequest]]:
+            """Implement pending requests for transformers session."""
             return [
                 (request_key, request)
                 for request_key, request, _rendered_prompt, _stop_strings, _metadata in inflight_requests.values()
             ]
 
         def submit_one() -> bool:
+            """Implement submit one for transformers session. Preserve the fallback order expected by the surrounding caller."""
             nonlocal source_exhausted
             nonlocal expected_signature
             if stop_event is not None and stop_event.is_set():
@@ -668,6 +694,7 @@ class TransformersSession(BaseTransformerSession):
         request_signature: tuple[Any, ...],
         request: GenerationRequest,
     ) -> Any:
+        """Ensure continuous batching manager."""
         from transformers import ContinuousBatchingManager
 
         _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManager)
@@ -704,6 +731,7 @@ class TransformersSession(BaseTransformerSession):
         ContinuousBatchingManager: Any,
         generation_config: Any,
     ) -> Any:
+        """Build continuous batching manager."""
         manager_init = inspect.signature(ContinuousBatchingManager.__init__)
         if "continuous_batching_config" in manager_init.parameters:
             from transformers import ContinuousBatchingConfig
@@ -746,6 +774,7 @@ class TransformersSession(BaseTransformerSession):
 
     # Allocate stable monotonic request ids for the paged manager.
     def _next_continuous_batching_request_id(self) -> str:
+        """Implement next continuous batching request id for transformers session."""
         with self._state_lock:
             request_id = f"req_{self.continuous_batching_request_counter}"
             self.continuous_batching_request_counter += 1
@@ -753,6 +782,7 @@ class TransformersSession(BaseTransformerSession):
 
     # Stop the session-owned paged manager and evict retained requests when manual eviction is enabled.
     def _stop_continuous_batching_manager(self) -> None:
+        """Implement stop continuous batching manager for transformers session."""
         with self._state_lock:
             manager = self.continuous_batching_manager
             retained_request_ids = set(self.continuous_batching_completed_request_ids)
@@ -774,6 +804,7 @@ class TransformersSession(BaseTransformerSession):
     # Restore the base attention kernel while token scoring runs on a paged-attention session.
     @contextmanager
     def _scoring_attention_context(self) -> Iterator[None]:
+        """Implement scoring attention context for transformers session."""
         active_attention = self.effective_attn_implementation or self.requested_attn_implementation
         if not isinstance(active_attention, str) or not active_attention.startswith("paged|"):
             yield
@@ -820,6 +851,7 @@ class TransformersSession(BaseTransformerSession):
 
     # Disable paged attention after a real failure and pin a safer fixed-batch fallback for the rest of the suite.
     def _disable_paged_attention(self, exc: Exception, *, fallback_batch_size: int) -> None:
+        """Implement disable paged attention for transformers session."""
         logger = get_logger()
         self._stop_continuous_batching_manager()
         with self._state_lock:
@@ -850,6 +882,7 @@ class TransformersSession(BaseTransformerSession):
 
 
 def _continuous_request_signature(request: GenerationRequest) -> tuple[Any, ...]:
+    """Implement continuous request signature for this module."""
     return (
         tuple(request.stop or ()),
         request.num_beams,
@@ -863,6 +896,7 @@ def _effective_attn_implementation(
     *,
     paged_attention_enabled: bool,
 ) -> str | None:
+    """Implement effective attn implementation for this module."""
     if attn_implementation is None:
         return None
     if paged_attention_enabled and not attn_implementation.startswith("paged|"):
@@ -876,6 +910,7 @@ def _resolve_paged_attention(
     model: Any,
     input_device: Any,
 ) -> bool:
+    """Resolve paged attention."""
     if not _requests_paged_attention(attn_implementation):
         return False
 

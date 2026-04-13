@@ -13,10 +13,12 @@ import sacrebleu
 import evalution
 from evalution.engines.base import GenerationOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 flores_es_module = importlib.import_module("evalution.benchmarks.flores_es")
 
 
 def test_flores_es_scores_translation_metrics(monkeypatch) -> None:
+    """Verify flores es scores translation metrics. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     docs = [
         {
             "id": 1,
@@ -42,7 +44,9 @@ def test_flores_es_scores_translation_metrics(monkeypatch) -> None:
     monkeypatch.setattr(flores_es_module, "load_flores200_pair", lambda *args, **kwargs: list(docs))
 
     class FakeSession:
+        """Provide the fake session helper used by the surrounding tests."""
         def generate(self, requests, *, batch_size=None):
+            """Generate generate."""
             assert batch_size == 2
             assert len(requests) == 2
             assert requests[0].prompt == (
@@ -83,6 +87,7 @@ def test_flores_es_scores_translation_metrics(monkeypatch) -> None:
 
 
 def test_flores_es_dispatcher_and_validation() -> None:
+    """Verify flores es dispatcher and validation."""
     suite = evalution.benchmarks.flores_es(direction="es-pt", max_rows=1)
     alias_suite = evalution.benchmarks.flores_es_es_pt(max_rows=1)
 

@@ -5,6 +5,9 @@
 
 """Shared queued request/result runtime for continuous generation.
 
+This module coordinates whole-request submission and whole-request completion delivery.
+It does not stream partial token text back to callers.
+
 Terminology
 +------------------+-----------------------------------------------------------+
 | Term             | Meaning                                                   |
@@ -217,6 +220,7 @@ class RequestQueue:
         stop_event: threading.Event | None,
         poll_timeout_s: float,
     ) -> None:
+        """Implement put item for request queue."""
         while stop_event is None or not stop_event.is_set():
             try:
                 self._queue.put(item, timeout=poll_timeout_s)

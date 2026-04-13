@@ -18,16 +18,19 @@ from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
 
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _FINAL_ANSWER_RE = pcre.compile(r"final answer:\s*\[(.*)\]", pcre.IGNORECASE)
 
 
 def _split_nodes(text: str) -> List[str]:
+    """Split nodes."""
     if not text:
         return []
     return [token.strip().strip("'\"") for token in text.split(",") if token.strip()]
 
 
 def _extract_final_answer(line: str) -> tuple[List[str], bool]:
+    """Extract final answer."""
     match = _FINAL_ANSWER_RE.search(line)
     if not match:
         return [], True
@@ -36,6 +39,7 @@ def _extract_final_answer(line: str) -> tuple[List[str], bool]:
 
 
 def _parse_final_answer(text: str, *, flexible: bool = False) -> tuple[List[str], bool]:
+    """Parse final answer. Preserve the fallback order expected by the surrounding caller."""
     if not text:
         return [], True
     lines = [line for line in text.rstrip().splitlines()] or [""]
@@ -53,6 +57,7 @@ def _parse_final_answer(text: str, *, flexible: bool = False) -> tuple[List[str]
 
 
 def _set_f1(predicted: list[str], reference: list[str]) -> float:
+    """Implement set F1 for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     predicted_set = set(predicted)
     reference_set = set(reference)
     if not reference_set and not predicted_set:
@@ -69,6 +74,8 @@ def _set_f1(predicted: list[str], reference: list[str]) -> float:
 
 @dataclass(slots=True)
 class GraphWalks(BaseTestSuite):
+    """Implement the graph walks benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "openai/graphwalks"
     dataset_name: str | None = None
     split: str = "train"
@@ -80,7 +87,9 @@ class GraphWalks(BaseTestSuite):
     task_variant: str = "graphwalks_128k"
 
     def dataset_loader(self) -> Callable[..., Any]:
+        """Return the dataset loader bound to this suite."""
         def loader(path: str, *, split: str, cache_dir: str | None, stream: bool) -> Any:
+            """Implement loader for graph walks."""
             return load_dataset(
                 path,
                 data_files=self.data_file,
@@ -92,9 +101,11 @@ class GraphWalks(BaseTestSuite):
         return loader
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return self.task_variant
 
     def result_metadata(self, *, generation_submission_mode: str) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "graphwalks_set_f1",
@@ -102,6 +113,7 @@ class GraphWalks(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Iterable[dict[str, Any]]) -> Iterable[PreparedSample]:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             prompt = str(doc["prompt"]).strip()
             yield PreparedSample(
@@ -118,10 +130,12 @@ class GraphWalks(BaseTestSuite):
             )
 
     def _format_target(self, answer_nodes: list[str]) -> str:
+        """Format target."""
         entries = [str(node) for node in answer_nodes]
         return f"[{', '.join(entries)}]"
 
     def score_sample(self, prepared_sample: PreparedSample, output: GenerationOutput) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         predicted = output.text
         strict_nodes, strict_error = _parse_final_answer(predicted, flexible=False)
         flexible_nodes, flexible_error = _parse_final_answer(predicted, flexible=True)
@@ -150,11 +164,13 @@ class GraphWalks(BaseTestSuite):
 
 
 def graphwalks_128k(**kwargs: Any) -> GraphWalks:
+    """Implement graphwalks 128k for this module."""
     kwargs.setdefault("stream", False)
     return GraphWalks(**kwargs)
 
 
 def graphwalks_1M(**kwargs: Any) -> GraphWalks:
+    """Implement graphwalks 1 m for this module."""
     kwargs.setdefault("stream", False)
     return GraphWalks(
         data_file="graphwalks_256k_to_1mil.parquet",

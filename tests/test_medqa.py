@@ -12,11 +12,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 medqa_module = importlib.import_module("evalution.benchmarks.medqa")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 6
         assert len(requests) == 4
         assert requests[0].context == (
@@ -38,6 +41,7 @@ class FakeSession:
 
 
 def test_medqa_scores_four_way_labeled_multiple_choice(monkeypatch) -> None:
+    """Verify medqa scores four way labeled multiple choice. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -86,6 +90,7 @@ def test_medqa_scores_four_way_labeled_multiple_choice(monkeypatch) -> None:
 
 
 def test_medqa_can_emit_label_permutation_metric(monkeypatch) -> None:
+    """Verify medqa can emit label permutation metric. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -103,10 +108,13 @@ def test_medqa_can_emit_label_permutation_metric(monkeypatch) -> None:
     monkeypatch.setattr(medqa_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class LabelPermutationSession:
+        """Define the label permutation session helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.calls = 0
 
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for label permutation session."""
             assert batch_size == 6
             self.calls += 1
             if self.calls == 1:

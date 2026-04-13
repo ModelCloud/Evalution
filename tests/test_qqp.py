@@ -13,12 +13,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 qqp_module = importlib.import_module("evalution.benchmarks.qqp")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 4
         assert len(requests) == 6
         assert requests[0].context == (
@@ -40,6 +43,7 @@ class FakeSession:
 
 
 def test_qqp_scores_accuracy_and_positive_class_f1(monkeypatch) -> None:
+    """Verify qqp scores accuracy and positive class F1. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -91,6 +95,7 @@ def test_qqp_scores_accuracy_and_positive_class_f1(monkeypatch) -> None:
 
 
 def test_qqp_prompt_helper_formats_duplicate_question_prompt() -> None:
+    """Verify qqp prompt helper formats duplicate question prompt."""
     assert (
         qqp_module._qqp_prompt("Question A?", "Question B?")
         == "Question 1: Question A?\nQuestion 2: Question B?\nQuestion: Do both questions ask the same thing?\nAnswer:"

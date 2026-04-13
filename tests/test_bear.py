@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 bear_module = importlib.import_module("evalution.benchmarks.bear")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         if len(requests) == 2:
             assert requests[0].context == ""
@@ -40,6 +43,7 @@ class FakeSession:
 
 
 def test_bear_scores_bear_and_bear_big_rows(monkeypatch) -> None:
+    """Verify bear scores bear and bear big rows. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     bear_dataset = Dataset.from_list(
         [
             {
@@ -79,6 +83,7 @@ def test_bear_scores_bear_and_bear_big_rows(monkeypatch) -> None:
     )
 
     def fake_load_dataset(dataset_path, dataset_name, *, split, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         assert dataset_path == "lm-pub-quiz/BEAR"
         assert split == "test"
         if dataset_name == "BEAR":
@@ -121,6 +126,7 @@ def test_bear_scores_bear_and_bear_big_rows(monkeypatch) -> None:
 
 
 def test_bear_rejects_unknown_variant_and_mismatched_dataset_name() -> None:
+    """Verify bear rejects unknown variant and mismatched dataset name."""
     with pytest.raises(ValueError, match="unsupported bear variant"):
         bear_module.BEAR(variant="unknown")
 

@@ -16,6 +16,7 @@ from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, Multip
 
 def _qqp_prompt(question1: str, question2: str) -> str:
     # Frame duplicate-question detection as a direct yes-or-no decision over the pair.
+    """Implement qqp prompt for this module."""
     return (
         f"Question 1: {question1.strip()}\n"
         f"Question 2: {question2.strip()}\n"
@@ -27,20 +28,24 @@ def _qqp_prompt(question1: str, question2: str) -> str:
 @dataclass(slots=True)
 class QQP(BaseMultipleChoiceSuite):
     # Evaluate Quora Question Pairs with yes versus no label ranking on the GLUE validation split.
+    """Implement the qqp benchmark suite."""
     dataset_path: str = "nyu-mll/glue"
     dataset_name: str | None = "qqp"
     split: str = "validation"
 
     # Use the canonical Hugging Face datasets loader for the GLUE QQP task.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite identifier used by logs, YAML specs, and serialized results.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "qqp"
 
     # Convert one QQP row into the shared binary-choice sample structure.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_qqp_prompt(doc["question1"], doc["question2"]),
@@ -57,6 +62,7 @@ class QQP(BaseMultipleChoiceSuite):
         raw_predictions: list[int],
         normalized_predictions: list[int],
     ) -> dict[str, float]:
+        """Compute extra metrics from the collected predictions. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         gold_labels = [sample.gold_index for sample in samples]
         return {
             "f1,ll_boolean": f1_for_label(gold_labels, raw_predictions, label=1),
@@ -70,4 +76,5 @@ class QQP(BaseMultipleChoiceSuite):
 
 # Mirror the public suite factory style used across the package.
 def qqp(**kwargs: Any) -> QQP:
+    """Implement qqp for this module."""
     return QQP(**kwargs)

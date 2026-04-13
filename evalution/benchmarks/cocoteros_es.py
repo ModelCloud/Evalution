@@ -32,6 +32,7 @@ from evalution.scorers.summary_rouge import summary_rouge_scores
 
 
 def _cocoteros_prompt(keywords: str, context: str) -> str:
+    """Implement cocoteros prompt for this module."""
     return (
         "Genera una frase corta con estas palabras: "
         f"{str(keywords).strip()}. El contexto es: {str(context).strip()} \n\n"
@@ -40,6 +41,7 @@ def _cocoteros_prompt(keywords: str, context: str) -> str:
 
 
 def _mean_rouge1(predictions: list[str], references: list[str]) -> float:
+    """Implement mean rouge1 for this module."""
     if not predictions:
         return 0.0
     return mean(
@@ -51,6 +53,7 @@ def _mean_rouge1(predictions: list[str], references: list[str]) -> float:
 @dataclass(slots=True)
 class CocoterosES(BaseTestSuite):
     # Evaluate the SpanishBench constrained sentence-generation task with corpus BLEU and mean ROUGE-1.
+    """Implement the cocoteros es benchmark suite."""
     dataset_path: str = "gplsi/cocoteros"
     dataset_name: str | None = None
     split: str = "test"
@@ -58,9 +61,11 @@ class CocoterosES(BaseTestSuite):
     stop: tuple[str, ...] = ("\n",)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "cocoteros_es"
 
     def result_metadata(
@@ -68,6 +73,7 @@ class CocoterosES(BaseTestSuite):
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
+        """Return the result metadata emitted for this suite."""
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "scoring_mode": "generated_corpus_bleu_mean_rouge1",
@@ -75,6 +81,7 @@ class CocoterosES(BaseTestSuite):
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
+        """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
             yield PreparedSample(
                 index=index,
@@ -92,6 +99,7 @@ class CocoterosES(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
+        """Score one sample against its expected outputs. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
         prediction = output.text.strip()
         reference = prepared_sample.target.strip()
         return SampleResult(
@@ -111,6 +119,7 @@ class CocoterosES(BaseTestSuite):
         )
 
     def evaluate(self, session: InferenceSession) -> TestResult:
+        """Evaluate evaluate."""
         task_name = self.task_name()
         logger = get_logger()
         loaded_docs, dataset_load_wall_s = load_suite_dataset(
@@ -182,6 +191,7 @@ class CocoterosES(BaseTestSuite):
         )
 
         def record_output(prepared_sample: PreparedSample, output: GenerationOutput) -> None:
+            """Implement record output for cocoteros es."""
             nonlocal processed_count
             nonlocal scoring_wall_s
 
@@ -197,6 +207,7 @@ class CocoterosES(BaseTestSuite):
                 sample_by_request_key: dict[int, PreparedSample] = {}
 
                 def iter_request_stream() -> Any:
+                    """Yield request items for the continuous generation loop."""
                     request_key = 0
                     prefetched_samples = iter_prefetched_samples(
                         session,
@@ -281,4 +292,5 @@ class CocoterosES(BaseTestSuite):
 
 
 def cocoteros_es(**kwargs: Any) -> CocoterosES:
+    """Implement cocoteros es for this module."""
     return CocoterosES(**kwargs)

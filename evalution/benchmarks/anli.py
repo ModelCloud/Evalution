@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _ANLI_CHOICES = ["True", "Neither", "False"]
 _ANLI_DEFAULT_SPLITS = {
     "r1": "test_r1",
@@ -22,12 +23,14 @@ _ANLI_DEFAULT_SPLITS = {
 
 def _anli_prompt(premise: str, hypothesis: str) -> str:
     # Match the upstream ANLI prompt format and label wording so scores stay comparable.
+    """Implement anli prompt for this module."""
     return f"{premise.strip()}\nQuestion: {hypothesis.strip()} True, False, or Neither?\nAnswer:"
 
 
 @dataclass(slots=True)
 class ANLI(BaseMultipleChoiceSuite):
     # Evaluate adversarial NLI by ranking entailment, neutral, and contradiction labels.
+    """Implement the anli benchmark suite."""
     dataset_path: str = "facebook/anli"
     dataset_name: str | None = None
     split: str = "test_r1"
@@ -35,14 +38,17 @@ class ANLI(BaseMultipleChoiceSuite):
 
     # Use the Hugging Face datasets loader for the public ANLI benchmark.
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return load_dataset
 
     # Return the stable suite name used by logs, YAML specs, and result payloads.
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return f"anli_{self.round_name}"
 
     # Convert one ANLI row into the shared prompt and three-choice structure used by the helper.
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         return MultipleChoiceSample(
             index=index,
             prompt=_anli_prompt(doc["premise"], doc["hypothesis"]),
@@ -59,6 +65,7 @@ class ANLI(BaseMultipleChoiceSuite):
 
 
 def _anli_round(round_name: str, **kwargs: Any) -> ANLI:
+    """Implement anli round for this module."""
     if "split" not in kwargs:
         kwargs["split"] = _ANLI_DEFAULT_SPLITS[round_name]
     return ANLI(round_name=round_name, **kwargs)
@@ -66,12 +73,15 @@ def _anli_round(round_name: str, **kwargs: Any) -> ANLI:
 
 # Mirror the public suite factory style used by the rest of the package.
 def anli_r1(**kwargs: Any) -> ANLI:
+    """Implement anli r1 for this module."""
     return _anli_round("r1", **kwargs)
 
 
 def anli_r2(**kwargs: Any) -> ANLI:
+    """Implement anli r2 for this module."""
     return _anli_round("r2", **kwargs)
 
 
 def anli_r3(**kwargs: Any) -> ANLI:
+    """Implement anli r3 for this module."""
     return _anli_round("r3", **kwargs)

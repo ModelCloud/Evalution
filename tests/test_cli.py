@@ -15,16 +15,21 @@ from evalution.engines.base import BaseEngine, BaseInferenceSession
 
 
 class FakeEngine(BaseEngine):
+    """Provide the fake engine helper used by the surrounding tests."""
     def build(self, model):
+        """Build build."""
         del model
         return FakeSession()
 
     def to_dict(self):
+        """Implement to dict for fake engine."""
         return {"name": "fake"}
 
 
 class FakeSession(BaseInferenceSession):
+    """Provide the fake session helper used by the surrounding tests."""
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         del batch_size
         return [
             type("Output", (), {"prompt": request.prompt, "text": "The answer is 42."})()
@@ -32,30 +37,37 @@ class FakeSession(BaseInferenceSession):
         ]
 
     def describe_execution(self):
+        """Implement describe execution for fake session."""
         return {"generation_backend": "fake"}
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         del requests, batch_size
         raise NotImplementedError
 
     def loglikelihood_rolling(self, requests, *, batch_size=None):
+        """Implement loglikelihood rolling for fake session."""
         del requests, batch_size
         raise NotImplementedError
 
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         request_items = list(requests)
         outputs = self.generate([request for _, request in request_items], batch_size=batch_size)
         for (item_id, _request), output in zip(request_items, outputs, strict=True):
             yield item_id, output
 
     def gc(self) -> None:
+        """Release reusable intermediate state for this object."""
         return None
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         return None
 
 
 def test_cli_run_executes_yaml_and_prints_json(monkeypatch, tmp_path, capsys) -> None:
+    """Verify CLI run executes YAML and prints JSON."""
     dataset = Dataset.from_list(
         [
             {
@@ -99,6 +111,7 @@ tests:
 
 
 def test_cli_emit_python_prints_equivalent_script(tmp_path, capsys) -> None:
+    """Verify CLI emit python prints equivalent script."""
     spec = tmp_path / "evalution.yaml"
     spec.write_text(
         """
@@ -127,6 +140,7 @@ tests:
 
 
 def test_cli_run_can_write_json_to_output_file(monkeypatch, tmp_path) -> None:
+    """Verify CLI run can write JSON to output file."""
     dataset = Dataset.from_list(
         [
             {

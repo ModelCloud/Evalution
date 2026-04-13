@@ -17,30 +17,38 @@ from evalution.engines.base import (
     LoglikelihoodOutput,
 )
 
+# Keep shared test fixtures and expectations explicit at module scope.
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challenge")
 
 
 class FakeEngine(BaseEngine):
+    """Provide the fake engine helper used by the surrounding tests."""
     def __init__(self) -> None:
+        """Initialize this object."""
         self.session = FakeSession()
         self.model_config = None
 
     def build(self, model):
+        """Build build."""
         self.model_config = model
         return self.session
 
     def to_dict(self):
+        """Implement to dict for fake engine."""
         return {"name": "fake"}
 
 
 class FakeSession(BaseInferenceSession):
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self) -> None:
+        """Initialize this object."""
         self.gc_calls = 0
         self.close_calls = 0
         self.loglikelihood_outputs: list[LoglikelihoodOutput] | None = None
 
     def generate(self, requests, *, batch_size=None):
+        """Generate generate."""
         del batch_size
         return [
             GenerationOutput(
@@ -51,6 +59,7 @@ class FakeSession(BaseInferenceSession):
         ]
 
     def describe_execution(self):
+        """Implement describe execution for fake session."""
         return {
             "requested_attn_implementation": "flash_attention_2",
             "effective_attn_implementation": "paged|flash_attention_2",
@@ -60,6 +69,7 @@ class FakeSession(BaseInferenceSession):
         }
 
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         del batch_size
         if self.loglikelihood_outputs is None:
             raise NotImplementedError
@@ -67,24 +77,29 @@ class FakeSession(BaseInferenceSession):
         return self.loglikelihood_outputs
 
     def loglikelihood_rolling(self, requests, *, batch_size=None):
+        """Implement loglikelihood rolling for fake session."""
         del requests, batch_size
         raise NotImplementedError
 
     def generate_continuous(self, requests, *, batch_size=None):
+        """Generate continuous."""
         request_items = list(requests)
         outputs = self.generate([request for _, request in request_items], batch_size=batch_size)
         for (item_id, _request), output in zip(request_items, outputs, strict=True):
             yield item_id, output
 
     def gc(self) -> None:
+        """Release reusable intermediate state for this object."""
         self.gc_calls += 1
 
     def close(self) -> None:
+        """Release the resources owned by this object."""
         self.close_calls += 1
         return None
 
 
 def test_run_accepts_dict_model_and_returns_structured_results(monkeypatch) -> None:
+    """Verify run accepts dict model and returns structured results."""
     dataset = Dataset.from_list(
         [
             {
@@ -111,6 +126,7 @@ def test_run_accepts_dict_model_and_returns_structured_results(monkeypatch) -> N
 
 
 def test_engine_runner_chains_model_and_test_runs(monkeypatch) -> None:
+    """Verify engine runner chains model and test runs."""
     dataset = Dataset.from_list(
         [
             {
@@ -133,6 +149,7 @@ def test_engine_runner_chains_model_and_test_runs(monkeypatch) -> None:
 
 
 def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
+    """Verify engine runner accepts model label kwarg."""
     dataset = Dataset.from_list(
         [
             {
@@ -155,12 +172,14 @@ def test_engine_runner_accepts_model_label_kwarg(monkeypatch) -> None:
 
 
 def test_engine_requires_model_before_run() -> None:
+    """Verify engine requires model before run."""
     engine = FakeEngine()
 
     assert not hasattr(engine, "run")
 
 
 def test_model_accepts_tokenizer_override() -> None:
+    """Verify model accepts tokenizer override."""
     tokenizer = object()
 
     engine = FakeEngine()
@@ -170,8 +189,11 @@ def test_model_accepts_tokenizer_override() -> None:
 
 
 def test_run_rejects_engines_that_return_non_session_objects(monkeypatch) -> None:
+    """Verify run rejects engines that return non session objects."""
     class InvalidEngine(BaseEngine):
+        """Implement the invalid engine engine adapter."""
         def build(self, model):
+            """Build build."""
             del model
             return object()
 
@@ -199,6 +221,7 @@ def test_run_rejects_engines_that_return_non_session_objects(monkeypatch) -> Non
 
 
 def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
+    """Verify run accepts ARC challenge suite."""
     dataset = Dataset.from_list(
         [
             {
@@ -241,6 +264,7 @@ def test_run_accepts_arc_challenge_suite(monkeypatch) -> None:
 
 
 def test_run_calls_session_gc_between_test_suites(monkeypatch) -> None:
+    """Verify run calls session gc between test suites."""
     dataset = Dataset.from_list(
         [
             {
@@ -268,6 +292,7 @@ def test_run_calls_session_gc_between_test_suites(monkeypatch) -> None:
 
 
 def test_engine_runner_calls_session_gc_between_test_runs(monkeypatch) -> None:
+    """Verify engine runner calls session gc between test runs."""
     dataset = Dataset.from_list(
         [
             {

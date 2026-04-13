@@ -14,14 +14,18 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import RollingLoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 paloma_module = importlib.import_module("evalution.benchmarks.paloma")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def __init__(self, outputs: list[RollingLoglikelihoodOutput]) -> None:
+        """Initialize this object."""
         self.outputs = outputs
 
     def loglikelihood_rolling(self, requests, *, batch_size=None):
+        """Implement loglikelihood rolling for fake session."""
         assert batch_size == 3
         request_items = list(requests)
         assert len(request_items) == 1
@@ -30,6 +34,7 @@ class FakeSession:
 
 
 def test_paloma_scores_rolling_perplexity_for_one_subset(monkeypatch) -> None:
+    """Verify paloma scores rolling perplexity for one subset. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list([{"text": "hello world"}])
     monkeypatch.setattr(paloma_module, "load_dataset", lambda *args, **kwargs: dataset)
 
@@ -59,6 +64,7 @@ def test_paloma_scores_rolling_perplexity_for_one_subset(monkeypatch) -> None:
 
 
 def test_paloma_normalizes_subset_tokens_and_rejects_unknown_subset() -> None:
+    """Verify paloma normalizes subset tokens and rejects unknown subset."""
     suite = evalution.benchmarks.paloma(subset="dolma_v1_5")
     assert suite.dataset_name == "dolma-v1_5"
     assert suite.task_name() == "paloma_dolma_v1_5"

@@ -13,11 +13,14 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 mmlu_cf_module = importlib.import_module("evalution.benchmarks.mmlu_cf")
 
 
 class FakeSession:
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 8
         assert len(requests) == 4
         assert requests[0].context == (
@@ -45,6 +48,7 @@ class FakeSession:
 
 
 def test_mmlu_cf_scores_subject_with_dev_fewshots(monkeypatch) -> None:
+    """Verify MMLU cf scores subject with dev fewshots. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     validation = Dataset.from_list(
         [
             {
@@ -71,6 +75,7 @@ def test_mmlu_cf_scores_subject_with_dev_fewshots(monkeypatch) -> None:
     )
 
     def fake_load_dataset(path, name=None, *, split=None, **kwargs):
+        """Support the surrounding tests with fake load dataset."""
         del path, name, kwargs
         if split == "val":
             return validation
@@ -107,5 +112,6 @@ def test_mmlu_cf_scores_subject_with_dev_fewshots(monkeypatch) -> None:
 
 
 def test_mmlu_cf_rejects_unknown_subject() -> None:
+    """Verify MMLU cf rejects unknown subject."""
     with pytest.raises(ValueError, match="unsupported MMLU-CF subject"):
         evalution.benchmarks.mmlu_cf(subject="unknown_subject")

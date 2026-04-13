@@ -16,6 +16,7 @@ from datasets import Dataset
 
 from evalution.benchmarks.multiple_choice import BaseMultipleChoiceSuite, MultipleChoiceSample
 
+# Keep benchmark defaults and public task ids explicit at module scope.
 _PUBMEDQA_ARCHIVE_URL = "https://huggingface.co/datasets/bigbio/pubmed_qa/resolve/main/pqal.zip"
 _PUBMEDQA_ARCHIVE_NAME = "pqal.zip"
 _PUBMEDQA_SPLIT_FILES = {
@@ -27,11 +28,13 @@ _PUBMEDQA_CHOICES = ["yes", "no", "maybe"]
 
 
 def _pubmedqa_prompt(question: str, contexts: list[str]) -> str:
+    """Implement pubmedqa prompt for this module."""
     abstract = "\n".join(str(context).strip() for context in contexts if str(context).strip())
     return f"Abstract: {abstract}\nQuestion: {question.strip()}\nAnswer:"
 
 
 def _pubmedqa_cache_path(cache_dir: str | None) -> Path:
+    """Implement pubmedqa cache path for this module."""
     if cache_dir is not None:
         base_dir = Path(cache_dir)
     else:
@@ -40,6 +43,7 @@ def _pubmedqa_cache_path(cache_dir: str | None) -> Path:
 
 
 def _ensure_pubmedqa_archive(*, cache_dir: str | None) -> Path:
+    """Ensure pubmedqa archive."""
     archive_path = _pubmedqa_cache_path(cache_dir)
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     if not archive_path.exists():
@@ -55,6 +59,7 @@ def _load_pubmedqa_dataset(
     cache_dir: str | None = None,
     stream: bool = (False),
 ) -> Dataset:
+    """Load pubmedqa dataset."""
     del stream
     if dataset_path != "bigbio/pubmed_qa":
         raise ValueError(f"unsupported PubMedQA dataset path: {dataset_path!r}")
@@ -79,18 +84,23 @@ def _load_pubmedqa_dataset(
 
 @dataclass(slots=True)
 class PubMedQA(BaseMultipleChoiceSuite):
+    """Implement the pub med QA benchmark suite."""
+    # Keep the suite defaults explicit on the class body so CLI, YAML, and Python stay aligned.
     dataset_path: str = "bigbio/pubmed_qa"
     dataset_name: str | None = "pubmed_qa_labeled_fold0_source"
     split: str = "test"
     stream: bool = (False)
 
     def dataset_loader(self) -> Any:
+        """Return the dataset loader bound to this suite."""
         return _load_pubmedqa_dataset
 
     def task_name(self) -> str:
+        """Return the exported task name for this suite."""
         return "pubmedqa"
 
     def build_sample(self, doc: dict[str, Any], *, index: int) -> MultipleChoiceSample:
+        """Build one benchmark sample from a dataset row."""
         contexts = [str(item) for item in doc["CONTEXTS"]]
         question = str(doc["QUESTION"]).strip()
         answer = str(doc["final_decision"]).strip().lower()
@@ -114,4 +124,5 @@ class PubMedQA(BaseMultipleChoiceSuite):
 
 
 def pubmedqa(**kwargs: Any) -> PubMedQA:
+    """Implement pubmedqa for this module."""
     return PubMedQA(**kwargs)

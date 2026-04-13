@@ -11,7 +11,6 @@ from pathlib import Path
 from shutil import move
 from tempfile import NamedTemporaryFile
 from threading import Lock
-from typing import Any
 from urllib.request import urlopen
 import xml.etree.ElementTree as ET
 import zipfile
@@ -34,16 +33,19 @@ _MEQSUM_SPLIT_ALIASES = {
 
 
 def _default_cache_root() -> Path:
+    """Implement default cache root for this module."""
     return Path.home() / ".cache" / "evalution" / "datasets"
 
 
 def _cache_root(cache_dir: str | None) -> Path:
+    """Implement cache root for this module."""
     if cache_dir is None:
         return _default_cache_root()
     return Path(cache_dir) / "evalution-vendored-datasets"
 
 
 def _sha256_file(path: Path) -> str:
+    """Implement sha256 file for this module."""
     hasher = hashlib.sha256()
     with path.open("rb") as handle:
         while True:
@@ -55,6 +57,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _resolved_split(split: str) -> str:
+    """Implement resolved split for this module."""
     resolved = _MEQSUM_SPLIT_ALIASES.get(split.strip().lower())
     if resolved is None:
         raise ValueError(
@@ -64,6 +67,7 @@ def _resolved_split(split: str) -> str:
 
 
 def _download_source_xlsx(cache_dir: str | None) -> Path:
+    """Implement download source xlsx for this module."""
     cache_root = _cache_root(cache_dir)
     cache_root.mkdir(parents=True, exist_ok=True)
     target_path = cache_root / f"meqsum-{MEQSUM_SOURCE_SHA256[:12]}.xlsx"
@@ -83,6 +87,7 @@ def _download_source_xlsx(cache_dir: str | None) -> Path:
 
 
 def _verified_source_xlsx(cache_dir: str | None) -> Path:
+    """Implement verified source xlsx for this module."""
     xlsx_path = _download_source_xlsx(cache_dir)
     actual_sha256 = _sha256_file(xlsx_path)
     if actual_sha256 != MEQSUM_SOURCE_SHA256:
@@ -94,6 +99,7 @@ def _verified_source_xlsx(cache_dir: str | None) -> Path:
 
 
 def _column_index(cell_reference: str) -> int:
+    """Implement column index for this module."""
     column_name = "".join(character for character in cell_reference if character.isalpha())
     index = 0
     for character in column_name:
@@ -102,6 +108,7 @@ def _column_index(cell_reference: str) -> int:
 
 
 def _shared_strings(archive: zipfile.ZipFile) -> list[str]:
+    """Implement shared strings for this module."""
     shared = ET.fromstring(archive.read("xl/sharedStrings.xml"))
     values: list[str] = []
     for item in shared.findall("a:si", _MEQSUM_NAMESPACE):
@@ -110,6 +117,7 @@ def _shared_strings(archive: zipfile.ZipFile) -> list[str]:
 
 
 def _cell_value(cell: ET.Element, shared_strings: list[str]) -> str:
+    """Implement cell value for this module."""
     if cell.get("t") == "inlineStr":
         return "".join(node.text or "" for node in cell.findall(".//a:t", _MEQSUM_NAMESPACE))
     value_node = cell.find("a:v", _MEQSUM_NAMESPACE)
@@ -121,6 +129,7 @@ def _cell_value(cell: ET.Element, shared_strings: list[str]) -> str:
 
 
 def _load_source_rows(xlsx_path: Path) -> list[dict[str, str]]:
+    """Load source rows. Keep the nested traversal explicit so ordering and metadata stay aligned."""
     with zipfile.ZipFile(xlsx_path) as archive:
         shared = _shared_strings(archive)
         sheet = ET.fromstring(archive.read("xl/worksheets/sheet1.xml"))
@@ -156,6 +165,7 @@ def _load_source_rows(xlsx_path: Path) -> list[dict[str, str]]:
 
 @lru_cache(maxsize=None)
 def _load_rows_cached(*, cache_root_key: str) -> tuple[dict[str, str], ...]:
+    """Load rows cached."""
     with _MEQSUM_ROW_LOCK:
         rows = _load_source_rows(_verified_source_xlsx(cache_root_key or None))
     return tuple(rows)
@@ -169,6 +179,7 @@ def load_meqsum_dataset(
     cache_dir: str | None = None,
     stream: bool = False,
 ) -> list[dict[str, str]]:
+    """Load meqsum dataset."""
     if dataset_path != MEQSUM_DATASET_PATH:
         raise ValueError(f"meqsum dataset_path must be {MEQSUM_DATASET_PATH!r}, got {dataset_path!r}")
     if dataset_name not in {None, MEQSUM_DATASET_NAME}:

@@ -13,12 +13,15 @@ from datasets import Dataset
 import evalution
 from evalution.engines.base import LoglikelihoodOutput
 
+# Keep shared test fixtures and expectations explicit at module scope.
 anli_module = importlib.import_module("evalution.benchmarks.anli")
 
 
 class FakeSession:
     # Return deterministic per-choice scores so the suite can be tested without a real model.
+    """Provide the fake session helper used by the surrounding tests."""
     def loglikelihood(self, requests, *, batch_size=None):
+        """Implement loglikelihood for fake session."""
         assert batch_size == 5
         assert len(requests) == 3
         assert requests[0].continuation == " True"
@@ -41,6 +44,7 @@ class FakeSession:
     ],
 )
 def test_anli_round_scores_three_way_nli(monkeypatch, factory_name, expected_name, expected_split) -> None:
+    """Verify anli round scores three way nli. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -86,6 +90,7 @@ def test_anli_round_scores_three_way_nli(monkeypatch, factory_name, expected_nam
 
 
 def test_anli_round_can_emit_label_permutation_metric(monkeypatch) -> None:
+    """Verify anli round can emit label permutation metric. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
     dataset = Dataset.from_list(
         [
             {
@@ -100,10 +105,13 @@ def test_anli_round_can_emit_label_permutation_metric(monkeypatch) -> None:
     monkeypatch.setattr(anli_module, "load_dataset", lambda *args, **kwargs: dataset)
 
     class LabelPermutationSession:
+        """Define the label permutation session helper used by the surrounding tests."""
         def __init__(self) -> None:
+            """Initialize this object."""
             self.calls = 0
 
         def loglikelihood(self, requests, *, batch_size=None):
+            """Implement loglikelihood for label permutation session."""
             assert batch_size == 5
             self.calls += 1
             if self.calls == 1:
