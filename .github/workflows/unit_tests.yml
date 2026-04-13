@@ -151,7 +151,16 @@ jobs:
 
           echo "::group::uv cache dir"
             uv cache dir
-            ls $(uv cache dir)
+            ls -alh $(uv cache dir) || true
+          echo "::endgroup::"
+          echo "::group::ls -alh /opt/uv"
+            ls -alh /opt/uv
+          echo "::endgroup::"
+          echo "::group::ls -alh /opt/uv/cache"
+            ls -alh /opt/uv/cache
+          echo "::endgroup::"
+          echo "::group::ls -alh /opt/uv/cache/uv"
+            ls -alh /opt/uv/cache/uv
           echo "::endgroup::"
           echo "::group::uv cache dir"
             printenv | grep UV_
