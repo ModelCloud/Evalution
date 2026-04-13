@@ -170,6 +170,10 @@ jobs:
           echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
           source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
           python -VV
+          echo "::group::uv pip list"
+           uv pip list
+          echo "::endgroup::"
+
 
       - name: Setup uv env
         run: |
