@@ -156,6 +156,14 @@ jobs:
 
       - name: Setup uv env
         run: |
+          echo "::group::uv cache dir"
+            uv cache dir
+            ls $(uv cache dir)
+          echo "::endgroup::"
+          echo "::group::uv cache dir"
+            printenv | grep UV_
+          echo "::endgroup::"
+          
           /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
 
           if [ "${UV_PYTHON}" = "3.14t" ]; then
@@ -176,8 +184,6 @@ jobs:
 
       - name: Print uv env
         run: |
-          uv cache dir
-          ls $(uv cache dir)
           echo "::group::uv python list"
           uv python list
           echo "::endgroup::"
