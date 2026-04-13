@@ -149,13 +149,6 @@ jobs:
           echo "PYTHON_VERSION=$python_version" >> "$GITHUB_ENV"
           echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
 
-          env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
-          echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
-          source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
-          python -VV
-
-      - name: Setup uv env
-        run: |
           echo "::group::uv cache dir"
             uv cache dir
             ls $(uv cache dir)
@@ -163,6 +156,14 @@ jobs:
           echo "::group::uv cache dir"
             printenv | grep UV_
           echo "::endgroup::"
+
+          env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
+          echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
+          source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
+          python -VV
+
+      - name: Setup uv env
+        run: |
           
           /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
 
