@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 import sys
 import threading
 from collections.abc import Iterable, Iterator
@@ -45,6 +46,7 @@ _FLASH_ATTN_VARLEN_FWD_CUDA_CONTEXT_PATCH_LOCK = threading.Lock()
 _FLASH_ATTENTION_SMALL_MAX_BATCH_TOKENS = 4096
 _FLASH_ATTENTION_SMALL_BLOCKS_PER_REQUEST = 1
 _FLASH_ATTENTION_LARGE_BLOCKS_PER_REQUEST = 16
+_PATCH_TRANSFORMERS_ENV = "EVALUTION_PATCH_TRANSFOMRERS"
 
 
 @dataclass(slots=True)
@@ -84,9 +86,15 @@ class Transformers(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
             return TransformersCompat.from_transformers(self).build(model)
 
         _warn_pending_nogil_transformers_pr_once()
-        _patch_flash_attn_varlen_fwd_cuda_context_once()
+        if _transformers_monkey_patches_enabled():
+            _patch_flash_attn_varlen_fwd_cuda_context_once()
         self.resolved_engine = "Transformers"
         return TransformersSession.from_config(self, model)
+
+
+def _transformers_monkey_patches_enabled() -> bool:
+    """Return whether Evalution's local Transformers monkey patches should be applied."""
+    return os.environ.get(_PATCH_TRANSFORMERS_ENV, "1") != "0"
 
 
 def _warn_pending_nogil_transformers_pr_once() -> None:
@@ -698,8 +706,9 @@ class TransformersSession(BaseTransformerSession):
         """Ensure continuous batching manager."""
         from transformers import ContinuousBatchingManager
 
-        _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManager)
-        _patch_continuous_batching_flash_attention_decode_once()
+        if _transformers_monkey_patches_enabled():
+            _patch_continuous_batching_manager_cuda_context_once(ContinuousBatchingManager)
+            _patch_continuous_batching_flash_attention_decode_once()
         generation_config = self._build_generation_config([request])
 
         with self._state_lock:
