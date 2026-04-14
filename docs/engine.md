@@ -147,8 +147,9 @@ knobs `manual_eviction`, `allow_block_sharing`, `max_blocks_per_request`, `use_a
 When `attn_implementation` resolves to paged FlashAttention and `max_blocks_per_request` is left
 unset in Evalution, the engine seeds the block-table decode fast path defaults it needs for that
 runtime. Evalution also keeps a compatibility monkeypatch for `transformers` builds that still
-need FA2 decode-fast-path enablement, and that fallback defaults `use_cuda_graph=False`. Evalution
-keeps a session-owned manager alive while stop
+need FA2 decode-fast-path enablement, and that fallback defaults `use_cuda_graph=False`. Set
+`EVALUTION_PATCH_TRANSFOMRERS=0` to skip Evalution's local Transformers/FlashAttention monkey
+patches entirely; the default is enabled. Evalution keeps a session-owned manager alive while stop
 strings and sampling settings stay compatible, then tears it down on `gc()` between suites or on
 `close()`.
 

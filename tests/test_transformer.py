@@ -844,6 +844,68 @@ def test_transformer_build_skips_pending_nogil_pr_warning_when_gil_is_enabled(mo
     assert warnings == []
 
 
+def test_transformer_build_skips_monkey_patches_when_patch_env_disabled(monkeypatch) -> None:
+    """Verify transformer build skips local monkey patches when the env gate disables them."""
+    import evalution.engines.transformers as transformer_module
+
+    fake_session = object()
+    varlen_patch_calls: list[str] = []
+    warning_calls: list[str] = []
+
+    monkeypatch.setenv("EVALUTION_PATCH_TRANSFOMRERS", "0")
+    monkeypatch.setattr(
+        "evalution.engines.transformers.transformers_continuous_batching_support",
+        lambda: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        TransformersSession,
+        "from_config",
+        classmethod(lambda cls, engine, model_config: fake_session),
+    )
+    monkeypatch.setattr(
+        transformer_module,
+        "_patch_flash_attn_varlen_fwd_cuda_context_once",
+        lambda: varlen_patch_calls.append("patched"),
+    )
+    monkeypatch.setattr(
+        transformer_module,
+        "_warn_pending_nogil_transformers_pr_once",
+        lambda: warning_calls.append("warned"),
+    )
+
+    assert Transformers(device="cpu").build(Model(path="/tmp/model")) is fake_session
+    assert warning_calls == ["warned"]
+    assert varlen_patch_calls == []
+
+
+def test_transformer_build_applies_monkey_patches_by_default(monkeypatch) -> None:
+    """Verify transformer build applies local monkey patches when the env gate is unset."""
+    import evalution.engines.transformers as transformer_module
+
+    fake_session = object()
+    varlen_patch_calls: list[str] = []
+
+    monkeypatch.delenv("EVALUTION_PATCH_TRANSFOMRERS", raising=False)
+    monkeypatch.setattr(
+        "evalution.engines.transformers.transformers_continuous_batching_support",
+        lambda: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        TransformersSession,
+        "from_config",
+        classmethod(lambda cls, engine, model_config: fake_session),
+    )
+    monkeypatch.setattr(
+        transformer_module,
+        "_patch_flash_attn_varlen_fwd_cuda_context_once",
+        lambda: varlen_patch_calls.append("patched"),
+    )
+    monkeypatch.setattr(transformer_module, "_warn_pending_nogil_transformers_pr_once", lambda: None)
+
+    assert Transformers(device="cpu").build(Model(path="/tmp/model")) is fake_session
+    assert varlen_patch_calls == ["patched"]
+
+
 def test_transformer_monkey_patches_continuous_batching_generation_loop_once(monkeypatch) -> None:
     """Verify transformer monkey patches continuous batching generation loop once."""
     import evalution.engines.transformers as transformer_module
@@ -938,6 +1000,120 @@ def test_transformer_monkey_patch_skips_manager_without_generation_loop(monkeypa
     transformer_module._patch_continuous_batching_manager_cuda_context_once(FakeContinuousBatchingManager)
 
     assert "_run_generation_loop" not in FakeContinuousBatchingManager.__dict__
+
+
+def test_transformer_session_skips_continuous_batching_monkey_patches_when_patch_env_disabled(monkeypatch) -> None:
+    """Verify transformer session skips paged-batching monkey patches when the env gate disables them."""
+    import evalution.engines.transformers as transformer_module
+
+    patch_calls: list[str] = []
+
+    class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
+        def __init__(self) -> None:
+            """Initialize this object."""
+            self.started = False
+
+        def is_running(self) -> bool:
+            """Report whether this manager is already running."""
+            return self.started
+
+        def start(self) -> None:
+            """Start this manager."""
+            self.started = True
+
+    session = TransformersSession(
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(dtype="bfloat16"),
+        tokenizer=SimpleNamespace(),
+        input_device=SimpleNamespace(type="cpu"),
+    )
+
+    monkeypatch.setenv("EVALUTION_PATCH_TRANSFOMRERS", "0")
+    monkeypatch.setattr(transformers, "ContinuousBatchingManager", FakeContinuousBatchingManager)
+    monkeypatch.setattr(
+        transformer_module,
+        "_patch_continuous_batching_manager_cuda_context_once",
+        lambda manager_cls: patch_calls.append(f"cuda:{manager_cls.__name__}"),
+    )
+    monkeypatch.setattr(
+        transformer_module,
+        "_patch_continuous_batching_flash_attention_decode_once",
+        lambda: patch_calls.append("decode"),
+    )
+    monkeypatch.setattr(session, "_build_generation_config", lambda requests: object())
+    monkeypatch.setattr(
+        session,
+        "_build_continuous_batching_manager",
+        lambda **kwargs: FakeContinuousBatchingManager(),
+    )
+
+    manager = session._ensure_continuous_batching_manager(
+        request_signature=("sig",),
+        request=GenerationRequest(prompt="alpha"),
+    )
+
+    assert isinstance(manager, FakeContinuousBatchingManager)
+    assert manager.started is True
+    assert patch_calls == []
+
+
+def test_transformer_session_applies_continuous_batching_monkey_patches_by_default(monkeypatch) -> None:
+    """Verify transformer session applies paged-batching monkey patches when the env gate is unset."""
+    import evalution.engines.transformers as transformer_module
+
+    patch_calls: list[str] = []
+
+    class FakeContinuousBatchingManager:
+        """Provide the fake continuous batching manager helper used by the surrounding tests."""
+        def __init__(self) -> None:
+            """Initialize this object."""
+            self.started = False
+
+        def is_running(self) -> bool:
+            """Report whether this manager is already running."""
+            return self.started
+
+        def start(self) -> None:
+            """Start this manager."""
+            self.started = True
+
+    session = TransformersSession(
+        config=Transformers(attn_implementation="paged|flash_attention_2"),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(dtype="bfloat16"),
+        tokenizer=SimpleNamespace(),
+        input_device=SimpleNamespace(type="cpu"),
+    )
+
+    monkeypatch.delenv("EVALUTION_PATCH_TRANSFOMRERS", raising=False)
+    monkeypatch.setattr(transformers, "ContinuousBatchingManager", FakeContinuousBatchingManager)
+    monkeypatch.setattr(
+        transformer_module,
+        "_patch_continuous_batching_manager_cuda_context_once",
+        lambda manager_cls: patch_calls.append(f"cuda:{manager_cls.__name__}"),
+    )
+    monkeypatch.setattr(
+        transformer_module,
+        "_patch_continuous_batching_flash_attention_decode_once",
+        lambda: patch_calls.append("decode"),
+    )
+    monkeypatch.setattr(session, "_build_generation_config", lambda requests: object())
+    monkeypatch.setattr(
+        session,
+        "_build_continuous_batching_manager",
+        lambda **kwargs: FakeContinuousBatchingManager(),
+    )
+
+    manager = session._ensure_continuous_batching_manager(
+        request_signature=("sig",),
+        request=GenerationRequest(prompt="alpha"),
+    )
+
+    assert isinstance(manager, FakeContinuousBatchingManager)
+    assert manager.started is True
+    assert patch_calls == ["cuda:FakeContinuousBatchingManager", "decode"]
 
 
 @pytest.mark.parametrize(
