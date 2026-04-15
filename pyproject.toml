@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=70.2.0"]
+requires = ["setuptools>=77.0.1,<83"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,7 @@ version = "0.0.4"
 description = "Modern LLM model evaluation for Transformers, SGLang, vLLM, TensorRT-LLM, llama.cpp, GPTQModel, OpenAI-compatible HTTP backends, and OpenVINO."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 dependencies = [
     "datasets>=4.8.3",
     "tokenicer>=0.0.12",
