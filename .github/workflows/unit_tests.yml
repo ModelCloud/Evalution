@@ -113,7 +113,7 @@ jobs:
 
   test:
     needs: [list-test-files, prepare]
-    if: ${{ always() && needs.list-test-files.outputs.files != '[]' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') }}
+    if: ${{ always() && needs.list-test-files.outputs.files != '[]' && (needs.prepare-setuptools.result == 'success' || needs.prepare-setuptools.result == 'skipped') }}
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.list-test-files.outputs.max-parallel) }}
@@ -229,7 +229,7 @@ jobs:
           path: artifacts/*
           if-no-files-found: ignore
 
-  prepare-compat:
+  prepare-setuptools:
     runs-on: ubuntu-latest
     outputs:
       versions: ${{ steps.parser.outputs.versions || '[]' }}
@@ -244,14 +244,14 @@ jobs:
           versions=$(python .github/scripts/ci_loop_versions.py setuptools ">=77.0.1,<83")
           echo "versions=$versions" >> "$GITHUB_OUTPUT"
 
-  check-compat:
-    needs: prepare-compat
-    if: needs.prepare.outputs.versions != '[]'
+  check-setuptools:
+    needs: prepare-setuptools
+    if: needs.prepare-setuptools.outputs.versions != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        version: ${{ fromJSON(needs.prepare.outputs.versions) }}
+        version: ${{ fromJSON(needs.prepare-setuptools.outputs.versions) }}
 
     steps:
       - uses: actions/checkout@v6
