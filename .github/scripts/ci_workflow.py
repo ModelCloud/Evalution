@@ -1,11 +1,18 @@
 import argparse
+import contextlib
+import fcntl
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 from ci_common import append_github_env, append_github_output, run_command
+
+_COMMON_TEST_ENV_FAMILY = "unit_test_common"
+_TENSORRT_LLM_TEST_ENV_FAMILY = "unit_test_tensorrt_llm"
+_TENSORRT_LLM_TEST_FILE = "tests/test_tensorrt_llm_engine.py"
 
 
 def sort_key(path: Path, root: Path) -> tuple[int, str]:
@@ -52,25 +59,78 @@ def command_set_test_metadata(args: argparse.Namespace) -> int:
     return 0
 
 
-def resolve_python_versions(test_file: str, default_python_version: str, default_uv_python: str) -> tuple[str, str]:
-    if test_file == "tests/test_tensorrt_llm_engine.py":
-        return "3.12", "3.12"
-    return default_python_version, default_uv_python
+def sanitize_env_component(value: str) -> str:
+    return re.sub(r"[^0-9A-Za-z_.-]+", "_", value).strip("_") or "shared"
+
+
+def resolve_test_env_signature(
+    test_file: str,
+    default_python_version: str,
+    default_uv_python: str,
+) -> tuple[str, str, str]:
+    if test_file == _TENSORRT_LLM_TEST_FILE:
+        return "3.12", "3.12", _TENSORRT_LLM_TEST_ENV_FAMILY
+    return default_python_version, default_uv_python, _COMMON_TEST_ENV_FAMILY
+
+
+def build_uv_env_name(
+    *,
+    env_family: str,
+    env_scope: str,
+) -> str:
+    safe_scope = sanitize_env_component(env_scope)
+    return f"evalution_{env_family}_{safe_scope}"
+
+
+def env_state_dir(env_name: str) -> Path:
+    state_dir = Path("/opt/uv/.ci-state") / sanitize_env_component(env_name)
+    state_dir.mkdir(parents=True, exist_ok=True)
+    return state_dir
+
+
+@contextlib.contextmanager
+def hold_env_lock(env_name: str):
+    lock_path = env_state_dir(env_name) / "env.lock"
+    with lock_path.open("w", encoding="utf-8") as handle:
+        print(f"waiting for env lock={lock_path}")
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        print(f"acquired env lock={lock_path}")
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def stamp_path(env_name: str, stamp_name: str) -> Path:
+    return env_state_dir(env_name) / f"{sanitize_env_component(stamp_name)}.stamp"
+
+
+def write_stamp(path: Path, message: str) -> None:
+    path.write_text(f"{message}\n", encoding="utf-8")
 
 
 def command_activate_uv_env(args: argparse.Namespace) -> int:
-    python_version, uv_python = resolve_python_versions(
+    python_version, uv_python, env_family = resolve_test_env_signature(
         args.test_file,
         args.python_version,
         args.uv_python,
     )
     append_github_env("PYTHON_VERSION", python_version)
     append_github_env("UV_PYTHON", uv_python)
+    append_github_env("ENV_FAMILY", env_family)
 
-    env_name = (
-        f"evalution_{args.safe_name}_cu{args.cuda_version}_torch{args.torch_version}"
-        f"_py{python_version}_release"
+    env_name = build_uv_env_name(
+        env_family=env_family,
+        env_scope=args.env_scope,
     )
+    append_github_env("ENV_NAME", env_name)
+
+    base_uv_cache_dir = os.environ.get("UV_CACHE_DIR", "")
+    uv_cache_dir = f"{base_uv_cache_dir.rstrip('/')}/{env_name}"
+    Path(uv_cache_dir).mkdir(parents=True, exist_ok=True)
+    append_github_env("UV_CACHE_DIR", uv_cache_dir)
+    print(f"using shared env family={env_family}")
+    print(f"using uv cache dir={uv_cache_dir}")
 
     script = f"""
 set -e
@@ -89,34 +149,76 @@ echo "::endgroup::"
 
 
 def command_setup_uv_env(args: argparse.Namespace) -> int:
-    run_command(
-        [
-            "bash",
-            "-lc",
-            f'echo "::group::init env..."\n'
-            f'/opt/env/init_compiler_torch_only.sh {args.cuda_version} {args.torch_version} {args.uv_python}\n'
-            f'echo "::endgroup::"',
-        ]
-    )
-
-    if args.uv_python == "3.14t":
-        run_command(
-            [
-                "bash",
-                "-lc",
-                'echo "::group::installing flash_attn with 3.14t..."\n'
-                "uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl\n"
-                'echo "::endgroup::"',
-            ]
-        )
-    elif args.uv_python == "3.12":
+    env_name = os.environ.get("ENV_NAME", "")
+    if args.uv_python == "3.12":
         append_github_env("EVALUTION_SKIP_GIL_CHECK", "1")
+
+    if not env_name:
+        print("ENV_NAME is not set; falling back to eager per-step setup.")
+    setup_stamp = stamp_path(env_name, "setup_uv_env") if env_name else None
+
+    with hold_env_lock(env_name or "fallback_setup_uv_env"):
+        if setup_stamp is not None and setup_stamp.exists():
+            print(f"shared env already prepared: {env_name}")
+            return 0
+
         run_command(
             [
                 "bash",
                 "-lc",
-                'echo "::group::installing tensorrt_llm..."\n'
-                "uv pip install tensorrt_llm -U\n"
+                f'echo "::group::init env..."\n'
+                f'/opt/env/init_compiler_torch_only.sh {args.cuda_version} {args.torch_version} {args.uv_python}\n'
+                f'echo "::endgroup::"',
+            ]
+        )
+
+        if args.uv_python == "3.14t":
+            run_command(
+                [
+                    "bash",
+                    "-lc",
+                    'echo "::group::installing flash_attn with 3.14t..."\n'
+                    "uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl\n"
+                    'echo "::endgroup::"',
+                ]
+            )
+        elif args.uv_python == "3.12":
+            run_command(
+                [
+                    "bash",
+                    "-lc",
+                    'echo "::group::installing tensorrt_llm..."\n'
+                    "uv pip install tensorrt_llm -U\n"
+                    'echo "::endgroup::"',
+                ]
+            )
+            run_command(
+                [
+                    "bash",
+                    "-lc",
+                    'echo "::group::installing flash_attn with 3.12..."\n'
+                    "uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp312-cp312-linux_x86_64.whl\n"
+                    'echo "::endgroup::"',
+                ]
+            )
+        else:
+            run_command(
+                [
+                    "bash",
+                    "-lc",
+                    'echo "::group::installing flash_attn..."\n'
+                    "uv pip install flash-attn\n"
+                    "uv pip show flash-attn\n"
+                    'echo "::endgroup::"',
+                ]
+            )
+
+        run_command(
+            [
+                "bash",
+                "-lc",
+                'echo "::group::installing accelerate..."\n'
+                "uv pip install accelerate -U\n"
                 'echo "::endgroup::"',
             ]
         )
@@ -124,42 +226,18 @@ def command_setup_uv_env(args: argparse.Namespace) -> int:
             [
                 "bash",
                 "-lc",
-                'echo "::group::installing flash_attn with 3.12..."\n'
-                "uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp312-cp312-linux_x86_64.whl\n"
-                'echo "::endgroup::"',
-            ]
-        )
-    else:
-        run_command(
-            [
-                "bash",
-                "-lc",
-                'echo "::group::installing flash_attn..."\n'
-                "uv pip install flash-attn\n"
-                "uv pip show flash-attn\n"
+                'echo "::group::installing gptqmodel..."\n'
+                "uv pip install gptqmodel -U\n"
+                "uv pip show gptqmodel\n"
                 'echo "::endgroup::"',
             ]
         )
 
-    run_command(
-        [
-            "bash",
-            "-lc",
-            'echo "::group::installing accelerate..."\n'
-            "uv pip install accelerate -U\n"
-            'echo "::endgroup::"',
-        ]
-    )
-    run_command(
-        [
-            "bash",
-            "-lc",
-            'echo "::group::installing gptqmodel..."\n'
-            "uv pip install gptqmodel -U\n"
-            "uv pip show gptqmodel\n"
-            'echo "::endgroup::"',
-        ]
-    )
+        if setup_stamp is not None:
+            write_stamp(
+                setup_stamp,
+                f"uv_python={args.uv_python} cuda={args.cuda_version} torch={args.torch_version}",
+            )
     return 0
 
 
@@ -197,17 +275,30 @@ def command_prepare_test_run(args: argparse.Namespace) -> int:
         print("::error::tests/ directory not found.")
         return 1
 
-    run_command(["uv", "pip", "install", "."])
-    run_command(["uv", "pip", "install", "-U", "pytest", "datasets", "rouge_score", "sglang", "pybase64"])
-    run_command(
-        [
-            "bash",
-            "-lc",
-            'echo "::group::pip list"\n'
-            "uv pip list\n"
-            'echo "::endgroup::"',
-        ]
-    )
+    env_name = os.environ.get("ENV_NAME", "")
+    if not env_name:
+        print("ENV_NAME is not set; falling back to eager test preparation.")
+    prepare_stamp = stamp_path(env_name, "prepare_test_run") if env_name else None
+
+    with hold_env_lock(env_name or "fallback_prepare_test_run"):
+        if prepare_stamp is not None and prepare_stamp.exists():
+            print(f"shared test env already prepared: {env_name}")
+            return 0
+
+        run_command(["uv", "pip", "install", "."])
+        run_command(["uv", "pip", "install", "-U", "pytest", "datasets", "rouge_score", "sglang", "pybase64"])
+        run_command(
+            [
+                "bash",
+                "-lc",
+                'echo "::group::pip list"\n'
+                "uv pip list\n"
+                'echo "::endgroup::"',
+            ]
+        )
+
+        if prepare_stamp is not None:
+            write_stamp(prepare_stamp, "project and test dependencies installed")
     return 0
 
 
@@ -263,6 +354,7 @@ def build_parser() -> argparse.ArgumentParser:
     activate_env.add_argument("--torch-version", required=True)
     activate_env.add_argument("--python-version", required=True)
     activate_env.add_argument("--uv-python", required=True)
+    activate_env.add_argument("--env-scope", default="shared")
     activate_env.set_defaults(handler=command_activate_uv_env)
 
     setup_env = subparsers.add_parser("setup-uv-env")
