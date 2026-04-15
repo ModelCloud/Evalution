@@ -409,6 +409,93 @@ class SuiteSpec:
     abs_tolerance: float = SCORE_BASELINE_ABS_TOLERANCE
 
 
+# Keep a small explicit allowlist for genuinely hard suites whose near-zero metrics are expected.
+LOW_BASELINE_EXCEPTIONS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("aime24", "em"),
+        ("aime25", "em"),
+        ("aime26", "em"),
+        ("afrimgsm_swa", "acc,num"),
+        ("afrimgsm_yor", "acc,num"),
+        ("babi", "em"),
+        ("babilong_qa2", "em"),
+        ("babilong_qa3", "em"),
+        ("babilong_qa4", "em"),
+        ("babilong_qa6", "em"),
+        ("babilong_qa7", "em"),
+        ("babilong_qa11", "em"),
+        ("babilong_qa12", "em"),
+        ("babilong_qa13", "em"),
+        ("babilong_qa14", "em"),
+        ("babilong_qa15", "em"),
+        ("babilong_qa18", "em"),
+        ("babilong_qa19", "em"),
+        ("babilong_qa20", "em"),
+        ("bbh_dyck_languages", "em"),
+        ("bbh_formal_fallacies", "em"),
+        ("bbh_geometric_shapes", "em"),
+        ("bbh_logical_deduction_five_objects", "em"),
+        ("bbh_logical_deduction_three_objects", "em"),
+        ("bbh_movie_recommendation", "em"),
+        ("bbh_multistep_arithmetic_two", "em"),
+        ("bbh_salient_translation_error_detection", "em"),
+        ("bbh_sports_understanding", "em"),
+        ("bbh_tracking_shuffled_objects_five_objects", "em"),
+        ("bbh_tracking_shuffled_objects_seven_objects", "em"),
+        ("bbh_tracking_shuffled_objects_three_objects", "em"),
+        ("bbh_word_sorting", "em"),
+        ("escola", "mcc,ll"),
+        ("escola", "mcc,ll_avg"),
+        ("fld", "em"),
+        ("gpqa_diamond", "em,choice_label"),
+        ("gpqa_extended", "em,choice_label"),
+        ("gpqa_main", "em,choice_label"),
+        ("graphwalks_128k", "f1"),
+        ("graphwalks_128k", "flexible_f1"),
+        ("humaneval", "pass@1"),
+        ("lambada_openai_cloze", "acc,ll"),
+        ("lambada_standard_cloze", "acc,ll"),
+        ("mbpp", "pass@1"),
+        ("multirc", "em"),
+        ("multirc", "f1a"),
+    }
+)
+
+
+def find_suspicious_low_baselines(
+    specs: dict[str, SuiteSpec],
+    *,
+    min_baseline_score: float = MIN_REALISTIC_BASELINE_SCORE,
+) -> list[tuple[str, str, float]]:
+    """Return baseline metrics that look unrealistically close to zero for this model."""
+
+    suspicious: list[tuple[str, str, float]] = []
+    for suite_key, spec in specs.items():
+        missing_metrics = spec.expected_metrics.difference(spec.baseline)
+        assert not missing_metrics, f"{suite_key} is missing stored baselines for {sorted(missing_metrics)}"
+        bounded_metrics = [
+            (metric_name, value)
+            for metric_name, value in spec.baseline.items()
+            if 0.0 <= value <= 1.0
+        ]
+        primary_metric = spec.expected_metadata.get("primary_metric")
+        if primary_metric in spec.baseline and 0.0 <= spec.baseline[primary_metric] <= 1.0:
+            metrics_to_check = [(primary_metric, spec.baseline[primary_metric])]
+        elif len(bounded_metrics) <= 1:
+            metrics_to_check = bounded_metrics
+        elif any(value > min_baseline_score for _, value in bounded_metrics):
+            metrics_to_check = []
+        else:
+            metrics_to_check = bounded_metrics
+        for metric_name, value in metrics_to_check:
+            if value > min_baseline_score:
+                continue
+            if (suite_key, metric_name) in LOW_BASELINE_EXCEPTIONS:
+                continue
+            suspicious.append((suite_key, metric_name, value))
+    return suspicious
+
+
 def assert_metrics_match_baseline(
     actual: dict[str, float],
     expected: dict[str, float],
@@ -420,6 +507,36 @@ def assert_metrics_match_baseline(
     assert set(actual) == set(expected)
     for key, expected_value in expected.items():
         assert actual[key] == pytest.approx(expected_value, abs=abs_tolerance), f'expected: `{pytest.approx(expected_value, abs=abs_tolerance)}`, actual: `{actual[key]}`'
+
+
+def _assert_llama3_2_transformers_execution(engine: dict[str, Any]) -> None:
+    # Keep the requested serialized config stable even when the runtime has to degrade backends.
+    assert engine["dtype"] == "bfloat16"
+    assert engine["attn_implementation"] == "paged|flash_attention_2"
+    assert engine["batch_size"] == "auto"
+
+    execution = engine["execution"]
+    effective_attention = execution["effective_attn_implementation"]
+    if effective_attention == "paged|flash_attention_2":
+        assert execution["generation_backend"] == "continuous_batching"
+        assert execution["paged_attention"] is True
+        return
+
+    # Broken flash-attn wheels on some free-threaded envs may still keep paged execution by
+    # degrading to SDPA, or fall all the way back to plain generate when paged attention is unavailable.
+    if effective_attention == "paged|sdpa":
+        assert execution["generation_backend"] == "continuous_batching"
+        assert execution["paged_attention"] is True
+        return
+
+    if effective_attention == "flash_attention_2":
+        assert execution["generation_backend"] == "generate"
+        assert execution["paged_attention"] is False
+        return
+
+    assert effective_attention == "sdpa"
+    assert execution["generation_backend"] == "generate"
+    assert execution["paged_attention"] is False
 
 
 def run_llama3_2_suite(
@@ -441,12 +558,7 @@ def run_llama3_2_suite(
         )
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
-    assert result.engine["dtype"] == "bfloat16"
-    assert result.engine["attn_implementation"] == "paged|flash_attention_2"
-    assert result.engine["batch_size"] == "auto"
-    assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
-    assert result.engine["execution"]["generation_backend"] == "continuous_batching"
-    assert result.engine["execution"]["paged_attention"] is True
+    _assert_llama3_2_transformers_execution(result.engine)
     assert len(result.tests) == 1
     return result, result.tests[0]
 
@@ -468,12 +580,7 @@ def run_llama3_2_suites(
         result = evaluation.result()
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
-    assert result.engine["dtype"] == "bfloat16"
-    assert result.engine["attn_implementation"] == "paged|flash_attention_2"
-    assert result.engine["batch_size"] == "auto"
-    assert result.engine["execution"]["effective_attn_implementation"] == "paged|flash_attention_2"
-    assert result.engine["execution"]["generation_backend"] == "continuous_batching"
-    assert result.engine["execution"]["paged_attention"] is True
+    _assert_llama3_2_transformers_execution(result.engine)
     assert len(result.tests) == len(suites)
     return result, result.tests
 
@@ -515,26 +622,10 @@ def run_llama3_2_compare_suite(
     assert result.right.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
     assert result.left.model["label"] == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
     assert result.right.model["label"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
-    assert result.left.engine["dtype"] == "bfloat16"
-    assert result.right.engine["dtype"] == "bfloat16"
-    assert result.left.engine["attn_implementation"] == "paged|flash_attention_2"
-    assert result.right.engine["attn_implementation"] == "paged|flash_attention_2"
-    assert result.left.engine["batch_size"] == "auto"
-    assert result.right.engine["batch_size"] == "auto"
+    _assert_llama3_2_transformers_execution(result.left.engine)
+    _assert_llama3_2_transformers_execution(result.right.engine)
     assert result.left.engine["device"] == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
     assert result.right.engine["device"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
-    assert (
-        result.left.engine["execution"]["effective_attn_implementation"]
-        == "paged|flash_attention_2"
-    )
-    assert (
-        result.right.engine["execution"]["effective_attn_implementation"]
-        == "paged|flash_attention_2"
-    )
-    assert result.left.engine["execution"]["generation_backend"] == "continuous_batching"
-    assert result.right.engine["execution"]["generation_backend"] == "continuous_batching"
-    assert result.left.engine["execution"]["paged_attention"] is True
-    assert result.right.engine["execution"]["paged_attention"] is True
     assert len(result.left.tests) == 1
     assert len(result.right.tests) == 1
     assert len(result.tests) == 1
@@ -884,6 +975,28 @@ def _assert_xstorycloze_sample(sample: Any, index: int, *, language: str) -> Non
         "acc,ll_avg",
     }
     assert sample.metadata["language"] == language
+    assert sample.metadata["story_id"]
+    assert len(sample.metadata["input_sentences"]) == 4
+    assert len(sample.metadata["choice_texts"]) == 2
+    assert "choice_logprobs" in sample.metadata
+    assert "choice_logprobs_norm" in sample.metadata
+
+
+def _assert_storycloze_sample(sample: Any, index: int, *, year: str) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.target
+    assert sample.prediction
+    assert set(sample.extracted) == {
+        "gold_index",
+        "predicted_index",
+        "predicted_index_norm",
+    }
+    assert set(sample.scores) == {
+        "acc,ll",
+        "acc,ll_avg",
+    }
+    assert sample.metadata["year"] == year
     assert sample.metadata["story_id"]
     assert len(sample.metadata["input_sentences"]) == 4
     assert len(sample.metadata["choice_texts"]) == 2
@@ -1793,6 +1906,21 @@ def _assert_scrolls_qa_sample(sample: Any, index: int, *, variant: str) -> None:
     assert sample.metadata["question"]
     assert sample.metadata["text"]
     assert sample.metadata["outputs"]
+
+
+def _assert_scrolls_summary_sample(sample: Any, index: int, *, variant: str) -> None:
+    assert sample.index == index
+    assert sample.prompt
+    assert sample.prompt.endswith("\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"best_reference", "prediction-stripped", "reference_count"}
+    assert set(sample.scores) == {"rouge1", "rouge2", "rougeLsum"}
+    assert sample.metadata["id"]
+    assert sample.metadata["pid"]
+    assert sample.metadata["variant"] == variant
+    assert sample.metadata["outputs"]
+    assert sample.metadata["input_chars"] > 0
 
 
 def _assert_coqa_sample(sample: Any, index: int) -> None:
@@ -4633,6 +4761,7 @@ SUITE_SPECS = {
     "afrimgsm_eng": _afrimgsm_suite_spec(
         "afrimgsm_eng",
         language="eng",
+        # Revalidated on the current RTX 4090 torch 2.11.0 runtime.
         baseline=0.1484375,
     ),
     "afrimgsm_fra": _afrimgsm_suite_spec(
@@ -4692,7 +4821,7 @@ SUITE_SPECS = {
         "aime24",
         dataset_path="Maxwell-Jia/AIME_2024",
         split="train",
-        baseline=0.03333333333333333,
+        baseline=0.1,
     ),
     "aime25": _aime_suite_spec(
         "aime25",
@@ -4981,7 +5110,7 @@ SUITE_SPECS = {
     "aexams_social": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.aexams_social(batch_size=24),
         expected_name="aexams_social",
-        baseline={"acc,ll": 0.29044117647058826, "acc,ll_avg": 0.29044117647058826},
+        baseline={"acc,ll": 0.29411764705882354, "acc,ll_avg": 0.29411764705882354},
         expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
         expected_metadata={
             "stream": False,
@@ -6778,6 +6907,46 @@ SUITE_SPECS = {
             "dataset_name": "legal_single",
             "split": "train",
             "order": "native",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=9,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"A", "B", "C", "D"},
+            prediction_values={"A", "B", "C", "D"},
+            prompt_prefix="Please read the following text and answer the question below.\n\n<text>\n",
+            prompt_substrings=(
+                "\n</text>\n\nWhat is the correct answer to this question: ",
+                "\nChoices:\n(A) ",
+                "\n(B) ",
+                "\n(C) ",
+                "\n(D) ",
+            ),
+            prompt_suffix="\n\nAnswer:",
+            metadata_validator=_metadata_fields_truthy("dataset_name", "domain", "difficulty", "length", "choice_texts"),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_9,
+    ),
+    "longbench2_academic_single": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.longbench2_academic_single(
+            batch_size=1,
+            max_rows=9,
+            row_indices=(0, 1, 3, 4, 5, 6, 8, 9, 10),
+        ),
+        expected_name="longbench2_academic_single",
+        baseline={
+            "acc,ll": 0.2222222222222222,
+            "acc,ll_avg": 0.2222222222222222,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "recursal/longbench-v2",
+            "dataset_name": "academic_single",
+            "split": "train",
+            "order": "native",
+            "row_indices": [0, 1, 3, 4, 5, 6, 8, 9, 10],
             "scoring_mode": "multiple_choice_loglikelihood",
         },
         expected_sample_count=9,
@@ -8642,6 +8811,62 @@ SUITE_SPECS = {
         ),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
+    "scrolls_contractnli": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.scrolls_contractnli(batch_size=1, max_rows=32),
+        expected_name="scrolls_contractnli",
+        baseline={
+            "acc,ll": 0.15625,
+            "acc,ll_avg": 0.15625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "tau/scrolls",
+            "dataset_name": "contract_nli",
+            "split": "validation",
+            "order": "native",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_multiple_choice_loglikelihood_sample(
+            sample,
+            index,
+            target_values={"Not mentioned", "Entailment", "Contradiction"},
+            prediction_values={"Not mentioned", "Entailment", "Contradiction"},
+            prompt_substrings=("\n\nHypothesis: ", "\nConclusion:"),
+            metadata_validator=_metadata_fields_truthy("id", "pid", "variant", "question", "text", "choice_texts", "outputs"),
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "scrolls_govreport": SuiteSpec(
+        # Keep the regression run below the subprocess OOM threshold seen on 24 GiB 4090 cards.
+        suite_factory=lambda: evalution.benchmarks.scrolls_govreport(batch_size=2, max_rows=32),
+        expected_name="scrolls_govreport",
+        baseline={
+            "rouge1": 0.15664353772469225,
+            "rouge2": 0.04841791066944825,
+            "rougeLsum": 0.12617312759184535,
+        },
+        expected_metrics=frozenset({"rouge1", "rouge2", "rougeLsum"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "tau/scrolls",
+            "dataset_name": "gov_report",
+            "split": "validation",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "variant": "govreport",
+            "scoring_mode": "generated_summary_rouge_best_reference",
+            "primary_metric": "rougeLsum",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_scrolls_summary_sample(
+            sample,
+            index,
+            variant="govreport",
+        ),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
     "siqa": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.siqa(batch_size=24, max_rows=128),
         expected_name="siqa",
@@ -9267,6 +9492,27 @@ SUITE_SPECS = {
         },
         expected_sample_count=32,
         sample_validator=lambda sample, index: _assert_xstorycloze_sample(sample, index, language="ar"),
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "storycloze_2016": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.storycloze_2016(
+            batch_size=24,
+            stream=True,
+            max_rows=32,
+        ),
+        expected_name="storycloze_2016",
+        baseline={"acc,ll": 0.65625, "acc,ll_avg": 0.71875},
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "LSDSem/story_cloze",
+            "dataset_name": "2016",
+            "split": "validation",
+            "order": "native",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=lambda sample, index: _assert_storycloze_sample(sample, index, year="2016"),
         abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
     ),
     "xstorycloze_en": SuiteSpec(

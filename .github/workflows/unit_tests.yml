@@ -52,42 +52,14 @@ jobs:
       - name: Set matrix config
         id: config
         run: |
-          echo "max-parallel=${{ github.event.inputs['max-parallel'] || '8' }}" >> "$GITHUB_OUTPUT"
+          python3 .github/scripts/ci_workflow.py set-matrix-config \
+            --max-parallel "${{ github.event.inputs['max-parallel'] || '8' }}"
 
       - name: List test files
         id: files
-        env:
-          TEST_REGEX: ${{ github.event.inputs.test_regex || '' }}
         run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import pathlib
-          import re
-
-          root = pathlib.Path("tests")
-          pattern = os.environ.get("TEST_REGEX", "")
-          regex = re.compile(pattern) if pattern else None
-
-          def sort_key(path: pathlib.Path) -> tuple[int, str]:
-            # Prioritize direct children of tests/ before nested test files.
-            rel = path.relative_to(root)
-            return (len(rel.parts), path.as_posix())
-
-          files = []
-          for path in sorted(root.rglob("test_*.py"), key=sort_key):
-            rel = path.as_posix()
-            if regex and not regex.search(rel):
-              continue
-            files.append(rel)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-            print(f"files={json.dumps(files)}", file=fh)
-
-          print("Matched test files:")
-          for rel in files:
-            print(rel)
-          PY
+          python3 .github/scripts/ci_workflow.py list-tests \
+            --test-regex "${{ github.event.inputs.test_regex || '' }}"
 
   test:
     needs: list-test-files
@@ -124,92 +96,41 @@ jobs:
       - name: Set test metadata
         id: meta
         run: |
-          test_file="${{ matrix.test-file }}"
-          safe_name="${test_file//\//__}"
-          safe_name="${safe_name//./_}"
-          requires_gpu="true"
-          if grep -q '^# GPU=-1$' "$test_file"; then
-            requires_gpu="false"
-          fi
-          echo "SAFE_NAME=$safe_name" >> "$GITHUB_ENV"
-          echo "TEST_REQUIRES_GPU=$requires_gpu" >> "$GITHUB_ENV"
-          echo "safe-name=$safe_name" >> "$GITHUB_OUTPUT"
-          echo "requires-gpu=$requires_gpu" >> "$GITHUB_OUTPUT"
+          source /opt/uv/setup_uv_venv.sh evalution_unit_pre_env 3.14t
+          uv pip install pyyaml -U
+          python3 .github/scripts/ci_workflow.py set-test-metadata \
+            --test-file "${{ matrix.test-file }}"
 
       - name: Activate uv env
         run: |
-          python_version="${PYTHON_VERSION}"
-          uv_python="${UV_PYTHON}"
+          safe_ref=$(printf '%s' "${{ env.ref }}" | sed -e 's/[\\/]/_/g' -e 's/^refs_heads_//')
 
-          if [ "${{ matrix.test-file }}" = "tests/test_tensorrt_llm_engine.py" ]; then
-            python_version="3.12"
-            uv_python="3.12"
-          fi
+          python3 .github/scripts/ci_workflow.py activate-uv-env \
+            --test-file "${{ matrix.test-file }}" \
+            --safe-name "${SAFE_NAME}_$safe_ref" \
+            --cuda-version "${{ env.CUDA_VERSION }}" \
+            --torch-version "${{ env.TORCH_VERSION }}" \
+            --python-version "${PYTHON_VERSION}" \
+            --uv-python "${UV_PYTHON}"
 
-          echo "PYTHON_VERSION=$python_version" >> "$GITHUB_ENV"
-          echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
-
-          env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
-          echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
-          source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
-          python -VV
 
       - name: Setup uv env
         run: |
-          /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
-
-          if [ "${UV_PYTHON}" = "3.14t" ]; then
-            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
-          elif [ "${UV_PYTHON}" = "3.12" ]; then
-            echo "EVALUTION_SKIP_GIL_CHECK=1" >> "$GITHUB_ENV"
-            uv pip install tensorrt_llm -U
-            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp312-cp312-linux_x86_64.whl
-          else
-            echo "== installing flash-attn =="
-            uv pip install flash-attn
-            uv pip show flash-attn
-          fi
-          uv pip install accelerate -U
-          echo "== installing gptqmodel =="
-          uv pip install gptqmodel -U
-          uv pip show gptqmodel
+          python3 .github/scripts/ci_workflow.py setup-uv-env \
+            --cuda-version "${{ env.CUDA_VERSION }}" \
+            --torch-version "${{ env.TORCH_VERSION }}" \
+            --uv-python "${UV_PYTHON}"
 
       - name: Print uv env
         run: |
-          echo "::group::uv python list"
-          uv python list
-          echo "::endgroup::"
-          
-          echo "== python =="
-          python -VV
-          which python
-          which pip || true
-
-          echo "== nvcc =="
-          nvcc --version
-
-          echo "::group::pip list"
-          uv pip list
-          echo "::endgroup::"
-
-          echo "== torch =="
-          uv pip show torch || true
-
-          echo "::group::project files"
-          ls -ahl
-          echo "::endgroup::"
-
-          echo "::group::git status"
-          git config --global --add safe.directory $(pwd)
-          git status
-          echo "::endgroup::"
+          python3 .github/scripts/ci_workflow.py print-uv-env
 
       - name: Find suitable GPU
         if: ${{ steps.meta.outputs.requires-gpu == 'true' }}
         env:
           BASE_URL: http://10.0.14.249
         run: |
-          python3 .github/scripts/allocate_gpu.py \
+          python3 .github/scripts/ci_gpu.py allocate \
             --base-url "$BASE_URL" \
             --run-id "${{ github.run_id }}" \
             --test "${{ matrix.test-file }}" \
@@ -221,19 +142,8 @@ jobs:
         env:
           BASE_URL: http://10.0.14.249
         run: |
-          if [ ! -d tests ]; then
-            echo "::error::tests/ directory not found."
-            exit 1
-          fi
-          
-          uv pip install .
-          uv pip install -U pytest datasets rouge_score sglang pybase64
-          
-          echo "::group::pip list"
-          uv pip list
-          echo "::endgroup::"
-
-          python .github/scripts/run_tests.py \
+          python3 .github/scripts/ci_workflow.py prepare-test-run
+          python3 .github/scripts/ci_tests.py run \
             --base-url "$BASE_URL" \
             --run-id "${{ github.run_id }}" \
             --test-file "${{ matrix.test-file }}" \
@@ -247,17 +157,13 @@ jobs:
         env:
           BASE_URL: http://10.0.14.249
         run: |
-          if [ -n "${CUDA_VISIBLE_DEVICES:-}" ] && [ -n "${STEP_TIMESTAMP:-}" ]; then
-            python3 .github/scripts/release_gpu.py \
-              --base-url "$BASE_URL" \
-              --run-id "${{ github.run_id }}" \
-              --gpu-id "${CUDA_VISIBLE_DEVICES}" \
-              --timestamp "${STEP_TIMESTAMP}" \
-              --test "${{ matrix.test-file }}" \
-              --runner "${{ runner.name }}"
-          else
-            echo "Skip GPU release because allocation metadata is missing."
-          fi
+          python3 .github/scripts/ci_workflow.py release-gpu-if-present \
+            --base-url "$BASE_URL" \
+            --run-id "${{ github.run_id }}" \
+            --cuda-visible-devices "${CUDA_VISIBLE_DEVICES:-}" \
+            --step-timestamp "${STEP_TIMESTAMP:-}" \
+            --test-file "${{ matrix.test-file }}" \
+            --runner "${{ runner.name }}"
 
       - name: Upload test artifacts
         if: always()

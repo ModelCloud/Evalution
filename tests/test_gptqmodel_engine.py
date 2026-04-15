@@ -172,8 +172,15 @@ def test_gptqmodel_session_generate_continuous_refills_paged_manager_while_calle
             assert add_special_tokens is False
             del kwargs
             if isinstance(prompts, str):
-                return {"input_ids": [11, 12, 13]}
-            return {"input_ids": [[11, 12, 13] for _ in prompts]}
+                return {
+                    "input_ids": torch.tensor([[11, 12, 13]]),
+                    "attention_mask": torch.tensor([[1, 1, 1]]),
+                }
+            batch_size = len(prompts)
+            return {
+                "input_ids": torch.tensor([[11, 12, 13] for _ in range(batch_size)]),
+                "attention_mask": torch.tensor([[1, 1, 1] for _ in range(batch_size)]),
+            }
 
         def decode(self, token_ids, *, skip_special_tokens=False):
             """Implement decode for fake tokenizer."""
@@ -198,6 +205,7 @@ def test_gptqmodel_session_generate_continuous_refills_paged_manager_while_calle
             """Initialize this object."""
             self.config = PretrainedConfig()
             self.config._attn_implementation = "flash_attention_2"
+            self.device = "cuda"
 
         def eval(self):
             """Implement eval for fake model."""

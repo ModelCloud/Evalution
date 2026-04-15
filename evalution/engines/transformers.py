@@ -292,7 +292,6 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
                     flash_attn_with_kvcache = lazy_import_paged_flash_attention(self.config._attn_implementation)[1]
                     conditions = [
                         self.cache.num_sliding_attention_groups == 0,
-                        torch.cuda.is_available(),
                         flash_attn_with_kvcache is not None,
                     ]
                     if not all(conditions):
@@ -359,7 +358,7 @@ class TransformersSession(BaseTransformerSession):
     def from_config(cls, config: Transformers, model_config: Model) -> TransformersSession:
         """Implement from config for transformers session."""
         runtime = load_transformer_runtime(config, model_config)
-        raw_attn_implementation = config.attn_implementation or runtime.requested_attn_implementation
+        raw_attn_implementation = runtime.requested_attn_implementation or config.attn_implementation
         paged_attention_enabled = config.continuous_batching and _resolve_paged_attention(
             attn_implementation=raw_attn_implementation,
             model=runtime.model,
@@ -822,6 +821,33 @@ class TransformersSession(BaseTransformerSession):
             yield
         finally:
             setter(active_attention)
+
+    # Standard generation should also honor the session-selected backend instead of whatever the
+    # model happened to load with before compatibility fallback rewrote attention settings.
+    @contextmanager
+    def _generation_attention_context(self) -> Iterator[None]:
+        active_attention = self.effective_attn_implementation or self.requested_attn_implementation
+        if not isinstance(active_attention, str):
+            yield
+            return
+
+        setter = getattr(self.model, "set_attn_implementation", None)
+        if not callable(setter):
+            yield
+            return
+
+        target_attention = _base_attn_implementation(active_attention)
+        if target_attention is None:
+            yield
+            return
+
+        previous_attention = getattr(self.model.config, "_attn_implementation", None)
+        setter(target_attention)
+        try:
+            yield
+        finally:
+            if isinstance(previous_attention, str):
+                setter(previous_attention)
 
     # Disable paged attention after a real failure and pin a safer fixed-batch fallback for the rest of the suite.
     def _disable_paged_attention(self, exc: Exception, *, fallback_batch_size: int) -> None:

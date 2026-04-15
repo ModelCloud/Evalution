@@ -9,8 +9,19 @@ def test_only_explicit_non_stream_benchmarks_keep_stream_false_defaults() -> Non
     benchmark_dir = Path(__file__).resolve().parents[1] / "evalution" / "benchmarks"
     explicit_non_stream = {
         "aexams.py",
+        "cmmlu.py",
         "coqa.py",
+        "fewshot_multiple_choice.py",
+        "kmmlu.py",
+        "mgsm.py",
+        "mlqa.py",
+        "mmlu_cf.py",
+        "mmlu_redux.py",
+        "qasper.py",
         "race.py",
+        "ruler.py",
+        "scrolls.py",
+        "simple_cooccurrence_bias.py",
     }
 
     offenders: list[str] = []

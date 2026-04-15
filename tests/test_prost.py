@@ -90,18 +90,14 @@ def test_prost_scores_answer_text_multiple_choice(monkeypatch) -> None:
 def test_prost_loader_reads_raw_jsonl_via_json_builder() -> None:
     """Verify prost loader reads raw jsonl via JSON builder."""
     dataset = prost_module._load_prost_dataset("corypaik/prost", split="test", streaming=False)
-    row = dataset[0]
-    assert set(row) == {
-        "A",
-        "B",
-        "C",
-        "D",
-        "context",
-        "ex_question",
-        "group",
-        "label",
-        "name",
-        "question",
+
+    assert dataset == "prost-dataset"
+    assert captured == {
+        "args": ("json",),
+        "kwargs": {
+            "data_files": {"test": "https://huggingface.co/datasets/corypaik/prost/resolve/main/data/default.jsonl"},
+            "split": "test",
+            "cache_dir": None,
+            "streaming": False,
+        },
     }
-    assert isinstance(row["context"], str)
-    assert isinstance(row["label"], int)

@@ -18,9 +18,9 @@ from evalution.results import SampleResult, TestResult
 from evalution.benchmarks.data import (
     apply_order,
     doc_count,
-    limit_docs,
     load_suite_dataset,
     normalize_order,
+    select_docs,
 )
 from evalution.benchmarks.execution import (
     AUTO_BATCH_PREVIEW_ROWS,
@@ -58,6 +58,8 @@ class BaseTestSuite(TestSuite):
     # Materialize datasets by default; benchmarks that rely on streaming opt in explicitly.
     stream: bool = DEFAULT_STREAM
     max_rows: int | None = None
+    # Allow deterministic test-only subsets when a benchmark's first rows are too large to run.
+    row_indices: tuple[int, ...] | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
 
@@ -155,6 +157,9 @@ class BaseTestSuite(TestSuite):
             "stream": self.stream,
             "generation_submission_mode": generation_submission_mode,
         }
+        if self.row_indices is not None:
+            metadata["row_indices"] = list(self.row_indices)
+        return metadata
 
     # Execute the shared dataset, batching, generation, and scoring pipeline.
     def evaluate(self, session: InferenceSession) -> TestResult:
@@ -172,7 +177,11 @@ class BaseTestSuite(TestSuite):
             stream=self.stream,
         )
 
-        docs = limit_docs(loaded_docs, self.max_rows)
+        docs = select_docs(
+            loaded_docs,
+            row_indices=self.row_indices,
+            max_rows=self.max_rows,
+        )
         if resolved_order != "native" and self.stream:
             raise ValueError("benchmark `stream=True` requires `order='native'`")
         if self.requires_full_doc_materialization() or resolved_order != "native":
