@@ -103,9 +103,11 @@ jobs:
 
       - name: Activate uv env
         run: |
+          safe_ref=$(printf '%s' "${{ env.ref }}" | sed 's/[\\/]/_/g')
+
           python3 .github/scripts/ci_workflow.py activate-uv-env \
             --test-file "${{ matrix.test-file }}" \
-            --safe-name "${SAFE_NAME}_${{ env.ref }}" \
+            --safe-name "${SAFE_NAME}_$safe_ref" \
             --cuda-version "${{ env.CUDA_VERSION }}" \
             --torch-version "${{ env.TORCH_VERSION }}" \
             --python-version "${PYTHON_VERSION}" \
