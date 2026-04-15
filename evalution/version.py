@@ -11,4 +11,4 @@ from importlib.metadata import PackageNotFoundError, version as package_version
 try:
     __version__ = package_version("Evalution")
 except PackageNotFoundError:
-    __version__ = "0.0.1"
+    __version__ = "0.0.4"
