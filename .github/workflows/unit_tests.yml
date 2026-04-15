@@ -103,7 +103,7 @@ jobs:
 
       - name: Activate uv env
         run: |
-          safe_ref=$(printf '%s' "${{ env.ref }}" | sed 's/[\\/]/_/g')
+          safe_ref=$(printf '%s' "${{ env.ref }}" | sed -e 's/[\\/]/_/g' -e 's/^refs_heads_//')
 
           python3 .github/scripts/ci_workflow.py activate-uv-env \
             --test-file "${{ matrix.test-file }}" \
