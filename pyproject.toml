@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=80"]
+requires = ["setuptools>=77.0.1,<83"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Evalution"
-version = "0.0.3"
+version = "0.0.4"
 description = "Modern LLM model evaluation for Transformers, SGLang, vLLM, TensorRT-LLM, llama.cpp, GPTQModel, OpenAI-compatible HTTP backends, and OpenVINO."
 readme = "README.md"
 requires-python = ">=3.10"
