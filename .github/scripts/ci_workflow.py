@@ -74,19 +74,6 @@ def command_activate_uv_env(args: argparse.Namespace) -> int:
 
     script = f"""
 set -e
-echo "::group::uv cache dir"
-uv cache dir
-ls -alh "$(uv cache dir)" || true
-echo "::endgroup::"
-echo "::group::ls -alh /opt/uv"
-ls -alh /opt/uv
-echo "::endgroup::"
-echo "::group::ls -alh /opt/uv/cache"
-ls -alh /opt/uv/cache
-echo "::endgroup::"
-echo "::group::ls -alh /opt/uv/cache/uv"
-ls -alh /opt/uv/cache/uv
-echo "::endgroup::"
 echo "::group::printenv"
 printenv | grep UV_
 echo "::endgroup::"
