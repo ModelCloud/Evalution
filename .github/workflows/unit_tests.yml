@@ -86,6 +86,9 @@ jobs:
 
       - name: Activate common uv env
         run: |
+          source /opt/uv/setup_uv_venv.sh evalution_unit_pre_env 3.14t
+          uv pip install pyyaml -U
+
           safe_ref=$(printf '%s' "${{ env.ref }}" | sed -e 's/[\\/]/_/g' -e 's/^refs_heads_//')
 
           python3 .github/scripts/ci_workflow.py activate-uv-env \
