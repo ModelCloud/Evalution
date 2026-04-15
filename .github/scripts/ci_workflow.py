@@ -38,6 +38,10 @@ def command_list_tests(args: argparse.Namespace) -> int:
         files.append(rel)
 
     append_github_output("files", json.dumps(files))
+    append_github_output(
+        "has-common-tests",
+        "true" if any(rel != _TENSORRT_LLM_TEST_FILE for rel in files) else "false",
+    )
     print("Matched test files:")
     for rel in files:
         print(rel)
@@ -49,13 +53,17 @@ def command_set_test_metadata(args: argparse.Namespace) -> int:
     safe_name = args.test_file.replace("/", "__").replace(".", "_")
     lines = test_file.read_text(encoding="utf-8").splitlines()
     requires_gpu = "false" if any(line == "# GPU=-1" for line in lines) else "true"
+    env_family = resolve_test_env_signature(args.test_file, "", "")[2]
 
     append_github_env("SAFE_NAME", safe_name)
     append_github_env("TEST_REQUIRES_GPU", requires_gpu)
+    append_github_env("ENV_FAMILY", env_family)
     append_github_output("safe-name", safe_name)
     append_github_output("requires-gpu", requires_gpu)
+    append_github_output("env-family", env_family)
     print(f"safe-name={safe_name}")
     print(f"requires-gpu={requires_gpu}")
+    print(f"env-family={env_family}")
     return 0
 
 

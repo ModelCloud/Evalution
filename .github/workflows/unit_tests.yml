@@ -42,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       files: ${{ steps.files.outputs.files }}
+      has-common-tests: ${{ steps.files.outputs.has-common-tests }}
       max-parallel: ${{ steps.config.outputs.max-parallel }}
     steps:
       - name: Checkout Code
@@ -61,9 +62,55 @@ jobs:
           python3 .github/scripts/ci_workflow.py list-tests \
             --test-regex "${{ github.event.inputs.test_regex || '' }}"
 
-  test:
+  prepare:
     needs: list-test-files
-    if: needs.list-test-files.outputs.files != '[]'
+    if: needs.list-test-files.outputs.has-common-tests == 'true'
+    runs-on: [ self-hosted, xeon5 ]
+    container:
+      image: 10.0.13.31:5000/nvidia/cuda:132-ubuntu24.04_0325
+      volumes:
+        - /monster/ci/env/entrypoint.sh:/entrypoint.sh
+        - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
+        - /dev/dri/by-path:/dev/dri/by-path
+        - /monster/ci/models:/monster/data/model
+        - /monster/ci/dataset:/monster/data/model/dataset
+        - /monster/ci/huggingface:/github/home/.cache/huggingface
+        - /monster/ci/uv:/opt/uv
+        - /monster/ci/env:/opt/env
+        - /monster/ci/dist:/opt/dist
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.ref }}
+
+      - name: Activate common uv env
+        run: |
+          safe_ref=$(printf '%s' "${{ env.ref }}" | sed -e 's/[\\/]/_/g' -e 's/^refs_heads_//')
+
+          python3 .github/scripts/ci_workflow.py activate-uv-env \
+            --test-file "tests/test_api.py" \
+            --safe-name "prepare_common_env" \
+            --cuda-version "${{ env.CUDA_VERSION }}" \
+            --torch-version "${{ env.TORCH_VERSION }}" \
+            --python-version "${PYTHON_VERSION}" \
+            --uv-python "${UV_PYTHON}" \
+            --env-scope "$safe_ref"
+
+      - name: Setup common uv env
+        run: |
+          python3 .github/scripts/ci_workflow.py setup-uv-env \
+            --cuda-version "${{ env.CUDA_VERSION }}" \
+            --torch-version "${{ env.TORCH_VERSION }}" \
+            --uv-python "${UV_PYTHON}"
+
+      - name: Prepare common test env
+        run: |
+          python3 .github/scripts/ci_workflow.py prepare-test-run
+
+  test:
+    needs: [list-test-files, prepare]
+    if: ${{ always() && needs.list-test-files.outputs.files != '[]' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') }}
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.list-test-files.outputs.max-parallel) }}
@@ -116,6 +163,7 @@ jobs:
 
 
       - name: Setup uv env
+        if: ${{ steps.meta.outputs.env-family != 'unit_test_common' }}
         run: |
           python3 .github/scripts/ci_workflow.py setup-uv-env \
             --cuda-version "${{ env.CUDA_VERSION }}" \
@@ -139,11 +187,15 @@ jobs:
             --count "1" \
             --require-single
 
+      - name: Prepare test run
+        if: ${{ steps.meta.outputs.env-family != 'unit_test_common' }}
+        run: |
+          python3 .github/scripts/ci_workflow.py prepare-test-run
+
       - name: Run test
         env:
           BASE_URL: http://10.0.14.249
         run: |
-          python3 .github/scripts/ci_workflow.py prepare-test-run
           python3 .github/scripts/ci_tests.py run \
             --base-url "$BASE_URL" \
             --run-id "${{ github.run_id }}" \
