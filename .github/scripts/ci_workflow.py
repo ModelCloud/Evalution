@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -71,6 +72,11 @@ def command_activate_uv_env(args: argparse.Namespace) -> int:
         f"evalution_{args.safe_name}_cu{args.cuda_version}_torch{args.torch_version}"
         f"_py{python_version}_release"
     )
+    base_uv_cache_dir = os.environ.get("UV_CACHE_DIR", "")
+    uv_cache_dir = f"{base_uv_cache_dir.rstrip('/')}/{env_name}"
+    Path(uv_cache_dir).mkdir(parents=True, exist_ok=True)
+    append_github_env("UV_CACHE_DIR", uv_cache_dir)
+    print(f"using uv cache dir={uv_cache_dir}")
 
     script = f"""
 set -e
