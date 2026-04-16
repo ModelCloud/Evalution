@@ -1034,11 +1034,17 @@ class BaseTransformerSession(BaseInferenceSession):
                     shift_labels = encoded["input_ids"][:, 1:]
 
                 for row_index, chunk in enumerate(batch):
-                    target_start = chunk.score_start
-                    shift_start = target_start - 1
-                    shift_end = shift_start + chunk.score_count
-                    sample_log_probs = shift_log_probs[row_index, shift_start:shift_end, :]
-                    sample_targets = shift_labels[row_index, shift_start:shift_end]
+                    if logits_to_keep is not None:
+                        # `logits_to_keep` returns only the tail window logits, so absolute
+                        # sequence offsets no longer apply for slicing.
+                        sample_log_probs = shift_log_probs[row_index, -chunk.score_count :, :]
+                        sample_targets = shift_labels[row_index, -chunk.score_count :]
+                    else:
+                        target_start = chunk.score_start
+                        shift_start = target_start - 1
+                        shift_end = shift_start + chunk.score_count
+                        sample_log_probs = shift_log_probs[row_index, shift_start:shift_end, :]
+                        sample_targets = shift_labels[row_index, shift_start:shift_end]
                     gathered = sample_log_probs.gather(-1, sample_targets.unsqueeze(-1)).squeeze(-1)
                     greedy_tokens = sample_log_probs.argmax(dim=-1)
                     scored_chunks.append(
