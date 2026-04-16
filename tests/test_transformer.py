@@ -2537,6 +2537,7 @@ def test_transformer_session_loglikelihood_uses_logits_to_keep_for_single_chunk_
 
     assert len(outputs) == 1
     assert outputs[0].token_count == 1
+    assert outputs[0].logprob < -1e-6
     assert session.model.logits_to_keep_calls == [2]
 
 
