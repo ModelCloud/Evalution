@@ -325,7 +325,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.14t"
 
       - name: Generate version matrix
         id: parser
@@ -347,7 +347,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.14t"
           cache: pip
 
       - name: Install package with selected setuptools
