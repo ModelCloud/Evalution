@@ -217,9 +217,15 @@ jobs:
             uv pip show flash-attn
           fi
           uv pip install accelerate -U
-          echo "== installing gptqmodel =="
-          uv pip install gptqmodel -U
-          uv pip show gptqmodel
+          # uv pip install torchao-0.17.0+cpu failed...
+          uv pip install https://download.pytorch.org/whl/cpu/torchao-0.17.0%2Bcpu-py3-none-any.whl#sha256=6c0ce8b506c72be4efb1f0c6fd1679cb58145efebb20d51ac1adf7a7b3ebb872 -U
+
+          echo "::group::pip gptqmodel"
+            echo "== installing gptqmodel =="
+            uv pip install gptqmodel -U
+            uv pip show gptqmodel
+          echo "::endgroup::"
+
 
       - name: Print uv env
         run: |
