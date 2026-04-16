@@ -87,6 +87,26 @@ def test_math_exact_match_extracts_simple_dollar_delimited_answer() -> None:
     assert extract_math_answer("Final answer is $42$") == "42"
 
 
+def test_math_exact_match_extracts_explicit_unboxed_final_answer() -> None:
+    """Verify math exact match extracts explicit unboxed answers and normalizes gold formatting."""
+    prediction = "Work...\nFinal answer: \\frac{1}{576}."
+    target = "$\\frac{1}{576}$."
+
+    assert extract_math_answer(prediction) == "\\frac{1}{576}"
+    assert math_exact_match(prediction, target) == 1.0
+
+
+def test_math_exact_match_uses_the_last_inline_math_span() -> None:
+    """Verify math exact match prefers the final inline math span instead of spanning the whole response."""
+    assert extract_math_answer("First $x$ then final $42$") == "42"
+
+
 def test_math_normalizer_strips_text_units_without_asserting() -> None:
     """Verify math normalizer strips text units without asserting."""
     assert normalize_math_string("12\\text{ cm}\\text{ squared}") == "12"
+
+
+def test_math_normalizer_strips_latex_wrappers_and_terminal_punctuation() -> None:
+    """Verify math normalizer removes formatting-only LaTeX delimiters and sentence punctuation."""
+    assert normalize_math_string("$\\left\\lfloor x \\right\\rfloor + 1$.") == "\\lfloorx\\rfloor+1"
+    assert normalize_math_string("\\(-((d - 2k)^2) + d\\)") == "-((d-2k)^2)+d"

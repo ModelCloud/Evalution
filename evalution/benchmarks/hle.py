@@ -128,6 +128,7 @@ class HLE(BaseTestSuite):
     dataset_path: str = HLE_DATASET_PATH
     dataset_name: str | None = None
     split: str = "test"
+    apply_chat_template: bool = False
     max_new_tokens: int = 64
     do_sample: bool = False
     temperature: float = 0.0
@@ -150,6 +151,7 @@ class HLE(BaseTestSuite):
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
             "modality_subset": "text_only",
             "source_benchmark": "cais/hle",
+            "apply_chat_template": self.apply_chat_template,
             "scoring_mode": "generated_hle_answer_accuracy",
             "primary_metric": "acc",
         }
@@ -161,14 +163,28 @@ class HLE(BaseTestSuite):
                 index=index,
                 doc=doc,
                 target=str(doc["answer"]).strip(),
-                request=GenerationRequest(
-                    prompt=_hle_prompt(str(doc["question"])),
-                    stop=list(_HLE_STOP_STRINGS),
-                    max_new_tokens=self.max_new_tokens,
-                    do_sample=self.do_sample,
-                    temperature=self.temperature,
-                ),
+                request=self._build_request(str(doc["question"])),
             )
+
+    def _build_request(self, question: str) -> GenerationRequest:
+        """Build one HLE generation request with the configured prompt-wrapping mode."""
+        prompt = _hle_prompt(question)
+        if self.apply_chat_template:
+            return GenerationRequest(
+                messages=[{"role": "user", "content": prompt}],
+                stop=list(_HLE_STOP_STRINGS),
+                max_new_tokens=self.max_new_tokens,
+                do_sample=self.do_sample,
+                temperature=self.temperature,
+            )
+
+        return GenerationRequest(
+            prompt=prompt,
+            stop=list(_HLE_STOP_STRINGS),
+            max_new_tokens=self.max_new_tokens,
+            do_sample=self.do_sample,
+            temperature=self.temperature,
+        )
 
     def score_sample(
         self,

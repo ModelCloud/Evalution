@@ -5,24 +5,43 @@
 
 from __future__ import annotations
 
+import pcre
+
+# Keep extractor heuristics explicit at module scope so math-answer parsing stays auditable.
+_EXPLICIT_ANSWER_PATTERNS = (
+    pcre.compile(r"(?i)\bfinal answer(?:\s+is)?\s*[:=\-]?\s*(.+)"),
+    pcre.compile(r"(?i)\bthe answer(?:\s+is)?\s*[:=\-]?\s*(.+)"),
+    pcre.compile(r"(?i)\banswer\s*[:=\-]\s*(.+)"),
+)
+_INLINE_DOLLAR_PATTERN = pcre.compile(r"(?s)\$([^$]+)\$")
+_INLINE_PAREN_PATTERN = pcre.compile(r"(?s)\\\((.+?)\\\)")
+_TRAILING_FORMATTING_PATTERN = pcre.compile(r"[\s`\"']+$")
+_TRAILING_SENTENCE_PUNCTUATION_PATTERN = pcre.compile(r"[\.,;:!]+$")
+
 
 def extract_math_answer(text: str) -> str:
     """Extract math answer. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
-    indices = [index for index, char in enumerate(text) if char == "$"]
-    if len(indices) > 1:
-        answer = text[indices[0] + 1 : indices[-1]]
-    else:
-        answer = text
-
-    boxed_answer = last_boxed_only_string(text)
+    response = text or ""
+    boxed_answer = last_boxed_only_string(response)
     if boxed_answer is not None:
         try:
             boxed_content = remove_boxed(boxed_answer)
             if boxed_content is not None:
-                answer = boxed_content
+                return _normalize_extracted_math_candidate(boxed_content)
         except (AssertionError, IndexError):
             pass
-    return answer
+
+    explicit_answer = _extract_explicit_answer_candidate(response)
+    if explicit_answer:
+        return _normalize_extracted_math_candidate(explicit_answer)
+
+    inline_answer = _extract_last_inline_math_candidate(response)
+    if inline_answer:
+        return _normalize_extracted_math_candidate(inline_answer)
+
+    lines = [line.strip() for line in response.splitlines() if line.strip()]
+    candidate = lines[-1] if lines else response
+    return _normalize_extracted_math_candidate(candidate)
 
 
 def math_exact_match(prediction: str, target: str) -> float:
@@ -146,16 +165,19 @@ def fix_sqrt(text: str) -> str:
 
 def normalize_math_string(text: str) -> str:
     """Normalize math string. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
-    normalized = text.replace("\n", "")
+    normalized = text.strip().replace("\n", "")
     normalized = normalized.replace("\\!", "")
     normalized = normalized.replace("\\\\", "\\")
     normalized = normalized.replace("tfrac", "frac")
     normalized = normalized.replace("dfrac", "frac")
     normalized = normalized.replace("\\left", "")
     normalized = normalized.replace("\\right", "")
+    normalized = normalized.replace("\\(", "")
+    normalized = normalized.replace("\\)", "")
     normalized = normalized.replace("^{\\circ}", "")
     normalized = normalized.replace("^\\circ", "")
     normalized = normalized.replace("\\$", "")
+    normalized = normalized.replace("$", "")
     normalized = remove_right_units(normalized)
     normalized = normalized.replace("\\%", "")
     normalized = normalized.replace("\\%", "")
@@ -173,4 +195,48 @@ def normalize_math_string(text: str) -> str:
     if normalized == "0.5":
         normalized = "\\frac{1}{2}"
     normalized = fix_a_slash_b(normalized)
+    normalized = _TRAILING_SENTENCE_PUNCTUATION_PATTERN.sub("", normalized)
     return normalized
+
+
+def _extract_explicit_answer_candidate(text: str) -> str:
+    """Extract the last explicit answer line from a verbose model response."""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for line in reversed(lines):
+        for pattern in _EXPLICIT_ANSWER_PATTERNS:
+            match = pattern.search(line)
+            if match:
+                return str(match.group(1)).strip()
+    return ""
+
+
+def _extract_last_inline_math_candidate(text: str) -> str:
+    """Extract the last inline math span from a model response when no boxed answer exists."""
+    dollar_matches = list(_INLINE_DOLLAR_PATTERN.findall(text))
+    if dollar_matches:
+        return str(dollar_matches[-1]).strip()
+
+    paren_matches = list(_INLINE_PAREN_PATTERN.findall(text))
+    if paren_matches:
+        return str(paren_matches[-1]).strip()
+    return ""
+
+
+def _normalize_extracted_math_candidate(text: str) -> str:
+    """Clean an extracted answer candidate without changing its mathematical content."""
+    candidate = (text or "").strip().strip("`\"'")
+
+    boxed_answer = last_boxed_only_string(candidate)
+    if boxed_answer is not None:
+        try:
+            candidate = remove_boxed(boxed_answer).strip()
+        except (AssertionError, IndexError):
+            pass
+    else:
+        inline_candidate = _extract_last_inline_math_candidate(candidate)
+        if inline_candidate:
+            candidate = inline_candidate
+
+    candidate = _TRAILING_FORMATTING_PATTERN.sub("", candidate)
+    candidate = _TRAILING_SENTENCE_PUNCTUATION_PATTERN.sub("", candidate)
+    return candidate.strip()

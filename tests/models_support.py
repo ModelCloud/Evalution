@@ -10067,6 +10067,7 @@ SUITE_SPECS = {
             "generation_submission_mode": "continuous_refill",
             "modality_subset": "text_only",
             "source_benchmark": "cais/hle",
+            "apply_chat_template": False,
             "scoring_mode": "generated_hle_answer_accuracy",
             "primary_metric": "acc",
         },
