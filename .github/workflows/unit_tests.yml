@@ -109,6 +109,7 @@ jobs:
         - /monster/ci/dataset:/monster/data/model/dataset
         - /monster/ci/huggingface:/github/home/.cache/huggingface
         - /github/workspace/uv:/opt/uv
+        - /github/workspace/tmp:/opt/uv/tmp
         - /monster/ci/uv/python:/opt/uv/python
         - /monster/ci/uv/cache/python:/opt/uv/cache/python
         - /monster/ci/uv/setup_uv_venv.sh:/opt/uv/setup_uv_venv.sh
@@ -197,6 +198,7 @@ jobs:
           echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
 
           env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
+          mv /opt/uv/venvs/$env_name /opt/uv/tmp || true
           echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
           source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
           python -VV
@@ -216,16 +218,18 @@ jobs:
             uv pip install flash-attn
             uv pip show flash-attn
           fi
-          uv pip install accelerate -U
-          # uv pip install torchao-0.17.0+cpu failed...
-          uv pip install https://download.pytorch.org/whl/cpu/torchao-0.17.0%2Bcpu-py3-none-any.whl#sha256=6c0ce8b506c72be4efb1f0c6fd1679cb58145efebb20d51ac1adf7a7b3ebb872 -U
+          
+          if [ "${{ matrix.test-file }}" = "tests/test_gptqmodel_engine.py" ]; then
+            uv pip install accelerate -U
+            # uv pip install torchao-0.17.0+cpu failed...
+            uv pip install https://download.pytorch.org/whl/cpu/torchao-0.17.0%2Bcpu-py3-none-any.whl#sha256=6c0ce8b506c72be4efb1f0c6fd1679cb58145efebb20d51ac1adf7a7b3ebb872 -U
 
-          echo "::group::pip gptqmodel"
-            echo "== installing gptqmodel =="
-            uv pip install gptqmodel -U
-            uv pip show gptqmodel
-          echo "::endgroup::"
-
+            echo "::group::pip gptqmodel"
+              echo "== installing gptqmodel =="
+              uv pip install gptqmodel -U
+              uv pip show gptqmodel
+            echo "::endgroup::"
+          fi
 
       - name: Print uv env
         run: |
