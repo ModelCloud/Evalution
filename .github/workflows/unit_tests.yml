@@ -317,40 +317,21 @@ jobs:
           rm -rf "${{ env.VIRTUAL_ENV }}"
 
 
-
   prepare-setuptools:
     runs-on: ubuntu-latest
     outputs:
       versions: ${{ steps.parser.outputs.versions || '[]' }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 2
-
-      - name: Check license line changed
-        id: check
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          elif git diff HEAD~1 HEAD -- pyproject.toml | grep -q '^[+-].*license = "Apache-2.0"'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/setup-python@v6
-        id: setup-python
-        if: steps.check.outputs.changed == 'true'
         with:
           python-version: "3.14"
 
       - name: Generate version matrix
-        if: steps.check.outputs.changed == 'true'
         id: parser
         run: |
-          PYTHON_BIN="${{ steps.setup-python.outputs.python-path }}"
-          "$PYTHON_BIN" -m pip install --upgrade requests packaging
-          versions=$("$PYTHON_BIN" .github/scripts/ci_loop_versions.py setuptools ">=77.0.1,<83")
+          python -m pip install --upgrade requests packaging
+          versions=$(python .github/scripts/ci_loop_versions.py setuptools ">=77.0.1,<83")
           echo "versions=$versions" >> "$GITHUB_OUTPUT"
 
   check-setuptools:
@@ -365,19 +346,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
-        id: setup-python
         with:
           python-version: "3.14"
           cache: pip
 
       - name: Install package with selected setuptools
         run: |
-          PYTHON_BIN="${{ steps.setup-python.outputs.python-path }}"
-          "$PYTHON_BIN" -m pip install --upgrade pip
-          "$PYTHON_BIN" -m pip install . "setuptools==${{ matrix.version }}"
+          python -m pip install --upgrade pip
+          python -m pip install . "setuptools==${{ matrix.version }}"
 
       - name: Show versions
         run: |
-          PYTHON_BIN="${{ steps.setup-python.outputs.python-path }}"
-          "$PYTHON_BIN" --version
-          "$PYTHON_BIN" -m pip show setuptools
+          python --version
+          python -m pip show setuptools
