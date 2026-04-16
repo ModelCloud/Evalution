@@ -804,6 +804,45 @@ def test_package_does_not_flatten_benchmarks_into_top_level_namespace() -> None:
     assert not hasattr(evalution, "f1_for_label")
 
 
+def test_package_exports_recent_benchmark_registrations() -> None:
+    """Verify package exports the newly added benchmark registrations."""
+    assert evalution.benchmarks.SuperGPQA is not None
+    assert callable(evalution.benchmarks.supergpqa)
+    assert evalution.benchmarks.HLE is not None
+    assert callable(evalution.benchmarks.hle)
+    assert evalution.benchmarks.HMMT is not None
+    assert evalution.benchmarks.HMMT_TASKS == ("hmmt_feb25", "hmmt_nov25", "hmmt_feb26")
+    for factory_name in evalution.benchmarks.HMMT_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+    assert evalution.benchmarks.IMOAnswerBench is not None
+    assert callable(evalution.benchmarks.imoanswerbench)
+    assert evalution.benchmarks.LiveCodeBench is not None
+    assert evalution.benchmarks.LIVECODEBENCH_TASKS == ("livecodebench_v6",)
+    assert callable(evalution.benchmarks.livecodebench_v6)
+    assert evalution.benchmarks.CapabilityGatedSuite is not None
+    assert evalution.benchmarks.CAPABILITY_GATED_TASKS == (
+        "swe_bench_verified",
+        "swe_bench_multilingual",
+        "swe_bench_pro",
+        "terminal_bench_2",
+        "claw_eval_avg",
+        "claw_eval_pass3",
+        "skillsbench_avg5",
+        "qwenclawbench",
+        "nl2repo",
+        "qwenwebbench",
+        "tau3_bench",
+        "vita_bench",
+        "deepplanning",
+        "tool_decathlon",
+        "mcpmark",
+        "mcp_atlas",
+        "widesearch",
+    )
+    for factory_name in evalution.benchmarks.CAPABILITY_GATED_TASKS:
+        assert callable(getattr(evalution.benchmarks, factory_name))
+
+
 def test_package_exports_fluent_runtime_api() -> None:
     """Verify package exports fluent runtime API."""
     assert callable(evalution.compare)
