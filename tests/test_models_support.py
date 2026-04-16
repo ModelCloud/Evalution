@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
+
+import pcre
 
 from tests.models_support import MIN_REALISTIC_BASELINE_SCORE
 from tests.models_support import SUITE_SPECS
 from tests.models_support import find_suspicious_low_baselines
+
+# Compile the benchmark-factory pattern once so the audit stays on the repo's PCRE2 backend.
+_EVALUTION_BENCHMARK_FACTORY_PATTERN = pcre.compile(r"evalution\.benchmarks\.([a-zA-Z0-9_]+)\s*\(")
 
 # Family dispatchers, alias factories, and helper constructors are covered by representative
 # concrete full-model suites in `SUITE_SPECS`, so the audit should not flag them as missing.
@@ -29,11 +33,14 @@ _NON_CONCRETE_BENCHMARK_FACTORIES = frozenset(
         "cabbq",
         "careqa",
         "ceval",
+        "claw_eval_avg",
+        "claw_eval_pass3",
         "cmmlu",
         "copal_id",
         "crows_pairs",
         "darijammlu",
         "darijammlu_accounting",
+        "deepplanning",
         "egymmlu",
         "egymmlu_accounting",
         "esbbq",
@@ -56,6 +63,8 @@ _NON_CONCRETE_BENCHMARK_FACTORIES = frozenset(
         "longbench_qasper",
         "longbench_samsum",
         "mastermind",
+        "mcp_atlas",
+        "mcpmark",
         "mgsm",
         "mlqa",
         "mmlu",
@@ -63,6 +72,7 @@ _NON_CONCRETE_BENCHMARK_FACTORIES = frozenset(
         "mmlu_pro",
         "mmlu_pro_plus",
         "mmlu_redux",
+        "nl2repo",
         "openbookqa_es",
         "paloma",
         "paloma_c4_en",
@@ -70,12 +80,23 @@ _NON_CONCRETE_BENCHMARK_FACTORIES = frozenset(
         "phrases_es",
         "polemo2",
         "qasper",
+        "qwenclawbench",
+        "qwenwebbench",
         "ruler",
         "ruler_qa_squad",
         "scrolls",
+        "skillsbench_avg5",
         "spanish_bench",
         "storycloze",
+        "swe_bench_multilingual",
+        "swe_bench_pro",
+        "swe_bench_verified",
+        "tau3_bench",
+        "terminal_bench_2",
         "truthfulqa",
+        "tool_decathlon",
+        "vita_bench",
+        "widesearch",
         "wmdp",
         "wnli_es",
         "xcopa",
@@ -93,8 +114,8 @@ _KNOWN_FULL_MODEL_COVERAGE_GAPS = frozenset()
 def _unit_tested_benchmark_factories() -> set[str]:
     factories: set[str] = set()
     for path in sorted(Path("tests").glob("test_*.py")):
-        text = path.read_text()
-        factories.update(re.findall(r"evalution\.benchmarks\.([a-zA-Z0-9_]+)\s*\(", text))
+        text = path.read_text(encoding="utf-8")
+        factories.update(_EVALUTION_BENCHMARK_FACTORY_PATTERN.findall(text))
     return factories
 
 

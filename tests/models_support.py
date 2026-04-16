@@ -35,6 +35,7 @@ LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE = os.environ.get(
 )
 # Baseline tolerances track the maximum accepted score drift for each benchmark sample size.
 SCORE_BASELINE_ABS_TOLERANCE = 2 / 128
+SCORE_BASELINE_ABS_TOLERANCE_8 = 2 / 8
 SCORE_BASELINE_ABS_TOLERANCE_9 = 2 / 9
 SCORE_BASELINE_ABS_TOLERANCE_32 = 2 / 32
 SCORE_BASELINE_ABS_TOLERANCE_35 = 2 / 35
@@ -44,6 +45,9 @@ SCORE_BASELINE_ABS_TOLERANCE_89 = 2 / 89
 SCORE_BASELINE_ABS_TOLERANCE_104 = 2 / 104
 SCORE_BASELINE_ABS_TOLERANCE_115 = 2 / 115
 SCORE_BASELINE_ABS_TOLERANCE_272 = 2 / 272
+# Keep the low-baseline audit strict enough to catch missing captures while allowing hard suites
+# through the explicit exception list below.
+MIN_REALISTIC_BASELINE_SCORE = 0.05
 _MIN_A100_CLASS_VRAM_BYTES = 90 * 1024**3
 _GPU_BASELINE_BUCKET_DEFAULT = "default"
 _GPU_BASELINE_BUCKET_A100 = "a100"
@@ -333,6 +337,7 @@ GPQA_TASKS = (
     "gpqa_diamond",
     "gpqa_extended",
 )
+HMMT_TASKS = tuple(evalution.benchmarks.HMMT_TASKS)
 CODE_X_GLUE_TASKS = (
     "code2text_go",
     "code2text_java",
@@ -450,9 +455,13 @@ LOW_BASELINE_EXCEPTIONS: frozenset[tuple[str, str]] = frozenset(
         ("gpqa_diamond", "em,choice_label"),
         ("gpqa_extended", "em,choice_label"),
         ("gpqa_main", "em,choice_label"),
+        ("hmmt_feb25", "em"),
+        ("hmmt_nov25", "em"),
+        ("hmmt_feb26", "em"),
         ("graphwalks_128k", "f1"),
         ("graphwalks_128k", "flexible_f1"),
         ("humaneval", "pass@1"),
+        ("imoanswerbench", "em"),
         ("lambada_openai_cloze", "acc,ll"),
         ("lambada_standard_cloze", "acc,ll"),
         ("mbpp", "pass@1"),
@@ -1142,6 +1151,23 @@ def _assert_aime_sample(sample: Any, index: int) -> None:
     assert sample.metadata["problem_id"]
 
 
+def _assert_hmmt_sample(sample: Any, index: int) -> None:
+    """Assert HMMT sample for the surrounding tests."""
+    _assert_aime_sample(sample, index)
+    assert sample.metadata["problem_id"] >= 0
+    if "problem_type" in sample.metadata:
+        assert sample.metadata["problem_type"]
+
+
+def _assert_imoanswerbench_sample(sample: Any, index: int) -> None:
+    """Assert IMOAnswerBench sample for the surrounding tests."""
+    _assert_aime_sample(sample, index)
+    assert sample.metadata["problem_id"]
+    assert sample.metadata["category"]
+    assert sample.metadata["subcategory"]
+    assert sample.metadata["source"]
+
+
 def _assert_hendrycks_math_sample(sample: Any, index: int, *, subset: str) -> None:
     """Assert hendrycks math sample for the surrounding tests."""
     assert sample.index == index
@@ -1380,6 +1406,26 @@ def _assert_mbpp_sample(sample: Any, index: int) -> None:
     assert sample.metadata["task_id"]
     assert sample.metadata["source_file"]
     assert "test_import_count" in sample.metadata
+
+
+def _assert_livecodebench_sample(sample: Any, index: int) -> None:
+    """Assert LiveCodeBench sample for the surrounding tests."""
+    assert sample.index == index
+    assert sample.prompt.startswith("Title: ")
+    assert "Return only the full final Python solution" in sample.prompt
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.extracted) == {"passed", "code"}
+    assert set(sample.scores) == {"pass@1"}
+    assert sample.extracted["passed"] in {"0", "1"}
+    assert sample.extracted["code"].strip()
+    assert sample.metadata["question_id"] == sample.target
+    assert sample.metadata["platform"]
+    assert sample.metadata["contest_id"]
+    assert sample.metadata["difficulty"]
+    assert sample.metadata["test_mode"] in {"stdin", "functional"}
+    if sample.metadata["test_mode"] == "functional":
+        assert sample.metadata["func_name"]
 
 
 def _assert_ifeval_sample(sample: Any, index: int) -> None:
@@ -2012,6 +2058,52 @@ def _assert_gpqa_sample(sample: Any, index: int, *, subset: str) -> None:
     assert len(sample.metadata["choice_texts"]) == 4
     assert sample.metadata["gold_choice"] in sample.metadata["choice_texts"]
     assert sample.metadata["shuffle_seed"] == 0
+
+
+def _metadata_has_supergpqa_fields(metadata: dict[str, Any]) -> None:
+    """Support the surrounding tests with metadata has SuperGPQA fields."""
+    assert metadata["uuid"]
+    assert metadata["raw_choices"]
+    assert metadata["answer_label"].isalpha()
+    assert metadata["answer_text"]
+    assert metadata["discipline"]
+    assert metadata["field"]
+    assert metadata["subfield"]
+    assert metadata["difficulty"]
+    assert isinstance(metadata["is_calculation"], bool)
+
+
+def _assert_supergpqa_sample(sample: Any, index: int) -> None:
+    """Assert SuperGPQA sample for the surrounding tests."""
+    _assert_multiple_choice_loglikelihood_sample(
+        sample,
+        index,
+        prompt_prefix="Question: ",
+        prompt_suffix="Answer:",
+        metadata_validator=_metadata_has_supergpqa_fields,
+    )
+    assert len(sample.target) == 1 and sample.target.isalpha()
+    assert len(sample.prediction) == 1 and sample.prediction.isalpha()
+
+
+def _assert_hle_sample(sample: Any, index: int) -> None:
+    """Assert HLE sample for the surrounding tests."""
+    assert sample.index == index
+    assert sample.prompt.endswith("\n\nAnswer:")
+    assert sample.target
+    assert sample.prediction is not None
+    assert set(sample.scores) == {"acc"}
+    assert sample.metadata["id"]
+    assert sample.metadata["answer_type"] in {"exactMatch", "multipleChoice"}
+    assert sample.metadata["raw_subject"]
+    assert sample.metadata["category"]
+    assert "author_name" in sample.metadata
+    assert sample.metadata["text_only"] is True
+    if sample.metadata["answer_type"] == "multipleChoice":
+        assert set(sample.extracted) == {"choice-label", "answer-extract"}
+        assert sample.target in {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
+        return
+    assert set(sample.extracted) == {"answer-extract"}
 
 
 def _validate_gsm8k_like_result(test_result: Any) -> None:
@@ -9936,6 +10028,168 @@ SUITE_SPECS = {
             index,
             metadata_validator=_metadata_sentence_has_blank,
         ),
+    ),
+    "supergpqa": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.supergpqa(batch_size=24, max_rows=32),
+        expected_name="supergpqa",
+        baseline={
+            "acc,ll": 0.15625,
+            "acc,ll_avg": 0.15625,
+        },
+        expected_metrics=frozenset({"acc,ll", "acc,ll_avg"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "m-a-p/SuperGPQA",
+            "dataset_name": None,
+            "split": "train",
+            "order": "native",
+            "scoring_mode": "multiple_choice_loglikelihood",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_supergpqa_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "hle": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.hle(
+            batch_size=4,
+            max_rows=32,
+            max_new_tokens=64,
+        ),
+        expected_name="hle",
+        baseline={"acc": 0.0625},
+        expected_metrics=frozenset({"acc"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "macabdul9/hle_text_only",
+            "dataset_name": None,
+            "split": "test",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "modality_subset": "text_only",
+            "source_benchmark": "cais/hle",
+            "scoring_mode": "generated_hle_answer_accuracy",
+            "primary_metric": "acc",
+        },
+        expected_sample_count=32,
+        sample_validator=_assert_hle_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_32,
+    ),
+    "hmmt_feb25": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.hmmt_feb25(
+            batch_size=2,
+            max_rows=8,
+            max_new_tokens=96,
+        ),
+        expected_name="hmmt_feb25",
+        baseline={"em": 0.0},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "MathArena/hmmt_feb_2025",
+            "dataset_name": None,
+            "split": "train",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_math_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=8,
+        sample_validator=_assert_hmmt_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_8,
+    ),
+    "hmmt_nov25": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.hmmt_nov25(
+            batch_size=2,
+            max_rows=8,
+            max_new_tokens=96,
+        ),
+        expected_name="hmmt_nov25",
+        baseline={"em": 0.0},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "MathArena/hmmt_nov_2025",
+            "dataset_name": None,
+            "split": "train",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_math_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=8,
+        sample_validator=_assert_hmmt_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_8,
+    ),
+    "hmmt_feb26": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.hmmt_feb26(
+            batch_size=2,
+            max_rows=8,
+            max_new_tokens=96,
+        ),
+        expected_name="hmmt_feb26",
+        baseline={"em": 0.0},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "MathArena/hmmt_feb_2026",
+            "dataset_name": None,
+            "split": "train",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_math_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=8,
+        sample_validator=_assert_hmmt_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_8,
+    ),
+    "imoanswerbench": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.imoanswerbench(
+            batch_size=2,
+            max_rows=8,
+            max_new_tokens=96,
+        ),
+        expected_name="imoanswerbench",
+        baseline={"em": 0.0},
+        expected_metrics=frozenset({"em"}),
+        expected_metadata={
+            "stream": False,
+            "dataset_path": "google-deepmind/superhuman/imobench",
+            "dataset_name": None,
+            "split": "test",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "scoring_mode": "generated_math_exact_match",
+            "primary_metric": "em",
+        },
+        expected_sample_count=8,
+        sample_validator=_assert_imoanswerbench_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_8,
+    ),
+    "livecodebench_v6": SuiteSpec(
+        suite_factory=lambda: evalution.benchmarks.livecodebench_v6(
+            batch_size=1,
+            stream=True,
+            max_rows=8,
+            max_new_tokens=384,
+        ),
+        expected_name="livecodebench_v6",
+        baseline={"pass@1": 0.125},
+        expected_metrics=frozenset({"pass@1"}),
+        expected_metadata={
+            "stream": True,
+            "dataset_path": "livecodebench/code_generation_lite",
+            "dataset_name": None,
+            "split": "test",
+            "order": "native",
+            "generation_submission_mode": "continuous_refill",
+            "version_tag": "release_v6",
+            "scoring_mode": "generated_code_execution",
+            "primary_metric": "pass@1",
+        },
+        expected_sample_count=8,
+        sample_validator=_assert_livecodebench_sample,
+        abs_tolerance=SCORE_BASELINE_ABS_TOLERANCE_8,
     ),
     "mmlu_pro_all": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.mmlu_pro(

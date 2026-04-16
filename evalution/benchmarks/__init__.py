@@ -105,6 +105,7 @@ from .gsm8k import GSM8K, gsm8k
 from .gsm8k_fr import GSM8KFR, gsm8k_fr
 from .gsm8k_ko import GSM8KKO, gsm8k_ko
 from .groundcocoa import GroundCocoa, groundcocoa
+from .hle import HLE, hle
 from . import haerae as _haerae_module
 from .haerae import HAERAE_SUBSETS, HAERAE_TASKS, Haerae, haerae
 from .gsm_plus import GSM_PLUS_TASKS, GSMPlus, GSMPlusMini, gsm_plus, gsm_plus_mini
@@ -129,6 +130,7 @@ from .ifeval import IFEval, ifeval
 from .ifeval_pt import IFEvalPT, ifeval_pt
 from . import inverse_scaling as _inverse_scaling_module
 from .inverse_scaling import INVERSE_SCALING_SUBSETS, INVERSE_SCALING_TASKS, InverseScaling, inverse_scaling
+from .imoanswerbench import IMOAnswerBench, imoanswerbench
 from . import kmmlu as _kmmlu_module
 from .kmmlu import KMMLU_DATASET_NAMES, KMMLU_SUBSETS, KMMLU_TASKS, KMMLU, kmmlu
 from .kobest import KOBEST_SUBSETS, KOBEST_TASKS, KoBEST, kobest, kobest_boolq, kobest_copa, kobest_hellaswag, kobest_sentineg, kobest_wic
@@ -162,6 +164,7 @@ from . import longbench as _longbench_module
 from .longbench import LONG_BENCH_TASKS, LongBench, longbench
 from . import longbench2 as _longbench2_module
 from .longbench2 import LONG_BENCH2_TASKS, LongBench2, longbench2
+from .livecodebench import LIVECODEBENCH_TASKS, LiveCodeBench, livecodebench_v6
 from .logiqa import LogiQA, logiqa
 from .logiqa2 import LogiQA2, logiqa2
 from .mbpp import MBPP, mbpp
@@ -233,6 +236,7 @@ from . import spanish_bench as _spanish_bench_module
 from .spanish_bench import SPANISH_BENCH_TASKS, SpanishBench, spanish_bench
 from . import storycloze as _storycloze_module
 from .storycloze import STORYCLOZE_TASKS, STORYCLOZE_YEARS, StoryCloze, storycloze
+from .supergpqa import SuperGPQA, supergpqa
 from .swag import SWAG, swag
 from .sst2 import SST2, sst2
 from .squad_completion import SQuADCompletion, squad_completion
@@ -260,6 +264,28 @@ from .xnli import XNLI, XNLI_LANGUAGES, XNLI_TASKS, xnli
 from .xnli_eu import XNLIEU, xnli_eu
 from .xlsum_es import XLSUMES, xlsum_es
 from .xwinograd import XWinograd, xwinograd, xwinograd_en, xwinograd_fr, xwinograd_jp, xwinograd_pt, xwinograd_ru, xwinograd_zh
+from .hmmt import HMMT, HMMT_TASKS, hmmt_feb25, hmmt_nov25, hmmt_feb26
+from .capability_gated import (
+    CAPABILITY_GATED_TASKS,
+    CapabilityGatedSuite,
+    claw_eval_avg,
+    claw_eval_pass3,
+    deepplanning,
+    mcp_atlas,
+    mcpmark,
+    nl2repo,
+    qwenclawbench,
+    qwenwebbench,
+    skillsbench_avg5,
+    swe_bench_multilingual,
+    swe_bench_pro,
+    swe_bench_verified,
+    tau3_bench,
+    terminal_bench_2,
+    tool_decathlon,
+    vita_bench,
+    widesearch,
+)
 
 for _crows_pairs_task in CROWS_PAIRS_TASKS:
     globals()[_crows_pairs_task] = getattr(_crows_pairs_module, _crows_pairs_task)
@@ -544,6 +570,7 @@ __all__ = [
     "GPQA_TASKS",
     "GSM8K",
     "GroundCocoa",
+    "HLE",
     "HAERAE_SUBSETS",
     "HAERAE_TASKS",
     "Haerae",
@@ -557,9 +584,12 @@ __all__ = [
     "HendrycksMath",
     "HEADQA",
     "HellaSwag",
+    "HMMT",
+    "HMMT_TASKS",
     "HistoiresMorales",
     "MoralStories",
     "IcelandicWinoGrande",
+    "IMOAnswerBench",
     "INVERSE_SCALING_SUBSETS",
     "INVERSE_SCALING_TASKS",
     "InverseScaling",
@@ -571,6 +601,8 @@ __all__ = [
     "KorMedMCQA",
     "LAMBADA",
     "LAMBADACloze",
+    "LIVECODEBENCH_TASKS",
+    "LiveCodeBench",
     "LongBench2",
     "LONG_BENCH2_TASKS",
     "LogiQA",
@@ -631,6 +663,7 @@ __all__ = [
     "StoryCloze",
     "STORYCLOZE_TASKS",
     "STORYCLOZE_YEARS",
+    "SuperGPQA",
     "SWAG",
     "SQuADV2",
     "SQuADCompletion",
@@ -641,6 +674,8 @@ __all__ = [
     "TRUTHFULQA_TASKS",
     "TruthfulQAMC",
     "TriviaQA",
+    "CAPABILITY_GATED_TASKS",
+    "CapabilityGatedSuite",
     "WiC",
     "WebQS",
     "WikiText",
@@ -823,6 +858,7 @@ __all__ = [
     "GSM8KKO",
     "gsm8k_ko",
     "groundcocoa",
+    "hle",
     "haerae",
     "gsm_plus",
     "gsm_plus_mini",
@@ -831,6 +867,9 @@ __all__ = [
     "headqa_es",
     "hendrycks_math",
     "hellaswag",
+    "hmmt_feb25",
+    "hmmt_nov25",
+    "hmmt_feb26",
     "humaneval",
     "histoires_morales",
     "moral_stories",
@@ -838,6 +877,7 @@ __all__ = [
     "IFEvalPT",
     "ifeval_pt",
     "inverse_scaling",
+    "imoanswerbench",
     "KMMLU",
     "KMMLU_DATASET_NAMES",
     "KMMLU_SUBSETS",
@@ -868,6 +908,7 @@ __all__ = [
     "longbench2",
     "LongBench2",
     "LONG_BENCH2_TASKS",
+    "livecodebench_v6",
     "logiqa",
     "logiqa2",
     "mbpp",
@@ -952,6 +993,7 @@ __all__ = [
     "siqa",
     "simple_cooccurrence_bias",
     "storycloze",
+    "supergpqa",
     "swag",
     "swde",
     "squad_completion",
@@ -963,10 +1005,27 @@ __all__ = [
     "truthfulqa_mc1",
     "truthfulqa_mc2",
     "triviaqa",
+    "claw_eval_avg",
+    "claw_eval_pass3",
+    "deepplanning",
+    "mcp_atlas",
+    "mcpmark",
+    "nl2repo",
+    "qwenclawbench",
+    "qwenwebbench",
+    "skillsbench_avg5",
+    "swe_bench_multilingual",
+    "swe_bench_pro",
+    "swe_bench_verified",
+    "tau3_bench",
+    "terminal_bench_2",
+    "tool_decathlon",
+    "vita_bench",
     "wic",
     "webqs",
     "wikitext",
     "wmdp",
+    "widesearch",
     "winogender",
     "winogender_all",
     "winogender_female",
@@ -1050,3 +1109,5 @@ __all__.extend(INVERSE_SCALING_TASKS)
 __all__.extend(CLICK_TASKS)
 __all__.extend(HAERAE_TASKS)
 __all__.extend(KORMEDMCQA_TASKS)
+__all__.extend(HMMT_TASKS)
+__all__.extend(CAPABILITY_GATED_TASKS)
