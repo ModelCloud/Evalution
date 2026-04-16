@@ -24,7 +24,7 @@ on:
 env:
   ref: ${{ github.event.inputs.ref || github.ref }}
   CUDA_DEVICE_ORDER: PCI_BUS_ID
-  CUDA_VERSION: 130
+  CUDA_VERSION: 131
   UV_TORCH_BACKEND: cu130
   TORCH_VERSION: 2.11.0
   PYTHON_VERSION: 3.14t
@@ -32,6 +32,7 @@ env:
   PYTHON_GIL: 0
   RUNNER: 10.0.13.31
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  BASE_URL: http://10.0.14.249
 
 concurrency:
   group: ${{ github.event.inputs.ref || github.ref }}-workflow-unit-tests
@@ -42,7 +43,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       files: ${{ steps.files.outputs.files }}
-      has-common-tests: ${{ steps.files.outputs.has-common-tests }}
       max-parallel: ${{ steps.config.outputs.max-parallel }}
     steps:
       - name: Checkout Code
@@ -53,67 +53,46 @@ jobs:
       - name: Set matrix config
         id: config
         run: |
-          python3 .github/scripts/ci_workflow.py set-matrix-config \
-            --max-parallel "${{ github.event.inputs['max-parallel'] || '8' }}"
+          echo "max-parallel=${{ github.event.inputs['max-parallel'] || '8' }}" >> "$GITHUB_OUTPUT"
 
       - name: List test files
         id: files
+        env:
+          TEST_REGEX: ${{ github.event.inputs.test_regex || '' }}
         run: |
-          python3 .github/scripts/ci_workflow.py list-tests \
-            --test-regex "${{ github.event.inputs.test_regex || '' }}"
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
 
-  prepare:
-    needs: list-test-files
-    if: needs.list-test-files.outputs.has-common-tests == 'true'
-    runs-on: [ self-hosted, xeon5 ]
-    container:
-      image: 10.0.13.31:5000/nvidia/cuda:132-ubuntu24.04_0325
-      volumes:
-        - /monster/ci/env/entrypoint.sh:/entrypoint.sh
-        - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
-        - /dev/dri/by-path:/dev/dri/by-path
-        - /monster/ci/models:/monster/data/model
-        - /monster/ci/dataset:/monster/data/model/dataset
-        - /monster/ci/huggingface:/github/home/.cache/huggingface
-        - /monster/ci/uv:/opt/uv
-        - /monster/ci/env:/opt/env
-        - /monster/ci/dist:/opt/dist
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ env.ref }}
+          root = pathlib.Path("tests")
+          pattern = os.environ.get("TEST_REGEX", "")
+          regex = re.compile(pattern) if pattern else None
 
-      - name: Activate common uv env
-        run: |
-          source /opt/uv/setup_uv_venv.sh evalution_unit_pre_env 3.14t
-          uv pip install pyyaml -U
+          def sort_key(path: pathlib.Path) -> tuple[int, str]:
+            # Prioritize direct children of tests/ before nested test files.
+            rel = path.relative_to(root)
+            return (len(rel.parts), path.as_posix())
 
-          safe_ref=$(printf '%s' "${{ env.ref }}" | sed -e 's/[\\/]/_/g' -e 's/^refs_heads_//')
+          files = []
+          for path in sorted(root.rglob("test_*.py"), key=sort_key):
+            rel = path.as_posix()
+            if regex and not regex.search(rel):
+              continue
+            files.append(rel)
 
-          python3 .github/scripts/ci_workflow.py activate-uv-env \
-            --test-file "tests/test_api.py" \
-            --safe-name "prepare_common_env" \
-            --cuda-version "${{ env.CUDA_VERSION }}" \
-            --torch-version "${{ env.TORCH_VERSION }}" \
-            --python-version "${PYTHON_VERSION}" \
-            --uv-python "${UV_PYTHON}" \
-            --env-scope "$safe_ref"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+            print(f"files={json.dumps(files)}", file=fh)
 
-      - name: Setup common uv env
-        run: |
-          python3 .github/scripts/ci_workflow.py setup-uv-env \
-            --cuda-version "${{ env.CUDA_VERSION }}" \
-            --torch-version "${{ env.TORCH_VERSION }}" \
-            --uv-python "${UV_PYTHON}"
-
-      - name: Prepare common test env
-        run: |
-          python3 .github/scripts/ci_workflow.py prepare-test-run
+          print("Matched test files:")
+          for rel in files:
+            print(rel)
+          PY
 
   test:
-    needs: [list-test-files, prepare]
-    if: ${{ always() && needs.list-test-files.outputs.files != '[]' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') }}
+    needs: list-test-files
+    if: needs.list-test-files.outputs.files != '[]'
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.list-test-files.outputs.max-parallel) }}
@@ -129,12 +108,14 @@ jobs:
         - /monster/ci/models:/monster/data/model
         - /monster/ci/dataset:/monster/data/model/dataset
         - /monster/ci/huggingface:/github/home/.cache/huggingface
-        - /monster/ci/uv:/opt/uv
-        # - /monster/ci/uv/setup_uv_venv.sh:/opt/uv/setup_uv_venv.sh
-        # - /monster/ci/uv/uv:/opt/uv/uv
-        # - /monster/ci/uv/uvx:/opt/uv/uvx
-        # - /monster/ci/uv/env:/opt/uv/env
-        # - /monster/ci/uv/uv.toml:/opt/uv/uv.toml
+        - /github/workspace/uv:/opt/uv
+        - /monster/ci/uv/python:/opt/uv/python
+        - /monster/ci/uv/cache/python:/opt/uv/cache/python
+        - /monster/ci/uv/setup_uv_venv.sh:/opt/uv/setup_uv_venv.sh
+        - /monster/ci/uv/uv:/opt/uv/uv
+        - /monster/ci/uv/uvx:/opt/uv/uvx
+        - /monster/ci/uv/env:/opt/uv/env
+        - /monster/ci/uv/uv.toml:/opt/uv/uv.toml
         - /monster/ci/env:/opt/env
         - /monster/ci/dist:/opt/dist
     steps:
@@ -146,80 +127,178 @@ jobs:
       - name: Set test metadata
         id: meta
         run: |
-          source /opt/uv/setup_uv_venv.sh evalution_unit_pre_env 3.14t
-          uv pip install pyyaml -U
-          python3 .github/scripts/ci_workflow.py set-test-metadata \
-            --test-file "${{ matrix.test-file }}"
+          test_file="${{ matrix.test-file }}"
+          safe_name="${test_file//\//__}"
+          safe_name="${safe_name//./_}"
+          requires_gpu="true"
+          if grep -q '^# GPU=-1$' "$test_file"; then
+            requires_gpu="false"
+          fi
+          echo "SAFE_NAME=$safe_name" >> "$GITHUB_ENV"
+          echo "TEST_REQUIRES_GPU=$requires_gpu" >> "$GITHUB_ENV"
+          echo "safe-name=$safe_name" >> "$GITHUB_OUTPUT"
+          echo "requires-gpu=$requires_gpu" >> "$GITHUB_OUTPUT"
+
+      - name: decompress uv cache
+        continue-on-error: true
+        run: |
+          if [ -f /opt/dist/uv.tar.xz ]; then
+            TAR_FILE="/opt/dist/uv.tar.xz"
+            LAST_FILE="/opt/uv/cache/lastmodified"
+          
+            # Get modification time of tar.xz file (epoch seconds)
+            TAR_MTIME=$(stat -c %Y "$TAR_FILE")
+          
+            # Read last recorded modification time if file exists
+            if [ -f "$LAST_FILE" ]; then
+              LAST_MTIME=$(cat "$LAST_FILE")
+            else
+              LAST_MTIME=0
+            fi
+          
+            # Compare timestamps to decide whether to decompress
+            if [ "$TAR_MTIME" = "$LAST_MTIME" ]; then
+              echo "uv.tar.xz unchanged, skip decompress"
+            else
+              echo "decompressing uv.tar.xz..."
+          
+              # Prepare temporary directory
+              mkdir -p /opt/uv/cache/tmp
+              rm -rf /opt/uv/cache/tmp/*
+          
+              # Extract archive
+              tar -xJf "$TAR_FILE" -C /opt/uv/cache/tmp
+          
+              # Replace existing uv directory
+              rm -rf /opt/uv/cache/uv
+              mv /opt/uv/cache/tmp/uv /opt/uv/cache/uv
+          
+              # Record latest modification time
+              echo "$TAR_MTIME" > "$LAST_FILE"
+          
+              echo "done!"
+              ls -ahl /opt/uv/cache
+              echo "=========="
+              ls -ahl /opt/uv/cache/uv
+            fi
+          fi
 
       - name: Activate uv env
         run: |
-          safe_ref=$(printf '%s' "${{ env.ref }}" | sed -e 's/[\\/]/_/g' -e 's/^refs_heads_//')
+          python_version="${PYTHON_VERSION}"
+          uv_python="${UV_PYTHON}"
 
-          python3 .github/scripts/ci_workflow.py activate-uv-env \
-            --test-file "${{ matrix.test-file }}" \
-            --safe-name "${SAFE_NAME}" \
-            --cuda-version "${{ env.CUDA_VERSION }}" \
-            --torch-version "${{ env.TORCH_VERSION }}" \
-            --python-version "${PYTHON_VERSION}" \
-            --uv-python "${UV_PYTHON}" \
-            --env-scope "$safe_ref"
+          if [ "${{ matrix.test-file }}" = "tests/test_tensorrt_llm_engine.py" ]; then
+            python_version="3.12"
+            uv_python="3.12"
+          fi
 
+          echo "PYTHON_VERSION=$python_version" >> "$GITHUB_ENV"
+          echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
+
+          env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
+          echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
+          source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
+          python -VV
 
       - name: Setup uv env
-        if: ${{ steps.meta.outputs.env-family != 'unit_test_common' }}
         run: |
-          python3 .github/scripts/ci_workflow.py setup-uv-env \
-            --cuda-version "${{ env.CUDA_VERSION }}" \
-            --torch-version "${{ env.TORCH_VERSION }}" \
-            --uv-python "${UV_PYTHON}"
+          /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
+
+          if [ "${UV_PYTHON}" = "3.14t" ]; then
+            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
+          elif [ "${UV_PYTHON}" = "3.12" ]; then
+            echo "EVALUTION_SKIP_GIL_CHECK=1" >> "$GITHUB_ENV"
+            uv pip install tensorrt_llm -U
+            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp312-cp312-linux_x86_64.whl
+          else
+            echo "== installing flash-attn =="
+            uv pip install flash-attn
+            uv pip show flash-attn
+          fi
+          uv pip install accelerate -U
+          echo "== installing gptqmodel =="
+          uv pip install gptqmodel -U
+          uv pip show gptqmodel
 
       - name: Print uv env
         run: |
-          python3 .github/scripts/ci_workflow.py print-uv-env
+          echo "::group::uv python list"
+          uv python list
+          ls -ahl /opt/uv/venvs
+          echo "::endgroup::"
+          
+          echo "== python =="
+          python -VV
+          which python
+          which pip || true
+
+          echo "== nvcc =="
+          nvcc --version
+
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+
+          echo "== torch =="
+          uv pip show torch || true
+
+          echo "::group::project files"
+          ls -ahl
+          echo "::endgroup::"
+
+          echo "::group::git status"
+          git config --global --add safe.directory $(pwd)
+          git status
+          echo "::endgroup::"
 
       - name: Find suitable GPU
         if: ${{ steps.meta.outputs.requires-gpu == 'true' }}
-        env:
-          BASE_URL: http://10.0.14.249
         run: |
-          python3 .github/scripts/ci_gpu.py allocate \
-            --base-url "$BASE_URL" \
+          python3 .github/scripts/allocate_gpu.py \
+            --base-url "${{ env.BASE_URL }}" \
             --run-id "${{ github.run_id }}" \
             --test "${{ matrix.test-file }}" \
             --runner "${{ runner.name }}" \
             --count "1" \
             --require-single
 
-      - name: Prepare test run
-        if: ${{ steps.meta.outputs.env-family != 'unit_test_common' }}
-        run: |
-          python3 .github/scripts/ci_workflow.py prepare-test-run
-
       - name: Run test
-        env:
-          BASE_URL: http://10.0.14.249
         run: |
-          python3 .github/scripts/ci_tests.py run \
-            --base-url "$BASE_URL" \
+          if [ ! -d tests ]; then
+            echo "::error::tests/ directory not found."
+            exit 1
+          fi
+          
+          uv pip install .
+          uv pip install -U pytest datasets rouge_score sglang pybase64
+          
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+
+          python .github/scripts/run_tests.py \
+            --base-url "${{ env.BASE_URL }}" \
             --run-id "${{ github.run_id }}" \
             --test-file "${{ matrix.test-file }}" \
             --runner "${{ runner.name }}" \
             --gpu-id "${CUDA_VISIBLE_DEVICES:-}" \
-            ${{ steps.meta.outputs.requires-gpu == 'true' && '--enable-keepalive-monitor' || '' }} \
             --artifacts-dir artifacts
 
       - name: Release GPU
         if: ${{ always() && steps.meta.outputs.requires-gpu == 'true' }}
-        env:
-          BASE_URL: http://10.0.14.249
         run: |
-          python3 .github/scripts/ci_workflow.py release-gpu-if-present \
-            --base-url "$BASE_URL" \
-            --run-id "${{ github.run_id }}" \
-            --cuda-visible-devices "${CUDA_VISIBLE_DEVICES:-}" \
-            --step-timestamp "${STEP_TIMESTAMP:-}" \
-            --test-file "${{ matrix.test-file }}" \
-            --runner "${{ runner.name }}"
+          if [ -n "${CUDA_VISIBLE_DEVICES:-}" ] && [ -n "${STEP_TIMESTAMP:-}" ]; then
+            python3 .github/scripts/release_gpu.py \
+              --base-url "${{ env.BASE_URL }}" \
+              --run-id "${{ github.run_id }}" \
+              --gpu-id "${CUDA_VISIBLE_DEVICES}" \
+              --timestamp "${STEP_TIMESTAMP}" \
+              --test "${{ matrix.test-file }}" \
+              --runner "${{ runner.name }}"
+          else
+            echo "Skip GPU release because allocation metadata is missing."
+          fi
 
       - name: Upload test artifacts
         if: always()
@@ -228,6 +307,16 @@ jobs:
           name: unit-test-results-${{ steps.meta.outputs.safe-name }}
           path: artifacts/*
           if-no-files-found: ignore
+
+      - name: Clean cache
+        if: always()
+        run: |
+          echo "Cleaning workspace: $PWD"
+          rm -rf ./* .[^.] .??* || true
+          echo "cleaning venv: ${{ env.VIRTUAL_ENV }}"
+          rm -rf "${{ env.VIRTUAL_ENV }}"
+
+
 
   prepare-setuptools:
     runs-on: ubuntu-latest

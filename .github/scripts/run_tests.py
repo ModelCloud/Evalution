@@ -6,10 +6,29 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
-from ci_common import append_github_env, fetch_text
+
+def append_github_env(name: str, value: str) -> None:
+    github_env = os.environ.get("GITHUB_ENV")
+    if not github_env:
+        return
+    with open(github_env, "a", encoding="utf-8") as fh:
+        fh.write(f"{name}={value}\n")
+
+
+def fetch_text(url: str, *, timeout: float, suppress_error: bool = False) -> str:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return response.read().decode("utf-8", errors="replace")
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        if suppress_error:
+            print(f"Request failed for {url}: {exc}")
+            return ""
+        raise
 
 
 def kill_process_group(proc: subprocess.Popen[str]) -> None:
@@ -31,9 +50,9 @@ def start_keepalive_monitor(
     def worker() -> None:
         print(f"start to keep alive... {keep_alive_url}")
         while not stop_event.wait(interval_sec):
-            response = fetch_text(keep_alive_url, timeout=10, suppress_error=True)
-            if int(response.strip()) < 0:
-                print(f"\n\n\nServer returned {response.strip()}, terminating job...\n\n\n")
+            resp = fetch_text(keep_alive_url, timeout=10, suppress_error=True)
+            if resp.strip() == "-1":
+                print("Server returned -1, terminating job...")
                 state["forced_exit_code"] = 3
                 kill_process_group(proc)
                 stop_event.set()
@@ -47,10 +66,10 @@ def start_keepalive_monitor(
 
 def stream_process_output(proc: subprocess.Popen[str], log_file: Path) -> int:
     assert proc.stdout is not None
-    with log_file.open("w", encoding="utf-8") as handle:
+    with log_file.open("w", encoding="utf-8") as fh:
         for line in proc.stdout:
             print(line, end="")
-            handle.write(line)
+            fh.write(line)
     return proc.wait()
 
 
@@ -66,15 +85,26 @@ def log_python_and_pytest_resolution() -> None:
     if not pytest_path:
         return
     try:
-        with open(pytest_path, encoding="utf-8") as handle:
-            first_line = handle.readline().rstrip()
+        with open(pytest_path, encoding="utf-8") as fh:
+            first_line = fh.readline().rstrip()
     except OSError as exc:
         print(f"failed to read pytest launcher: {exc}")
         return
     print(f"pytest shebang={first_line}")
 
 
-def command_run(args: argparse.Namespace) -> int:
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base-url", required=True)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--test-file", required=True)
+    parser.add_argument("--runner", required=True)
+    parser.add_argument("--gpu-id", default="")
+    parser.add_argument("--monitor-interval-sec", type=int, default=60)
+    parser.add_argument("--artifacts-dir", default="artifacts")
+    parser.add_argument("--clear-cuda", action="store_true")
+    args = parser.parse_args()
+
     env = os.environ.copy()
     if args.clear_cuda:
         env["CUDA_VISIBLE_DEVICES"] = ""
@@ -88,12 +118,12 @@ def command_run(args: argparse.Namespace) -> int:
     log_file = artifacts_dir / f"{safe_name}.log"
     junitxml = artifacts_dir / f"{safe_name}.xml"
 
-    pytest_command = ["pytest", "--durations=0", args.test_file, f"--junitxml={junitxml}"]
+    pytest_cmd = ["pytest", "--durations=0", args.test_file, f"--junitxml={junitxml}"]
     log_python_and_pytest_resolution()
-    print(f"+ {' '.join(pytest_command)}")
+    print(f"+ {' '.join(pytest_cmd)}")
 
     proc = subprocess.Popen(
-        pytest_command,
+        pytest_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -112,16 +142,12 @@ def command_run(args: argparse.Namespace) -> int:
     monitor_thread = None
     monitor_stop = None
     monitor_state = {"forced_exit_code": 0}
-    if args.enable_keepalive_monitor and env.get("CUDA_VISIBLE_DEVICES", ""):
+    if env.get("CUDA_VISIBLE_DEVICES", ""):
         monitor_thread, monitor_stop, monitor_state = start_keepalive_monitor(
             proc=proc,
             keep_alive_url=keep_alive_url,
             interval_sec=args.monitor_interval_sec,
         )
-    elif args.enable_keepalive_monitor:
-        print("Skip keepalive monitor because CUDA_VISIBLE_DEVICES is empty.")
-    else:
-        print("Keepalive monitor disabled for this test run.")
 
     start_time = time.time()
     try:
@@ -135,12 +161,11 @@ def command_run(args: argparse.Namespace) -> int:
 
     if monitor_state["forced_exit_code"]:
         append_github_env("ERROR", "22")
-        print(f"\n\n\nforced_exit_code: {monitor_state['forced_exit_code']}\n\n\n")
         return 22
 
     if return_code != 0:
         append_github_env("ERROR", "22")
-        print(f"\n\n\npipe status wrong: {return_code}\n\n\n")
+        print(f"pipe status wrong: {return_code}")
         return 22
 
     execution_time = int(time.time() - start_time)
@@ -154,31 +179,6 @@ def command_run(args: argparse.Namespace) -> int:
         print(f"Failed to list artifact dir: {exc}")
 
     return 0
-
-
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    run = subparsers.add_parser("run")
-    run.add_argument("--base-url", required=True)
-    run.add_argument("--run-id", required=True)
-    run.add_argument("--test-file", required=True)
-    run.add_argument("--runner", required=True)
-    run.add_argument("--gpu-id", default="")
-    run.add_argument("--enable-keepalive-monitor", action="store_true")
-    run.add_argument("--monitor-interval-sec", type=int, default=60)
-    run.add_argument("--artifacts-dir", default="artifacts")
-    run.add_argument("--clear-cuda", action="store_true")
-    run.set_defaults(handler=command_run)
-
-    return parser
-
-
-def main() -> int:
-    parser = build_parser()
-    args = parser.parse_args()
-    return args.handler(args)
 
 
 if __name__ == "__main__":
