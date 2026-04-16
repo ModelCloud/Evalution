@@ -109,6 +109,7 @@ jobs:
         - /monster/ci/dataset:/monster/data/model/dataset
         - /monster/ci/huggingface:/github/home/.cache/huggingface
         - /github/workspace/uv:/opt/uv
+        - /github/workspace/tmp:/opt/uv/tmp
         - /monster/ci/uv/python:/opt/uv/python
         - /monster/ci/uv/cache/python:/opt/uv/cache/python
         - /monster/ci/uv/setup_uv_venv.sh:/opt/uv/setup_uv_venv.sh
@@ -197,6 +198,7 @@ jobs:
           echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
 
           env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
+          mv /opt/uv/venvs/$env_name /opt/uv/tmp || true
           echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
           source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
           python -VV
