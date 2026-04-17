@@ -50,6 +50,11 @@ jobs:
         with:
           ref: ${{ env.ref }}
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14t"
+          cache: pip
+
       - name: Set matrix config
         id: config
         run: |
@@ -58,6 +63,9 @@ jobs:
       - name: List test files
         id: files
         run: |
+          python -m pip install --upgrade pip
+          python -m pip install device_smi
+
           files=$(python3 .github/scripts/list_test_files.py \
             --test-regex "${{ github.event.inputs.test_regex || '' }}")
           echo "files=$files" >> "$GITHUB_OUTPUT"
