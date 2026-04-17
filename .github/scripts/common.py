@@ -1,5 +1,4 @@
 import os
-import platform as py_platform
 import re
 import subprocess
 import time
@@ -8,6 +7,7 @@ import urllib.error
 import urllib.request
 import json
 from pathlib import Path
+from device_smi import Device
 
 
 GPU_DISABLED_MARKER = re.compile(r"^# GPU=-1\s*$", re.MULTILINE)
@@ -131,20 +131,17 @@ def quote_url_value(value: str) -> str:
     return urllib.parse.quote(value, safe="")
 
 
-def build_server_info(runner_name: str | None) -> dict[str, str]:
-    machine = py_platform.machine().lower() or "unknown"
-    system = py_platform.system().lower() or "unknown"
+def build_server_info() -> dict[str, str]:
+    os_info = Device("os")
+    cpu_model = Device("cpu").model
     platform_name = (
-        os.environ.get("GPU_ALLOCATOR_PLATFORM")
-        or runner_name
-        or os.environ.get("RUNNER_NAME")
-        or os.environ.get("HOSTNAME")
-        or f"{system}-{machine}"
+            os.environ.get("GPU_PLATFORM")
+            or cpu_model
     )
     return {
         "platform": platform_name,
-        "arch": machine,
-        "system": system,
+        "arch": os_info.arch,
+        "system": os_info.name,
     }
 
 

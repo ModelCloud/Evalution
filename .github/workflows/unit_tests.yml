@@ -159,6 +159,7 @@ jobs:
       - name: Setup uv env
         run: |
           /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
+          uv pip install device_smi -U
           python3 .github/scripts/install_unit_test_deps.py \
             --test-file "${{ matrix.test-file }}" \
             --uv-python "${UV_PYTHON}" \
