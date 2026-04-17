@@ -236,14 +236,6 @@ jobs:
             echo "Skip GPU release because allocation metadata is missing."
           fi
 
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: unit-test-results-${{ steps.meta.outputs.safe-name }}
-          path: artifacts/*
-          if-no-files-found: ignore
-
       - name: Clean cache
         if: always()
         run: |
