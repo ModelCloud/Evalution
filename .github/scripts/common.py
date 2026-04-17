@@ -7,7 +7,6 @@ import urllib.error
 import urllib.request
 import json
 from pathlib import Path
-from device_smi import Device
 
 
 GPU_DISABLED_MARKER = re.compile(r"^# GPU=-1\s*$", re.MULTILINE)
@@ -132,6 +131,7 @@ def quote_url_value(value: str) -> str:
 
 
 def build_server_info() -> dict[str, str]:
+    from device_smi import Device
     os_info = Device("os")
     cpu_model = Device("cpu").model
     platform_name = (
@@ -180,7 +180,7 @@ def query_gpu_inventory() -> list[dict[str, object]]:
 
 def build_get_request(*, runner_name: str, run_id: str, test_name: str, count: str) -> dict[str, object]:
     return {
-        "server": build_server_info(runner_name),
+        "server": build_server_info(),
         "job": {
             "jobId": int(run_id),
             "count": int(count),
@@ -194,7 +194,7 @@ def build_get_request(*, runner_name: str, run_id: str, test_name: str, count: s
 
 def build_job_request(*, runner_name: str, run_id: str, test_name: str) -> dict[str, object]:
     return {
-        "server": build_server_info(runner_name),
+        "server": build_server_info(),
         "job": {
             "jobId": int(run_id),
             "test": test_name,
