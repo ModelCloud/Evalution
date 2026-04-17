@@ -1,42 +1,38 @@
 import argparse
 import sys
 import urllib.error
-import urllib.parse
-import urllib.request
 
-
-def fetch_text(url: str, *, timeout: float) -> str:
-    with urllib.request.urlopen(url, timeout=timeout) as response:
-        return response.read().decode("utf-8", errors="replace")
+from common import build_job_request, extract_gpu_ids, normalize_base_url, request_json
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--gpu-id", required=True)
-    parser.add_argument("--timestamp", required=True)
+    parser.add_argument("--gpu-id", default="")
+    parser.add_argument("--timestamp")
     parser.add_argument("--test", required=True)
     parser.add_argument("--runner", required=True)
     parser.add_argument("--timeout", type=float, default=10)
     args = parser.parse_args()
 
-    encoded_test = urllib.parse.quote(args.test, safe="")
-    encoded_runner = urllib.parse.quote(args.runner, safe="")
-    url = (
-        f"{args.base_url}/gpu/release?runid={args.run_id}&gpu={args.gpu_id}"
-        f"&timestamp={args.timestamp}&test={encoded_test}&runner={encoded_runner}"
+    request_body = build_job_request(
+        runner_name=args.runner,
+        run_id=args.run_id,
+        test_name=args.test,
     )
+    url = f"{normalize_base_url(args.base_url)}/release"
     print(url)
 
     try:
-        resp = fetch_text(url, timeout=args.timeout).strip()
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        response = request_json(url, method="POST", body=request_body, timeout=args.timeout)
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
         print(f"Failed to release GPU: {exc}")
         return 0
 
+    resp = extract_gpu_ids(response)
     print(f"response: {resp}")
-    if resp != args.gpu_id:
+    if args.gpu_id and resp not in {args.gpu_id, "-1"}:
         print(f"Error: response ({resp}) != expected ({args.gpu_id})")
     return 0
 

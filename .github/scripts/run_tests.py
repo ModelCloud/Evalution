@@ -7,28 +7,16 @@ import sys
 import threading
 import time
 import urllib.error
-import urllib.parse
-import urllib.request
 from pathlib import Path
-
-
-def append_github_env(name: str, value: str) -> None:
-    github_env = os.environ.get("GITHUB_ENV")
-    if not github_env:
-        return
-    with open(github_env, "a", encoding="utf-8") as fh:
-        fh.write(f"{name}={value}\n")
-
-
-def fetch_text(url: str, *, timeout: float, suppress_error: bool = False) -> str:
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
-            return response.read().decode("utf-8", errors="replace")
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        if suppress_error:
-            print(f"Request failed for {url}: {exc}")
-            return ""
-        raise
+from common import (
+    append_github_env,
+    build_job_request,
+    extract_gpu_ids,
+    normalize_base_url,
+    normalize_test_file,
+    request_json,
+    to_safe_name,
+)
 
 
 def kill_process_group(proc: subprocess.Popen[str]) -> None:
@@ -41,18 +29,37 @@ def kill_process_group(proc: subprocess.Popen[str]) -> None:
 def start_keepalive_monitor(
     *,
     proc: subprocess.Popen[str],
-    keep_alive_url: str,
+    keepalive_endpoint: str,
+    keepalive_payload: dict[str, object],
+    expected_gpu_ids: str,
     interval_sec: int,
 ) -> tuple[threading.Thread, threading.Event, dict[str, int]]:
     stop_event = threading.Event()
     state = {"forced_exit_code": 0}
 
     def worker() -> None:
-        print(f"start to keep alive... {keep_alive_url}")
+        print(f"start to keep alive... {keepalive_endpoint}")
         while not stop_event.wait(interval_sec):
-            resp = fetch_text(keep_alive_url, timeout=10, suppress_error=True)
-            if resp.strip() == "-1":
-                print("Server returned -1, terminating job...")
+            try:
+                response = request_json(
+                    keepalive_endpoint,
+                    method="POST",
+                    body=keepalive_payload,
+                    timeout=10,
+                )
+            except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+                print(f"Keepalive request failed: {exc}")
+                continue
+
+            resp = extract_gpu_ids(response)
+            if resp == "-1":
+                print(f"Server returned {resp}, terminating job...")
+                state["forced_exit_code"] = 3
+                kill_process_group(proc)
+                stop_event.set()
+                return
+            if expected_gpu_ids and resp != expected_gpu_ids:
+                print(f"Keepalive returned mismatched GPUs {resp}, expected {expected_gpu_ids}.")
                 state["forced_exit_code"] = 3
                 kill_process_group(proc)
                 stop_event.set()
@@ -71,10 +78,6 @@ def stream_process_output(proc: subprocess.Popen[str], log_file: Path) -> int:
             print(line, end="")
             fh.write(line)
     return proc.wait()
-
-
-def to_safe_name(test_file: str) -> str:
-    return test_file.replace("/", "__").replace(".", "_")
 
 
 def log_python_and_pytest_resolution() -> None:
@@ -114,11 +117,18 @@ def main() -> int:
 
     artifacts_dir = Path(args.artifacts_dir)
     artifacts_dir.mkdir(parents=True, exist_ok=True)
-    safe_name = to_safe_name(args.test_file)
+    test_file = normalize_test_file(args.test_file)
+    if not Path("tests").is_dir():
+        print("tests/ directory not found.")
+        return 1
+    if not Path(test_file).is_file():
+        print(f"test file not found: {test_file}")
+        return 1
+    safe_name = to_safe_name(test_file)
     log_file = artifacts_dir / f"{safe_name}.log"
     junitxml = artifacts_dir / f"{safe_name}.xml"
 
-    pytest_cmd = ["pytest", "--durations=0", args.test_file, f"--junitxml={junitxml}"]
+    pytest_cmd = ["pytest", "--durations=0", test_file, f"--junitxml={junitxml}"]
     log_python_and_pytest_resolution()
     print(f"+ {' '.join(pytest_cmd)}")
 
@@ -132,11 +142,11 @@ def main() -> int:
         start_new_session=True,
     )
 
-    encoded_test = urllib.parse.quote(args.test_file, safe="")
-    encoded_runner = urllib.parse.quote(args.runner, safe="")
-    keep_alive_url = (
-        f"{args.base_url}/gpu/keepalive?runid={args.run_id}&test={encoded_test}"
-        f"&runner={encoded_runner}&timestamp={int(time.time())}&gpu={env.get('CUDA_VISIBLE_DEVICES', '')}"
+    keepalive_endpoint = f"{normalize_base_url(args.base_url)}/keepalive"
+    keepalive_payload = build_job_request(
+        runner_name=args.runner,
+        run_id=args.run_id,
+        test_name=test_file,
     )
 
     monitor_thread = None
@@ -145,7 +155,9 @@ def main() -> int:
     if env.get("CUDA_VISIBLE_DEVICES", ""):
         monitor_thread, monitor_stop, monitor_state = start_keepalive_monitor(
             proc=proc,
-            keep_alive_url=keep_alive_url,
+            keepalive_endpoint=keepalive_endpoint,
+            keepalive_payload=keepalive_payload,
+            expected_gpu_ids=env.get("CUDA_VISIBLE_DEVICES", ""),
             interval_sec=args.monitor_interval_sec,
         )
 
