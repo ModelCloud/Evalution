@@ -7,7 +7,6 @@ import urllib.error
 import urllib.request
 import json
 from pathlib import Path
-from device_smi import Device
 
 
 GPU_DISABLED_MARKER = re.compile(r"^# GPU=-1\s*$", re.MULTILINE)
@@ -132,6 +131,7 @@ def quote_url_value(value: str) -> str:
 
 
 def build_server_info() -> dict[str, str]:
+    from device_smi import Device
     os_info = Device("os")
     cpu_model = Device("cpu").model
     platform_name = (
