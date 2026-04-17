@@ -30,7 +30,7 @@ def is_valid_gpu_response(value: str) -> bool:
 
 
 def print_status(base_url: str, runner_name: str) -> None:
-    server = build_server_info(runner_name)
+    server = build_server_info()
     try:
         status = request_json(
             format_info_url(base_url, server["platform"]),

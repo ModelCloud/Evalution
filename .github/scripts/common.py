@@ -180,7 +180,7 @@ def query_gpu_inventory() -> list[dict[str, object]]:
 
 def build_get_request(*, runner_name: str, run_id: str, test_name: str, count: str) -> dict[str, object]:
     return {
-        "server": build_server_info(runner_name),
+        "server": build_server_info(),
         "job": {
             "jobId": int(run_id),
             "count": int(count),
@@ -194,7 +194,7 @@ def build_get_request(*, runner_name: str, run_id: str, test_name: str, count: s
 
 def build_job_request(*, runner_name: str, run_id: str, test_name: str) -> dict[str, object]:
     return {
-        "server": build_server_info(runner_name),
+        "server": build_server_info(),
         "job": {
             "jobId": int(run_id),
             "test": test_name,
