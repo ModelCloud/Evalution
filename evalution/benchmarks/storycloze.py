@@ -101,7 +101,9 @@ def _load_storycloze_dataset(
     *,
     split: str,
     cache_dir: str | None = None,
-    stream: bool = False,
+    # Match the repository's stream-first convention for helper defaults; suite instances still
+    # decide the public benchmark default via their dataclass configuration.
+    stream: bool = True,
 ) -> Any:
     if dataset_path != "LSDSem/story_cloze":
         raise ValueError(f"unsupported storycloze dataset_path: {dataset_path!r}")
