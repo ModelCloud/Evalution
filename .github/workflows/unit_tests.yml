@@ -57,38 +57,11 @@ jobs:
 
       - name: List test files
         id: files
-        env:
-          TEST_REGEX: ${{ github.event.inputs.test_regex || '' }}
         run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import pathlib
-          import re
-
-          root = pathlib.Path("tests")
-          pattern = os.environ.get("TEST_REGEX", "")
-          regex = re.compile(pattern) if pattern else None
-
-          def sort_key(path: pathlib.Path) -> tuple[int, str]:
-            # Prioritize direct children of tests/ before nested test files.
-            rel = path.relative_to(root)
-            return (len(rel.parts), path.as_posix())
-
-          files = []
-          for path in sorted(root.rglob("test_*.py"), key=sort_key):
-            rel = path.as_posix()
-            if regex and not regex.search(rel):
-              continue
-            files.append(rel)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-            print(f"files={json.dumps(files)}", file=fh)
-
-          print("Matched test files:")
-          for rel in files:
-            print(rel)
-          PY
+          files=$(python3 .github/scripts/list_test_files.py \
+            --test-regex "${{ github.event.inputs.test_regex || '' }}")
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "Matched test files: $files"
 
   test:
     needs: list-test-files
@@ -128,17 +101,8 @@ jobs:
       - name: Set test metadata
         id: meta
         run: |
-          test_file="${{ matrix.test-file }}"
-          safe_name="${test_file//\//__}"
-          safe_name="${safe_name//./_}"
-          requires_gpu="true"
-          if grep -q '^# GPU=-1$' "$test_file"; then
-            requires_gpu="false"
-          fi
-          echo "SAFE_NAME=$safe_name" >> "$GITHUB_ENV"
-          echo "TEST_REQUIRES_GPU=$requires_gpu" >> "$GITHUB_ENV"
-          echo "safe-name=$safe_name" >> "$GITHUB_OUTPUT"
-          echo "requires-gpu=$requires_gpu" >> "$GITHUB_OUTPUT"
+          python3 .github/scripts/prepare_unit_test.py \
+            --test-file "${{ matrix.test-file }}"
 
       - name: decompress uv cache
         continue-on-error: true
@@ -186,50 +150,20 @@ jobs:
 
       - name: Activate uv env
         run: |
-          python_version="${PYTHON_VERSION}"
-          uv_python="${UV_PYTHON}"
-
-          if [ "${{ matrix.test-file }}" = "tests/test_tensorrt_llm_engine.py" ]; then
-            python_version="3.12"
-            uv_python="3.12"
-          fi
-
-          echo "PYTHON_VERSION=$python_version" >> "$GITHUB_ENV"
-          echo "UV_PYTHON=$uv_python" >> "$GITHUB_ENV"
-
-          env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${python_version}_release"
+          env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
           mv /opt/uv/venvs/$env_name /opt/uv/tmp || true
-          echo "source /opt/uv/setup_uv_venv.sh $env_name ${python_version}"
-          source /opt/uv/setup_uv_venv.sh "$env_name" "${python_version}"
+          echo "source /opt/uv/setup_uv_venv.sh $env_name ${PYTHON_VERSION}"
+          source /opt/uv/setup_uv_venv.sh "$env_name" "${PYTHON_VERSION}"
           python -VV
 
       - name: Setup uv env
         run: |
           /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
-
-          if [ "${UV_PYTHON}" = "3.14t" ]; then
-            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp314-cp314t-linux_x86_64.whl
-          elif [ "${UV_PYTHON}" = "3.12" ]; then
-            echo "EVALUTION_SKIP_GIL_CHECK=1" >> "$GITHUB_ENV"
-            uv pip install tensorrt_llm -U
-            uv pip install http://10.0.13.31/files/flash_attn/flash_attn-2.8.4-cp312-cp312-linux_x86_64.whl
-          else
-            echo "== installing flash-attn =="
-            uv pip install flash-attn
-            uv pip show flash-attn
-          fi
-          
-          if [ "${{ matrix.test-file }}" = "tests/test_gptqmodel_engine.py" ]; then
-            uv pip install accelerate -U
-            # uv pip install torchao-0.17.0+cpu failed...
-            uv pip install https://download.pytorch.org/whl/cpu/torchao-0.17.0%2Bcpu-py3-none-any.whl#sha256=6c0ce8b506c72be4efb1f0c6fd1679cb58145efebb20d51ac1adf7a7b3ebb872 -U
-
-            echo "::group::pip gptqmodel"
-              echo "== installing gptqmodel =="
-              uv pip install gptqmodel -U
-              uv pip show gptqmodel
-            echo "::endgroup::"
-          fi
+          python3 .github/scripts/install_unit_test_deps.py \
+            --test-file "${{ matrix.test-file }}" \
+            --uv-python "${UV_PYTHON}" \
+            --runner "${{ env.RUNNER }}" \
+            --install-project
 
       - name: Print uv env
         run: |
@@ -275,14 +209,6 @@ jobs:
 
       - name: Run test
         run: |
-          if [ ! -d tests ]; then
-            echo "::error::tests/ directory not found."
-            exit 1
-          fi
-          
-          uv pip install .
-          uv pip install -U pytest datasets rouge_score sglang pybase64
-          
           echo "::group::pip list"
           uv pip list
           echo "::endgroup::"
@@ -298,12 +224,11 @@ jobs:
       - name: Release GPU
         if: ${{ always() && steps.meta.outputs.requires-gpu == 'true' }}
         run: |
-          if [ -n "${CUDA_VISIBLE_DEVICES:-}" ] && [ -n "${STEP_TIMESTAMP:-}" ]; then
+          if [ -n "${CUDA_VISIBLE_DEVICES:-}" ]; then
             python3 .github/scripts/release_gpu.py \
               --base-url "${{ env.BASE_URL }}" \
               --run-id "${{ github.run_id }}" \
               --gpu-id "${CUDA_VISIBLE_DEVICES}" \
-              --timestamp "${STEP_TIMESTAMP}" \
               --test "${{ matrix.test-file }}" \
               --runner "${{ runner.name }}"
           else

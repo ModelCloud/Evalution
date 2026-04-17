@@ -1,53 +1,18 @@
 import argparse
-import os
+import subprocess
 import sys
 import time
-import urllib.error
-import urllib.parse
-import urllib.request
 
-
-def now_ms() -> int:
-    return time.time_ns() // 1_000_000
-
-
-def fetch_text(url: str, *, timeout: float, suppress_error: bool = False) -> str:
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
-            return response.read().decode("utf-8", errors="replace")
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        if suppress_error:
-            print(f"Request failed for {url}: {exc}")
-            return ""
-        raise
-
-
-def fetch_with_retry(url: str, *, timeout: float, retries: int, retry_delay: float) -> str:
-    last_error: Exception | None = None
-    for attempt in range(retries + 1):
-        try:
-            return fetch_text(url, timeout=timeout)
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            last_error = exc
-            if attempt < retries:
-                time.sleep(retry_delay)
-    if last_error is not None:
-        print(f"Request failed after retries: {last_error}")
-    return ""
-
-
-def print_status(base_url: str) -> None:
-    status = fetch_text(f"{base_url}/gpu/status", timeout=10, suppress_error=True).strip()
-    if status:
-        print(status)
-
-
-def append_github_env(name: str, value: str) -> None:
-    github_env = os.environ.get("GITHUB_ENV")
-    if not github_env:
-        return
-    with open(github_env, "a", encoding="utf-8") as fh:
-        fh.write(f"{name}={value}\n")
+from common import (
+    append_github_env,
+    build_get_request,
+    build_server_info,
+    extract_gpu_ids,
+    format_info_url,
+    normalize_base_url,
+    request_json,
+    request_json_with_retry,
+)
 
 
 def is_valid_gpu_response(value: str) -> bool:
@@ -62,6 +27,20 @@ def is_valid_gpu_response(value: str) -> bool:
         elif not part.isdigit():
             return False
     return True
+
+
+def print_status(base_url: str, runner_name: str) -> None:
+    server = build_server_info(runner_name)
+    try:
+        status = request_json(
+            format_info_url(base_url, server["platform"]),
+            timeout=10,
+        )
+    except Exception as exc:
+        print(f"Request failed for allocator info: {exc}")
+        return
+    if status is not None:
+        print(status)
 
 
 def main() -> int:
@@ -79,33 +58,36 @@ def main() -> int:
     parser.add_argument("--require-single", action="store_true")
     args = parser.parse_args()
 
-    encoded_test = urllib.parse.quote(args.test, safe="")
-    encoded_runner = urllib.parse.quote(args.runner, safe="")
     start_s = time.time()
+    endpoint = f"{normalize_base_url(args.base_url)}/get"
 
     print("Requesting GPU from allocator")
     print(f"run_id={args.run_id} test={args.test} runner={args.runner} count={args.count}")
 
     while True:
-        ts_ms = now_ms()
-        url = (
-            f"{args.base_url}/gpu/get?runid={args.run_id}&timestamp={ts_ms}"
-            f"&test={encoded_test}&runner={encoded_runner}&count={args.count}"
+        request_body = build_get_request(
+            runner_name=args.runner,
+            run_id=args.run_id,
+            test_name=args.test,
+            count=args.count,
         )
-        print(f"requesting GPU with: {url}")
+        print(f"requesting GPU with: {endpoint}")
 
-        resp = fetch_with_retry(
-            url,
+        response = request_json_with_retry(
+            endpoint,
+            method="POST",
+            body=request_body,
             timeout=args.request_timeout,
             retries=args.retries,
             retry_delay=args.retry_delay,
-        ).replace("\r", "").replace("\n", "").strip()
+        )
+        resp = extract_gpu_ids(response)
 
         print(f"resp={{{resp}}}")
 
         if not is_valid_gpu_response(resp):
             print(f"Allocator returned invalid response: {resp!r} (temporary error)")
-            print_status(args.base_url)
+            print_status(args.base_url, args.runner)
             time.sleep(args.sleep_sec)
             continue
 
@@ -116,14 +98,14 @@ def main() -> int:
                     f"Timed out after {args.timeout_sec}s waiting for GPU "
                     f"(last response={resp})"
                 )
-                print_status(args.base_url)
+                print_status(args.base_url, args.runner)
                 return 1
 
             print(
                 f"No GPU available (response={resp}). Waiting {args.sleep_sec}s..."
                 f" elapsed={elapsed}s"
             )
-            print_status(args.base_url)
+            print_status(args.base_url, args.runner)
             time.sleep(args.sleep_sec)
             continue
 
@@ -133,9 +115,9 @@ def main() -> int:
 
         print(f"Allocated GPU ID: {resp}")
         append_github_env("CUDA_VISIBLE_DEVICES", resp)
-        append_github_env("STEP_TIMESTAMP", str(now_ms()))
         print(f"CUDA_VISIBLE_DEVICES set to {resp}")
-        print_status(args.base_url)
+        print(subprocess.getoutput(f"nvidia-smi -i {resp} --query-gpu=name --format=csv"))
+        print_status(args.base_url, args.runner)
         return 0
 
 
