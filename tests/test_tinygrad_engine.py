@@ -250,8 +250,8 @@ def test_tinygrad_generate_batches_same_signature_requests_together(monkeypatch)
     assert [output.text for output in outputs] == ["out:one", "out:two"]
 
 
-def test_tinygrad_generate_splits_requests_by_batch_signature(monkeypatch) -> None:
-    """Verify static batching only merges requests that share the safe decode signature."""
+def test_tinygrad_generate_batches_mixed_prompt_lengths_together(monkeypatch) -> None:
+    """Verify static batching now keeps mixed prompt lengths together when decode settings match."""
 
     session = _build_session()
     seen_batches: list[list[str | None]] = []
@@ -278,8 +278,146 @@ def test_tinygrad_generate_splits_requests_by_batch_signature(monkeypatch) -> No
         batch_size=4,
     )
 
-    assert seen_batches == [["same-a", "same-b"], ["different-len"]]
+    assert seen_batches == [["same-a", "different-len", "same-b"]]
     assert [output.text for output in outputs] == ["out:same-a", "out:different-len", "out:same-b"]
+
+
+def test_tinygrad_generate_splits_requests_by_batch_signature(monkeypatch) -> None:
+    """Verify static batching still splits requests when sampling controls diverge."""
+
+    session = _build_session()
+    seen_batches: list[list[str | None]] = []
+
+    def fake_generate_batch(requests: list[GenerationRequest]) -> list:
+        seen_batches.append([request.prompt for request in requests])
+        return [
+            SimpleNamespace(
+                prompt=request.prompt or "",
+                text=f"out:{request.prompt}",
+                metadata={},
+            )
+            for request in requests
+        ]
+
+    monkeypatch.setattr(session, "_generate_batch", fake_generate_batch)
+
+    outputs = session.generate(
+        [
+            GenerationRequest(prompt="greedy-a", input_ids=[1, 2, 3], max_new_tokens=4),
+            GenerationRequest(prompt="sampled", input_ids=[4, 5], max_new_tokens=4, do_sample=True, temperature=0.8),
+            GenerationRequest(prompt="greedy-b", input_ids=[6, 7, 8], max_new_tokens=4),
+        ],
+        batch_size=4,
+    )
+
+    assert seen_batches == [["greedy-a", "greedy-b"], ["sampled"]]
+    assert [output.text for output in outputs] == ["out:greedy-a", "out:sampled", "out:greedy-b"]
+
+
+def test_tinygrad_native_generate_rebuckets_mixed_prompt_lengths(monkeypatch) -> None:
+    """Verify native extra-llama mixed prompt lengths are rerouted into same-length sub-batches."""
+
+    session = _build_session()
+    session.model = SimpleNamespace(layers=[], tok_embeddings=object(), norm=object())
+    seen_prompt_lengths: list[list[int]] = []
+
+    def fake_uniform_batch(*, requests, prompt_token_ids, prompt_lengths, do_sample, temperature):
+        seen_prompt_lengths.append(list(prompt_lengths))
+        return [
+            SimpleNamespace(
+                prompt=request.prompt or "",
+                text=f"out:{request.prompt}",
+                metadata={},
+            )
+            for request in requests
+        ]
+
+    monkeypatch.setattr(session, "_generate_uniform_prompt_batch", fake_uniform_batch)
+
+    outputs = session.generate(
+        [
+            GenerationRequest(prompt="same-a", input_ids=[1, 2, 3], max_new_tokens=4),
+            GenerationRequest(prompt="different-len", input_ids=[4, 5], max_new_tokens=4),
+            GenerationRequest(prompt="same-b", input_ids=[6, 7, 8], max_new_tokens=4),
+        ],
+        batch_size=4,
+    )
+
+    assert seen_prompt_lengths == [[3, 3], [2]]
+    assert [output.text for output in outputs] == ["out:same-a", "out:different-len", "out:same-b"]
+
+
+def test_tinygrad_forward_batch_logits_uses_batched_extra_llama_jit() -> None:
+    """Verify native extra-llama batched single-token decode reuses a TinyJit cache per batch size."""
+
+    class FakeResult:
+        """Carry one sentinel logits payload through the fake JIT path."""
+
+        def __init__(self, value: str) -> None:
+            self.value = value
+
+        def realize(self) -> str:
+            return self.value
+
+    class FakeVariable:
+        """Support the start_pos binding contract used by the extra-llama JIT path."""
+
+        def __init__(self, name: str, lower: int, upper: int) -> None:
+            self.name = name
+            self.lower = lower
+            self.upper = upper
+
+        def bind(self, value: int) -> tuple[str, int]:
+            return ("bound_start_pos", value)
+
+    class FakeJit:
+        """Record calls so the surrounding test can assert cache reuse and reset behavior."""
+
+        def __init__(self, fn) -> None:
+            self.fn = fn
+            self.calls: list[tuple[object, ...]] = []
+            self.reset_count = 0
+
+        def __call__(self, *args) -> FakeResult:
+            self.calls.append(args)
+            return FakeResult("jit-logits")
+
+        def reset(self) -> None:
+            self.reset_count += 1
+
+    jit_instances: list[FakeJit] = []
+
+    def build_fake_jit(fn) -> FakeJit:
+        jit = FakeJit(fn)
+        jit_instances.append(jit)
+        return jit
+
+    session = _build_session()
+    session.modules = SimpleNamespace(
+        helpers=SimpleNamespace(Context=lambda **kwargs: nullcontext()),
+        Tensor=lambda rows, **kwargs: rows,
+        dtypes=SimpleNamespace(int32="int32"),
+        tinygrad=SimpleNamespace(TinyJit=build_fake_jit),
+        extra_llama=SimpleNamespace(Variable=FakeVariable),
+    )
+    session.model = SimpleNamespace(
+        layers=[],
+        tok_embeddings=object(),
+        norm=object(),
+        forward=lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("fallback forward should not run")),
+    )
+
+    first = session._forward_batch_logits([[1], [2]], start_pos=7)
+    second = session._forward_batch_logits([[3], [4]], start_pos=9)
+
+    assert first == "jit-logits"
+    assert second == "jit-logits"
+    assert len(jit_instances) == 1
+    assert len(jit_instances[0].calls) == 2
+
+    session._reset_model_cache(reset_jit=True)
+
+    assert jit_instances[0].reset_count == 1
 
 
 def test_tinygrad_native_cuda_execution_metadata_reports_runtime_profile() -> None:
