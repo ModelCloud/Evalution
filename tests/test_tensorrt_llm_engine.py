@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import importlib.util
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -260,31 +259,25 @@ def test_tensorrt_llm_engine_defaults_batch_size_to_auto() -> None:
     assert engine.padding_side == "left"
     assert engine.tensor_parallel_size == 1
     assert engine.runtime_backend is None
-    assert engine.tensorrt_llm_path is None
     assert engine.to_dict()["resolved_engine"] is None
 
 
-def test_import_tensorrt_llm_uses_checkout_fallback(monkeypatch, tmp_path) -> None:
-    """Verify import tensorrt LLM uses checkout fallback."""
+def test_import_tensorrt_llm_uses_native_python_import(monkeypatch) -> None:
+    """Verify TensorRT-LLM import reads from the active Python environment only."""
     fake_module = object()
 
     def fake_import_module(name: str):
         """Support the surrounding tests with fake import module."""
         assert name == "tensorrt_llm"
-        if str(tmp_path) not in sys.path:
-            raise ModuleNotFoundError("No module named 'tensorrt_llm'")
         return fake_module
 
     monkeypatch.setattr(
         "evalution.engines.tensorrt_llm_engine.importlib.import_module",
         fake_import_module,
     )
-    monkeypatch.setattr("evalution.engines.tensorrt_llm_engine.sys.path", list(sys.path))
-
-    imported = _import_tensorrt_llm(str(tmp_path))
+    imported = _import_tensorrt_llm()
 
     assert imported is fake_module
-    assert sys.path[0] == str(tmp_path)
 
 
 def test_tensorrt_llm_session_generates_and_scores() -> None:
@@ -387,7 +380,7 @@ def test_tensorrt_llm_engine_runs_real_cuda_smoke_path(capfd: pytest.CaptureFixt
 
     _integration_log(capfd, f"checking TensorRT-LLM runtime for model {model_path}")
     try:
-        _import_tensorrt_llm(None)
+        _import_tensorrt_llm()
     except Exception as exc:  # pragma: no cover - runtime availability is environment specific
         pytest.fail(f"TensorRT-LLM runtime unavailable: {exc}")
 

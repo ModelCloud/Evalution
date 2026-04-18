@@ -271,6 +271,7 @@ class BaseEnginePagedBatchingConfig:
     """Define the base engine paged batching config helper class."""
     manual_eviction: bool = False
     allow_block_sharing: bool = True
+    max_batch_tokens: int | None = None
     max_blocks_per_request: int | None = None
     use_async_batching: bool | None = None
     use_cuda_graph: bool | None = None

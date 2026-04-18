@@ -6,8 +6,6 @@
 from __future__ import annotations
 
 import importlib
-import os
-import sys
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -44,26 +42,6 @@ _UNSUPPORTED_GPTQMODEL_BACKENDS = frozenset({"mlx", "sglang", "vllm"})
 _CUDA_CUSPARSE_HEADER = Path("/usr/local/cuda/include/cusparse.h")
 
 
-def _default_gptqmodel_path() -> str | None:
-    """Find a local GPTQModel checkout when the runtime is not installed as a package."""
-
-    for env_name in ("EVALUTION_GPTQMODEL_PATH", "GPTQMODEL_PATH"):
-        configured = os.environ.get(env_name)
-        if configured:
-            return configured
-
-    repo_root = Path(__file__).resolve().parents[2]
-    for candidate in (
-            repo_root / "gptqmodel",
-            repo_root.parent / "gptqmodel",
-            Path.cwd() / "gptqmodel",
-    ):
-        if candidate.exists():
-            return str(candidate)
-
-    return None
-
-
 @dataclass(slots=True)
 class _LoadedGPTQModelRuntime:
     # Bundle the GPTQModel runtime objects so session construction can stay deterministic.
@@ -84,7 +62,6 @@ class GPTQModel(BaseEnginePagedBatchingConfig, _TransformersCommonConfig):
     # Load quantized Hugging Face-compatible checkpoints through GPTQModel.
     """Define the gptqmodel helper class."""
     backend: str = "auto"
-    gptqmodel_path: str | None = field(default_factory=_default_gptqmodel_path)
 
     # Reuse the same paged-attention feature gating as the native transformer engine.
     def build(self, model: Model) -> TransformersSession:
@@ -214,7 +191,7 @@ def load_gptqmodel_runtime(
 
     backend = _resolve_gptqmodel_backend(config)
     _validate_gptqmodel_backend(backend)
-    gptqmodel_module = _import_gptqmodel(config.gptqmodel_path)
+    gptqmodel_module = _import_gptqmodel()
 
     load_kwargs = {
         **model_config.model_kwargs,
@@ -284,34 +261,15 @@ def load_gptqmodel_runtime(
     )
 
 
-# Import the local checkout only as a fallback so installed environments keep working unchanged.
-def _import_gptqmodel(gptqmodel_path: str | None) -> Any:
-    """Implement import gptqmodel for this module."""
+# Import the installed package directly so engine behavior follows the active Python environment.
+def _import_gptqmodel() -> Any:
+    """Import GPTQModel from the active Python environment."""
     try:
         return importlib.import_module("gptqmodel")
     except ModuleNotFoundError as exc:
-        if not gptqmodel_path:
-            raise ModuleNotFoundError(
-                "gptqmodel is not importable; install it or configure `gptqmodel_path`"
-            ) from exc
-
-        checkout_path = Path(gptqmodel_path)
-        if not checkout_path.exists():
-            raise ModuleNotFoundError(
-                f"gptqmodel is not importable and the configured checkout path does not exist: {checkout_path}"
-            ) from exc
-
-        checkout_root = str(checkout_path)
-        if checkout_root not in sys.path:
-            sys.path.insert(0, checkout_root)
-
-        try:
-            return importlib.import_module("gptqmodel")
-        except ModuleNotFoundError as nested_exc:
-            raise ModuleNotFoundError(
-                "failed to import gptqmodel from the configured checkout; install GPTQModel runtime "
-                "dependencies for that checkout first"
-            ) from nested_exc
+        raise ModuleNotFoundError(
+            "gptqmodel is not importable; install the optional `gptqmodel` dependency"
+        ) from exc
 
 
 def _normalize_gptqmodel_backend(backend: Any) -> str:

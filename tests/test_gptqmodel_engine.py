@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import math
-import sys
 import threading
 from pathlib import Path
 from types import SimpleNamespace
@@ -22,7 +21,6 @@ from evalution.engines.gptqmodel_engine import (
     GPTQModel,
     GPTQModelSession,
     _CUDA_CUSPARSE_HEADER,
-    _default_gptqmodel_path,
     _import_gptqmodel,
     _validate_gptqmodel_backend,
     load_gptqmodel_runtime,
@@ -35,12 +33,10 @@ _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-
 def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     """Verify gptqmodel engine defaults batch size to auto."""
     engine = GPTQModel()
-    expected_gptqmodel_path = _default_gptqmodel_path()
 
     assert engine.batch_size == "auto"
     assert engine.seed is None
     assert engine.backend == "auto"
-    assert engine.gptqmodel_path == expected_gptqmodel_path
     assert engine.manual_eviction is False
     assert engine.allow_block_sharing is True
     assert engine.max_blocks_per_request is None
@@ -52,7 +48,6 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["batch_size"] == "auto"
     assert engine.to_dict()["seed"] is None
     assert engine.to_dict()["backend"] == "auto"
-    assert engine.to_dict()["gptqmodel_path"] == expected_gptqmodel_path
     assert engine.to_dict()["manual_eviction"] is False
     assert engine.to_dict()["allow_block_sharing"] is True
     assert engine.to_dict()["max_blocks_per_request"] is None
@@ -61,16 +56,6 @@ def test_gptqmodel_engine_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
-
-
-def test_gptqmodel_engine_defaults_path_from_environment(monkeypatch, tmp_path) -> None:
-    """Verify gptqmodel engine defaults path from environment."""
-    monkeypatch.setenv("EVALUTION_GPTQMODEL_PATH", str(tmp_path))
-
-    engine = GPTQModel()
-
-    assert engine.gptqmodel_path == str(tmp_path)
-
 
 def test_load_gptqmodel_runtime_seeds_runtime(monkeypatch) -> None:
     """Verify load gptqmodel runtime seeds runtime."""
@@ -118,7 +103,7 @@ def test_load_gptqmodel_runtime_seeds_runtime(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "evalution.engines.gptqmodel_engine._import_gptqmodel",
-        lambda path: SimpleNamespace(
+        lambda: SimpleNamespace(
             GPTQModel=SimpleNamespace(load=lambda **kwargs: FakeWrapper())
         ),
     )
@@ -336,27 +321,22 @@ def test_gptqmodel_rejects_paged_attn_when_continuous_batching_is_unavailable(mo
         GPTQModel(attn_implementation="paged|flash_attention_2").build(Model(path="/tmp/model"))
 
 
-def test_import_gptqmodel_uses_checkout_fallback(monkeypatch, tmp_path) -> None:
-    """Verify import gptqmodel uses checkout fallback."""
+def test_import_gptqmodel_uses_native_python_import(monkeypatch) -> None:
+    """Verify import gptqmodel reads from the active Python environment only."""
     fake_module = object()
 
     def fake_import_module(name: str):
         """Support the surrounding tests with fake import module."""
         assert name == "gptqmodel"
-        if str(tmp_path) not in sys.path:
-            raise ModuleNotFoundError("No module named 'gptqmodel'")
         return fake_module
 
     monkeypatch.setattr(
         "evalution.engines.gptqmodel_engine.importlib.import_module",
         fake_import_module,
     )
-    monkeypatch.setattr("evalution.engines.gptqmodel_engine.sys.path", list(sys.path))
-
-    imported = _import_gptqmodel(str(tmp_path))
+    imported = _import_gptqmodel()
 
     assert imported is fake_module
-    assert sys.path[0] == str(tmp_path)
 
 
 def test_load_gptqmodel_runtime_uses_quantized_loader(monkeypatch) -> None:
@@ -423,7 +403,7 @@ def test_load_gptqmodel_runtime_uses_quantized_loader(monkeypatch) -> None:
     fake_module = SimpleNamespace(GPTQModel=SimpleNamespace(load=fake_load))
     monkeypatch.setattr(
         "evalution.engines.gptqmodel_engine._import_gptqmodel",
-        lambda path: fake_module,
+        lambda: fake_module,
     )
 
     runtime = load_gptqmodel_runtime(
@@ -502,7 +482,7 @@ def test_load_gptqmodel_runtime_prefers_triton_when_marlin_headers_are_missing(m
     )
     monkeypatch.setattr(
         "evalution.engines.gptqmodel_engine._import_gptqmodel",
-        lambda path: SimpleNamespace(
+        lambda: SimpleNamespace(
             GPTQModel=SimpleNamespace(
                 load=lambda **kwargs: load_calls.append(kwargs) or FakeWrapper()
             )

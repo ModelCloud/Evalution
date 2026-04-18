@@ -22,6 +22,7 @@ from evalution.engines import (
     OpenVINO,
     SGLang,
     TensorRTLLM,
+    Tinygrad,
     Transformers,
     TransformersCompat,
     VLLM,
@@ -49,6 +50,7 @@ _ENGINE_REGISTRY: dict[str, _EngineRegistryEntry] = {
     "llamacpp": _EngineSpec(factory=LlamaCpp, emit_alias="LlamaCpp"),
     "openvino": _EngineSpec(factory=OpenVINO, emit_alias="OpenVINO"),
     "tensorrtllm": _EngineSpec(factory=TensorRTLLM, emit_alias="TensorRTLLM"),
+    "tinygrad": _EngineSpec(factory=Tinygrad, emit_alias="Tinygrad"),
     "vllm": _EngineSpec(factory=VLLM, emit_alias="VLLM"),
     "sglang": _EngineSpec(factory=SGLang, emit_alias="SGLang"),
 }

@@ -118,6 +118,7 @@ Evalution ships these built-in engines:
 - `engines.Transformers()`: the modern backend
 - `engines.TransformersCompat()`: the compatibility backend
 - `engines.GPTQModel()`: the quantized GPTQModel backend
+- `engines.Tinygrad()`: the GGUF-only tinygrad local runtime backend
 - `engines.LlamaCpp()`: the llama.cpp backend through `llama-cpp-python`
 - `engines.OpenAICompatible()`: an OpenAI-style HTTP backend
 - `engines.OpenVINO()`: the Optimum Intel OpenVINO backend
@@ -156,6 +157,20 @@ strings and sampling settings stay compatible, then tears it down on `gc()` betw
 the same shared generation, scoring, and paged continuous-batching path as the built-in
 transformer engines when the loaded quantized model exposes the required HF hooks. It also
 surfaces the resolved quantized runtime backend in execution metadata.
+
+`engines.Tinygrad()` loads local GGUF checkpoints through tinygrad's packaged LLM runtime and keeps
+generation, log-likelihood, and rolling log-likelihood fully in process. For chat-template
+benchmarks such as `gsm8k_platinum`, keep `model.path` pointed at the `.gguf` file and
+`model.tokenizer_path` pointed at the matching dense tokenizer checkout. Evalution drives
+`generate(...)` through true low-level static batching on top of tinygrad's batched forward path,
+then emulates `generate_continuous(...)` and `loglikelihood_continuous(...)` with same-thread
+fixed-batch submission when request-level continuous batching is unavailable upstream. The engine
+now rejects dense Hugging Face checkpoints explicitly because tinygrad's native Llama 3.2 path was
+producing incorrect benchmark outputs on the shared GSM8K regression matrix. On CUDA it defaults
+to the profiled graph-free tinygrad runtime (`jit=2`, `jitbeam=0`) for the local RTX 4090 and
+A100 families because `jit=1` hit CUDA graph construction failures and `jitbeam=2` did not finish
+the startup sweep in time. Override `jit` or `jitbeam` explicitly when you want to test a
+different tinygrad runtime profile.
 
 `engines.LlamaCpp()` loads GGUF-compatible checkpoints through `llama_cpp.Llama(...)` and keeps
 generation plus both log-likelihood APIs fully in process. Since llama.cpp does expose a native
