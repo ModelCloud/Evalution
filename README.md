@@ -661,22 +661,6 @@ tests:
   - type: gsm8k_platinum
 ```
 
-For the shared llama.cpp integration test artifact, download
-`bartowski/Llama-3.2-1B-Instruct-GGUF` with the `Llama-3.2-1B-Instruct-Q4_K_M.gguf` file and keep
-the original Hugging Face tokenizer checkout at `/monster/data/model/Llama-3.2-1B-Instruct`:
-
-```bash
-python - <<'PY'
-from huggingface_hub import hf_hub_download
-
-hf_hub_download(
-    repo_id="bartowski/Llama-3.2-1B-Instruct-GGUF",
-    filename="Llama-3.2-1B-Instruct-Q4_K_M.gguf",
-    local_dir="/monster/data/model/Llama-3.2-1B-Instruct-GGUF",
-)
-PY
-```
-
 ### OpenVINO 🔧
 
 Use `engines.OpenVINO()` in Python or `engine.type: OpenVINO` in YAML when you want to run an
