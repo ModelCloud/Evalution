@@ -68,9 +68,11 @@ class FakePrepareTokenizer:
     def apply_chat_template(self, messages, *, tokenize=False, add_generation_prompt=True):
         """Render chat messages into one deterministic prompt string."""
 
-        del tokenize
         rendered = "|".join(f"{message['role']}:{message['content']}" for message in messages)
-        return rendered + ("|assistant:" if add_generation_prompt else "")
+        rendered = rendered + ("|assistant:" if add_generation_prompt else "")
+        if tokenize:
+            return {"input_ids": [len(rendered)]}
+        return rendered
 
     def encode(self, text: str, add_special_tokens: bool = False) -> list[int]:
         """Encode text deterministically so the tests can assert exact token ids."""
@@ -197,7 +199,9 @@ def test_tinygrad_generate_truncates_stop_strings(monkeypatch) -> None:
     """Verify generated text is truncated at the first configured stop string."""
 
     session = _build_session()
-    monkeypatch.setattr(session, "_generate_token_ids", lambda *args, **kwargs: [65, 66])
+    generated_steps = iter(([65], [66]))
+    monkeypatch.setattr(session, "_reset_model_cache", lambda *args, **kwargs: None)
+    monkeypatch.setattr(session, "_batched_next_token_ids", lambda *args, **kwargs: next(generated_steps))
 
     outputs = session.generate(
         [
@@ -213,6 +217,69 @@ def test_tinygrad_generate_truncates_stop_strings(monkeypatch) -> None:
     assert outputs[0].text == "abc"
     assert outputs[0].metadata["finish_reason"] == "stop"
     assert outputs[0].metadata["completion_token_count"] == 2
+
+
+def test_tinygrad_generate_batches_same_signature_requests_together(monkeypatch) -> None:
+    """Verify same-shape requests are coalesced into one low-level tinygrad batch."""
+
+    session = _build_session()
+    seen_batches: list[list[str | None]] = []
+
+    def fake_generate_batch(requests: list[GenerationRequest]) -> list:
+        seen_batches.append([request.prompt for request in requests])
+        return [
+            SimpleNamespace(
+                prompt=request.prompt or "",
+                text=f"out:{request.prompt}",
+                metadata={},
+            )
+            for request in requests
+        ]
+
+    monkeypatch.setattr(session, "_generate_batch", fake_generate_batch)
+
+    outputs = session.generate(
+        [
+            GenerationRequest(prompt="one", input_ids=[1, 2, 3], max_new_tokens=4),
+            GenerationRequest(prompt="two", input_ids=[4, 5, 6], max_new_tokens=4),
+        ],
+        batch_size=2,
+    )
+
+    assert seen_batches == [["one", "two"]]
+    assert [output.text for output in outputs] == ["out:one", "out:two"]
+
+
+def test_tinygrad_generate_splits_requests_by_batch_signature(monkeypatch) -> None:
+    """Verify static batching only merges requests that share the safe decode signature."""
+
+    session = _build_session()
+    seen_batches: list[list[str | None]] = []
+
+    def fake_generate_batch(requests: list[GenerationRequest]) -> list:
+        seen_batches.append([request.prompt for request in requests])
+        return [
+            SimpleNamespace(
+                prompt=request.prompt or "",
+                text=f"out:{request.prompt}",
+                metadata={},
+            )
+            for request in requests
+        ]
+
+    monkeypatch.setattr(session, "_generate_batch", fake_generate_batch)
+
+    outputs = session.generate(
+        [
+            GenerationRequest(prompt="same-a", input_ids=[1, 2, 3], max_new_tokens=4),
+            GenerationRequest(prompt="different-len", input_ids=[4, 5], max_new_tokens=4),
+            GenerationRequest(prompt="same-b", input_ids=[6, 7, 8], max_new_tokens=4),
+        ],
+        batch_size=4,
+    )
+
+    assert seen_batches == [["same-a", "same-b"], ["different-len"]]
+    assert [output.text for output in outputs] == ["out:same-a", "out:different-len", "out:same-b"]
 
 
 def test_tinygrad_native_cuda_execution_metadata_reports_runtime_profile() -> None:

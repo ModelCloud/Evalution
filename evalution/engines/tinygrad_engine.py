@@ -8,6 +8,7 @@ from __future__ import annotations
 import gc
 import importlib
 import json
+import math
 import os
 import sys
 import threading
@@ -205,6 +206,10 @@ class TinygradSession(BaseInferenceSession):
                     input_ids = list(request.input_ids)
                 elif request.messages is not None and self.prepare_tokenizer is None and _is_tinygrad_simple_tokenizer(self.tokenizer):
                     input_ids = self._encode_chat_messages_with_tinygrad_tokenizer(request)
+                elif request.messages is not None and self.prepare_tokenizer is not None:
+                    if rendered_prompt is None:
+                        rendered_prompt = self._render_request_with_tokenizer(tokenizer, request)
+                    input_ids = self._tokenize_chat_messages_with_tokenizer(tokenizer, request)
                 else:
                     if rendered_prompt is None:
                         rendered_prompt = self._render_request_with_tokenizer(tokenizer, request)
@@ -230,13 +235,28 @@ class TinygradSession(BaseInferenceSession):
         if not requests:
             return []
 
-        del batch_size
         prepared_requests = self.prepare_requests(requests)
-        outputs: list[GenerationOutput] = []
+        effective_batch_size = (
+            max(int(batch_size), 1)
+            if batch_size is not None
+            else self.resolve_batch_size(prepared_requests)
+        )
+        outputs: list[GenerationOutput | None] = [None] * len(prepared_requests)
         with self._generation_lock:
-            for request in prepared_requests:
-                outputs.append(self._generate_one(request))
-        return outputs
+            for generation_batch in self._iter_generation_batches(
+                prepared_requests,
+                batch_size=effective_batch_size,
+            ):
+                batch_outputs = self._generate_batch(
+                    [request for _, request in generation_batch]
+                )
+                for (request_index, _request), output in zip(
+                    generation_batch,
+                    batch_outputs,
+                    strict=True,
+                ):
+                    outputs[request_index] = output
+        return [output for output in outputs if output is not None]
 
     def generate_continuous(
         self,
@@ -455,52 +475,252 @@ class TinygradSession(BaseInferenceSession):
     def _generate_one(self, request: GenerationRequest) -> GenerationOutput:
         """Generate one completion by running tinygrad autoregressively with reusable KV cache."""
 
+        return self._generate_batch([request])[0]
+
+    def _iter_generation_batches(
+        self,
+        requests: list[GenerationRequest],
+        *,
+        batch_size: int,
+    ) -> Iterator[list[tuple[int, GenerationRequest]]]:
+        """Group prepared generation requests into safe static batches."""
+
+        grouped: dict[tuple[int, bool, float, int], list[tuple[int, GenerationRequest]]] = {}
+        for request_index, request in enumerate(requests):
+            signature = self._generation_batch_signature(request)
+            grouped.setdefault(signature, []).append((request_index, request))
+
+        for grouped_requests in grouped.values():
+            for start in range(0, len(grouped_requests), batch_size):
+                yield grouped_requests[start : start + batch_size]
+
+    def _generation_batch_signature(self, request: GenerationRequest) -> tuple[int, bool, float, int]:
+        """Return the static-batching signature required by tinygrad's shared start_pos decode loop."""
+
         if request.num_beams != 1:
             raise ValueError("Tinygrad engine currently requires num_beams=1")
         if request.input_ids is None:
             raise ValueError("prepared generation requests must include input_ids")
-
-        prompt_ids = list(request.input_ids)
-        if not prompt_ids:
+        prompt_length = len(request.input_ids)
+        if prompt_length <= 0:
             raise ValueError("generation requests must provide at least one prompt token")
-
-        self._reset_model_cache()
-        max_new_tokens = request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens
-        generated_ids: list[int] = []
-        finish_reason = "length"
-        for token_id in self._generate_token_ids(
-            prompt_ids,
-            max_new_tokens=max_new_tokens,
-            do_sample=request.do_sample,
-            temperature=request.temperature,
-        ):
-            if self._is_end_token(token_id):
-                finish_reason = "stop"
-                break
-
-            generated_ids.append(int(token_id))
-            generated_text = self._decode_tokens(generated_ids)
-            truncated = _truncate_at_stop(generated_text, request.stop)
-            if truncated != generated_text:
-                generated_text = truncated
-                finish_reason = "stop"
-                break
-        else:
-            generated_text = _truncate_at_stop(self._decode_tokens(generated_ids), request.stop)
-
-        if "generated_text" not in locals():
-            generated_text = _truncate_at_stop(self._decode_tokens(generated_ids), request.stop)
-
-        return GenerationOutput(
-            prompt=request.rendered_prompt or request.prompt or str(request.messages),
-            text=generated_text,
-            metadata={
-                **dict(request.metadata),
-                "finish_reason": finish_reason,
-                "prompt_token_count": len(prompt_ids),
-                "completion_token_count": len(generated_ids),
-            },
+        max_new_tokens = (
+            request.max_new_tokens
+            if request.max_new_tokens is not None
+            else self.config.max_new_tokens
         )
+        return (
+            prompt_length,
+            bool(request.do_sample),
+            float(request.temperature),
+            int(max_new_tokens),
+        )
+
+    def _generate_batch(self, requests: list[GenerationRequest]) -> list[GenerationOutput]:
+        """Generate one static batch through tinygrad's batched forward path."""
+
+        if not requests:
+            return []
+
+        batch_signature = self._generation_batch_signature(requests[0])
+        prompt_length, do_sample, temperature, _max_new_tokens = batch_signature
+        for request in requests[1:]:
+            if self._generation_batch_signature(request) != batch_signature:
+                raise ValueError("Tinygrad static batching requires matching prompt lengths and sampling settings")
+
+        prompt_token_ids = [
+            [int(token_id) for token_id in request.input_ids or []]
+            for request in requests
+        ]
+        generation_limits = [
+            max(
+                min(
+                    int(request.max_new_tokens if request.max_new_tokens is not None else self.config.max_new_tokens),
+                    max(int(self.max_context) - prompt_length, 0),
+                ),
+                0,
+            )
+            for request in requests
+        ]
+
+        generated_token_ids = [[] for _ in requests]
+        generated_texts = [""] * len(requests)
+        finish_reasons = ["length"] * len(requests)
+        finished = [limit <= 0 for limit in generation_limits]
+        finished_row_input_id = self._rollout_filler_token_id()
+
+        self._reset_model_cache(reset_jit=True)
+        if not all(finished):
+            with self._runtime_context():
+                current_tokens, current_position = self._prefill_batch(
+                    prompt_token_ids=prompt_token_ids,
+                    do_sample=do_sample,
+                    temperature=temperature,
+                )
+                while True:
+                    self._consume_generation_step(
+                        requests=requests,
+                        current_tokens=current_tokens,
+                        generated_token_ids=generated_token_ids,
+                        generated_texts=generated_texts,
+                        finish_reasons=finish_reasons,
+                        finished=finished,
+                        generation_limits=generation_limits,
+                    )
+                    if all(finished):
+                        break
+                    if current_position >= int(self.max_context):
+                        break
+                    current_tokens = self._batched_next_token_ids(
+                        [
+                            [finished_row_input_id if finished[row_index] else token_id]
+                            for row_index, token_id in enumerate(current_tokens)
+                        ],
+                        start_pos=current_position,
+                        do_sample=do_sample,
+                        temperature=temperature,
+                    )
+                    current_position += 1
+
+        outputs: list[GenerationOutput] = []
+        for request, output_token_ids, generated_text, finish_reason in zip(
+            requests,
+            generated_token_ids,
+            generated_texts,
+            finish_reasons,
+            strict=True,
+        ):
+            outputs.append(
+                GenerationOutput(
+                    prompt=request.rendered_prompt or request.prompt or str(request.messages),
+                    text=generated_text,
+                    metadata={
+                        **dict(request.metadata),
+                        "finish_reason": finish_reason,
+                        "prompt_token_count": prompt_length,
+                        "completion_token_count": len(output_token_ids),
+                    },
+                )
+            )
+        return outputs
+
+    def _consume_generation_step(
+        self,
+        *,
+        requests: list[GenerationRequest],
+        current_tokens: list[int],
+        generated_token_ids: list[list[int]],
+        generated_texts: list[str],
+        finish_reasons: list[str],
+        finished: list[bool],
+        generation_limits: list[int],
+    ) -> None:
+        """Apply one batched decode step to the per-request generation state."""
+
+        for row_index, token_id in enumerate(current_tokens):
+            if finished[row_index]:
+                continue
+            if self._is_end_token(token_id):
+                finish_reasons[row_index] = "stop"
+                finished[row_index] = True
+                generated_texts[row_index] = _truncate_at_stop(
+                    self._decode_tokens(generated_token_ids[row_index]),
+                    requests[row_index].stop,
+                )
+                continue
+
+            generated_token_ids[row_index].append(int(token_id))
+            generated_text = self._decode_tokens(generated_token_ids[row_index])
+            truncated_text = _truncate_at_stop(generated_text, requests[row_index].stop)
+            generated_texts[row_index] = truncated_text
+            if truncated_text != generated_text:
+                finish_reasons[row_index] = "stop"
+                finished[row_index] = True
+                continue
+
+            if len(generated_token_ids[row_index]) >= generation_limits[row_index]:
+                finish_reasons[row_index] = "length"
+                finished[row_index] = True
+
+    def _batched_next_token_ids(
+        self,
+        token_ids: list[list[int]],
+        *,
+        start_pos: int,
+        do_sample: bool,
+        temperature: float,
+    ) -> list[int]:
+        """Run one batched tinygrad forward pass and return one sampled token id per row."""
+
+        token_tensor = self.modules.Tensor(
+            [list(row) for row in token_ids],
+            dtype=self.modules.dtypes.int32,
+            device=self.compute_device,
+        )
+        temperature_value = temperature if do_sample else 0.0
+        temperature_tensor = self.modules.Tensor(float(temperature_value), device=self.compute_device).contiguous()
+        start_pos_uop = self.modules.tinygrad.UOp.variable(
+            "start_pos",
+            0,
+            int(self.max_context) - 1,
+        ).bind(int(start_pos))
+        next_token_tensor = self.model(token_tensor, start_pos_uop, temperature_tensor).realize()
+        token_rows = next_token_tensor.tolist()
+        return [int(row[0] if isinstance(row, list) else row) for row in token_rows]
+
+    def _prefill_batch(
+        self,
+        *,
+        prompt_token_ids: list[list[int]],
+        do_sample: bool,
+        temperature: float,
+    ) -> tuple[list[int], int]:
+        """Mirror tinygrad's chunked prompt prefill before the autoregressive rollout phase."""
+
+        chunk_size = 1 if bool(getattr(self.model, "has_recurrent_block", False)) else 32
+        prompt_length = len(prompt_token_ids[0])
+        current_position = 0
+        current_tokens: list[int] = []
+        previous_chunk_length: int | None = None
+        while current_position < prompt_length:
+            chunk_end = min(current_position + chunk_size, prompt_length)
+            current_chunk_length = chunk_end - current_position
+            if previous_chunk_length is not None and current_chunk_length != previous_chunk_length:
+                prefill_jit = getattr(self.model, "prefill_jit", None)
+                if prefill_jit is not None and hasattr(prefill_jit, "reset"):
+                    prefill_jit.reset()
+            current_tokens = self._batched_next_token_ids(
+                [row[current_position:chunk_end] for row in prompt_token_ids],
+                start_pos=current_position,
+                do_sample=do_sample,
+                temperature=temperature,
+            )
+            previous_chunk_length = current_chunk_length
+            current_position = chunk_end
+        return current_tokens, current_position
+
+    def _rollout_filler_token_id(self) -> int:
+        """Return a stable token id for finished rows that remain in a static batch."""
+
+        tokenizer = self.tokenizer
+        if _is_tinygrad_simple_tokenizer(tokenizer):
+            for attr_name in ("eos_id", "bos_id"):
+                token_id = getattr(tokenizer, attr_name, None)
+                if isinstance(token_id, int):
+                    return int(token_id)
+            with suppress(Exception):
+                prefix = list(tokenizer.prefix())
+                if prefix:
+                    return int(prefix[-1])
+            return 0
+
+        for attr_name in ("eos_token_id", "pad_token_id", "bos_token_id"):
+            token_id = getattr(tokenizer, attr_name, None)
+            if isinstance(token_id, int):
+                return int(token_id)
+            if isinstance(token_id, list) and token_id:
+                return int(token_id[0])
+        return 0
 
     def _generate_token_ids(
         self,
@@ -540,6 +760,31 @@ class TinygradSession(BaseInferenceSession):
         if request.prompt is None:
             raise ValueError("generation requests must define either `prompt` or `messages`")
         return request.prompt
+
+    def _tokenize_chat_messages_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> list[int]:
+        """Prefer tokenizer-native chat tokenization so Llama special tokens are not double-applied."""
+
+        if request.messages is None:
+            raise ValueError("chat tokenization requires request.messages")
+        apply_chat_template = getattr(tokenizer, "apply_chat_template", None)
+        if callable(apply_chat_template):
+            with suppress(TypeError, ValueError):
+                tokenized = apply_chat_template(
+                    request.messages,
+                    tokenize=True,
+                    add_generation_prompt=request.add_generation_prompt,
+                )
+                if isinstance(tokenized, dict):
+                    tokenized = tokenized.get("input_ids")
+                if tokenized and isinstance(tokenized[0], list):
+                    tokenized = tokenized[0]
+                if isinstance(tokenized, list):
+                    return [int(token_id) for token_id in tokenized]
+
+        rendered_prompt = request.rendered_prompt
+        if rendered_prompt is None:
+            rendered_prompt = self._render_request_with_tokenizer(tokenizer, request)
+        return self._tokenize_generation_text(rendered_prompt, request)
 
     def _encode_chat_messages_with_tinygrad_tokenizer(self, request: GenerationRequest) -> list[int]:
         """Encode chat messages directly through tinygrad's built-in GGUF tokenizer helpers."""
@@ -843,7 +1088,7 @@ class TinygradSession(BaseInferenceSession):
                 x = block(x, start_pos)
             return self.model.output(self.model.output_norm(x)).realize()
 
-    def _reset_model_cache(self) -> None:
+    def _reset_model_cache(self, *, reset_jit: bool = False) -> None:
         """Drop cached KV and recurrent state so the next request starts from a clean prompt."""
 
         if self.model is None:
@@ -854,6 +1099,11 @@ class TinygradSession(BaseInferenceSession):
                     delattr(block, attr_name)
         if hasattr(self.model, "_cached_tokens"):
             self.model._cached_tokens = []
+        if reset_jit:
+            for attr_name in ("prefill_jit", "rollout_jit"):
+                jit_cache = getattr(self.model, attr_name, None)
+                if jit_cache is not None and hasattr(jit_cache, "reset"):
+                    jit_cache.reset()
 
     def _runtime_context(self):
         """Bind tinygrad's default device while model work is in flight."""
@@ -1000,8 +1250,99 @@ def _build_native_runtime(
         consume=True,
         realize=True,
     )
+    rope_scaling = hf_config.get("rope_scaling")
+    if isinstance(rope_scaling, Mapping) and rope_scaling.get("rope_type") == "llama3":
+        _patch_native_llama3_rope_init_state(
+            modules=modules,
+            model=model,
+            config=transformer_config,
+            rope_scaling=rope_scaling,
+        )
     tokenizer = _load_prepare_tokenizer(config, model_config)
     return model, tokenizer, tokenizer, model_type
+
+
+def _patch_native_llama3_rope_init_state(
+    *,
+    modules: _TinygradModules,
+    model: Any,
+    config: Any,
+    rope_scaling: Mapping[str, Any],
+) -> None:
+    """Patch native tinygrad blocks so HF Llama 3 rope scaling survives cache reinitialization."""
+
+    freqs_cis = _build_llama3_freqs_cis(
+        modules=modules,
+        dim=int(config.rope_dim),
+        end=int(config.max_context),
+        theta=float(config.rope_theta),
+        factor=float(rope_scaling["factor"]),
+        low_freq_factor=float(rope_scaling["low_freq_factor"]),
+        high_freq_factor=float(rope_scaling["high_freq_factor"]),
+        original_max_position_embeddings=int(rope_scaling["original_max_position_embeddings"]),
+    )
+    for block in getattr(model, "blk", []):
+        original_init_state = getattr(block, "_init_state", None)
+        if not callable(original_init_state):
+            continue
+
+        def patched_init_state(
+            x: Any,
+            *,
+            _original_init_state: Any = original_init_state,
+            _block: Any = block,
+            _freqs_cis: Any = freqs_cis,
+        ) -> None:
+            _original_init_state(x)
+            if hasattr(_block, "freqs_cis"):
+                _block.freqs_cis = _freqs_cis
+
+        block._init_state = patched_init_state
+
+
+def _build_llama3_freqs_cis(
+    *,
+    modules: _TinygradModules,
+    dim: int,
+    end: int,
+    theta: float,
+    factor: float,
+    low_freq_factor: float,
+    high_freq_factor: float,
+    original_max_position_embeddings: int,
+) -> Any:
+    """Precompute the scaled RoPE table required by native Hugging Face Llama 3 checkpoints."""
+
+    low_freq_wavelen = original_max_position_embeddings / low_freq_factor
+    high_freq_wavelen = original_max_position_embeddings / high_freq_factor
+    inverse_freqs: list[float] = []
+    for rotary_index in range(0, dim, 2):
+        inverse_freq = 1.0 / (theta ** (float(rotary_index) / float(dim)))
+        wavelen = 2.0 * math.pi / inverse_freq
+        if wavelen > low_freq_wavelen:
+            scaled_inverse_freq = inverse_freq / factor
+        else:
+            scaled_inverse_freq = inverse_freq
+        if high_freq_wavelen <= wavelen <= low_freq_wavelen:
+            smooth_factor = (
+                (original_max_position_embeddings / wavelen) - low_freq_factor
+            ) / (high_freq_factor - low_freq_factor)
+            scaled_inverse_freq = (
+                (1.0 - smooth_factor) * (inverse_freq / factor)
+                + smooth_factor * inverse_freq
+            )
+        inverse_freqs.append(float(scaled_inverse_freq))
+
+    frequency_tensor = modules.Tensor(
+        inverse_freqs,
+        device=modules.Device.DEFAULT,
+    ).reshape(1, len(inverse_freqs))
+    position_tensor = modules.Tensor(
+        list(range(end)),
+        device=modules.Device.DEFAULT,
+    ).reshape(end, 1)
+    angles = (position_tensor * frequency_tensor).realize()
+    return angles.cos().cat(angles.sin(), dim=-1).contiguous().realize()
 
 
 def _load_native_llama_state_dict(
