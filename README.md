@@ -188,9 +188,9 @@ Its `continuous_batching=True` mode schedules multiple in-flight requests togeth
 returns one final completion per request rather than streaming partial tokens to the caller.
 
 `engines.Tinygrad(...)` accepts tinygrad runtime options such as `device`, `dtype`, `batch_size`,
-`max_context`, `tinygrad_path`, `jit`, and `jitbeam`. It can load local dense Hugging Face
-`llama` checkpoints directly, or direct `.gguf` files when you also provide the matching
-`tokenizer_path` for chat template rendering.
+`max_context`, `tinygrad_path`, `jit`, and `jitbeam`. It loads local `.gguf` checkpoints
+directly; for chat-template benchmarks such as `gsm8k_platinum`, also provide the matching
+`tokenizer_path` so Evalution can render the prompt with the dense tokenizer assets.
 
 `engines.OpenVINO(...)` accepts OpenVINO runtime options such as `dtype`, `device`, `batch_size`, `attn_implementation`, `max_new_tokens` and `ov_config`.
 
@@ -531,22 +531,39 @@ tests:
 ### Tinygrad 🧠
 
 Use `engines.Tinygrad()` in Python or `engine.type: Tinygrad` in YAML when you want to run local
-models through tinygrad's own LLM runtime. Evalution keeps `generate(...)`,
+GGUF models through tinygrad's own LLM runtime. Evalution keeps `generate(...)`,
 `generate_continuous(...)`, `loglikelihood(...)`, and `loglikelihood_rolling(...)` on the same
 shared engine contract.
 
 Install the runtime with `pip install tinygrad`, or point `tinygrad_path` at a local checkout when
 you want Evalution to import tinygrad from source.
 
+Tinygrad engine summary:
+
+| Capability | Tinygrad |
+| --- | --- |
+| Model format | Local GGUF checkpoints |
+| Chat-template support | Yes, via `model.tokenizer_path` |
+| Static batching | Yes, low-level batched decode in `generate(...)` |
+| Continuous batching | Emulated fixed-batch submission over the same static batched path |
+| Default CUDA runtime profile | `jit=2`, `jitbeam=0` |
+
 Notes:
 
-- Native dense loading currently targets local Hugging Face `llama` checkpoints with `config.json`.
-- GGUF loading works directly from a `.gguf` file. For chat-template benchmarks such as
-  `gsm8k_platinum`, also set `model.tokenizer_path` to the matching dense tokenizer checkout.
-- CUDA runs now default to the profiled graph-free tinygrad runtime (`jit=2`, `jitbeam=0`) on the
+- `model.path` must point to a local `.gguf` file.
+- For chat-template benchmarks such as `gsm8k_platinum`, set `model.tokenizer_path` to the
+  matching dense tokenizer checkout.
+- CUDA runs default to the profiled graph-free tinygrad runtime (`jit=2`, `jitbeam=0`) on the
   local RTX 4090 and A100 families because `jit=1` hit CUDA graph failures and `jitbeam=2` did not
   finish the startup profile sweep in time. Override `jit` or `jitbeam` explicitly if you want to
   experiment with a different tinygrad runtime profile.
+
+Validated `gsm8k_platinum` GGUF baseline:
+
+| GPU | rows | batch_size | max_new_tokens | acc,num |
+| --- | ---: | ---: | ---: | ---: |
+| RTX 4090 | 128 | 128 | 256 | 0.46875 |
+| A100 | 128 | 128 | 256 | 0.46875 |
 
 Python:
 
@@ -561,8 +578,19 @@ result = (
         max_context=4096,
         tinygrad_path="/tmp/tinygrad",
     )
-    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
-    .run(benchmarks.gsm8k_platinum())
+    .model(
+        path="/monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+        tokenizer_path="/monster/data/model/Llama-3.2-1B-Instruct",
+    )
+    .run(
+        benchmarks.gsm8k_platinum(
+            variant="base",
+            apply_chat_template=True,
+            batch_size=128,
+            max_new_tokens=256,
+            max_rows=128,
+        )
+    )
 )
 ```
 
@@ -576,19 +604,16 @@ engine:
   tinygrad_path: /tmp/tinygrad
 
 model:
-  path: /monster/data/model/Llama-3.2-1B-Instruct
+  path: /monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf
+  tokenizer_path: /monster/data/model/Llama-3.2-1B-Instruct
 
 tests:
   - type: gsm8k_platinum
-```
-
-To run the same engine against a GGUF file, keep the engine config unchanged and switch the model
-to the GGUF path plus the dense tokenizer checkout:
-
-```yaml
-model:
-  path: /monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf
-  tokenizer_path: /monster/data/model/Llama-3.2-1B-Instruct
+    variant: base
+    apply_chat_template: true
+    batch_size: 128
+    max_new_tokens: 256
+    max_rows: 128
 ```
 
 ### LlamaCpp 🦙

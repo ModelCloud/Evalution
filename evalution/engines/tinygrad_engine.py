@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import gc
 import importlib
-import json
-import math
 import os
 import sys
 import threading
@@ -46,7 +44,6 @@ _DEFAULT_TINYGRAD_CHECKOUT_CANDIDATES = (
     Path.cwd() / "tinygrad",
     Path.cwd().parent / "tinygrad",
 )
-_NATIVE_LLAMA_MODEL_TYPE = "llama"
 _A100_CLASS_MIN_VRAM_BYTES = 90 * 1024**3
 
 
@@ -81,7 +78,6 @@ class _TinygradModules:
     nn_state: Any
     llm_model: Any
     llm_cli: Any
-    extra_llama: Any
     dtypes: Any
 
 
@@ -102,7 +98,7 @@ class _LoadedTinygradRuntime:
 
 @dataclass(slots=True)
 class Tinygrad(BaseEngineDeviceConfig, SharedEngineConfig):
-    """Configure Evalution to run generation and scoring through tinygrad."""
+    """Configure Evalution to run GGUF generation and scoring through tinygrad."""
 
     # Tinygrad support stays optional and local-first so the core install remains lean.
     max_context: int | None = None
@@ -124,7 +120,7 @@ class Tinygrad(BaseEngineDeviceConfig, SharedEngineConfig):
 
 @dataclass(slots=True)
 class TinygradSession(BaseInferenceSession):
-    """Own one live tinygrad LLM runtime plus Evalution request translation logic."""
+    """Own one live GGUF tinygrad LLM runtime plus Evalution request translation logic."""
 
     # Keep the runtime and tokenizer state on the session so one built engine can be reused
     # across multiple suites without rebuilding the model every time.
@@ -141,7 +137,6 @@ class TinygradSession(BaseInferenceSession):
     runtime_profile: _TinygradRuntimeProfile
     _generation_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _tokenizer_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
-    _extra_llama_batch_logits_jits: dict[int, Any] = field(default_factory=dict, init=False, repr=False)
     _closed: bool = field(default=False, init=False, repr=False)
 
     @classmethod
@@ -541,14 +536,6 @@ class TinygradSession(BaseInferenceSession):
                 do_sample=do_sample,
                 temperature=temperature,
             )
-        if self._uses_extra_llama_runtime():
-            return self._generate_extra_llama_prompt_length_buckets(
-                requests=requests,
-                prompt_token_ids=prompt_token_ids,
-                prompt_lengths=prompt_lengths,
-                do_sample=do_sample,
-                temperature=temperature,
-            )
         return self._generate_mixed_prompt_batch(
             requests=requests,
             prompt_token_ids=prompt_token_ids,
@@ -698,48 +685,6 @@ class TinygradSession(BaseInferenceSession):
             finish_reasons=finish_reasons,
         )
 
-    def _generate_extra_llama_prompt_length_buckets(
-        self,
-        *,
-        requests: list[GenerationRequest],
-        prompt_token_ids: list[list[int]],
-        prompt_lengths: list[int],
-        do_sample: bool,
-        temperature: float,
-    ) -> list[GenerationOutput]:
-        """Keep native extra-llama generation on same-length sub-batches because mixed-length lockstep decode is not stable there."""
-
-        indexed_outputs: list[GenerationOutput | None] = [None] * len(requests)
-        grouped: dict[int, list[tuple[int, GenerationRequest, list[int]]]] = {}
-        for request_index, request, prompt_ids, prompt_length in zip(
-            range(len(requests)),
-            requests,
-            prompt_token_ids,
-            prompt_lengths,
-            strict=True,
-        ):
-            grouped.setdefault(prompt_length, []).append((request_index, request, prompt_ids))
-
-        for grouped_requests in grouped.values():
-            sub_requests = [request for _, request, _ in grouped_requests]
-            sub_prompt_token_ids = [prompt_ids for _, _, prompt_ids in grouped_requests]
-            sub_prompt_lengths = [len(prompt_ids) for prompt_ids in sub_prompt_token_ids]
-            sub_outputs = self._generate_uniform_prompt_batch(
-                requests=sub_requests,
-                prompt_token_ids=sub_prompt_token_ids,
-                prompt_lengths=sub_prompt_lengths,
-                do_sample=do_sample,
-                temperature=temperature,
-            )
-            for (request_index, _request, _prompt_ids), output in zip(
-                grouped_requests,
-                sub_outputs,
-                strict=True,
-            ):
-                indexed_outputs[request_index] = output
-
-        return [output for output in indexed_outputs if output is not None]
-
     def _build_generation_outputs(
         self,
         *,
@@ -826,14 +771,6 @@ class TinygradSession(BaseInferenceSession):
             for attr_name in ("blk", "token_embd", "output_norm")
         )
 
-    def _uses_extra_llama_runtime(self) -> bool:
-        """Detect tinygrad's native Llama runtime used by the upstream HF conversion path."""
-
-        return all(
-            hasattr(self.model, attr_name)
-            for attr_name in ("layers", "tok_embeddings", "norm")
-        )
-
     def _batched_next_token_ids(
         self,
         token_ids: list[list[int]],
@@ -843,28 +780,6 @@ class TinygradSession(BaseInferenceSession):
         temperature: float,
     ) -> list[int]:
         """Run one batched tinygrad forward pass and return one sampled token id per row."""
-
-        if self._uses_extra_llama_runtime() and len(token_ids) == 1 and len(token_ids[0]) == 1:
-            token_tensor = self.modules.Tensor(
-                [list(row) for row in token_ids],
-                dtype=self.modules.dtypes.int32,
-                device=self.compute_device,
-            )
-            next_token_tensor = self.model(
-                token_tensor,
-                int(start_pos),
-                float(temperature if do_sample else 0.0),
-            ).realize()
-            token_list = next_token_tensor.tolist()
-            return [int(token_list[0] if isinstance(token_list, list) else token_list)]
-
-        if self._uses_extra_llama_runtime():
-            logits = self._forward_batch_logits(token_ids, start_pos=start_pos)
-            return self._sample_next_token_ids_from_logits(
-                logits[:, -1, :],
-                do_sample=do_sample,
-                temperature=temperature,
-            )
 
         token_tensor = self.modules.Tensor(
             [list(row) for row in token_ids],
@@ -892,7 +807,7 @@ class TinygradSession(BaseInferenceSession):
     ) -> tuple[list[int], int]:
         """Mirror tinygrad's chunked prompt prefill before the autoregressive rollout phase."""
 
-        chunk_size = 1 if self._uses_extra_llama_runtime() or bool(getattr(self.model, "has_recurrent_block", False)) else 32
+        chunk_size = 1 if bool(getattr(self.model, "has_recurrent_block", False)) else 32
         prompt_length = len(prompt_token_ids[0])
         current_position = 0
         current_tokens: list[int] = []
@@ -932,51 +847,7 @@ class TinygradSession(BaseInferenceSession):
             for block in self.model.blk:
                 x = block(x, start_pos)
             return self.model.output(self.model.output_norm(x)).realize()
-        if self._uses_extra_llama_runtime():
-            if len(token_ids) > 1 and all(len(row) == 1 for row in token_ids):
-                # Extra-llama only ships a built-in JIT for batch=1 decode. Cache one TinyJit per
-                # batch size so native batched generation can still stay on compiled single-token kernels.
-                batch_size = len(token_ids)
-                batched_logits_jit = self._extra_llama_batch_logits_jits.get(batch_size)
-                if batched_logits_jit is None:
-                    batched_logits_jit = self.modules.tinygrad.TinyJit(self._extra_llama_forward_logits)
-                    self._extra_llama_batch_logits_jits[batch_size] = batched_logits_jit
-                start_pos_var = self.modules.extra_llama.Variable(
-                    "start_pos",
-                    0,
-                    int(self.max_context) - 1,
-                ).bind(int(start_pos))
-                return batched_logits_jit(
-                    token_tensor,
-                    start_pos_var,
-                ).realize()
-            return self._extra_llama_forward_logits(token_tensor, int(start_pos)).realize()
         raise ValueError("unsupported tinygrad model runtime for batched logits")
-
-    def _extra_llama_forward_logits(
-        self,
-        token_tensor: Any,
-        start_pos: int | Any,
-    ) -> Any:
-        """Rebuild extra-llama logits directly so batched native decode does not depend on the NaN sampling branch."""
-
-        sequence_length = int(token_tensor.shape[1])
-        hidden_states = self.model.tok_embeddings(token_tensor).contiguous()
-        freqs_cis = self.model.freqs_cis.cast(hidden_states.dtype)[:, start_pos:start_pos + sequence_length, :, :, :]
-        if sequence_length > 1:
-            causal_mask = self.modules.Tensor.full(
-                (1, 1, sequence_length, start_pos + sequence_length),
-                float("-inf"),
-                dtype=hidden_states.dtype,
-                device=hidden_states.device,
-            ).triu(start_pos + 1)
-        else:
-            causal_mask = None
-        for layer in self.model.layers:
-            hidden_states = layer(hidden_states, start_pos, freqs_cis, causal_mask)
-        return self.model.output(
-            self.model.norm(hidden_states).contiguous().contiguous_backward()
-        ).contiguous_backward()
 
     def _sample_next_token_ids_from_logits(
         self,
@@ -1018,54 +889,6 @@ class TinygradSession(BaseInferenceSession):
             if isinstance(token_id, list) and token_id:
                 return int(token_id[0])
         return 0
-
-    def _generate_token_ids(
-        self,
-        prompt_ids: list[int],
-        *,
-        max_new_tokens: int,
-        do_sample: bool,
-        temperature: float,
-    ) -> list[int]:
-        """Generate one continuation token stream through tinygrad's native decode loop."""
-
-        if not hasattr(self.model, "generate"):
-            self._reset_model_cache(reset_jit=True)
-            with self._runtime_context():
-                current_tokens, current_position = self._prefill_batch(
-                    prompt_token_ids=[list(prompt_ids)],
-                    do_sample=do_sample,
-                    temperature=temperature,
-                )
-                output_ids: list[int] = []
-                while len(output_ids) < max_new_tokens and current_position <= int(self.max_context):
-                    token_id = int(current_tokens[0])
-                    if self._is_end_token(token_id):
-                        break
-                    output_ids.append(token_id)
-                    if len(output_ids) >= max_new_tokens or current_position >= int(self.max_context):
-                        break
-                    current_tokens = self._batched_next_token_ids(
-                        [[token_id]],
-                        start_pos=current_position,
-                        do_sample=do_sample,
-                        temperature=temperature,
-                    )
-                    current_position += 1
-                return output_ids
-
-        with self._runtime_context():
-            generator = self.model.generate(
-                list(prompt_ids),
-                temperature=temperature if do_sample else 0.0,
-            )
-            output_ids: list[int] = []
-            for _ in range(max_new_tokens):
-                try:
-                    output_ids.append(int(next(generator)))
-                except StopIteration:
-                    break
-            return output_ids
 
     def _render_request_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> str:
         """Render either a plain prompt or a chat-formatted prompt string."""
@@ -1413,13 +1236,6 @@ class TinygradSession(BaseInferenceSession):
             for attr_name in ("cache_kv", "cache_k", "cache_v", "conv_state", "recurrent_state", "freqs_cis"):
                 if hasattr(block, attr_name):
                     delattr(block, attr_name)
-        for layer in getattr(self.model, "layers", []):
-            attention = getattr(layer, "attention", None)
-            if attention is None:
-                continue
-            for attr_name in ("cache_kv",):
-                if hasattr(attention, attr_name):
-                    delattr(attention, attr_name)
         if hasattr(self.model, "_cached_tokens"):
             self.model._cached_tokens = []
         if reset_jit:
@@ -1430,9 +1246,6 @@ class TinygradSession(BaseInferenceSession):
             forward_jit = getattr(self.model, "forward_jit", None)
             if forward_jit is not None and hasattr(forward_jit, "reset"):
                 forward_jit.reset()
-            for jit_cache in self._extra_llama_batch_logits_jits.values():
-                if hasattr(jit_cache, "reset"):
-                    jit_cache.reset()
 
     def _runtime_context(self):
         """Bind tinygrad's default device while model work is in flight."""
@@ -1457,6 +1270,14 @@ class TinygradSession(BaseInferenceSession):
 def _load_tinygrad_runtime(config: Tinygrad, model_config: Model) -> _LoadedTinygradRuntime:
     """Load the requested tinygrad runtime and return the reusable session state."""
 
+    # Keep the public contract explicit: the Tinygrad engine is GGUF-only until tinygrad's native
+    # dense Hugging Face path is correct on the shared Llama 3.2 benchmark matrix again.
+    if not _is_gguf_path(model_config.path):
+        raise ValueError(
+            "Tinygrad engine currently supports local GGUF checkpoints only; "
+            "native dense Hugging Face loading was removed after incorrect Llama 3.2 outputs"
+        )
+
     modules = _import_tinygrad_modules(config.tinygrad_path)
     requested_device = _resolve_tinygrad_device(config.device)
     with _tinygrad_context(modules, requested_device):
@@ -1464,20 +1285,12 @@ def _load_tinygrad_runtime(config: Tinygrad, model_config: Model) -> _LoadedTiny
             if config.seed is not None:
                 modules.Tensor.manual_seed(config.seed)
 
-        if _is_gguf_path(model_config.path):
-            model, tokenizer, prepare_tokenizer, model_type = _build_gguf_runtime(
-                modules=modules,
-                config=config,
-                model_config=model_config,
-            )
-            load_format = "gguf"
-        else:
-            model, tokenizer, prepare_tokenizer, model_type = _build_native_runtime(
-                modules=modules,
-                config=config,
-                model_config=model_config,
-            )
-            load_format = "native"
+        model, tokenizer, prepare_tokenizer, model_type = _build_gguf_runtime(
+            modules=modules,
+            config=config,
+            model_config=model_config,
+        )
+        load_format = "gguf"
 
         compute_device = str(modules.Device.DEFAULT if requested_device is None else modules.Device.canonicalize(requested_device))
         max_context = int(getattr(model, "max_context", config.max_context or 2048))
@@ -1523,396 +1336,8 @@ def _build_gguf_runtime(
     return model, tokenizer, prepare_tokenizer, str(kv.get("general.architecture", "gguf"))
 
 
-def _build_native_runtime(
-    *,
-    modules: _TinygradModules,
-    config: Tinygrad,
-    model_config: Model,
-) -> tuple[Any, Any, Any, str]:
-    """Build the native dense runtime for Hugging Face Llama-family checkpoints."""
-
-    model_root = _resolve_native_model_root(model_config.path)
-    config_path = model_root / "config.json"
-    if not config_path.exists():
-        raise ValueError(
-            "Tinygrad native loading currently requires a local Hugging Face checkpoint with config.json"
-        )
-
-    hf_config = json.loads(config_path.read_text(encoding="utf-8"))
-    model_type = str(hf_config.get("model_type", ""))
-    if model_type != _NATIVE_LLAMA_MODEL_TYPE:
-        raise ValueError(
-            "Tinygrad native loading currently supports Hugging Face `llama` checkpoints; "
-            "use a local GGUF file for broader tinygrad model coverage"
-        )
-
-    max_context = int(hf_config.get("max_position_embeddings", 2048))
-    if config.max_context is not None:
-        max_context = min(max_context, int(config.max_context))
-
-    model = modules.extra_llama.Transformer(
-        dim=int(hf_config["hidden_size"]),
-        hidden_dim=int(hf_config["intermediate_size"]),
-        n_heads=int(hf_config["num_attention_heads"]),
-        n_layers=int(hf_config["num_hidden_layers"]),
-        n_kv_heads=int(hf_config.get("num_key_value_heads", hf_config["num_attention_heads"])),
-        norm_eps=float(hf_config["rms_norm_eps"]),
-        vocab_size=int(hf_config["vocab_size"]),
-        rope_theta=float(hf_config.get("rope_theta", 10000.0)),
-        max_context=max_context,
-        jit=True,
-    )
-    state_dict = _load_native_extra_llama_state_dict(
-        modules=modules,
-        model_root=model_root,
-        config=hf_config,
-        dtype=config.dtype,
-    )
-    modules.nn_state.load_state_dict(
-        model,
-        state_dict,
-        strict=False,
-        verbose=False,
-        consume=True,
-        realize=True,
-    )
-    rope_scaling = hf_config.get("rope_scaling")
-    if isinstance(rope_scaling, Mapping) and rope_scaling.get("rope_type") == "llama3":
-        _patch_extra_llama3_rope_init_state(
-            modules=modules,
-            model=model,
-            head_dim=int(hf_config["hidden_size"]) // int(hf_config["num_attention_heads"]),
-            rope_theta=float(hf_config.get("rope_theta", 10000.0)),
-            rope_scaling=rope_scaling,
-        )
-    tokenizer = _load_prepare_tokenizer(config, model_config)
-    return model, tokenizer, tokenizer, model_type
-
-
-def _load_native_extra_llama_state_dict(
-    *,
-    modules: _TinygradModules,
-    model_root: Path,
-    config: Mapping[str, Any],
-    dtype: str | None,
-) -> dict[str, Any]:
-    """Load and remap Hugging Face Llama-family weights into tinygrad's native Llama runtime."""
-
-    state_dict = _load_dense_state_dict(modules, model_root)
-    converted = modules.extra_llama.convert_from_huggingface(
-        state_dict,
-        int(config["num_hidden_layers"]),
-        int(config["num_attention_heads"]),
-        int(config.get("num_key_value_heads", config["num_attention_heads"])),
-    )
-    return {
-        key: _maybe_cast_tinygrad_weight(modules, value, dtype=dtype)
-        for key, value in converted.items()
-    }
-
-
-def _patch_native_llama3_rope_init_state(
-    *,
-    modules: _TinygradModules,
-    model: Any,
-    config: Any,
-    rope_scaling: Mapping[str, Any],
-) -> None:
-    """Patch native tinygrad blocks so HF Llama 3 rope scaling survives cache reinitialization."""
-
-    freqs_cis = _build_llama3_freqs_cis(
-        modules=modules,
-        dim=int(config.rope_dim),
-        end=int(config.max_context),
-        theta=float(config.rope_theta),
-        factor=float(rope_scaling["factor"]),
-        low_freq_factor=float(rope_scaling["low_freq_factor"]),
-        high_freq_factor=float(rope_scaling["high_freq_factor"]),
-        original_max_position_embeddings=int(rope_scaling["original_max_position_embeddings"]),
-    )
-    for block in getattr(model, "blk", []):
-        original_init_state = getattr(block, "_init_state", None)
-        if not callable(original_init_state):
-            continue
-
-        def patched_init_state(
-            x: Any,
-            *,
-            _original_init_state: Any = original_init_state,
-            _block: Any = block,
-            _freqs_cis: Any = freqs_cis,
-        ) -> None:
-            _original_init_state(x)
-            if hasattr(_block, "freqs_cis"):
-                _block.freqs_cis = _freqs_cis
-
-        block._init_state = patched_init_state
-
-
-def _patch_extra_llama3_rope_init_state(
-    *,
-    modules: _TinygradModules,
-    model: Any,
-    head_dim: int,
-    rope_theta: float,
-    rope_scaling: Mapping[str, Any],
-) -> None:
-    """Patch extra-llama native state so HF Llama 3 rope scaling survives the converted runtime."""
-
-    model.freqs_cis = _build_extra_llama3_freqs_cis(
-        modules=modules,
-        dim=head_dim,
-        end=int(model.max_context) * 2,
-        theta=rope_theta,
-        factor=float(rope_scaling["factor"]),
-        low_freq_factor=float(rope_scaling["low_freq_factor"]),
-        high_freq_factor=float(rope_scaling["high_freq_factor"]),
-        original_max_position_embeddings=int(rope_scaling["original_max_position_embeddings"]),
-    )
-
-
-def _build_llama3_freqs_cis(
-    *,
-    modules: _TinygradModules,
-    dim: int,
-    end: int,
-    theta: float,
-    factor: float,
-    low_freq_factor: float,
-    high_freq_factor: float,
-    original_max_position_embeddings: int,
-) -> Any:
-    """Precompute the scaled RoPE table required by native Hugging Face Llama 3 checkpoints."""
-
-    low_freq_wavelen = original_max_position_embeddings / low_freq_factor
-    high_freq_wavelen = original_max_position_embeddings / high_freq_factor
-    inverse_freqs: list[float] = []
-    for rotary_index in range(0, dim, 2):
-        inverse_freq = 1.0 / (theta ** (float(rotary_index) / float(dim)))
-        wavelen = 2.0 * math.pi / inverse_freq
-        if wavelen > low_freq_wavelen:
-            scaled_inverse_freq = inverse_freq / factor
-        else:
-            scaled_inverse_freq = inverse_freq
-        if high_freq_wavelen <= wavelen <= low_freq_wavelen:
-            smooth_factor = (
-                (original_max_position_embeddings / wavelen) - low_freq_factor
-            ) / (high_freq_factor - low_freq_factor)
-            scaled_inverse_freq = (
-                (1.0 - smooth_factor) * (inverse_freq / factor)
-                + smooth_factor * inverse_freq
-            )
-        inverse_freqs.append(float(scaled_inverse_freq))
-
-    frequency_tensor = modules.Tensor(
-        inverse_freqs,
-        device=modules.Device.DEFAULT,
-    ).reshape(1, len(inverse_freqs))
-    position_tensor = modules.Tensor(
-        list(range(end)),
-        device=modules.Device.DEFAULT,
-    ).reshape(end, 1)
-    angles = (position_tensor * frequency_tensor).realize()
-    return angles.cos().cat(angles.sin(), dim=-1).contiguous().realize()
-
-
-def _build_extra_llama3_freqs_cis(
-    *,
-    modules: _TinygradModules,
-    dim: int,
-    end: int,
-    theta: float,
-    factor: float,
-    low_freq_factor: float,
-    high_freq_factor: float,
-    original_max_position_embeddings: int,
-) -> Any:
-    """Precompute the complex-pair RoPE table required by extra-llama's native Llama runtime."""
-
-    low_freq_wavelen = original_max_position_embeddings / low_freq_factor
-    high_freq_wavelen = original_max_position_embeddings / high_freq_factor
-    inverse_freqs: list[float] = []
-    for rotary_index in range(0, dim, 2):
-        inverse_freq = 1.0 / (theta ** (float(rotary_index) / float(dim)))
-        wavelen = 2.0 * math.pi / inverse_freq
-        if wavelen > low_freq_wavelen:
-            scaled_inverse_freq = inverse_freq / factor
-        else:
-            scaled_inverse_freq = inverse_freq
-        if high_freq_wavelen <= wavelen <= low_freq_wavelen:
-            smooth_factor = (
-                (original_max_position_embeddings / wavelen) - low_freq_factor
-            ) / (high_freq_factor - low_freq_factor)
-            scaled_inverse_freq = (
-                (1.0 - smooth_factor) * (inverse_freq / factor)
-                + smooth_factor * inverse_freq
-            )
-        inverse_freqs.append(float(scaled_inverse_freq))
-
-    frequency_tensor = modules.Tensor(
-        inverse_freqs,
-        device=modules.Device.DEFAULT,
-    ).reshape(1, len(inverse_freqs))
-    position_tensor = modules.Tensor(
-        list(range(end)),
-        device=modules.Device.DEFAULT,
-    ).reshape(end, 1)
-    angles = (position_tensor * frequency_tensor).realize()
-    return modules.Tensor.stack(
-        angles.cos(),
-        angles.sin(),
-        dim=-1,
-    ).reshape(1, end, 1, len(inverse_freqs), 2).contiguous().realize()
-
-
-def _load_native_llama_state_dict(
-    *,
-    modules: _TinygradModules,
-    model_root: Path,
-    config: Mapping[str, Any],
-    dtype: str | None,
-) -> dict[str, Any]:
-    """Load and remap Hugging Face Llama-family weights into tinygrad's packaged LLM layout."""
-
-    state_dict = _load_dense_state_dict(modules, model_root)
-    n_heads = int(config["num_attention_heads"])
-    n_kv_heads = int(config.get("num_key_value_heads", config["num_attention_heads"]))
-
-    mapped: dict[str, Any] = {}
-    for key, value in state_dict.items():
-        if ".rotary_emb." in key:
-            continue
-        if key.startswith("model.layers.") and key.endswith(".self_attn.q_proj.weight"):
-            value = _permute_llama_rope_weight(value, n_heads)
-        elif key.startswith("model.layers.") and key.endswith(".self_attn.k_proj.weight"):
-            value = _permute_llama_rope_weight(value, n_kv_heads)
-
-        mapped_key = _map_hf_llama_weight_key(key)
-        if mapped_key is None:
-            continue
-        mapped[mapped_key] = _maybe_cast_tinygrad_weight(modules, value, dtype=dtype)
-
-    if "output.weight" not in mapped and "token_embd.weight" in mapped:
-        mapped["output.weight"] = mapped["token_embd.weight"]
-    return mapped
-
-
-def _map_hf_llama_weight_key(key: str) -> str | None:
-    """Translate one Hugging Face Llama-family weight name into tinygrad's packaged LLM layout."""
-
-    if key == "model.embed_tokens.weight":
-        return "token_embd.weight"
-    if key == "model.norm.weight":
-        return "output_norm.weight"
-    if key == "lm_head.weight":
-        return "output.weight"
-
-    parts = key.split(".")
-    if len(parts) < 5 or parts[0] != "model" or parts[1] != "layers":
-        return None
-
-    layer_index = parts[2]
-    suffix = ".".join(parts[3:])
-    mapping = {
-        "input_layernorm.weight": f"blk.{layer_index}.attn_norm.weight",
-        "self_attn.q_proj.weight": f"blk.{layer_index}.attn_q.weight",
-        "self_attn.k_proj.weight": f"blk.{layer_index}.attn_k.weight",
-        "self_attn.v_proj.weight": f"blk.{layer_index}.attn_v.weight",
-        "self_attn.o_proj.weight": f"blk.{layer_index}.attn_output.weight",
-        "post_attention_layernorm.weight": f"blk.{layer_index}.ffn_norm.weight",
-        "mlp.gate_proj.weight": f"blk.{layer_index}.ffn_gate.weight",
-        "mlp.down_proj.weight": f"blk.{layer_index}.ffn_down.weight",
-        "mlp.up_proj.weight": f"blk.{layer_index}.ffn_up.weight",
-    }
-    return mapping.get(suffix)
-
-
-def _permute_llama_rope_weight(value: Any, n_heads: int) -> Any:
-    """Undo Hugging Face's RoPE permutation so tinygrad sees the expected weight layout."""
-
-    # tinygrad's CUDA/PTX path can load BF16 tensors directly but cannot cast them in-place yet,
-    # so keep the RoPE undo pass on CPU and only move to the execution device later.
-    value = value.to("CPU")
-    return (
-        value.reshape(n_heads, 2, value.shape[0] // n_heads // 2, value.shape[1])
-        .transpose(1, 2)
-        .reshape(*value.shape[:2])
-        .realize()
-    )
-
-
-def _maybe_cast_tinygrad_weight(
-    modules: _TinygradModules,
-    value: Any,
-    *,
-    dtype: str | None,
-) -> Any:
-    """Normalize dense weight dtypes for the tinygrad runtime without touching non-floating tensors."""
-
-    resolved_dtype = None if dtype is None else str(dtype).lower()
-    value_dtype = str(getattr(value, "dtype", ""))
-    if not any(token in value_dtype for token in ("float", "half", "bfloat")):
-        return value
-
-    # Perform dtype normalization on CPU because tinygrad's current CUDA/PTX backend raises
-    # on BF16 casts even though the same tensors can be copied to CUDA successfully.
-    cpu_value = value.to("CPU")
-    if resolved_dtype in {"float32", "fp32"}:
-        return cpu_value.cast(modules.dtypes.float32).realize()
-    if resolved_dtype in {"bfloat16", "bf16"}:
-        return cpu_value.realize()
-    if "bfloat16" in value_dtype:
-        return cpu_value.cast(modules.dtypes.float32).cast(modules.dtypes.float16).realize()
-    if resolved_dtype in {"float16", "fp16", "half"}:
-        return cpu_value.cast(modules.dtypes.float16).realize()
-    return cpu_value.realize()
-
-
-def _load_dense_state_dict(modules: _TinygradModules, model_root: Path) -> dict[str, Any]:
-    """Load one local dense Hugging Face state dict from a directory or index file."""
-
-    index_candidates = (
-        model_root / "model.safetensors.index.json",
-        model_root / "pytorch_model.bin.index.json",
-    )
-    for index_path in index_candidates:
-        if index_path.exists():
-            loaded = json.loads(index_path.read_text(encoding="utf-8"))
-            weight_map = loaded["weight_map"]
-            shard_cache: dict[str, dict[str, Any]] = {}
-            state_dict: dict[str, Any] = {}
-            for key, shard_name in weight_map.items():
-                shard = shard_cache.get(shard_name)
-                if shard is None:
-                    shard = _load_state_file(modules, model_root / shard_name)
-                    shard_cache[shard_name] = shard
-                state_dict[key] = shard[key]
-            return state_dict
-
-    single_file_candidates = (
-        model_root / "model.safetensors",
-        model_root / "pytorch_model.bin",
-        model_root / "consolidated.00.pth",
-    )
-    for path in single_file_candidates:
-        if path.exists():
-            return _load_state_file(modules, path)
-
-    raise ValueError(
-        "Tinygrad native loading could not find model.safetensors, pytorch_model.bin, or a matching shard index"
-    )
-
-
-def _load_state_file(modules: _TinygradModules, path: Path) -> dict[str, Any]:
-    """Load one dense state file through tinygrad's packaged weight readers."""
-
-    if path.suffix == ".safetensors":
-        return modules.nn_state.safe_load(str(path))
-    return modules.nn_state.torch_load(str(path))
-
-
 def _load_prepare_tokenizer(config: Tinygrad, model_config: Model) -> Any:
-    """Load the optional Hugging Face tokenizer used for chat-template rendering or native tokenization."""
+    """Load the optional Hugging Face tokenizer used for GGUF chat-template rendering."""
 
     trust_remote_code = (
         config.trust_remote_code
@@ -1965,7 +1390,6 @@ def _load_tinygrad_modules() -> _TinygradModules:
     nn_state = importlib.import_module("tinygrad.nn.state")
     llm_model = importlib.import_module("tinygrad.llm.model")
     llm_cli = importlib.import_module("tinygrad.llm.cli")
-    extra_llama = importlib.import_module("extra.models.llama")
     dtypes = importlib.import_module("tinygrad.dtype").dtypes
     return _TinygradModules(
         tinygrad=tinygrad,
@@ -1975,7 +1399,6 @@ def _load_tinygrad_modules() -> _TinygradModules:
         nn_state=nn_state,
         llm_model=llm_model,
         llm_cli=llm_cli,
-        extra_llama=extra_llama,
         dtypes=dtypes,
     )
 
@@ -2096,13 +1519,6 @@ def _require_local_model_path(path_or_name: str) -> Path:
     raise ValueError(
         "Tinygrad engine currently expects a local model path; remote Hub ids should be downloaded first"
     )
-
-
-def _resolve_native_model_root(path_or_name: str) -> Path:
-    """Resolve the directory that owns one dense Hugging Face checkpoint plus config.json."""
-
-    path = _require_local_model_path(path_or_name)
-    return path if path.is_dir() else path.parent
 
 
 def _is_tinygrad_simple_tokenizer(tokenizer: Any) -> bool:

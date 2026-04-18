@@ -715,12 +715,15 @@ def run_llama3_2_tinygrad_suite(
     path: str | None = None,
     tokenizer_path: str | None = None,
 ) -> tuple[Any, Any]:
-    """Run one tinygrad-backed Llama 3.2 suite against the shared local fixtures."""
+    """Run one GGUF tinygrad-backed Llama 3.2 suite against the shared local fixtures."""
 
-    model_path = path or str(LLAMA3_2_1B_INSTRUCT)
+    model_path = path or str(LLAMA3_2_1B_INSTRUCT_GGUF)
     model_kwargs: dict[str, Any] = {"path": model_path}
-    if tokenizer_path is not None:
-        model_kwargs["tokenizer_path"] = tokenizer_path
+    resolved_tokenizer_path = tokenizer_path
+    if Path(model_path).suffix.lower() == ".gguf" and resolved_tokenizer_path is None:
+        resolved_tokenizer_path = str(LLAMA3_2_1B_INSTRUCT)
+    if resolved_tokenizer_path is not None:
+        model_kwargs["tokenizer_path"] = resolved_tokenizer_path
 
     with capsys.disabled():
         result = (
@@ -737,8 +740,8 @@ def run_llama3_2_tinygrad_suite(
         )
 
     assert result.model["path"] == model_path
-    if tokenizer_path is not None:
-        assert result.model["tokenizer_path"] == tokenizer_path
+    if resolved_tokenizer_path is not None:
+        assert result.model["tokenizer_path"] == resolved_tokenizer_path
     assert result.engine["resolved_engine"] == "Tinygrad"
     assert result.engine["device"] == LLAMA3_2_TINYGRAD_DEVICE
     assert result.engine["batch_size"] == "auto"
