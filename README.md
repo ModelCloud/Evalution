@@ -8,6 +8,10 @@
 
 Evalution is a modern LLM evaluation toolkit for fast, benchmark-faithful, multi-engine model evaluation. 🚀
 
+## News
+
+- April 19th, 2026: 🚀 `Tinygrad` engine support added.
+
 Install ⚡
 
 ```bash
