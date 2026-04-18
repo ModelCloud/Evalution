@@ -1644,7 +1644,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "manual_eviction" in gptqmodel_keys
     assert "max_batch_tokens" in gptqmodel_keys
     assert "backend" in gptqmodel_keys
-    assert "gptqmodel_path" in gptqmodel_keys
+    assert "gptqmodel_path" not in gptqmodel_keys
     assert "continuous_batching" not in gptqmodel_keys
 
     assert "dtype" in transformers_compat_keys
@@ -1656,7 +1656,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "dtype" in vllm_keys
     assert "batch_size" in vllm_keys
     assert "tensor_parallel_size" in vllm_keys
-    assert "vllm_path" in vllm_keys
+    assert "vllm_path" not in vllm_keys
     assert "attn_implementation" not in vllm_keys
     assert "device" not in vllm_keys
 
@@ -1672,7 +1672,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "continuous_batching" in llama_cpp_keys
     assert "n_ctx" in llama_cpp_keys
     assert "n_gpu_layers" in llama_cpp_keys
-    assert "llama_cpp_path" in llama_cpp_keys
+    assert "llama_cpp_path" not in llama_cpp_keys
     assert "tokenizer_mode" not in llama_cpp_keys
     assert "attn_implementation" not in llama_cpp_keys
 
@@ -1680,7 +1680,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "batch_size" in tinygrad_keys
     assert "device" in tinygrad_keys
     assert "max_context" in tinygrad_keys
-    assert "tinygrad_path" in tinygrad_keys
+    assert "tinygrad_path" not in tinygrad_keys
     assert "jit" in tinygrad_keys
     assert "jitbeam" in tinygrad_keys
     assert "attn_implementation" not in tinygrad_keys
@@ -1697,7 +1697,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "batch_size" in tensorrt_llm_keys
     assert "tensor_parallel_size" in tensorrt_llm_keys
     assert "runtime_backend" in tensorrt_llm_keys
-    assert "tensorrt_llm_path" in tensorrt_llm_keys
+    assert "tensorrt_llm_path" not in tensorrt_llm_keys
     assert "attn_implementation" not in tensorrt_llm_keys
 
 

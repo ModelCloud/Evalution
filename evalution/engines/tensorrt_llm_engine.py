@@ -7,13 +7,11 @@ from __future__ import annotations
 
 import importlib
 import os
-import sys
 import threading
 from collections.abc import Iterable, Iterator
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field, replace
 from itertools import chain
-from pathlib import Path
 from typing import Any
 
 from evalution.config import Model
@@ -37,15 +35,6 @@ from evalution.engines.transformers_common import (
 
 # Keep the engine's auto-batching sentinel aligned with the shared runtime helpers.
 _AUTO_BATCH_SIZE = "auto"
-# Search common sibling-checkout locations so local TensorRT-LLM development works without pip install.
-_DEFAULT_TENSORRT_LLM_CHECKOUT_CANDIDATES = (
-    Path(__file__).resolve().parents[3] / "TensorRT-LLM",
-    Path.cwd() / "TensorRT-LLM",
-    Path.cwd().parent / "TensorRT-LLM",
-    Path(__file__).resolve().parents[3] / "tensorrt_llm",
-    Path.cwd() / "tensorrt_llm",
-    Path.cwd().parent / "tensorrt_llm",
-)
 
 
 @dataclass(slots=True)
@@ -57,7 +46,6 @@ class TensorRTLLM(SharedEngineConfig):
     max_model_len: int | None = None
     tokenizer_revision: str | None = None
     runtime_backend: str | None = None
-    tensorrt_llm_path: str | None = None
     llm_kwargs: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseInferenceSession:
@@ -93,7 +81,7 @@ class TensorRTLLMSession(BaseInferenceSession):
     def from_config(cls, config: TensorRTLLM, model_config: Model) -> TensorRTLLMSession:
         """Load TensorRT-LLM plus tokenizers and normalize Evalution config into runtime kwargs."""
 
-        tensorrt_llm_module = _import_tensorrt_llm(config.tensorrt_llm_path)
+        tensorrt_llm_module = _import_tensorrt_llm()
         trust_remote_code = (
             config.trust_remote_code
             if config.trust_remote_code is not None
@@ -811,8 +799,8 @@ def _resolve_runtime_tokenizer_name(model_config: Model) -> str:
     return model_config.path
 
 
-def _import_tensorrt_llm(tensorrt_llm_path: str | None) -> Any:
-    """Import TensorRT-LLM, optionally retrying through common local checkout locations."""
+def _import_tensorrt_llm() -> Any:
+    """Import TensorRT-LLM from the active Python environment."""
 
     def _ensure_transformers_compat() -> None:
         """Patch known import-surface drift between TensorRT-LLM and newer transformers builds."""
@@ -840,23 +828,6 @@ def _import_tensorrt_llm(tensorrt_llm_path: str | None) -> Any:
     try:
         return importlib.import_module("tensorrt_llm")
     except ModuleNotFoundError as exc:
-        search_paths = []
-        if tensorrt_llm_path:
-            search_paths.append(Path(tensorrt_llm_path))
-        search_paths.extend(_DEFAULT_TENSORRT_LLM_CHECKOUT_CANDIDATES)
-
-        for candidate in search_paths:
-            if not candidate.exists():
-                continue
-            root = str(candidate)
-            if root not in sys.path:
-                sys.path.insert(0, root)
-            try:
-                _ensure_transformers_compat()
-                return importlib.import_module("tensorrt_llm")
-            except ModuleNotFoundError:
-                continue
-
         raise ModuleNotFoundError(
-            "tensorrt_llm is not importable; install it or configure `tensorrt_llm_path` to a local checkout"
+            "tensorrt_llm is not importable; install the optional `tensorrt_llm` dependency"
         ) from exc

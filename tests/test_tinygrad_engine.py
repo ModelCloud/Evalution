@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -121,7 +120,6 @@ def test_tinygrad_engine_defaults_batch_size_to_auto() -> None:
 
     assert engine.batch_size == "auto"
     assert engine.max_context is None
-    assert engine.tinygrad_path is None
     assert engine.jit is None
     assert engine.jitbeam is None
     assert engine.to_dict()["resolved_engine"] is None
@@ -137,23 +135,17 @@ def test_resolve_tinygrad_device_normalizes_evalution_device_strings() -> None:
     assert _resolve_tinygrad_device("nv:1") == "NV:1"
 
 
-def test_import_tinygrad_uses_checkout_fallback(monkeypatch, tmp_path: Path) -> None:
-    """Verify local checkout discovery is used when importing tinygrad initially fails."""
-
-    checkout = tmp_path / "tinygrad"
-    checkout.mkdir()
+def test_import_tinygrad_uses_native_python_import(monkeypatch) -> None:
+    """Verify tinygrad import reads from the active Python environment only."""
     fake_modules = object()
 
     def fake_load():
-        """Support the surrounding tests with a path-sensitive import helper."""
-
-        if str(checkout) not in __import__("sys").path:
-            raise ModuleNotFoundError("No module named 'tinygrad'")
+        """Support the surrounding tests with a deterministic import helper."""
         return fake_modules
 
     monkeypatch.setattr("evalution.engines.tinygrad_engine._load_tinygrad_modules", fake_load)
 
-    imported = _import_tinygrad_modules(str(checkout))
+    imported = _import_tinygrad_modules()
 
     assert imported is fake_modules
 

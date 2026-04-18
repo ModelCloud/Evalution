@@ -8,7 +8,6 @@ from __future__ import annotations
 import gc
 import importlib
 import os
-import sys
 import threading
 from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager, nullcontext, suppress
@@ -37,13 +36,8 @@ from evalution.engines.transformers_common import (
     _truncate_at_stop,
 )
 
-# Keep the engine defaults and local-checkout discovery explicit at module scope.
+# Keep the engine defaults explicit at module scope.
 _AUTO_BATCH_SIZE = "auto"
-_DEFAULT_TINYGRAD_CHECKOUT_CANDIDATES = (
-    Path(__file__).resolve().parents[3] / "tinygrad",
-    Path.cwd() / "tinygrad",
-    Path.cwd().parent / "tinygrad",
-)
 _A100_CLASS_MIN_VRAM_BYTES = 90 * 1024**3
 
 
@@ -100,9 +94,8 @@ class _LoadedTinygradRuntime:
 class Tinygrad(BaseEngineDeviceConfig, SharedEngineConfig):
     """Configure Evalution to run GGUF generation and scoring through tinygrad."""
 
-    # Tinygrad support stays optional and local-first so the core install remains lean.
+    # Tinygrad support stays optional so the core install remains lean.
     max_context: int | None = None
-    tinygrad_path: str | None = None
     jit: int | None = None
     jitbeam: int | None = None
 
@@ -1278,7 +1271,7 @@ def _load_tinygrad_runtime(config: Tinygrad, model_config: Model) -> _LoadedTiny
             "native dense Hugging Face loading was removed after incorrect Llama 3.2 outputs"
         )
 
-    modules = _import_tinygrad_modules(config.tinygrad_path)
+    modules = _import_tinygrad_modules()
     requested_device = _resolve_tinygrad_device(config.device)
     with _tinygrad_context(modules, requested_device):
         with suppress(Exception):
@@ -1355,30 +1348,13 @@ def _load_prepare_tokenizer(config: Tinygrad, model_config: Model) -> Any:
     return tokenizer
 
 
-def _import_tinygrad_modules(tinygrad_path: str | None) -> _TinygradModules:
-    """Import tinygrad, optionally falling back to a nearby local checkout."""
-
+def _import_tinygrad_modules() -> _TinygradModules:
+    """Import tinygrad from the active Python environment."""
     try:
         return _load_tinygrad_modules()
     except ModuleNotFoundError as exc:
-        search_paths = []
-        if tinygrad_path:
-            search_paths.append(Path(tinygrad_path))
-        search_paths.extend(_DEFAULT_TINYGRAD_CHECKOUT_CANDIDATES)
-
-        for candidate in search_paths:
-            if not candidate.exists():
-                continue
-            root = str(candidate)
-            if root not in sys.path:
-                sys.path.insert(0, root)
-            try:
-                return _load_tinygrad_modules()
-            except ModuleNotFoundError:
-                continue
-
         raise ModuleNotFoundError(
-            "tinygrad is not importable; install it or configure `tinygrad_path` to a local checkout"
+            "tinygrad is not importable; install the optional `tinygrad` dependency"
         ) from exc
 
 

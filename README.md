@@ -183,12 +183,12 @@ evalution emit-python evalution.yaml
 and `max_running_requests`.
 
 `engines.LlamaCpp(...)` accepts llama.cpp runtime options such as `device`, `n_ctx`,
-`n_gpu_layers`, `flash_attn`, `main_gpu`, `llama_cpp_path`, and `llama_kwargs`.
+`n_gpu_layers`, `flash_attn`, `main_gpu`, and `llama_kwargs`.
 Its `continuous_batching=True` mode schedules multiple in-flight requests together but still
 returns one final completion per request rather than streaming partial tokens to the caller.
 
 `engines.Tinygrad(...)` accepts tinygrad runtime options such as `device`, `dtype`, `batch_size`,
-`max_context`, `tinygrad_path`, `jit`, and `jitbeam`. It loads local `.gguf` checkpoints
+`max_context`, `jit`, and `jitbeam`. It loads local `.gguf` checkpoints
 directly; for chat-template benchmarks such as `gsm8k_platinum`, also provide the matching
 `tokenizer_path` so Evalution can render the prompt with the dense tokenizer assets.
 
@@ -408,8 +408,7 @@ tests:
 ### TensorRTLLM 🧠
 
 Use `engines.TensorRTLLM()` in Python or `engine.type: TensorRTLLM` in YAML when you want the
-TensorRT-LLM runtime. Configure `tensorrt_llm_path` only when `tensorrt_llm` is not importable
-from the active environment. The current backend expects `num_beams=1`.
+TensorRT-LLM runtime. The current backend expects `num_beams=1`.
 
 Python:
 
@@ -418,7 +417,7 @@ import evalution as eval
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
-# Extra dependency: install `tensorrt_llm`, or set `tensorrt_llm_path` to a local checkout.
+# Extra dependency: install `tensorrt_llm`.
 result = (
     engines.TensorRTLLM(
         batch_size=16,
@@ -491,8 +490,7 @@ tests:
 ### GPTQModel 🪶
 
 Use `engines.GPTQModel()` in Python or `engine.type: GPTQModel` in YAML when you want to load a
-quantized checkpoint through GPTQModel's native loader. Configure `gptqmodel_path` only when the
-runtime is not importable from the active environment.
+quantized checkpoint through GPTQModel's native loader.
 
 Python:
 
@@ -535,8 +533,7 @@ GGUF models through tinygrad's own LLM runtime. Evalution keeps `generate(...)`,
 `generate_continuous(...)`, `loglikelihood(...)`, and `loglikelihood_rolling(...)` on the same
 shared engine contract.
 
-Install the runtime with `pip install tinygrad`, or point `tinygrad_path` at a local checkout when
-you want Evalution to import tinygrad from source.
+Install the runtime with `pip install tinygrad`.
 
 Tinygrad engine summary:
 
@@ -558,13 +555,6 @@ Notes:
   finish the startup profile sweep in time. Override `jit` or `jitbeam` explicitly if you want to
   experiment with a different tinygrad runtime profile.
 
-Validated `gsm8k_platinum` GGUF baseline:
-
-| GPU | rows | batch_size | max_new_tokens | acc,num |
-| --- | ---: | ---: | ---: | ---: |
-| RTX 4090 | 128 | 128 | 256 | 0.46875 |
-| A100 | 128 | 128 | 256 | 0.46875 |
-
 Python:
 
 ```python
@@ -576,21 +566,12 @@ result = (
     engines.Tinygrad(
         device="auto",
         max_context=4096,
-        tinygrad_path="/tmp/tinygrad",
     )
     .model(
         path="/monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
         tokenizer_path="/monster/data/model/Llama-3.2-1B-Instruct",
     )
-    .run(
-        benchmarks.gsm8k_platinum(
-            variant="base",
-            apply_chat_template=True,
-            batch_size=128,
-            max_new_tokens=256,
-            max_rows=128,
-        )
-    )
+    .run(benchmarks.gsm8k_platinum())
 )
 ```
 
@@ -601,7 +582,6 @@ engine:
   type: Tinygrad
   device: auto
   max_context: 4096
-  tinygrad_path: /tmp/tinygrad
 
 model:
   path: /monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf
@@ -609,11 +589,6 @@ model:
 
 tests:
   - type: gsm8k_platinum
-    variant: base
-    apply_chat_template: true
-    batch_size: 128
-    max_new_tokens: 256
-    max_rows: 128
 ```
 
 ### LlamaCpp 🦙

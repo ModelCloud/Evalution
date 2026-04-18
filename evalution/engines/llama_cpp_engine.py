@@ -39,15 +39,6 @@ from evalution.engines.transformers_common import (
 
 # Keep the engine's auto-batching sentinel aligned with the shared runtime helpers.
 _AUTO_BATCH_SIZE = "auto"
-# Search common sibling-checkout locations so local source builds work before pip installation.
-_DEFAULT_LLAMA_CPP_CHECKOUT_CANDIDATES = (
-    Path(__file__).resolve().parents[3] / "llama-cpp-python",
-    Path.cwd() / "llama-cpp-python",
-    Path.cwd().parent / "llama-cpp-python",
-    Path(__file__).resolve().parents[3] / "llama_cpp_python",
-    Path.cwd() / "llama_cpp_python",
-    Path.cwd().parent / "llama_cpp_python",
-)
 
 
 @dataclass(slots=True)
@@ -72,7 +63,6 @@ class LlamaCpp(BaseEngineDeviceConfig, SharedEngineConfig):
     chat_format: str | None = None
     verbose: bool = False
     logits_all: bool = True
-    llama_cpp_path: str | None = None
     llama_kwargs: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseInferenceSession:
@@ -109,7 +99,7 @@ class LlamaCppSession(BaseInferenceSession):
     def from_config(cls, config: LlamaCpp, model_config: Model) -> LlamaCppSession:
         """Load llama.cpp, construct the runtime, and optionally attach a tokenizer for chat formatting."""
 
-        llama_module = _import_llama_cpp(config.llama_cpp_path)
+        llama_module = _import_llama_cpp()
         gpu_offload_supported = _llama_supports_gpu_offload(llama_module)
         effective_device = _resolve_effective_device(config.device, gpu_offload_supported)
         effective_n_gpu_layers = _resolve_n_gpu_layers(
@@ -1125,23 +1115,11 @@ class _LlamaCppContinuousBatchState:
     generated_text: str = ""
 
 
-def _import_llama_cpp(llama_cpp_path: str | None) -> Any:
-    """Import llama-cpp-python and optionally fall back to a local checkout path."""
-
-    explicit_candidates = [Path(llama_cpp_path)] if llama_cpp_path is not None else []
-    candidates = [candidate for candidate in explicit_candidates + list(_DEFAULT_LLAMA_CPP_CHECKOUT_CANDIDATES)]
-
+def _import_llama_cpp() -> Any:
+    """Import llama-cpp-python from the active Python environment."""
     try:
         return importlib.import_module("llama_cpp")
     except ModuleNotFoundError as original_exc:
-        for candidate in candidates:
-            if not candidate.exists():
-                continue
-            candidate_str = str(candidate)
-            if candidate_str not in sys.path:
-                sys.path.insert(0, candidate_str)
-            with suppress(ModuleNotFoundError):
-                return importlib.import_module("llama_cpp")
         raise ModuleNotFoundError(
             "LlamaCpp engine requires the optional `llama-cpp-python` dependency"
         ) from original_exc

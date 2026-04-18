@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -201,23 +199,17 @@ def test_llama_cpp_engine_defaults_batch_size_to_auto() -> None:
     assert engine.continuous_batching is True
     assert engine.n_ctx == 4096
     assert engine.logits_all is True
-    assert engine.llama_cpp_path is None
     assert engine.to_dict()["resolved_engine"] is None
 
 
-def test_import_llama_cpp_uses_checkout_fallback(monkeypatch, tmp_path) -> None:
-    """Verify local checkout discovery is used when importing llama_cpp initially fails."""
-
-    checkout = tmp_path / "llama-cpp-python"
-    checkout.mkdir()
+def test_import_llama_cpp_uses_native_python_import(monkeypatch) -> None:
+    """Verify llama_cpp import reads from the active Python environment only."""
     fake_module = object()
 
     def fake_import_module(name: str):
         """Support the surrounding tests with a fake import hook."""
 
         assert name == "llama_cpp"
-        if str(checkout) not in sys.path:
-            raise ModuleNotFoundError("No module named 'llama_cpp'")
         return fake_module
 
     monkeypatch.setattr(
@@ -225,7 +217,7 @@ def test_import_llama_cpp_uses_checkout_fallback(monkeypatch, tmp_path) -> None:
         fake_import_module,
     )
 
-    imported = _import_llama_cpp(str(checkout))
+    imported = _import_llama_cpp()
 
     assert imported is fake_module
 
@@ -236,7 +228,7 @@ def test_llama_cpp_build_enables_full_gpu_offload_when_available(monkeypatch) ->
     fake_module = FakeLlamaModule(gpu_offload_supported=True)
     monkeypatch.setattr(
         "evalution.engines.llama_cpp_engine._import_llama_cpp",
-        lambda llama_cpp_path: fake_module,
+        lambda: fake_module,
     )
     monkeypatch.setattr(
         "evalution.engines.llama_cpp_engine._maybe_load_prepare_tokenizer",
@@ -278,7 +270,7 @@ def test_llama_cpp_build_falls_back_to_cpu_without_gpu_offload(monkeypatch) -> N
     fake_module = FakeLlamaModule(gpu_offload_supported=False)
     monkeypatch.setattr(
         "evalution.engines.llama_cpp_engine._import_llama_cpp",
-        lambda llama_cpp_path: fake_module,
+        lambda: fake_module,
     )
     monkeypatch.setattr(
         "evalution.engines.llama_cpp_engine._maybe_load_prepare_tokenizer",
@@ -299,7 +291,7 @@ def test_llama_cpp_build_accepts_mlx_device_when_gpu_offload_is_available(monkey
     fake_module = FakeLlamaModule(gpu_offload_supported=True)
     monkeypatch.setattr(
         "evalution.engines.llama_cpp_engine._import_llama_cpp",
-        lambda llama_cpp_path: fake_module,
+        lambda: fake_module,
     )
     monkeypatch.setattr(
         "evalution.engines.llama_cpp_engine._maybe_load_prepare_tokenizer",

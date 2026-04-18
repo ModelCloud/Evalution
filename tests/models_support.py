@@ -26,7 +26,6 @@ LLAMA3_2_1B_INSTRUCT_GGUF = Path(
 LLAMA3_2_TRANSFORMERS_DEVICE = os.environ.get("EVALUTION_TEST_DEVICE", "cuda:0")
 LLAMA3_2_LLAMACPP_DEVICE = os.environ.get("EVALUTION_TEST_LLAMACPP_DEVICE", "auto")
 LLAMA3_2_TINYGRAD_DEVICE = os.environ.get("EVALUTION_TEST_TINYGRAD_DEVICE", "auto")
-LLAMA3_2_TINYGRAD_PATH = os.environ.get("EVALUTION_TEST_TINYGRAD_PATH", "/tmp/tinygrad")
 LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE = os.environ.get(
     "EVALUTION_TEST_COMPARE_LEFT_DEVICE",
     "cuda:0",
@@ -55,9 +54,7 @@ _GPU_BASELINE_BUCKET_DEFAULT = "default"
 _GPU_BASELINE_BUCKET_A100 = "a100"
 _GPU_BASELINE_BUCKET_RTX4090 = "rtx4090"
 _HAS_LLAMACPP_BINDING = importlib.util.find_spec("llama_cpp") is not None
-_HAS_TINYGRAD_RUNTIME = importlib.util.find_spec("tinygrad") is not None or (
-    bool(LLAMA3_2_TINYGRAD_PATH) and Path(LLAMA3_2_TINYGRAD_PATH).exists()
-)
+_HAS_TINYGRAD_RUNTIME = importlib.util.find_spec("tinygrad") is not None
 
 
 def _visible_llama3_2_gpu_baseline_bucket() -> str:
@@ -415,7 +412,7 @@ LLAMA3_2_TINYGRAD_TEST_MARKS = [
     ),
     pytest.mark.skipif(
         not _HAS_TINYGRAD_RUNTIME,
-        reason="tinygrad is not installed and no local tinygrad checkout is configured",
+        reason="tinygrad is not installed in the active Python environment",
     ),
     pytest.mark.skipif(
         not hasattr(sys, "_is_gil_enabled") or sys._is_gil_enabled(),
@@ -732,7 +729,6 @@ def run_llama3_2_tinygrad_suite(
                 batch_size="auto",
                 seed=0,
                 max_context=4096,
-                tinygrad_path=LLAMA3_2_TINYGRAD_PATH,
             )
             .model(**model_kwargs)
             .run(suite)
@@ -746,7 +742,6 @@ def run_llama3_2_tinygrad_suite(
     assert result.engine["device"] == LLAMA3_2_TINYGRAD_DEVICE
     assert result.engine["batch_size"] == "auto"
     assert result.engine["max_context"] == 4096
-    assert result.engine["tinygrad_path"] == LLAMA3_2_TINYGRAD_PATH
     assert result.engine["execution"]["generation_backend"] == "tinygrad_generate"
     execution_device = result.engine["execution"]["device"]
     assert execution_device == "CPU" or execution_device.startswith(("CUDA", "NV"))

@@ -7,13 +7,11 @@ from __future__ import annotations
 
 import importlib
 import os
-import sys
 import threading
 from collections.abc import Iterable, Iterator
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field, replace
 from itertools import chain
-from pathlib import Path
 from typing import Any
 
 from evalution.config import Model
@@ -39,11 +37,6 @@ from evalution.engines.transformers_common import (
 
 # Keep engine defaults and compatibility flags explicit at module scope.
 _AUTO_BATCH_SIZE = "auto"
-_DEFAULT_VLLM_CHECKOUT_CANDIDATES = (
-    Path(__file__).resolve().parents[3] / "vllm",
-    Path.cwd() / "vllm",
-    Path.cwd().parent / "vllm",
-)
 
 
 @dataclass(slots=True)
@@ -53,13 +46,12 @@ class VLLM(BaseEngineTokenizerModeConfig, BaseEngineQuantizationConfig, SharedEn
     # This engine intentionally models vLLM as a first-class Evalution backend
     # instead of routing through GPTQModel or the legacy TransformersCompat path.
     # That lets us preserve vLLM-specific behavior such as request-id based
-    # continuous batching, prompt_logprobs scoring, and local checkout loading.
+    # continuous batching and prompt_logprobs scoring.
     tensor_parallel_size: int = 1
     gpu_memory_utilization: float = 0.9
     max_model_len: int | None = None
     enforce_eager: bool = False
     tokenizer_revision: str | None = None
-    vllm_path: str | None = None
     llm_kwargs: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseInferenceSession:
@@ -93,7 +85,7 @@ class VLLMSession(BaseInferenceSession):
     def from_config(cls, config: VLLM, model_config: Model) -> VLLMSession:
         """Load vLLM, construct the runtime, and attach tokenizers for request preparation."""
 
-        vllm_module = _import_vllm(config.vllm_path)
+        vllm_module = _import_vllm()
         trust_remote_code = (
             config.trust_remote_code
             if config.trust_remote_code is not None
@@ -841,31 +833,11 @@ def _resolve_vllm_tokenizer_name(model_config: Model) -> str:
     return model_config.path
 
 
-def _import_vllm(vllm_path: str | None) -> Any:
-    """Import vLLM, optionally falling back to a nearby local checkout."""
-
+def _import_vllm() -> Any:
+    """Import vLLM from the active Python environment."""
     try:
         return importlib.import_module("vllm")
     except ModuleNotFoundError as exc:
-        # Evalution is often developed alongside a local vLLM checkout. We try
-        # the configured path first, then a few common sibling-repo locations,
-        # before failing with a targeted import error.
-        search_paths = []
-        if vllm_path:
-            search_paths.append(Path(vllm_path))
-        search_paths.extend(_DEFAULT_VLLM_CHECKOUT_CANDIDATES)
-
-        for candidate in search_paths:
-            if not candidate.exists():
-                continue
-            root = str(candidate)
-            if root not in sys.path:
-                sys.path.insert(0, root)
-            try:
-                return importlib.import_module("vllm")
-            except ModuleNotFoundError:
-                continue
-
         raise ModuleNotFoundError(
-            "vllm is not importable; install it or configure `vllm_path` to a local checkout"
+            "vllm is not importable; install the optional `vllm` dependency"
         ) from exc

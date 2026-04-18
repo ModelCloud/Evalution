@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import importlib.util
 import math
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -251,33 +250,26 @@ def test_vllm_engine_defaults_batch_size_to_auto() -> None:
     assert engine.padding_side == "left"
     assert engine.tensor_parallel_size == 1
     assert engine.gpu_memory_utilization == 0.9
-    assert engine.vllm_path is None
     assert engine.to_dict()["resolved_engine"] is None
 
 
-def test_import_vllm_uses_checkout_fallback(monkeypatch, tmp_path) -> None:
-    """Verify local checkout discovery is used when importing vLLM initially fails."""
+def test_import_vllm_uses_native_python_import(monkeypatch) -> None:
+    """Verify vLLM import reads from the active Python environment only."""
 
     # What this test is actually verifying:
-    # _import_vllm should prepend the configured checkout path and retry import
-    # so development against a sibling vLLM checkout works without pip install.
+    # _import_vllm should import the installed package directly and not mutate sys.path.
     fake_module = object()
 
     def fake_import_module(name: str):
-        """Pretend vLLM becomes importable only after the checkout path is added."""
+        """Return one fake vLLM module from the active environment."""
 
         assert name == "vllm"
-        if str(tmp_path) not in sys.path:
-            raise ModuleNotFoundError("No module named 'vllm'")
         return fake_module
 
     monkeypatch.setattr("evalution.engines.vllm_engine.importlib.import_module", fake_import_module)
-    monkeypatch.setattr("evalution.engines.vllm_engine.sys.path", list(sys.path))
-
-    imported = _import_vllm(str(tmp_path))
+    imported = _import_vllm()
 
     assert imported is fake_module
-    assert sys.path[0] == str(tmp_path)
 
 
 def test_vllm_session_generates_and_scores() -> None:
@@ -460,7 +452,7 @@ def test_vllm_session_gc_resets_prefix_cache() -> None:
     assert llm.reset_prefix_cache_calls == 1
 
 
-def test_vllm_build_loads_local_checkout(monkeypatch) -> None:
+def test_vllm_build_uses_installed_runtime(monkeypatch) -> None:
     """Verify build() wires together the imported runtime and prepare tokenizer."""
 
     # What this test is actually verifying:
@@ -484,7 +476,7 @@ def test_vllm_build_loads_local_checkout(monkeypatch) -> None:
             assert kwargs["tensor_parallel_size"] == 2
             return fake_llm
 
-    monkeypatch.setattr("evalution.engines.vllm_engine._import_vllm", lambda path: FakeVLLMModule)
+    monkeypatch.setattr("evalution.engines.vllm_engine._import_vllm", lambda: FakeVLLMModule)
     monkeypatch.setattr(
         "evalution.engines.vllm_engine._load_tokenizer_from_model",
         lambda source, **kwargs: fake_prepare_tokenizer,
@@ -519,7 +511,7 @@ def test_vllm_build_accepts_custom_tokenizer_object(monkeypatch) -> None:
             assert kwargs["tokenizer"] == "/tmp/model"
             return fake_llm
 
-    monkeypatch.setattr("evalution.engines.vllm_engine._import_vllm", lambda path: FakeVLLMModule)
+    monkeypatch.setattr("evalution.engines.vllm_engine._import_vllm", lambda: FakeVLLMModule)
     monkeypatch.setattr(
         "evalution.engines.vllm_engine._load_tokenizer_from_model",
         lambda source, **kwargs: custom_tokenizer,
