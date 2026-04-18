@@ -982,7 +982,7 @@ def test_transformer_monkey_patch_seeds_flash_attention_cb_defaults(
 
     cb_config = manager_cls._create_batch_processor(manager)
 
-    assert cb_config.use_cuda_graph is False
+    assert cb_config.use_cuda_graph is None
     assert cb_config.max_blocks_per_request == expected_blocks
 
 
@@ -1017,6 +1017,71 @@ def test_transformer_monkey_patch_preserves_explicit_flash_attention_cb_settings
 
     assert cb_config.use_cuda_graph is True
     assert cb_config.max_blocks_per_request == 0
+
+
+def test_transformer_monkey_patch_normalizes_cuda_graph_decision_to_tuple(monkeypatch) -> None:
+    """Verify transformer monkey patch normalizes CUDA-graph decisions to per-path booleans."""
+    import evalution.engines.transformers as transformer_module
+    from transformers import ContinuousBatchingConfig
+
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: True)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_continuous_batching_graph_fix", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: True)
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+
+    transformer_module._patch_continuous_batching_flash_attention_decode_once()
+
+    cb_config = ContinuousBatchingConfig(use_cuda_graph=True)
+    decided = cb_config.decide_use_cuda_graphs(compile_config=None, is_attn_mask_needed=False)
+
+    assert decided == (True, True)
+    assert cb_config.use_cuda_graph == (True, True)
+    assert cb_config.get_cuda_graph_booleans() == (True, True)
+
+
+def test_transformer_monkey_patch_fixes_varlen_padding_and_graph_keys(monkeypatch) -> None:
+    """Verify transformer monkey patch pads varlen metadata and keys graphs by max_seqlen_k."""
+    import evalution.engines.transformers as transformer_module
+    from transformers.generation.continuous_batching import input_outputs
+
+    monkeypatch.setattr(transformer_module, "_transformers_supports_flash_attention_auto_max_blocks", lambda: True)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_continuous_batching_graph_fix", lambda: False)
+    monkeypatch.setattr(transformer_module, "_transformers_supports_fa2_decode_fast_path", lambda: True)
+
+    transformer_module._patch_continuous_batching_flash_attention_decode_once()
+
+    fake_io = SimpleNamespace(
+        num_q_tokens=4,
+        max_kv_read=8,
+        true_batch_size=2,
+        total_seqlen_q=3,
+        max_seqlen_q=2,
+        max_seqlen_k={"full_attention": 600},
+        input_ids=torch.tensor([11, 12, 13, 0], dtype=torch.int32),
+        position_ids=torch.tensor([0, 1, 2, 0], dtype=torch.int32),
+        cumulative_seqlens_q=torch.tensor([0, 2, 3, 4, 4], dtype=torch.int32),
+        logits_indices=torch.tensor([0, 1, 2, 3], dtype=torch.int32),
+        _bulk_input_tensor=torch.zeros((1, 4), dtype=torch.int32),
+        static_inputs=0,
+        cache=SimpleNamespace(num_groups=1, num_pages=4096),
+        block_table=torch.zeros((1, 4), dtype=torch.int32),
+        use_block_table=False,
+        read_index_storage=torch.zeros((1, 12), dtype=torch.int32),
+        write_index_storage=torch.zeros((1, 4), dtype=torch.int32),
+        cumulative_seqlens_k={"full_attention": torch.tensor([0, 5, 8, 8, 8], dtype=torch.int32)},
+        attention_mask=None,
+        true_read_sizes=[8],
+        true_write_sizes=[3],
+        use_cuda_graph_varlen=True,
+    )
+
+    kwargs = input_outputs.ContinuousBatchingIOs.get_model_kwargs(fake_io, use_padding=True)
+
+    assert kwargs["cu_seq_lens_q"][3:].tolist() == [3, 3]
+    assert kwargs["cu_seq_lens_k"][3:].tolist() == [8, 8]
+    assert kwargs["max_seqlen_q"] == 4
+    assert kwargs["max_seqlen_k"] == 1024
+    assert input_outputs.ContinuousBatchingIOs._get_graph_key(fake_io) == (4, 8, 1024)
 
 
 def test_transformer_monkey_patch_accepts_fa2_decode_fast_path(monkeypatch) -> None:
@@ -1098,7 +1163,7 @@ def test_transformer_monkey_patch_keeps_defaults_patch_when_only_native_decode_s
 
     cb_config = manager_cls._create_batch_processor(manager)
 
-    assert cb_config.use_cuda_graph is False
+    assert cb_config.use_cuda_graph is None
     assert cb_config.max_blocks_per_request == 1
     assert processor_cls._ensure_decode_fast_path_is_available is original_ensure_fast_path
 
@@ -1769,7 +1834,7 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
             allow_block_sharing=False,
             max_blocks_per_request=32,
             use_async_batching=False,
-            use_cuda_graph=True,
+            use_cuda_graph=(True, False),
             q_padding_interval_size=128,
             kv_padding_interval_size=4096,
             max_cached_graphs=8,
@@ -1794,7 +1859,7 @@ def test_transformer_session_generate_supports_config_object_continuous_batching
     assert manager.continuous_batching_config.allow_block_sharing is False
     assert manager.continuous_batching_config.max_blocks_per_request == 32
     assert manager.continuous_batching_config.use_async_batching is False
-    assert manager.continuous_batching_config.use_cuda_graph is True
+    assert manager.continuous_batching_config.use_cuda_graph == (True, False)
     assert manager.continuous_batching_config.q_padding_interval_size == 128
     assert manager.continuous_batching_config.kv_padding_interval_size == 4096
     assert manager.continuous_batching_config.max_cached_graphs == 8
