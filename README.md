@@ -26,11 +26,11 @@ Core runtime dependencies stay lean: `transformers`, `datasets`, `logbar`, `PyPc
 
 ## Why Evalution ✨
 
-**8 engines. 153 built-in benchmark families. 213 in-repo GPU benchmark regression tests.**
+**9 engines. 153 built-in benchmark families. 215 in-repo GPU benchmark regression tests.**
 
-- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `OpenAICompatible`, `GPTQModel`, and `OpenVINO`.
+- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `OpenAICompatible`, `GPTQModel`, `OpenVINO`, and `Tinygrad`.
 - 📚 Broad benchmark coverage: 153 documented built-in benchmark families spanning reasoning, multilingual evals, coding, long-context, QA, perplexity, safety, and more.
-- 🧪 GPU validated: the repo includes 213 in-repo GPU benchmark regression tests for individual Llama 3.2 benchmark runs, with RTX 4090 and A100-aware baselines where scores are pinned.
+- 🧪 GPU validated: the repo includes 215 in-repo GPU benchmark regression tests for individual Llama 3.2 benchmark runs, with RTX 4090 and A100-aware baselines where scores are pinned.
 - ⚡ Speed: Evalution is faster than many evaluators and attempts continuous batching by default when the selected engine supports it.
 - 🪶 Minimal core deps: the default install stays focused and avoids dragging in every backend dependency up front.
 - 🧼 Clean API: Python, YAML, CLI, single-model runs, and compare flows all share the same readable shape.
@@ -73,6 +73,7 @@ result = (
         device="cuda:0",
         batch_size="auto",
         allow_block_sharing=True,
+        max_batch_tokens=None,
         max_blocks_per_request=None,
         use_async_batching=None,
         use_cuda_graph=None,
@@ -136,6 +137,7 @@ engine:
   dtype: bfloat16
   attn_implementation: paged|flash_attention_2
   device: cuda:0
+  max_batch_tokens: null
   max_blocks_per_request: null
   use_cuda_graph: null
 
@@ -184,6 +186,11 @@ and `max_running_requests`.
 `n_gpu_layers`, `flash_attn`, `main_gpu`, `llama_cpp_path`, and `llama_kwargs`.
 Its `continuous_batching=True` mode schedules multiple in-flight requests together but still
 returns one final completion per request rather than streaming partial tokens to the caller.
+
+`engines.Tinygrad(...)` accepts tinygrad runtime options such as `device`, `dtype`, `batch_size`,
+`max_context`, `tinygrad_path`, `jit`, and `jitbeam`. It can load local dense Hugging Face
+`llama` checkpoints directly, or direct `.gguf` files when you also provide the matching
+`tokenizer_path` for chat template rendering.
 
 `engines.OpenVINO(...)` accepts OpenVINO runtime options such as `dtype`, `device`, `batch_size`, `attn_implementation`, `max_new_tokens` and `ov_config`.
 
@@ -521,6 +528,69 @@ tests:
   - type: gsm8k_platinum
 ```
 
+### Tinygrad 🧠
+
+Use `engines.Tinygrad()` in Python or `engine.type: Tinygrad` in YAML when you want to run local
+models through tinygrad's own LLM runtime. Evalution keeps `generate(...)`,
+`generate_continuous(...)`, `loglikelihood(...)`, and `loglikelihood_rolling(...)` on the same
+shared engine contract.
+
+Install the runtime with `pip install tinygrad`, or point `tinygrad_path` at a local checkout when
+you want Evalution to import tinygrad from source.
+
+Notes:
+
+- Native dense loading currently targets local Hugging Face `llama` checkpoints with `config.json`.
+- GGUF loading works directly from a `.gguf` file. For chat-template benchmarks such as
+  `gsm8k_platinum`, also set `model.tokenizer_path` to the matching dense tokenizer checkout.
+- CUDA runs now default to the profiled graph-free tinygrad runtime (`jit=2`, `jitbeam=0`) on the
+  local RTX 4090 and A100 families because `jit=1` hit CUDA graph failures and `jitbeam=2` did not
+  finish the startup profile sweep in time. Override `jit` or `jitbeam` explicitly if you want to
+  experiment with a different tinygrad runtime profile.
+
+Python:
+
+```python
+import evalution as eval
+import evalution.benchmarks as benchmarks
+import evalution.engines as engines
+
+result = (
+    engines.Tinygrad(
+        device="auto",
+        max_context=4096,
+        tinygrad_path="/tmp/tinygrad",
+    )
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .run(benchmarks.gsm8k_platinum())
+)
+```
+
+YAML:
+
+```yaml
+engine:
+  type: Tinygrad
+  device: auto
+  max_context: 4096
+  tinygrad_path: /tmp/tinygrad
+
+model:
+  path: /monster/data/model/Llama-3.2-1B-Instruct
+
+tests:
+  - type: gsm8k_platinum
+```
+
+To run the same engine against a GGUF file, keep the engine config unchanged and switch the model
+to the GGUF path plus the dense tokenizer checkout:
+
+```yaml
+model:
+  path: /monster/data/model/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf
+  tokenizer_path: /monster/data/model/Llama-3.2-1B-Instruct
+```
+
 ### LlamaCpp 🦙
 
 Use `engines.LlamaCpp()` in Python or `engine.type: LlamaCpp` in YAML when you want a
@@ -639,9 +709,9 @@ tests:
   - type: gsm8k_platinum
 ```
 
-`Tokenicer` is used to load tokenizers for the transformer, transformer-compat, OpenVINO, GPTQModel,
-vLLM, and optionally LlamaCpp engines. When `engine.model(...)` is called with a model config,
-Evalution resolves tokenizer loading in this order:
+`Tokenicer` is used to load tokenizers for the transformer, transformer-compat, OpenVINO,
+GPTQModel, Tinygrad, vLLM, and optionally LlamaCpp engines. When `engine.model(...)` is called
+with a model config, Evalution resolves tokenizer loading in this order:
 `tokenizer` (preinitialized object), `tokenizer_path`, then `path`.
 `Tokenicer` also applies its normalization stage so pad/eos/bos token IDs are corrected before evaluation.
 `LlamaCpp` still uses llama.cpp's native tokenizer for scoring and prompt tokenization; the optional

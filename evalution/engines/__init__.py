@@ -20,6 +20,7 @@ from .openai_server import OpenAICompatibleServer, build_openai_compatible_serve
 from .openvino_engine import OpenVINO
 from .sglang_engine import SGLang
 from .tensorrt_llm_engine import TensorRTLLM
+from .tinygrad_engine import Tinygrad
 from .transformers import Transformers
 from .transformers_compat import TransformersCompat
 from .vllm_engine import VLLM
@@ -41,6 +42,7 @@ __all__ = [
     "SGLang",
     "SharedEngineConfig",
     "TensorRTLLM",
+    "Tinygrad",
     "Transformers",
     "TransformersCompat",
     "VLLM",

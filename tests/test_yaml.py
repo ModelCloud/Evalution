@@ -24,6 +24,7 @@ from evalution.engines import (
     SGLang,
     SharedEngineConfig,
     TensorRTLLM,
+    Tinygrad,
     Transformers,
     TransformersCompat,
     VLLM,
@@ -1540,6 +1541,29 @@ tests:
     assert "eval(engines." not in script
 
 
+def test_python_from_yaml_emits_tinygrad_name() -> None:
+    """Verify python_from_yaml emits the explicit Tinygrad engine constructor name."""
+
+    script = evalution.python_from_yaml(
+        """
+engine:
+  type: Tinygrad
+  device: cuda:0
+  max_context: 4096
+model:
+  path: /tmp/model.gguf
+tests:
+  - type: gsm8k_platinum
+    max_rows: 8
+"""
+    )
+
+    assert "engines.Tinygrad(" in script
+    assert "device='cuda:0'" in script
+    assert "max_context=4096" in script
+    assert "eval(engines." not in script
+
+
 def test_non_yaml_engine_api_uses_shared_engine_config_inheritance() -> None:
     """Verify the public engine classes inherit common runtime controls from one shared base."""
 
@@ -1550,9 +1574,11 @@ def test_non_yaml_engine_api_uses_shared_engine_config_inheritance() -> None:
     assert issubclass(OpenVINO, SharedEngineConfig)
     assert issubclass(VLLM, SharedEngineConfig)
     assert issubclass(SGLang, SharedEngineConfig)
+    assert issubclass(Tinygrad, SharedEngineConfig)
     assert issubclass(LlamaCpp, BaseEngineDeviceConfig)
     assert issubclass(OpenVINO, BaseEngineDeviceConfig)
     assert issubclass(TensorRTLLM, SharedEngineConfig)
+    assert issubclass(Tinygrad, BaseEngineDeviceConfig)
     assert issubclass(TransformersCompat, BaseEngineTransformersRuntimeConfig)
     assert issubclass(Transformers, BaseEngineTransformersRuntimeConfig)
     assert issubclass(GPTQModel, BaseEngineTransformersRuntimeConfig)
@@ -1579,6 +1605,7 @@ def test_repeated_engine_keys_live_on_dedicated_base_configs() -> None:
     assert {field.name for field in fields(BaseEnginePagedBatchingConfig)} == {
         "manual_eviction",
         "allow_block_sharing",
+        "max_batch_tokens",
         "max_blocks_per_request",
         "use_async_batching",
         "use_cuda_graph",
@@ -1600,6 +1627,7 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     vllm_keys = evalution_yaml._engine_option_keys("vllm")
     sglang_keys = evalution_yaml._engine_option_keys("sglang")
     llama_cpp_keys = evalution_yaml._engine_option_keys("llamacpp")
+    tinygrad_keys = evalution_yaml._engine_option_keys("tinygrad")
     openvino_keys = evalution_yaml._engine_option_keys("openvino")
     tensorrt_llm_keys = evalution_yaml._engine_option_keys("tensorrtllm")
 
@@ -1608,11 +1636,13 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "padding_side" in transformers_keys
     assert "attn_implementation" in transformers_keys
     assert "continuous_batching" in transformers_keys
+    assert "max_batch_tokens" in transformers_keys
 
     assert "dtype" in gptqmodel_keys
     assert "batch_size" in gptqmodel_keys
     assert "attn_implementation" in gptqmodel_keys
     assert "manual_eviction" in gptqmodel_keys
+    assert "max_batch_tokens" in gptqmodel_keys
     assert "backend" in gptqmodel_keys
     assert "gptqmodel_path" in gptqmodel_keys
     assert "continuous_batching" not in gptqmodel_keys
@@ -1645,6 +1675,15 @@ def test_engine_option_keys_are_inherited_from_engine_dataclass_hierarchy() -> N
     assert "llama_cpp_path" in llama_cpp_keys
     assert "tokenizer_mode" not in llama_cpp_keys
     assert "attn_implementation" not in llama_cpp_keys
+
+    assert "dtype" in tinygrad_keys
+    assert "batch_size" in tinygrad_keys
+    assert "device" in tinygrad_keys
+    assert "max_context" in tinygrad_keys
+    assert "tinygrad_path" in tinygrad_keys
+    assert "jit" in tinygrad_keys
+    assert "jitbeam" in tinygrad_keys
+    assert "attn_implementation" not in tinygrad_keys
 
     assert "dtype" in openvino_keys
     assert "batch_size" in openvino_keys
@@ -1707,6 +1746,22 @@ def test_build_engine_constructs_sglang() -> None:
     assert isinstance(engine, SGLang)
     assert engine.tp_size == 2
     assert engine.seed == 7
+
+
+def test_build_engine_constructs_tinygrad() -> None:
+    """Verify YAML engine construction resolves the registered Tinygrad engine."""
+
+    engine = evalution_yaml._build_engine(
+        {
+            "type": "Tinygrad",
+            "device": "cuda:0",
+            "max_context": 4096,
+        }
+    )
+
+    assert isinstance(engine, Tinygrad)
+    assert engine.device == "cuda:0"
+    assert engine.max_context == 4096
 
 
 def test_build_engine_constructs_tensorrt_llm() -> None:

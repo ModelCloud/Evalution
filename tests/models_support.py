@@ -25,6 +25,8 @@ LLAMA3_2_1B_INSTRUCT_GGUF = Path(
 )
 LLAMA3_2_TRANSFORMERS_DEVICE = os.environ.get("EVALUTION_TEST_DEVICE", "cuda:0")
 LLAMA3_2_LLAMACPP_DEVICE = os.environ.get("EVALUTION_TEST_LLAMACPP_DEVICE", "auto")
+LLAMA3_2_TINYGRAD_DEVICE = os.environ.get("EVALUTION_TEST_TINYGRAD_DEVICE", "auto")
+LLAMA3_2_TINYGRAD_PATH = os.environ.get("EVALUTION_TEST_TINYGRAD_PATH", "/tmp/tinygrad")
 LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE = os.environ.get(
     "EVALUTION_TEST_COMPARE_LEFT_DEVICE",
     "cuda:0",
@@ -53,6 +55,9 @@ _GPU_BASELINE_BUCKET_DEFAULT = "default"
 _GPU_BASELINE_BUCKET_A100 = "a100"
 _GPU_BASELINE_BUCKET_RTX4090 = "rtx4090"
 _HAS_LLAMACPP_BINDING = importlib.util.find_spec("llama_cpp") is not None
+_HAS_TINYGRAD_RUNTIME = importlib.util.find_spec("tinygrad") is not None or (
+    bool(LLAMA3_2_TINYGRAD_PATH) and Path(LLAMA3_2_TINYGRAD_PATH).exists()
+)
 
 
 def _visible_llama3_2_gpu_baseline_bucket() -> str:
@@ -397,6 +402,33 @@ LLAMA3_2_LLAMACPP_TEST_MARKS = [
         reason="llama-cpp-python is not installed",
     ),
 ]
+LLAMA3_2_TINYGRAD_TEST_MARKS = [
+    pytest.mark.integration,
+    pytest.mark.slow,
+    pytest.mark.skipif(
+        not LLAMA3_2_1B_INSTRUCT.exists(),
+        reason="local Llama 3.2 1B Instruct weights are not available",
+    ),
+    pytest.mark.skipif(
+        not torch.cuda.is_available(),
+        reason="CUDA is required for the llama 3.2 tinygrad integration test",
+    ),
+    pytest.mark.skipif(
+        not _HAS_TINYGRAD_RUNTIME,
+        reason="tinygrad is not installed and no local tinygrad checkout is configured",
+    ),
+    pytest.mark.skipif(
+        not hasattr(sys, "_is_gil_enabled") or sys._is_gil_enabled(),
+        reason="the tinygrad integration test requires Python free-threading with GIL disabled",
+    ),
+]
+LLAMA3_2_TINYGRAD_GGUF_TEST_MARKS = [
+    *LLAMA3_2_TINYGRAD_TEST_MARKS,
+    pytest.mark.skipif(
+        not LLAMA3_2_1B_INSTRUCT_GGUF.exists(),
+        reason="local Llama 3.2 1B Instruct GGUF weights are not available",
+    ),
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -672,6 +704,52 @@ def run_llama3_2_llamacpp_suite(
     assert result.engine["execution"]["continuous_batching"] is True
     assert result.engine["execution"]["requested_device"] in {"auto", "cuda", "cpu", "mlx"}
     assert result.engine["execution"]["device"] in {"cpu", "cuda", "mlx"}
+    assert len(result.tests) == 1
+    return result, result.tests[0]
+
+
+def run_llama3_2_tinygrad_suite(
+    capsys: pytest.CaptureFixture[str],
+    suite: Any,
+    *,
+    path: str | None = None,
+    tokenizer_path: str | None = None,
+) -> tuple[Any, Any]:
+    """Run one tinygrad-backed Llama 3.2 suite against the shared local fixtures."""
+
+    model_path = path or str(LLAMA3_2_1B_INSTRUCT)
+    model_kwargs: dict[str, Any] = {"path": model_path}
+    if tokenizer_path is not None:
+        model_kwargs["tokenizer_path"] = tokenizer_path
+
+    with capsys.disabled():
+        result = (
+            evalution.Tinygrad(
+                device=LLAMA3_2_TINYGRAD_DEVICE,
+                batch_size="auto",
+                seed=0,
+                max_context=4096,
+                tinygrad_path=LLAMA3_2_TINYGRAD_PATH,
+            )
+            .model(**model_kwargs)
+            .run(suite)
+            .result()
+        )
+
+    assert result.model["path"] == model_path
+    if tokenizer_path is not None:
+        assert result.model["tokenizer_path"] == tokenizer_path
+    assert result.engine["resolved_engine"] == "Tinygrad"
+    assert result.engine["device"] == LLAMA3_2_TINYGRAD_DEVICE
+    assert result.engine["batch_size"] == "auto"
+    assert result.engine["max_context"] == 4096
+    assert result.engine["tinygrad_path"] == LLAMA3_2_TINYGRAD_PATH
+    assert result.engine["execution"]["generation_backend"] == "tinygrad_generate"
+    execution_device = result.engine["execution"]["device"]
+    assert execution_device == "CPU" or execution_device.startswith(("CUDA", "NV"))
+    if execution_device.startswith("CUDA"):
+        assert result.engine["execution"]["jit"] == 2
+        assert result.engine["execution"]["jitbeam"] == 0
     assert len(result.tests) == 1
     return result, result.tests[0]
 
