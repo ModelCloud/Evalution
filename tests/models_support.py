@@ -6713,7 +6713,13 @@ SUITE_SPECS = {
     "lambada_openai_mt_de": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_de(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_de",
-        baseline={"acc,ll": 0.25, "ppl,ll": 158.80795113445453},
+        # This multilingual LAMBADA variant shows stable GPU-specific ppl drift on A100
+        # while matching the existing baseline on RTX 4090.
+        baseline=_select_llama3_2_gpu_baseline(
+            default={"acc,ll": 0.25, "ppl,ll": 158.80795113445453},
+            rtx4090={"acc,ll": 0.25, "ppl,ll": 158.80795113445453},
+            a100={"acc,ll": 0.2421875, "ppl,ll": 159.49725779730807},
+        ),
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
@@ -6907,7 +6913,13 @@ SUITE_SPECS = {
     "lambada_openai_mt_stablelm_nl": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.lambada_openai_mt_stablelm_nl(batch_size=24, stream=True, max_rows=128),
         expected_name="lambada_openai_mt_stablelm_nl",
-        baseline={"acc,ll": 0.3359375, "ppl,ll": 347.65201100927254},
+        # This multilingual LAMBADA variant also has reproducible A100-only ppl drift,
+        # so the regression gate needs hardware-specific expectations.
+        baseline=_select_llama3_2_gpu_baseline(
+            default={"acc,ll": 0.3359375, "ppl,ll": 347.65201100927254},
+            rtx4090={"acc,ll": 0.3359375, "ppl,ll": 347.65201100927254},
+            a100={"acc,ll": 0.328125, "ppl,ll": 348.19882971839223},
+        ),
         expected_metrics=frozenset({"acc,ll", "ppl,ll"}),
         expected_metadata={
             "stream": True,
