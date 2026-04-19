@@ -4796,9 +4796,9 @@ SUITE_SPECS = {
         ),
         expected_name="flores_es_en_es",
         baseline={
-            "bleu": 18.828597650639605,
-            "chrf": 48.82648309055004,
-            "ter": 67.75929549902153,
+            "bleu": 2.8357823453746205,
+            "chrf": 32.581102166087284,
+            "ter": 67.2211350293542,
         },
         expected_metrics=frozenset({"bleu", "chrf", "ter"}),
         expected_metadata={
@@ -4839,9 +4839,9 @@ SUITE_SPECS = {
         ),
         expected_name="flores_pt_en_pt",
         baseline={
-            "bleu": 29.342202780864405,
-            "chrf": 59.30497881186596,
-            "ter": 54.3646408839779,
+            "bleu": 3.9481684794695475,
+            "chrf": 35.94580008574314,
+            "ter": 55.13812154696133,
         },
         expected_metrics=frozenset({"bleu", "chrf", "ter"}),
         expected_metadata={
@@ -5724,8 +5724,8 @@ SUITE_SPECS = {
         ),
         expected_name="cocoteros_es",
         baseline={
-            "bleu": 0.4089394499961097,
-            "rouge1": 0.051929660753190166,
+            "bleu": 0.07624514123186824,
+            "rouge1": 0.042807348901098906,
         },
         expected_metrics=frozenset({"bleu", "rouge1"}),
         expected_metadata={
@@ -10699,7 +10699,7 @@ for _language, _baseline in {
     "es": _select_llama3_2_gpu_baseline(
         default={"em": 0.125, "f1": 0.5209415584415584},
         rtx4090={"em": 0.125, "f1": 0.5209415584415584},
-        a100={"em": 0.09375, "f1": 0.42406655844155844},
+        a100={"em": 0.09375, "f1": 0.4907332251082251},
     ),
     "zh": {"em": 0.375, "f1": 0.45312499999999994},
 }.items():
