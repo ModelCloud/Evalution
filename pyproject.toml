@@ -55,7 +55,6 @@ filterwarnings = [
 [project.optional-dependencies]
 test = [
     "pytest",
-    "rouge-score",
     "torch",
 ]
 #

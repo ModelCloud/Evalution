@@ -11,12 +11,12 @@ from functools import lru_cache
 from typing import Any
 
 from datasets import load_dataset
-from rouge_score import rouge_scorer
 
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
 from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
+from evalution.scorers.rouge import RougeScorer
 
 # Mirror the upstream NoticIA one-sentence debunking prompt and stop strings.
 _NOTICIA_STOP_STRINGS = ("\n\n", "\n")
@@ -50,10 +50,10 @@ def _clean_noticia_text(text: str) -> str:
 
 
 @lru_cache(maxsize=1)
-def _noticia_rouge1_scorer() -> rouge_scorer.RougeScorer:
+def _noticia_rouge1_scorer() -> RougeScorer:
     # Score the cleaned one-sentence summaries without stemming to match the upstream task intent.
     """Implement noticia rouge1 scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
-    return rouge_scorer.RougeScorer(["rouge1"], use_stemmer=False)
+    return RougeScorer(["rouge1"], use_stemmer=False)
 
 
 def _noticia_rouge1(prediction: str, reference: str) -> float:

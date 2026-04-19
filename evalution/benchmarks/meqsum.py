@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
 
-from rouge_score import rouge_scorer
 import sacrebleu
 
 from evalution.benchmarks.base import BaseTestSuite
@@ -23,6 +22,7 @@ from evalution.datasets import (
 )
 from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
+from evalution.scorers.rouge import RougeScorer
 
 # Preserve the upstream instruction string and stop behavior while keeping the loader local and auditable.
 _MEQSUM_INSTRUCTION = (
@@ -47,10 +47,10 @@ def _meqsum_prompt(question_text: str) -> str:
 
 
 @lru_cache(maxsize=1)
-def _meqsum_rouge_scorer() -> rouge_scorer.RougeScorer:
+def _meqsum_rouge_scorer() -> RougeScorer:
     # Match the upstream MeQSum task's non-stemmed ROUGE scoring for short question summaries.
     """Implement meqsum ROUGE scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
-    return rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=False)
+    return RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=False)
 
 
 def _meqsum_summary_scores(prediction: str, reference: str) -> dict[str, float]:

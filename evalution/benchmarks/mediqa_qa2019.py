@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
 
-from rouge_score import rouge_scorer
 import sacrebleu
 
 from evalution.benchmarks.base import BaseTestSuite
@@ -23,6 +22,7 @@ from evalution.datasets import (
 )
 from evalution.engines.base import GenerationOutput, GenerationRequest
 from evalution.results import SampleResult
+from evalution.scorers.rouge import RougeScorer
 
 # Keep the task prompt aligned with the upstream task description while using the vendored XML loader.
 _MEDIQA_QA2019_INSTRUCTION = (
@@ -38,10 +38,10 @@ def _mediqa_qa2019_prompt(question: str) -> str:
 
 
 @lru_cache(maxsize=1)
-def _mediqa_qa2019_rouge_scorer() -> rouge_scorer.RougeScorer:
+def _mediqa_qa2019_rouge_scorer() -> RougeScorer:
     # The upstream task uses non-stemmed overlap metrics, so keep the local scorer equally literal.
     """Implement mediqa qa2019 ROUGE scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
-    return rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=False)
+    return RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=False)
 
 
 def _zero_summary_scores() -> dict[str, float]:

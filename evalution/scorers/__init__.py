@@ -48,6 +48,7 @@ from .longbench import (
     longbench_rouge_score,
     longbench_rouge_zh_score,
 )
+from .rouge import RougeScorer
 from .summary_rouge import summary_rouge_scores
 
 # Keep scorer defaults and parser helpers explicit at module scope.
@@ -97,5 +98,6 @@ __all__ = [
     "normalized_logprob",
     "numbers_equal",
     "extract_math_answer",
+    "RougeScorer",
     "summary_rouge_scores",
 ]

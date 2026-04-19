@@ -230,13 +230,51 @@ def _transformers_supports_flash_attention_auto_max_blocks() -> bool:
     return max_blocks_parameter is not None and max_blocks_parameter.default is None
 
 
+def _transformers_supports_fa2_continuous_batching_graph_fix() -> bool:
+    """Detect whether transformers already includes the CB graph-key and padding fix from PR #45323."""
+
+    try:
+        from transformers import ContinuousBatchingConfig
+        from transformers.generation.continuous_batching import input_outputs, utils
+    except Exception:
+        return False
+
+    if not callable(getattr(ContinuousBatchingConfig, "get_cuda_graph_booleans", None)):
+        return False
+    if not callable(getattr(input_outputs.ContinuousBatchingIOs, "_get_graph_key", None)):
+        return False
+    return callable(getattr(utils, "pad_to_pow2", None))
+
+
+def _get_cuda_graph_booleans(use_cuda_graph: bool | tuple[bool, bool] | None) -> tuple[bool, bool]:
+    """Normalize the continuous batching CUDA-graph setting to per-path booleans."""
+
+    if use_cuda_graph is None:
+        return False, False
+    if isinstance(use_cuda_graph, bool):
+        return use_cuda_graph, use_cuda_graph
+    return bool(use_cuda_graph[0]), bool(use_cuda_graph[1])
+
+
+def _set_use_cuda_graph_varlen(inputs_and_outputs: Any, use_cuda_graph_varlen: bool) -> None:
+    """Propagate the varlen CUDA-graph flag to whichever IO objects the installed runtime created."""
+
+    setattr(inputs_and_outputs, "use_cuda_graph_varlen", use_cuda_graph_varlen)
+    for io_pair in getattr(inputs_and_outputs, "io_pairs", ()):
+        for attr in ("host_io", "device_io"):
+            io_state = getattr(io_pair, attr, None)
+            if io_state is not None:
+                setattr(io_state, "use_cuda_graph_varlen", use_cuda_graph_varlen)
+
+
 def _patch_continuous_batching_flash_attention_decode_once() -> None:
-    """Apply Evalution's generic paged FlashAttention decode fast-path compat patch once."""
+    """Apply Evalution's local paged FlashAttention continuous-batching compat patch once."""
 
     try:
         import torch
         from transformers import ContinuousBatchingConfig
-        from transformers.generation.continuous_batching import continuous_api
+        from transformers.generation import configuration_utils as generation_configuration_utils
+        from transformers.generation.continuous_batching import continuous_api, input_outputs, utils
         from transformers.modeling_flash_attention_utils import lazy_import_paged_flash_attention
         from transformers.utils.generic import is_flash_attention_requested
     except Exception:
@@ -248,8 +286,9 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
     if manager_cls is None or processor_cls is None:
         return
     needs_defaults_patch = not _transformers_supports_flash_attention_auto_max_blocks()
+    needs_cb_graph_fix = not _transformers_supports_fa2_continuous_batching_graph_fix()
     needs_decode_patch = not _transformers_supports_fa2_decode_fast_path()
-    if not needs_defaults_patch and not needs_decode_patch:
+    if not needs_defaults_patch and not needs_cb_graph_fix and not needs_decode_patch:
         return
 
     with _CONTINUOUS_BATCHING_FA_DECODE_PATCH_LOCK:
@@ -266,8 +305,6 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
                 model_config = getattr(getattr(self, "model", None), "config", None)
                 attn_implementation = getattr(model_config, "_attn_implementation", None)
                 if isinstance(cb_config, ContinuousBatchingConfig) and _is_supported_flash_attention(attn_implementation):
-                    if cb_config.use_cuda_graph is None:
-                        cb_config.use_cuda_graph = False
                     if cb_config.max_blocks_per_request is None:
                         cb_config.max_blocks_per_request = _flash_attention_cb_default_max_blocks(
                             cb_config.max_batch_tokens
@@ -276,6 +313,417 @@ def _patch_continuous_batching_flash_attention_decode_once() -> None:
 
             _create_batch_processor_with_flash_attention_defaults.__evalution_flash_attention_defaults_patch__ = True
             manager_cls._create_batch_processor = _create_batch_processor_with_flash_attention_defaults
+
+        if needs_cb_graph_fix:
+            current_decide_use_cuda_graphs = getattr(ContinuousBatchingConfig, "decide_use_cuda_graphs", None)
+            if callable(current_decide_use_cuda_graphs) and not getattr(
+                current_decide_use_cuda_graphs,
+                "__evalution_fa2_cb_graph_fix__",
+                False,
+            ):
+                def _decide_use_cuda_graphs(
+                    self: Any,
+                    compile_config: Any | None,
+                    is_attn_mask_needed: bool,
+                ) -> tuple[bool, bool]:
+                    """Implement decide use cuda graphs for this module."""
+                    if not torch.cuda.is_available():
+                        if self.use_cuda_graph:
+                            generation_configuration_utils.logger.warning(
+                                "use_cuda_graph is True but torch.cuda.is_available() = %s: "
+                                "turning off cuda graphs.",
+                                torch.cuda.is_available(),
+                            )
+                        self.use_cuda_graph = (False, False)
+                    elif self.use_cuda_graph is not None:
+                        self.use_cuda_graph = _get_cuda_graph_booleans(self.use_cuda_graph)
+                    elif self.q_padding_interval_size or self.kv_padding_interval_size or self.max_cached_graphs:
+                        self.use_cuda_graph = (True, True)
+                    elif compile_config is not None:
+                        options = torch._inductor.list_mode_options().get(
+                            compile_config.mode,
+                            compile_config.options,
+                        )
+                        compile_uses_cudagraphs = options.get("triton.cudagraphs", False)
+                        if compile_uses_cudagraphs:
+                            generation_configuration_utils.logger.warning(
+                                "Compile config %s uses cudagraphs, which usually does not work "
+                                "well with continuous batching. We recommend using mode "
+                                "'default' or 'max-autotune-no-cudagraphs' instead.",
+                                compile_config.mode,
+                            )
+                        use_cuda_graph = not compile_uses_cudagraphs
+                        self.use_cuda_graph = (use_cuda_graph, use_cuda_graph)
+                    else:
+                        use_cuda_graph = not is_attn_mask_needed
+                        self.use_cuda_graph = (use_cuda_graph, use_cuda_graph)
+                        generation_configuration_utils.logger.warning(
+                            "No behavior specified for use_cuda_graph, defaulting to "
+                            "self.use_cuda_graph = %s because is_attn_mask_needed = %s. If you "
+                            "want to save memory, turn off cuda graphs, but they tend to improve "
+                            "performances by a lot.",
+                            self.use_cuda_graph,
+                            is_attn_mask_needed,
+                        )
+                    # Older transformers managers still assign the return value of
+                    # decide_use_cuda_graphs(), so keep returning the normalized tuple until the
+                    # installed dependency picks up the upstream call-site change from PR #45323.
+                    return self.use_cuda_graph
+
+                def _get_cuda_graph_booleans_for_config(self: Any) -> tuple[bool, bool]:
+                    """Implement get cuda graph booleans for this module."""
+                    return _get_cuda_graph_booleans(getattr(self, "use_cuda_graph", None))
+
+                _decide_use_cuda_graphs.__evalution_fa2_cb_graph_fix__ = True
+                _get_cuda_graph_booleans_for_config.__evalution_fa2_cb_graph_fix__ = True
+                ContinuousBatchingConfig.decide_use_cuda_graphs = _decide_use_cuda_graphs
+                ContinuousBatchingConfig.get_cuda_graph_booleans = _get_cuda_graph_booleans_for_config
+
+            if not callable(getattr(utils, "pad_to_pow2", None)):
+                from math import ceil, log2
+
+                def pad_to_pow2(value: int, max_value: int, min_value: int = 0) -> int:
+                    """Return the next power-of-two bucket, capped to the cache capacity."""
+
+                    value = max(value, max(1, min_value))
+                    padded = 2 ** int(ceil(log2(value)))
+                    return min(padded, max_value)
+
+                utils.pad_to_pow2 = pad_to_pow2
+
+            current_graph_buffer_get = getattr(utils.CudaGraphBuffer, "get_graph", None)
+            if callable(current_graph_buffer_get) and not getattr(
+                current_graph_buffer_get,
+                "__evalution_fa2_cb_graph_fix__",
+                False,
+            ):
+                def _normalize_graph_key(*key_parts: Any) -> tuple[int, ...]:
+                    """Normalize graph-buffer keys across old and new transformers call sites."""
+
+                    if len(key_parts) == 1 and isinstance(key_parts[0], tuple):
+                        return tuple(int(part) for part in key_parts[0])
+                    return tuple(int(part) for part in key_parts)
+
+                def _get_graph_from_buffer(self: Any, *key_parts: Any) -> Any:
+                    """Implement get graph from buffer for this module."""
+
+                    key = _normalize_graph_key(*key_parts)
+                    graph = self._storage.get(key)
+                    if graph is not None:
+                        self._storage.move_to_end(key)
+                    return graph
+
+                def _set_graph_in_buffer(self: Any, *args: Any) -> None:
+                    """Implement set graph in buffer for this module."""
+
+                    if len(args) == 2 and isinstance(args[0], tuple):
+                        key = _normalize_graph_key(args[0])
+                        graph = args[1]
+                    elif len(args) == 3:
+                        key = _normalize_graph_key(args[0], args[1])
+                        graph = args[2]
+                    else:
+                        raise TypeError("set_graph expects either (key, graph) or (q_len, kv_len, graph)")
+                    self.plan_for_new_graph()
+                    cb_logger.info("Setting graph for key = %s", key)
+                    self._storage[key] = graph
+
+                _get_graph_from_buffer.__evalution_fa2_cb_graph_fix__ = True
+                _set_graph_in_buffer.__evalution_fa2_cb_graph_fix__ = True
+                utils.CudaGraphBuffer.get_graph = _get_graph_from_buffer
+                utils.CudaGraphBuffer.set_graph = _set_graph_in_buffer
+
+            current_processor_init = getattr(processor_cls, "__init__", None)
+            if callable(current_processor_init) and not getattr(
+                current_processor_init,
+                "__evalution_fa2_cb_graph_fix__",
+                False,
+            ):
+                @wraps(current_processor_init)
+                def _processor_init_with_fa2_cb_graph_fix(self: Any, *args: Any, **kwargs: Any) -> None:
+                    """Implement processor init with fa2 cb graph fix for this module."""
+
+                    bound_init = inspect.signature(current_processor_init).bind(self, *args, **kwargs)
+                    cb_config = bound_init.arguments["continuous_batching_config"]
+                    original_use_cuda_graph = getattr(cb_config, "use_cuda_graph", None)
+                    use_cuda_graph_varlen, use_cuda_graph_decode = _get_cuda_graph_booleans(
+                        original_use_cuda_graph
+                    )
+                    cb_config.use_cuda_graph = use_cuda_graph_varlen or use_cuda_graph_decode
+                    try:
+                        current_processor_init(self, *args, **kwargs)
+                    finally:
+                        cb_config.use_cuda_graph = original_use_cuda_graph
+                    self.use_cuda_graph_varlen = use_cuda_graph_varlen
+                    self.use_cuda_graph_decode = use_cuda_graph_decode
+                    self.use_cuda_graph = use_cuda_graph_varlen or use_cuda_graph_decode
+                    _set_use_cuda_graph_varlen(self.inputs_and_outputs, use_cuda_graph_varlen)
+
+                _processor_init_with_fa2_cb_graph_fix.__evalution_fa2_cb_graph_fix__ = True
+                processor_cls.__init__ = _processor_init_with_fa2_cb_graph_fix
+
+            current_generation_step = getattr(processor_cls, "_generation_step", None)
+            if callable(current_generation_step) and not getattr(
+                current_generation_step,
+                "__evalution_fa2_cb_graph_fix__",
+                False,
+            ):
+                @wraps(current_generation_step)
+                def _generation_step_with_fa2_cb_graph_fix(self: Any, model: Any) -> None:
+                    """Implement generation step with fa2 cb graph fix for this module."""
+
+                    original_use_cuda_graph = getattr(self, "use_cuda_graph", False)
+                    self.use_cuda_graph = (
+                        self.use_cuda_graph_decode
+                        if self.inputs_and_outputs.use_block_table
+                        else self.use_cuda_graph_varlen
+                    )
+                    try:
+                        current_generation_step(self, model)
+                    finally:
+                        self.use_cuda_graph = original_use_cuda_graph
+
+                _generation_step_with_fa2_cb_graph_fix.__evalution_fa2_cb_graph_fix__ = True
+                processor_cls._generation_step = _generation_step_with_fa2_cb_graph_fix
+
+            current_warmup = getattr(processor_cls, "warmup", None)
+            if callable(current_warmup) and not getattr(
+                current_warmup,
+                "__evalution_fa2_cb_graph_fix__",
+                False,
+            ):
+                @torch.inference_mode()
+                def _warmup_with_fa2_cb_graph_fix(
+                    self: Any,
+                    model: Any,
+                    logit_processor: Any,
+                    num_query_tokens: int = 0,
+                    num_cache_tokens: int = 0,
+                ) -> None:
+                    """Implement warmup with fa2 cb graph fix for this module."""
+
+                    del logit_processor
+                    if not self._pad_inputs:
+                        cb_logger.info("CUDA graphs and compile are disabled, skipping warmup.")
+                        return None
+
+                    num_query_tokens = num_query_tokens if num_query_tokens > 0 else self.max_batch_tokens
+                    num_query_tokens = min(num_query_tokens, self.max_batch_tokens)
+                    num_cache_tokens = (
+                        num_cache_tokens if num_cache_tokens > 0 else self.cache.block_size * num_query_tokens
+                    )
+                    num_cache_tokens = min(num_cache_tokens, self.cache.num_blocks * self.cache.block_size)
+
+                    num_pages = self.cache.num_blocks * self.cache.block_size
+                    compute_stream = self.inputs_and_outputs.compute_stream
+                    num_io_pairs = 2 if self.use_async_batching else 1
+
+                    for pair_idx in range(num_io_pairs):
+                        if self.use_async_batching:
+                            self.inputs_and_outputs.current_pair = pair_idx
+                            cb_logger.info("Warming up IO pair %s/2...", pair_idx + 1)
+
+                        padded_q = continuous_api.pad_to_interval(
+                            num_query_tokens,
+                            self.q_padding_interval_size,
+                            self.max_batch_tokens,
+                        )
+                        padded_kv = continuous_api.pad_to_interval(
+                            num_cache_tokens + num_query_tokens,
+                            self.kv_padding_interval_size,
+                            num_pages,
+                        )
+                        cb_logger.info(
+                            "Warming up varlen path (%s Q tokens, %s KV tokens)...",
+                            padded_q,
+                            padded_kv,
+                        )
+                        future_states = continuous_api.create_warmup_future_states(
+                            1,
+                            continuous_api.RequestStatus.PREFILLING,
+                            num_query_tokens,
+                            num_cache_tokens,
+                            self.cache,
+                        )
+                        try:
+                            start = continuous_api.perf_counter()
+                            self.inputs_and_outputs.prepare_batch_tensors(
+                                future_states,
+                                self.logit_processor,
+                                False,
+                                padded_q,
+                                padded_kv - padded_q,
+                            )
+                            batch_data = self.inputs_and_outputs.get_model_kwargs(use_padding=True)
+                            carry_over_ids, prev_output_ids, output_ids = self.inputs_and_outputs.get_cb_kwargs()
+                            forward_fn = self._compiled_varlen or self._forward_process_and_sample
+                            forward_fn_args = (model, batch_data, carry_over_ids, prev_output_ids, output_ids)
+                            if self.use_cuda_graph_varlen:
+                                self.capture_graph(forward_fn, compute_stream, *forward_fn_args)
+                            else:
+                                with torch.cuda.stream(compute_stream):
+                                    forward_fn(*forward_fn_args)
+                            cb_logger.info(
+                                "Varlen warmup completed in %.2fs",
+                                continuous_api.perf_counter() - start,
+                            )
+                        except Exception as exc:
+                            cb_logger.warning("Failed to warm up varlen path: %s", exc)
+                        finally:
+                            for future_state in future_states:
+                                self.cache.free_blocks(future_state.state.request_id)
+
+                        if self.cache.max_blocks_per_request == 0:
+                            continue
+
+                        cb_logger.info("Warming up decode fast path...")
+                        q_interval = self.q_padding_interval_size
+                        decode_graphs = 0
+                        start = continuous_api.perf_counter()
+                        for num_requests in range(q_interval, num_query_tokens + q_interval, q_interval):
+                            future_states = continuous_api.create_warmup_future_states(
+                                num_requests,
+                                continuous_api.RequestStatus.DECODING,
+                                1,
+                                self.cache.block_size,
+                                self.cache,
+                            )
+                            if not future_states:
+                                continue
+                            try:
+                                padded_q = continuous_api.pad_to_interval(
+                                    len(future_states),
+                                    q_interval,
+                                    self.max_batch_tokens,
+                                )
+                                self.inputs_and_outputs.prepare_batch_tensors(
+                                    future_states,
+                                    self.logit_processor,
+                                    True,
+                                    padded_q,
+                                    0,
+                                )
+                                batch_data = self.inputs_and_outputs.get_model_kwargs(use_padding=True)
+                                carry_over_ids, prev_output_ids, output_ids = self.inputs_and_outputs.get_cb_kwargs()
+                                forward_fn = self._compiled_decode or self._forward_process_and_sample
+                                forward_fn_args = (model, batch_data, carry_over_ids, prev_output_ids, output_ids)
+                                if self.use_cuda_graph_decode:
+                                    self.capture_graph(forward_fn, compute_stream, *forward_fn_args)
+                                else:
+                                    with torch.cuda.stream(compute_stream):
+                                        forward_fn(*forward_fn_args)
+                                decode_graphs += 1
+                            except Exception as exc:
+                                cb_logger.warning(
+                                    "Failed to warm up decode path for %s requests: %s",
+                                    num_requests,
+                                    exc,
+                                )
+                            finally:
+                                for future_state in future_states:
+                                    self.cache.free_blocks(future_state.state.request_id)
+                        cb_logger.info(
+                            "Decode warmup completed (%s graphs) in %.2fs.",
+                            decode_graphs,
+                            continuous_api.perf_counter() - start,
+                        )
+
+                    if self.use_async_batching:
+                        self.inputs_and_outputs.current_pair = 0
+
+                _warmup_with_fa2_cb_graph_fix.__evalution_fa2_cb_graph_fix__ = True
+                processor_cls.warmup = _warmup_with_fa2_cb_graph_fix
+
+            current_get_model_kwargs = getattr(input_outputs.ContinuousBatchingIOs, "get_model_kwargs", None)
+            if callable(current_get_model_kwargs) and not getattr(
+                current_get_model_kwargs,
+                "__evalution_fa2_cb_graph_fix__",
+                False,
+            ):
+                @wraps(current_get_model_kwargs)
+                def _get_model_kwargs_with_fa2_cb_graph_fix(self: Any, use_padding: bool = False) -> dict[str, Any]:
+                    """Implement get model kwargs with fa2 cb graph fix for this module."""
+
+                    original_max_seqlen_q = self.max_seqlen_q
+                    original_max_seqlen_k = dict(self.max_seqlen_k)
+                    kwargs = current_get_model_kwargs(self, use_padding=use_padding)
+                    if not use_padding:
+                        return kwargs
+
+                    kwargs["cu_seq_lens_q"][self.true_batch_size + 1 :] = self.total_seqlen_q
+                    use_cuda_graph_varlen = getattr(self, "use_cuda_graph_varlen", False)
+                    if not self.use_block_table and use_cuda_graph_varlen:
+                        self.max_seqlen_q = self.num_q_tokens
+                        self.max_seqlen_k = {
+                            layer_type: utils.pad_to_pow2(
+                                original_max_seqlen_k[layer_type],
+                                self.cache.num_pages,
+                                1024,
+                            )
+                            for layer_type in original_max_seqlen_k
+                        }
+                    else:
+                        self.max_seqlen_q = original_max_seqlen_q
+                        self.max_seqlen_k = original_max_seqlen_k
+                    kwargs["max_seqlen_q"] = 1 if self.use_block_table else self.max_seqlen_q
+
+                    if isinstance(kwargs["cu_seq_lens_k"], dict):
+                        kwargs["max_seqlen_k"] = {}
+                        for layer_type, cu_seq_lens_k in kwargs["cu_seq_lens_k"].items():
+                            if use_padding:
+                                cu_seq_lens_k[self.true_batch_size + 1 :] = self.cumulative_seqlens_k[layer_type][
+                                    self.true_batch_size
+                                ]
+                            kwargs["max_seqlen_k"][layer_type] = (
+                                1 if self.use_block_table else self.max_seqlen_k[layer_type]
+                            )
+                    else:
+                        layer_type = next(iter(self.cumulative_seqlens_k))
+                        kwargs["cu_seq_lens_k"][self.true_batch_size + 1 :] = self.cumulative_seqlens_k[layer_type][
+                            self.true_batch_size
+                        ]
+                        kwargs["max_seqlen_k"] = 1 if self.use_block_table else self.max_seqlen_k[layer_type]
+                    return kwargs
+
+                _get_model_kwargs_with_fa2_cb_graph_fix.__evalution_fa2_cb_graph_fix__ = True
+                input_outputs.ContinuousBatchingIOs.get_model_kwargs = _get_model_kwargs_with_fa2_cb_graph_fix
+
+            current_get_graph = getattr(input_outputs.ContinuousBatchingIOs, "get_graph", None)
+            if callable(current_get_graph) and not getattr(
+                current_get_graph,
+                "__evalution_fa2_cb_graph_fix__",
+                False,
+            ):
+                def _get_graph_key(self: Any) -> tuple[int, ...]:
+                    """Implement get graph key for this module."""
+
+                    if self.max_kv_read > 0:
+                        return (self.num_q_tokens, self.max_kv_read, *self.max_seqlen_k.values())
+                    return (self.num_q_tokens,)
+
+                def _get_graph_with_fa2_cb_graph_fix(self: Any) -> Any:
+                    """Implement get graph with fa2 cb graph fix for this module."""
+
+                    key = self._get_graph_key()
+                    graph = self.graphs.get_graph(key)
+                    if graph is None:
+                        self.graphs.plan_for_new_graph()
+                        cb_logger.info("Creating graph for key = %s", key)
+                    return graph
+
+                def _set_graph_with_fa2_cb_graph_fix(self: Any, graph: Any) -> None:
+                    """Implement set graph with fa2 cb graph fix for this module."""
+
+                    key = self._get_graph_key()
+                    self.graphs.set_graph(key, graph)
+                    cb_logger.info("Setting graph for key = %s", key)
+
+                _get_graph_key.__evalution_fa2_cb_graph_fix__ = True
+                _get_graph_with_fa2_cb_graph_fix.__evalution_fa2_cb_graph_fix__ = True
+                _set_graph_with_fa2_cb_graph_fix.__evalution_fa2_cb_graph_fix__ = True
+                input_outputs.ContinuousBatchingIOs._get_graph_key = _get_graph_key
+                input_outputs.ContinuousBatchingIOs.get_graph = _get_graph_with_fa2_cb_graph_fix
+                input_outputs.ContinuousBatchingIOs.set_graph = _set_graph_with_fa2_cb_graph_fix
 
         current_ensure_fast_path = getattr(processor_cls, "_ensure_decode_fast_path_is_available", None)
         if needs_decode_patch and callable(current_ensure_fast_path) and not getattr(

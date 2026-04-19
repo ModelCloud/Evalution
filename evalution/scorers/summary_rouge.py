@@ -7,13 +7,13 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from rouge_score import rouge_scorer
+from evalution.scorers.rouge import RougeScorer
 
 
 @lru_cache(maxsize=1)
-def _summary_rouge_scorer() -> rouge_scorer.RougeScorer:
+def _summary_rouge_scorer() -> RougeScorer:
     """Implement summary ROUGE scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
-    return rouge_scorer.RougeScorer(
+    return RougeScorer(
         ["rouge1", "rouge2", "rougeLsum"],
         use_stemmer=True,
     )
