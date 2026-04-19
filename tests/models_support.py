@@ -4855,11 +4855,19 @@ SUITE_SPECS = {
             max_new_tokens=64,
         ),
         expected_name="flores_pt_en_pt",
-        baseline={
-            "bleu": 3.9481684794695475,
-            "chrf": 35.94580008574314,
-            "ter": 55.13812154696133,
-        },
+        # FLORES en->pt keeps the prior A100 score and drifts upward slightly on 4090.
+        baseline=_select_llama3_2_gpu_baseline(
+            default={
+                "bleu": 3.9481684794695475,
+                "chrf": 35.94580008574314,
+                "ter": 55.13812154696133,
+            },
+            rtx4090={
+                "bleu": 4.137385632582491,
+                "chrf": 36.46813827910562,
+                "ter": 54.14364640883977,
+            },
+        ),
         expected_metrics=frozenset({"bleu", "chrf", "ter"}),
         expected_metadata={
             "stream": False,
