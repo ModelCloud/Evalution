@@ -11,7 +11,8 @@ import string
 import unicodedata
 
 import pcre
-from rouge_score import rouge_scorer
+
+from evalution.scorers.rouge import RougeScorer
 
 # Keep scorer defaults and parser helpers explicit at module scope.
 _EN_ARTICLES_RE = pcre.compile(r"\b(a|an|the)\b")
@@ -99,9 +100,9 @@ def longbench_qa_f1_zh_score(prediction: str, reference: str) -> float:
 
 
 @lru_cache(maxsize=1)
-def _rouge_l_scorer() -> rouge_scorer.RougeScorer:
+def _rouge_l_scorer() -> RougeScorer:
     """Implement ROUGE l scorer for this module. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""
-    return rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
+    return RougeScorer(["rougeL"], use_stemmer=False)
 
 
 def longbench_rouge_score(prediction: str, reference: str) -> float:
