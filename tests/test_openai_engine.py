@@ -5,6 +5,7 @@
 # GPU=-1
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import time
 
 from evalution.config import Model
@@ -227,6 +228,78 @@ def test_openai_compatible_server_microbatches_parallel_generation_requests() ->
         "two",
     ]
     assert max(len(batch) for batch in backend.generate_batches) >= 2
+
+
+def test_openai_compatible_server_preserves_client_generation_order_within_microbatch() -> None:
+    """Verify the server sorts one microbatch back into the client's original request order."""
+
+    backend = FakeSession()
+    with OpenAICompatibleServer(
+        session=backend,
+        model_name="fake-model",
+        max_batch_size=3,
+        batch_window_s=0.02,
+    ) as server:
+        batcher = server._generate_batcher
+        assert batcher is not None
+
+        def submit(prompt: str, order_index: int) -> str:
+            output = batcher.submit(
+                GenerationRequest(
+                    prompt=prompt,
+                    metadata={"_evalution_generation_order": order_index},
+                ),
+                batch_key=("completion", 256, (), 0.0, False),
+            )
+            return output.text
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(submit, "two", 2),
+                executor.submit(submit, "one", 1),
+                executor.submit(submit, "zero", 0),
+            ]
+            outputs = [future.result() for future in futures]
+
+    assert sorted(outputs) == ["one->done", "two->done", "zero->done"]
+    assert backend.generate_batches == [["zero", "one", "two"]]
+
+
+def test_openai_compatible_server_waits_for_missing_earlier_generation_order() -> None:
+    """Verify one late earlier request can still anchor the first server microbatch."""
+
+    backend = FakeSession()
+    with OpenAICompatibleServer(
+        session=backend,
+        model_name="fake-model",
+        max_batch_size=2,
+        batch_window_s=0.05,
+    ) as server:
+        batcher = server._generate_batcher
+        assert batcher is not None
+
+        def submit(prompt: str, order_index: int, *, delay_s: float = 0.0) -> str:
+            if delay_s > 0.0:
+                time.sleep(delay_s)
+            output = batcher.submit(
+                GenerationRequest(
+                    prompt=prompt,
+                    metadata={"_evalution_generation_order": order_index},
+                ),
+                batch_key=("completion", 256, (), 0.0, False),
+            )
+            return output.text
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(submit, "one", 1),
+                executor.submit(submit, "two", 2),
+                executor.submit(submit, "zero", 0, delay_s=0.01),
+            ]
+            outputs = [future.result() for future in futures]
+
+    assert sorted(outputs) == ["one->done", "two->done", "zero->done"]
+    assert backend.generate_batches == [["zero", "one", "two"]]
 
 
 def test_openai_compatible_engine_generate_continuous_yields_completion_order() -> None:

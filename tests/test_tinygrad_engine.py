@@ -150,6 +150,20 @@ def test_import_tinygrad_uses_native_python_import(monkeypatch) -> None:
     assert imported is fake_modules
 
 
+def test_import_tinygrad_modules_reports_missing_llm_runtime(monkeypatch) -> None:
+    """Explain when tinygrad is installed but does not ship the packaged LLM runtime Evalution uses."""
+
+    def fake_load() -> object:
+        """Raise the same import shape the real loader surfaces for stripped tinygrad builds."""
+
+        raise ModuleNotFoundError("No module named 'tinygrad.llm'", name="tinygrad.llm")
+
+    monkeypatch.setattr("evalution.engines.tinygrad_engine._load_tinygrad_modules", fake_load)
+
+    with pytest.raises(ModuleNotFoundError, match="packaged `tinygrad\\.llm` runtime"):
+        _import_tinygrad_modules()
+
+
 def test_tinygrad_prepare_requests_renders_messages_through_builtin_tokenizer() -> None:
     """Verify GGUF chat requests fall back to tinygrad's built-in tokenizer when no HF tokenizer is supplied."""
 

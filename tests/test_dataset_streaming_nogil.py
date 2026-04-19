@@ -11,7 +11,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
-from datasets import IterableDataset, load_dataset
+from datasets import IterableDataset, disable_progress_bars, enable_progress_bars, load_dataset
 
 
 def _is_runtime_nogil() -> bool:
@@ -41,8 +41,9 @@ def test_streaming_dataset_supports_many_threads_in_nogil_mode(tmp_path) -> None
     workers = 12
     rows_to_fetch = 128
 
-    def worker(worker_index: int) -> tuple[int, int]:
-        """Support the surrounding tests with worker."""
+    def load_worker_dataset(worker_index: int) -> IterableDataset:
+        """Build one worker-local streaming dataset after the shared runtime has been warmed once."""
+
         dataset = load_dataset(
             "json",
             data_files=str(source_path),
@@ -51,6 +52,12 @@ def test_streaming_dataset_supports_many_threads_in_nogil_mode(tmp_path) -> None
             cache_dir=str(tmp_path / f"hf_cache_{worker_index}"),
         )
         assert isinstance(dataset, IterableDataset)
+        return dataset
+
+    def worker(worker_index: int) -> tuple[int, int]:
+        """Read the same leading rows from one worker-local streaming dataset."""
+
+        dataset = load_worker_dataset(worker_index)
 
         iterator = iter(dataset)
         first = next(iterator)
@@ -59,9 +66,20 @@ def test_streaming_dataset_supports_many_threads_in_nogil_mode(tmp_path) -> None
             last = next(iterator)["id"]
         return first["id"], last
 
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(worker, worker_index) for worker_index in range(workers)]
-        results = [f.result() for f in as_completed(futures)]
+    # This test targets datasets streaming under no-GIL thread fanout, not tqdm's nested
+    # thread-map bookkeeping. Disable progress bars through the public datasets API so the
+    # assertion stays focused on the streaming path itself.
+    disable_progress_bars()
+    try:
+        # datasets mutates IterableDataset's base classes the first time a streaming builder is
+        # materialized. Warm that one-time global initialization on the main thread so the actual
+        # no-GIL assertion covers concurrent dataset reads instead of that shared class mutation.
+        load_worker_dataset(-1)
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(worker, worker_index) for worker_index in range(workers)]
+            results = [f.result() for f in as_completed(futures)]
+    finally:
+        enable_progress_bars()
 
     assert len(results) == workers
     assert all(first == 0 for first, _ in results)

@@ -53,8 +53,20 @@ _MIN_A100_CLASS_VRAM_BYTES = 90 * 1024**3
 _GPU_BASELINE_BUCKET_DEFAULT = "default"
 _GPU_BASELINE_BUCKET_A100 = "a100"
 _GPU_BASELINE_BUCKET_RTX4090 = "rtx4090"
-_HAS_LLAMACPP_BINDING = importlib.util.find_spec("llama_cpp") is not None
-_HAS_TINYGRAD_RUNTIME = importlib.util.find_spec("tinygrad") is not None
+def _has_importable_module(module_name: str) -> bool:
+    """Probe module availability without letting missing parents raise through importlib."""
+
+    try:
+        return importlib.util.find_spec(module_name) is not None
+    except ModuleNotFoundError:
+        return False
+
+
+_HAS_LLAMACPP_BINDING = _has_importable_module("llama_cpp")
+_HAS_TINYGRAD_RUNTIME = _has_importable_module("tinygrad")
+_HAS_TINYGRAD_LLM_RUNTIME = _has_importable_module("tinygrad.llm.model") and _has_importable_module(
+    "tinygrad.llm.cli"
+)
 
 
 def _visible_llama3_2_gpu_baseline_bucket() -> str:
@@ -413,6 +425,10 @@ LLAMA3_2_TINYGRAD_TEST_MARKS = [
     pytest.mark.skipif(
         not _HAS_TINYGRAD_RUNTIME,
         reason="tinygrad is not installed in the active Python environment",
+    ),
+    pytest.mark.skipif(
+        not _HAS_TINYGRAD_LLM_RUNTIME,
+        reason="tinygrad is installed without the packaged tinygrad.llm runtime required by Evalution",
     ),
     pytest.mark.skipif(
         not hasattr(sys, "_is_gil_enabled") or sys._is_gil_enabled(),

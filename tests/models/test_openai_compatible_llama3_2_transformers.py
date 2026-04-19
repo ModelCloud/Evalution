@@ -20,6 +20,7 @@ from tests.models_support import (
     LLAMA3_2_TRANSFORMERS_DEVICE,
     LLAMA3_2_TRANSFORMERS_TEST_MARKS,
     SUITE_SPECS,
+    _assert_llama3_2_transformers_execution,
     assert_metrics_match_baseline,
 )
 
@@ -36,7 +37,13 @@ _RESULT_JSON_RE = pcre.compile(r"RESULT_JSON_START\n(.*?)\nRESULT_JSON_END", pcr
 
 
 def _select_single_gpu_index() -> str:
-    """Pick one low-usage physical GPU and expose only that device to the child run."""
+    """Pick one GPU for the child run while preserving any outer single-GPU lease."""
+
+    visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if visible_devices is not None and visible_devices.strip():
+        # Respect the parent test runner's single-GPU mask by keeping child subprocesses on the
+        # already-visible device instead of rescanning the whole host and colliding with another shard.
+        return "0"
 
     completed = subprocess.run(
         [
@@ -219,10 +226,7 @@ def test_llama3_2_transformers_openai_compatible_gsm8k_platinum_matches_native_b
         assert openai_result["metadata"][key] == expected_value
 
     assert native_result["engine"]["resolved_engine"] == "Transformers"
-    assert (
-        native_result["engine"]["execution"]["generation_backend"]
-        == "continuous_batching"
-    )
+    _assert_llama3_2_transformers_execution(native_result["engine"])
     assert openai_result["engine"]["resolved_engine"] == "OpenAICompatible"
     assert openai_result["engine"]["batch_size"] == _OPENAI_SERVER_BATCH_SIZE
     assert openai_result["engine"]["execution"]["generation_backend"] == "openai_http"
