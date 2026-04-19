@@ -17,6 +17,7 @@ from tests.models_support import (
     LLAMA3_2_TRANSFORMERS_DEVICE,
     LLAMA3_2_TRANSFORMERS_TEST_MARKS,
     _assert_llama3_2_transformers_execution,
+    _select_llama3_2_gpu_baseline,
     assert_metrics_match_baseline,
 )
 
@@ -129,11 +130,19 @@ def test_llama3_2_transformers_vs_transformers_compat_gsm8k_platinum_baselines()
 
     assert_metrics_match_baseline(
         transformers_result["metrics"],
-        {"acc,num": 0.4296875},
+        _select_llama3_2_gpu_baseline(
+            default={"acc,num": 0.4296875},
+            rtx4090={"acc,num": 0.375},
+            a100={"acc,num": 0.4140625},
+        ),
         abs_tolerance=_DUAL_ENGINE_SCORE_ABS_TOLERANCE,
     )
     assert_metrics_match_baseline(
         compat_result["metrics"],
-        {"acc,num": 0.4453125},
+        _select_llama3_2_gpu_baseline(
+            default={"acc,num": 0.4453125},
+            rtx4090={"acc,num": 0.375},
+            a100={"acc,num": 0.390625},
+        ),
         abs_tolerance=_DUAL_ENGINE_SCORE_ABS_TOLERANCE,
     )

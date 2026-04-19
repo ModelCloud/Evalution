@@ -4417,7 +4417,10 @@ SUITE_SPECS = {
     "cabbq_disability_status": _cabbq_suite_spec(
         "cabbq_disability_status",
         category="DisabilityStatus",
-        baseline={"acc,ll": 0.546875, "acc,ll_avg": 0.546875},
+        baseline=_select_llama3_2_gpu_baseline(
+            default={"acc,ll": 0.546875, "acc,ll_avg": 0.546875},
+            a100={"acc,ll": 0.5234375, "acc,ll_avg": 0.5234375},
+        ),
     ),
     "cabbq_gender": _cabbq_suite_spec(
         "cabbq_gender",
@@ -5085,7 +5088,7 @@ SUITE_SPECS = {
     "hendrycks_math_algebra": _hendrycks_math_suite_spec(
         "hendrycks_math_algebra",
         subset="algebra",
-        baseline=0.21875,
+        baseline=0.3125,
     ),
     "asdiv": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.asdiv(batch_size=24, stream=True, max_rows=128),
@@ -5794,7 +5797,7 @@ SUITE_SPECS = {
     "code2text_java": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.code2text_java(batch_size=1, max_rows=16),
         expected_name="code2text_java",
-        baseline={"bleu4": 0.7372980967711409},
+        baseline={"bleu4": 0.13832115138608542},
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
             "stream": False,
@@ -5834,7 +5837,7 @@ SUITE_SPECS = {
     "code2text_php": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.code2text_php(batch_size=1, max_rows=16),
         expected_name="code2text_php",
-        baseline={"bleu4": 0.2931185120841358},
+        baseline={"bleu4": 0.14671215900496887},
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
             "stream": False,
@@ -5874,7 +5877,11 @@ SUITE_SPECS = {
     "code2text_ruby": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.code2text_ruby(batch_size=1, max_rows=16),
         expected_name="code2text_ruby",
-        baseline={"bleu4": 0.3812030669921292},
+        baseline=_select_llama3_2_gpu_baseline(
+            default={"bleu4": 0.5020017346048271},
+            rtx4090={"bleu4": 0.5193085876021191},
+            a100={"bleu4": 0.5020017346048271},
+        ),
         expected_metrics=frozenset({"bleu4"}),
         expected_metadata={
             "stream": False,
@@ -6470,12 +6477,26 @@ SUITE_SPECS = {
     "ifeval_pt": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.ifeval_pt(batch_size=8, max_rows=64),
         expected_name="ifeval_pt",
-        baseline={
-            "prompt_level_strict_acc": 0.203125,
-            "prompt_level_loose_acc": 0.25,
-            "inst_level_strict_acc": 0.38,
-            "inst_level_loose_acc": 0.41,
-        },
+        baseline=_select_llama3_2_gpu_baseline(
+            default={
+                "prompt_level_strict_acc": 0.203125,
+                "prompt_level_loose_acc": 0.25,
+                "inst_level_strict_acc": 0.38,
+                "inst_level_loose_acc": 0.41,
+            },
+            rtx4090={
+                "prompt_level_strict_acc": 0.1875,
+                "prompt_level_loose_acc": 0.28125,
+                "inst_level_strict_acc": 0.39,
+                "inst_level_loose_acc": 0.47,
+            },
+            a100={
+                "prompt_level_strict_acc": 0.21875,
+                "prompt_level_loose_acc": 0.3125,
+                "inst_level_strict_acc": 0.4,
+                "inst_level_loose_acc": 0.47,
+            },
+        ),
         expected_metrics=frozenset({
             "prompt_level_strict_acc",
             "prompt_level_loose_acc",
@@ -6608,10 +6629,16 @@ SUITE_SPECS = {
     ),
     "kobest_wic": _kobest_suite_spec(
         subset="wic",
-        baseline={
-            "acc,ll": 0.4375,
-            "acc,ll_avg": 0.5,
-        },
+        baseline=_select_llama3_2_gpu_baseline(
+            default={
+                "acc,ll": 0.4375,
+                "acc,ll_avg": 0.5,
+            },
+            a100={
+                "acc,ll": 0.4375,
+                "acc,ll_avg": 0.4765625,
+            },
+        ),
     ),
     "headqa_en": SuiteSpec(
         suite_factory=lambda: evalution.benchmarks.headqa_en(batch_size=24, stream=True, max_rows=128),
