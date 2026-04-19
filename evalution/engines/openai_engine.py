@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import threading
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, as_completed, wait
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 from urllib import error, request
 
@@ -29,6 +29,7 @@ _DEFAULT_GENERATE_PATH = "/v1/completions"
 _DEFAULT_CHAT_PATH = "/v1/chat/completions"
 _DEFAULT_LOGLIKELIHOOD_PATH = "/v1/eval/loglikelihood"
 _DEFAULT_ROLLING_LOGLIKELIHOOD_PATH = "/v1/eval/loglikelihood/rolling"
+_INTERNAL_GENERATION_ORDER_KEY = "_evalution_generation_order"
 
 
 def _coerce_batch_size(value: int | str | None, *, default: int) -> int:
@@ -60,6 +61,14 @@ def _coerce_stop(stop: Any) -> list[str]:
     if isinstance(stop, str):
         return [stop]
     return [str(item) for item in stop]
+
+
+def _with_generation_order(request_item: GenerationRequest, order_index: int) -> GenerationRequest:
+    """Attach a stable client-side ordinal so server microbatches can preserve request order."""
+
+    metadata = dict(request_item.metadata)
+    metadata[_INTERNAL_GENERATION_ORDER_KEY] = int(order_index)
+    return replace(request_item, metadata=metadata)
 
 
 @dataclass(slots=True)
@@ -145,7 +154,10 @@ class OpenAICompatibleSession(BaseInferenceSession):
         if not requests:
             return []
         return self._run_ordered_refill(
-            requests=requests,
+            requests=[
+                _with_generation_order(request_item, order_index)
+                for order_index, request_item in enumerate(requests)
+            ],
             worker=self._generate_one,
             batch_size=batch_size,
         )
@@ -162,7 +174,13 @@ class OpenAICompatibleSession(BaseInferenceSession):
             """Drive request submission with one bounded in-flight queue."""
 
             yield from self._stream_unordered_refill(
-                items=iter(requests),
+                items=(
+                    (
+                        request_key,
+                        _with_generation_order(request_item, order_index),
+                    )
+                    for order_index, (request_key, request_item) in enumerate(requests)
+                ),
                 worker=self._generate_one,
                 batch_size=batch_size,
             )
@@ -299,6 +317,7 @@ class OpenAICompatibleSession(BaseInferenceSession):
                 "max_tokens": int(request_item.max_new_tokens),
                 "temperature": float(request_item.temperature),
                 "stop": list(request_item.stop),
+                "metadata": dict(request_item.metadata),
             }
             response = self._post_json(self.config.chat_completions_path, payload)
             choices = response.get("choices") or []
@@ -318,6 +337,7 @@ class OpenAICompatibleSession(BaseInferenceSession):
             "max_tokens": int(request_item.max_new_tokens),
             "temperature": float(request_item.temperature),
             "stop": list(request_item.stop),
+            "metadata": dict(request_item.metadata),
         }
         response = self._post_json(self.config.completions_path, payload)
         choices = response.get("choices") or []

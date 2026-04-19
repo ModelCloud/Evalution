@@ -143,7 +143,7 @@ class StoryCloze(BaseMultipleChoiceSuite):
 
     def dataset_loader(self) -> Any:
         """Return the dataset loader bound to this suite."""
-        return load_dataset
+        return _load_storycloze_dataset
 
     def task_name(self) -> str:
         """Return the exported task name for this suite."""

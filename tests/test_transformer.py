@@ -139,11 +139,14 @@ def test_seed_transformer_runtime_syncs_transformers_python_numpy_torch_and_cuda
 ) -> None:
     """Verify seed transformer runtime syncs transformers python numpy torch and cuda."""
     import numpy as np
-    import transformers
 
     calls: list[tuple[str, int]] = []
 
-    monkeypatch.setattr(transformers, "set_seed", lambda seed: calls.append(("transformers", seed)))
+    monkeypatch.setitem(
+        sys.modules,
+        "transformers",
+        SimpleNamespace(set_seed=lambda seed: calls.append(("transformers", seed))),
+    )
     monkeypatch.setattr("evalution.engines.transformers_common.random.seed", lambda seed: calls.append(("python", seed)))
     monkeypatch.setattr(np.random, "seed", lambda seed: calls.append(("numpy", seed)))
     monkeypatch.setattr(torch, "manual_seed", lambda seed: calls.append(("torch", seed)))

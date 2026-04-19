@@ -8,6 +8,7 @@ from __future__ import annotations
 import gc
 import os
 import random
+import sys
 import threading
 from contextlib import contextmanager, suppress
 from contextvars import ContextVar
@@ -574,7 +575,14 @@ class BaseTransformerSession(BaseInferenceSession):
                     for request in requests
                     if request.input_ids is None
                 ]
-                encoded = self.tokenizer(rendered_prompts, padding=False)
+                # Keep inline prompt-length estimates on the same token contract as
+                # `prepare_requests()` so auto batch sizing does not count an extra
+                # BOS or other special tokens that generation will not consume.
+                encoded = self.tokenizer(
+                    rendered_prompts,
+                    add_special_tokens=False,
+                    padding=False,
+                )
             fallback_lengths = iter(len(token_ids) for token_ids in encoded["input_ids"])
             prompt_lengths = [
                 length if length is not None else next(fallback_lengths)
@@ -785,9 +793,13 @@ class BaseTransformerSession(BaseInferenceSession):
                 return_tensors="pt",
                 padding=True,
             )
+        # Mirror `prepare_requests()` so inline generation and pretokenized generation
+        # feed the model identical prompt tokens. This keeps HTTP/server-backed
+        # sessions from silently prepending tokenizer-specific special tokens.
         return self.tokenizer(
             [self._render_request(request) for request in batch],
             return_tensors="pt",
+            add_special_tokens=False,
             padding=True,
         )
 
@@ -1528,11 +1540,21 @@ def _seed_transformer_runtime(seed: int | None) -> None:
     if seed is None:
         return
 
+    # Import the module object first so tests can monkeypatch `transformers.set_seed` directly and
+    # so lazy-exported builds still route through one stable attribute lookup.
     with suppress(Exception):
-        from transformers import set_seed as transformers_set_seed
+        transformers = sys.modules.get("transformers")
+        if transformers is None:
+            import transformers as transformers_module
 
-        transformers_set_seed(seed)
+            transformers = transformers_module
 
+        transformers_set_seed = getattr(transformers, "set_seed", None)
+        if callable(transformers_set_seed):
+            transformers_set_seed(seed)
+
+    # Keep Evalution's own RNG synchronization explicit even when transformers exposes set_seed(),
+    # because downstream releases are free to narrow or expand what that helper touches.
     random.seed(seed)
 
     with suppress(Exception):

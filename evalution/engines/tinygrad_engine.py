@@ -1353,6 +1353,12 @@ def _import_tinygrad_modules() -> _TinygradModules:
     try:
         return _load_tinygrad_modules()
     except ModuleNotFoundError as exc:
+        missing_name = getattr(exc, "name", "") or ""
+        if missing_name.startswith("tinygrad.llm"):
+            raise ModuleNotFoundError(
+                "tinygrad is installed without the packaged `tinygrad.llm` runtime; "
+                "install a tinygrad build that ships the LLM modules required by Evalution"
+            ) from exc
         raise ModuleNotFoundError(
             "tinygrad is not importable; install the optional `tinygrad` dependency"
         ) from exc

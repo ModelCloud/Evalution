@@ -76,8 +76,19 @@ def test_mc_taco_scores_binary_multiple_choice_accuracy(monkeypatch) -> None:
     assert sample.metadata["category"] == "Typical Time"
 
 
-def test_mc_taco_loader_reads_raw_tsv_via_csv_builder() -> None:
+def test_mc_taco_loader_reads_raw_tsv_via_csv_builder(monkeypatch) -> None:
     """Verify mc taco loader reads raw tsv via CSV builder."""
+    captured: dict[str, object] = {}
+
+    def fake_load_dataset(*args, **kwargs):
+        """Capture the raw CSV-builder arguments without reaching the network."""
+
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return "mc-taco-dataset"
+
+    monkeypatch.setattr(mc_taco_module, "load_dataset", fake_load_dataset)
+
     dataset = mc_taco_module._load_mc_taco_dataset(
         "CogComp/mc_taco",
         split="validation",

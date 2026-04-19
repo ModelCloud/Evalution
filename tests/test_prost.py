@@ -87,8 +87,19 @@ def test_prost_scores_answer_text_multiple_choice(monkeypatch) -> None:
     assert sample.metadata["choice_texts"] == ["apple", "ball", "block", "bottle"]
 
 
-def test_prost_loader_reads_raw_jsonl_via_json_builder() -> None:
+def test_prost_loader_reads_raw_jsonl_via_json_builder(monkeypatch) -> None:
     """Verify prost loader reads raw jsonl via JSON builder."""
+    captured: dict[str, object] = {}
+
+    def fake_load_dataset(*args, **kwargs):
+        """Capture the raw JSON-builder arguments without reaching the network."""
+
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return "prost-dataset"
+
+    monkeypatch.setattr(prost_module, "load_dataset", fake_load_dataset)
+
     dataset = prost_module._load_prost_dataset("corypaik/prost", split="test", streaming=False)
 
     assert dataset == "prost-dataset"
