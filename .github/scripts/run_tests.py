@@ -166,7 +166,7 @@ def main() -> int:
         return_code = stream_process_output(proc, log_file)
     finally:
         if monitor_stop is not None:
-            print("trap cleanup EXIT...")
+            print("\n\ntrap cleanup EXIT...\n\n")
             monitor_stop.set()
         if monitor_thread is not None:
             monitor_thread.join(timeout=5)
@@ -177,18 +177,18 @@ def main() -> int:
 
     if return_code != 0:
         append_github_env("ERROR", "22")
-        print(f"pipe status wrong: {return_code}")
+        print(f"\n\npipe status wrong: {return_code}\n\n")
         return 22
 
     execution_time = int(time.time() - start_time)
-    print(f"{execution_time // 60}m {execution_time % 60}s")
+    print(f"\n\n{execution_time // 60}m {execution_time % 60}s\n\n")
 
     try:
         for entry in sorted(artifacts_dir.iterdir()):
             stat = entry.stat()
-            print(f"{stat.st_size:>10} {entry.name}")
+            print(f"\n\n{stat.st_size:>10} {entry.name}\n\n")
     except OSError as exc:
-        print(f"Failed to list artifact dir: {exc}")
+        print(f"\n\nFailed to list artifact dir: {exc}\n\n")
 
     return 0
 
