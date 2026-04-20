@@ -68,24 +68,20 @@ jobs:
           python -m pip install device_smi
 
           files=$(python3 .github/scripts/list_test_files.py \
-            --test-regex "${{ github.event.inputs.test_regex || '' }}")
+            --test-regex "${{ github.event.inputs.test_regex || '' }}" \
+            --group-count=2)
 
-          IFS=' ' read -r -a file_array <<< "$files"
-          
-          mid=$(( (${#file_array[@]} + 1) / 2 ))
-          
-          files_group1="${file_array[@]:0:mid}"
-          files_group2="${file_array[@]:mid}"
-          
+          IFS=$'\n' read -r files_group1 files_group2 <<< "$files"
+
           echo "files-group1=$files_group1" >> "$GITHUB_OUTPUT"
           echo "files-group2=$files_group2" >> "$GITHUB_OUTPUT"
-        
+
           echo "Group1: $files_group1"
           echo "Group2: $files_group2"
 
   test:
     needs: list-test-files
-    if: needs.list-test-files.outputs.files-group1 != '[]'
+    if: needs.list-test-files.outputs.files-group1 != '' && needs.list-test-files.outputs.files-group1 != '[]'
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.list-test-files.outputs.max-parallel) }}
@@ -267,7 +263,7 @@ jobs:
 
   test2:
     needs: list-test-files
-    if: needs.list-test-files.outputs.files-group2 != '[]'
+    if: needs.list-test-files.outputs.files-group2 != '' && needs.list-test-files.outputs.files-group2 != '[]'
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.list-test-files.outputs.max-parallel) }}
