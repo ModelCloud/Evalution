@@ -371,8 +371,10 @@ jobs:
             --install-project
 
           if [[ "${{ matrix.test_script }}" == *sglang* ]]; then
+            uv pip install pydantic zmq uvloop psutil -U
+          fi
+          if [[ "${{ matrix.test_script }}" == *tensorrt* ]]; then
             apt update && apt install libopenmpi-dev openmpi-bin -y
-            uv pip install pydantic zmq uvloop -U
           fi
 
       - name: Print uv env
