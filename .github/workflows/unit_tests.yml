@@ -19,7 +19,7 @@ on:
       max-parallel:
         description: "Parallel jobs"
         required: false
-        default: "8"
+        default: "4"
 
 env:
   ref: ${{ github.event.inputs.ref || github.ref }}
@@ -42,7 +42,8 @@ jobs:
   list-test-files:
     runs-on: ubuntu-latest
     outputs:
-      files: ${{ steps.files.outputs.files }}
+      files-group1: ${{ steps.files.outputs.files-group1 }}
+      files-group2: ${{ steps.files.outputs.files-group2 }}
       max-parallel: ${{ steps.config.outputs.max-parallel }}
     steps:
       - name: Checkout Code
@@ -68,17 +69,28 @@ jobs:
 
           files=$(python3 .github/scripts/list_test_files.py \
             --test-regex "${{ github.event.inputs.test_regex || '' }}")
-          echo "files=$files" >> "$GITHUB_OUTPUT"
-          echo "Matched test files: $files"
+
+          IFS='\n' read -r -a file_array <<< "$files"
+          
+          mid=$(( (${#file_array[@]} + 1) / 2 ))
+          
+          files_group1="${file_array[@]:0:mid}"
+          files_group2="${file_array[@]:mid}"
+          
+          echo "files_group1=$files_group1" >> "$GITHUB_OUTPUT"
+          echo "files_group2=$files_group2" >> "$GITHUB_OUTPUT"
+        
+          echo "Group1: $files_group1"
+          echo "Group2: $files_group2"
 
   test:
     needs: list-test-files
-    if: needs.list-test-files.outputs.files != '[]'
+    if: needs.list-test-files.outputs.files-group1 != '[]'
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.list-test-files.outputs.max-parallel) }}
       matrix:
-        test-file: ${{ fromJSON(needs.list-test-files.outputs.files) }}
+        test-file: ${{ fromJSON(needs.list-test-files.outputs.files-group1) }}
     runs-on: [ self-hosted, xeon5 ]
     container:
       image: 10.0.13.31:5000/nvidia/cuda:132-ubuntu24.04_0325
@@ -252,6 +264,187 @@ jobs:
           echo "cleaning venv: ${{ env.VIRTUAL_ENV }}"
           rm -rf "${{ env.VIRTUAL_ENV }}"
 
+
+  test2:
+    needs: list-test-files
+    if: needs.list-test-files.outputs.files-group2 != '[]'
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(needs.list-test-files.outputs.max-parallel) }}
+      matrix:
+        test-file: ${{ fromJSON(needs.list-test-files.outputs.files-group2) }}
+    runs-on: [ self-hosted, xeon5 ]
+    container:
+      image: 10.0.13.31:5000/nvidia/cuda:132-ubuntu24.04_0325
+      volumes:
+        - /monster/ci/env/entrypoint.sh:/entrypoint.sh
+        - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
+        - /dev/dri/by-path:/dev/dri/by-path
+        - /monster/ci/models:/monster/data/model
+        - /monster/ci/dataset:/monster/data/model/dataset
+        - /monster/ci/huggingface:/github/home/.cache/huggingface
+        - /github/workspace/uv:/opt/uv
+        - /github/workspace/tmp:/opt/uv/tmp
+        - /monster/ci/uv/python:/opt/uv/python
+        - /monster/ci/uv/cache/python:/opt/uv/cache/python
+        - /monster/ci/uv/setup_uv_venv.sh:/opt/uv/setup_uv_venv.sh
+        - /monster/ci/uv/uv:/opt/uv/uv
+        - /monster/ci/uv/uvx:/opt/uv/uvx
+        - /monster/ci/uv/env:/opt/uv/env
+        - /monster/ci/uv/uv.toml:/opt/uv/uv.toml
+        - /monster/ci/env:/opt/env
+        - /monster/ci/dist:/opt/dist
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.ref }}
+
+      - name: Set test metadata
+        id: meta
+        run: |
+          python3 .github/scripts/prepare_unit_test.py \
+            --test-file "${{ matrix.test-file }}"
+
+      - name: decompress uv cache
+        continue-on-error: true
+        run: |
+          if [ -f /opt/dist/uv.tar.xz ]; then
+            TAR_FILE="/opt/dist/uv.tar.xz"
+            LAST_FILE="/opt/uv/cache/lastmodified"
+          
+            # Get modification time of tar.xz file (epoch seconds)
+            TAR_MTIME=$(stat -c %Y "$TAR_FILE")
+          
+            # Read last recorded modification time if file exists
+            if [ -f "$LAST_FILE" ]; then
+              LAST_MTIME=$(cat "$LAST_FILE")
+            else
+              LAST_MTIME=0
+            fi
+          
+            # Compare timestamps to decide whether to decompress
+            if [ "$TAR_MTIME" = "$LAST_MTIME" ]; then
+              echo "uv.tar.xz unchanged, skip decompress"
+            else
+              echo "decompressing uv.tar.xz..."
+          
+              # Prepare temporary directory
+              mkdir -p /opt/uv/cache/tmp
+              rm -rf /opt/uv/cache/tmp/*
+          
+              # Extract archive
+              tar -xJf "$TAR_FILE" -C /opt/uv/cache/tmp
+          
+              # Replace existing uv directory
+              rm -rf /opt/uv/cache/uv
+              mv /opt/uv/cache/tmp/uv /opt/uv/cache/uv
+          
+              # Record latest modification time
+              echo "$TAR_MTIME" > "$LAST_FILE"
+          
+              echo "done!"
+              ls -ahl /opt/uv/cache
+              echo "=========="
+              ls -ahl /opt/uv/cache/uv
+            fi
+          fi
+
+      - name: Activate uv env
+        run: |
+          env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
+          mv /opt/uv/venvs/$env_name /opt/uv/tmp || true
+          echo "source /opt/uv/setup_uv_venv.sh $env_name ${PYTHON_VERSION}"
+          source /opt/uv/setup_uv_venv.sh "$env_name" "${PYTHON_VERSION}"
+          python -VV
+
+      - name: Setup uv env
+        run: |
+          /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} ${UV_PYTHON}
+          uv pip install device_smi -U
+          python3 .github/scripts/install_unit_test_deps.py \
+            --test-file "${{ matrix.test-file }}" \
+            --uv-python "${UV_PYTHON}" \
+            --runner "${{ env.RUNNER }}" \
+            --install-project
+
+      - name: Print uv env
+        run: |
+          echo "::group::uv python list"
+          uv python list
+          ls -ahl /opt/uv/venvs
+          echo "::endgroup::"
+          
+          echo "== python =="
+          python -VV
+          which python
+          which pip || true
+
+          echo "== nvcc =="
+          nvcc --version
+
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+
+          echo "== torch =="
+          uv pip show torch || true
+
+          echo "::group::project files"
+          ls -ahl
+          echo "::endgroup::"
+
+          echo "::group::git status"
+          git config --global --add safe.directory $(pwd)
+          git status
+          echo "::endgroup::"
+
+      - name: Find suitable GPU
+        if: ${{ steps.meta.outputs.requires-gpu == 'true' }}
+        run: |
+          python3 .github/scripts/allocate_gpu.py \
+            --base-url "${{ env.BASE_URL }}" \
+            --run-id "${{ github.run_id }}" \
+            --test "${{ matrix.test-file }}" \
+            --runner "${{ runner.name }}" \
+            --count "1" \
+            --require-single
+
+      - name: Run test
+        run: |
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+
+          python .github/scripts/run_tests.py \
+            --base-url "${{ env.BASE_URL }}" \
+            --run-id "${{ github.run_id }}" \
+            --test-file "${{ matrix.test-file }}" \
+            --runner "${{ runner.name }}" \
+            --gpu-id "${CUDA_VISIBLE_DEVICES:-}" \
+            --artifacts-dir artifacts
+
+      - name: Release GPU
+        if: ${{ always() && steps.meta.outputs.requires-gpu == 'true' }}
+        run: |
+          if [ -n "${CUDA_VISIBLE_DEVICES:-}" ]; then
+            python3 .github/scripts/release_gpu.py \
+              --base-url "${{ env.BASE_URL }}" \
+              --run-id "${{ github.run_id }}" \
+              --gpu-id "${CUDA_VISIBLE_DEVICES}" \
+              --test "${{ matrix.test-file }}" \
+              --runner "${{ runner.name }}"
+          else
+            echo "Skip GPU release because allocation metadata is missing."
+          fi
+
+      - name: Clean cache
+        if: always()
+        run: |
+          echo "Cleaning workspace: $PWD"
+          rm -rf ./* .[^.] .??* || true
+          echo "cleaning venv: ${{ env.VIRTUAL_ENV }}"
+          rm -rf "${{ env.VIRTUAL_ENV }}"
 
   prepare-setuptools:
     runs-on: ubuntu-latest
