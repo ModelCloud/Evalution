@@ -371,6 +371,7 @@ jobs:
             --install-project
 
           if [[ "${{ matrix.test_script }}" == *sglang* ]]; then
+            apt update && apt install libopenmpi-dev openmpi-bin -y
             uv pip install pydantic zmq uvloop -U
           fi
 
