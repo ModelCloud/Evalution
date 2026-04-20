@@ -183,6 +183,10 @@ jobs:
             --uv-python "${UV_PYTHON}" \
             --runner "${{ env.RUNNER }}" \
             --install-project
+          
+          if [[ "${{ matrix.test_script }}" == *sglang* ]]; then
+            uv pip install pydantic -U
+          fi
 
       - name: Print uv env
         run: |
@@ -365,6 +369,10 @@ jobs:
             --uv-python "${UV_PYTHON}" \
             --runner "${{ env.RUNNER }}" \
             --install-project
+
+          if [[ "${{ matrix.test_script }}" == *sglang* ]]; then
+            uv pip install pydantic -U
+          fi
 
       - name: Print uv env
         run: |
