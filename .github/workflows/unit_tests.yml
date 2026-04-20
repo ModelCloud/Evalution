@@ -184,7 +184,7 @@ jobs:
             --runner "${{ env.RUNNER }}" \
             --install-project
           
-          if [[ "${{ matrix.test_script }}" == *sglang* ]]; then
+          if [[ "${{ matrix.test-file }}" == *sglang* ]]; then
             uv pip install pydantic -U
           fi
 
