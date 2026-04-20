@@ -77,8 +77,8 @@ jobs:
           files_group1="${file_array[@]:0:mid}"
           files_group2="${file_array[@]:mid}"
           
-          echo "files_group1=$files_group1" >> "$GITHUB_OUTPUT"
-          echo "files_group2=$files_group2" >> "$GITHUB_OUTPUT"
+          echo "files-group1=$files_group1" >> "$GITHUB_OUTPUT"
+          echo "files-group2=$files_group2" >> "$GITHUB_OUTPUT"
         
           echo "Group1: $files_group1"
           echo "Group2: $files_group2"
