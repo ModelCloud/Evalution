@@ -185,7 +185,7 @@ jobs:
             --install-project
           
           if [[ "${{ matrix.test-file }}" == *sglang* ]]; then
-            uv pip install pydantic -U
+            uv pip install pydantic zmq -U
           fi
 
       - name: Print uv env
@@ -371,7 +371,7 @@ jobs:
             --install-project
 
           if [[ "${{ matrix.test_script }}" == *sglang* ]]; then
-            uv pip install pydantic -U
+            uv pip install pydantic zmq -U
           fi
 
       - name: Print uv env
