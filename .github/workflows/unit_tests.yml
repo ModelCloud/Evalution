@@ -71,7 +71,9 @@ jobs:
             --test-regex "${{ github.event.inputs.test_regex || '' }}" \
             --group-count=2)
 
-          IFS=$'\n' read -r files_group1 files_group2 <<< "$files"
+          mapfile -t file_groups <<< "$files"
+          files_group1="${file_groups[0]}"
+          files_group2="${file_groups[1]}"
 
           echo "files-group1=$files_group1" >> "$GITHUB_OUTPUT"
           echo "files-group2=$files_group2" >> "$GITHUB_OUTPUT"
