@@ -48,23 +48,23 @@ def start_keepalive_monitor(
                     timeout=10,
                 )
             except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
-                print(f"Keepalive request failed: {exc}")
+                print(f"\n\nKeepalive request failed: {exc}\n\n")
                 continue
 
             resp = extract_gpu_ids(response)
             if resp == "-1":
-                print(f"Server returned {resp}, terminating job...")
+                print(f"\n\nServer returned {resp}, terminating job...\n\n")
                 state["forced_exit_code"] = 3
                 kill_process_group(proc)
                 stop_event.set()
                 return
             if expected_gpu_ids and resp != expected_gpu_ids:
-                print(f"Keepalive returned mismatched GPUs {resp}, expected {expected_gpu_ids}.")
+                print(f"\n\nKeepalive returned mismatched GPUs {resp}, expected {expected_gpu_ids}.\n\n")
                 state["forced_exit_code"] = 3
                 kill_process_group(proc)
                 stop_event.set()
                 return
-            print("gpu is kept alive...")
+            print("\n\ngpu is kept alive...\n\n")
 
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
