@@ -81,7 +81,7 @@ jobs:
           echo "Group1: $files_group1"
           echo "Group2: $files_group2"
 
-  test:
+  gpu:
     needs: list-test-files
     if: needs.list-test-files.outputs.files-group1 != '' && needs.list-test-files.outputs.files-group1 != '[]'
     strategy:
@@ -186,6 +186,9 @@ jobs:
           
           if [[ "${{ matrix.test-file }}" == *sglang* ]]; then
             uv pip install pydantic zmq uvloop -U
+          fi
+          if [[ "${{ matrix.test_script }}" == *tensorrt* ]]; then
+            apt update && apt install libopenmpi-dev openmpi-bin -y
           fi
 
       - name: Print uv env
