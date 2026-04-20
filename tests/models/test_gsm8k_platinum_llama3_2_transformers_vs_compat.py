@@ -132,7 +132,7 @@ def test_llama3_2_transformers_vs_transformers_compat_gsm8k_platinum_baselines()
         transformers_result["metrics"],
         _select_llama3_2_gpu_baseline(
             default={"acc,num": 0.4296875},
-            rtx4090={"acc,num": 0.375},
+            rtx4090={"acc,num": 0.4296875},
             a100={"acc,num": 0.4140625},
         ),
         abs_tolerance=_DUAL_ENGINE_SCORE_ABS_TOLERANCE,
@@ -141,7 +141,7 @@ def test_llama3_2_transformers_vs_transformers_compat_gsm8k_platinum_baselines()
         compat_result["metrics"],
         _select_llama3_2_gpu_baseline(
             default={"acc,num": 0.4453125},
-            rtx4090={"acc,num": 0.375},
+            rtx4090={"acc,num": 0.4453125},
             a100={"acc,num": 0.390625},
         ),
         abs_tolerance=_DUAL_ENGINE_SCORE_ABS_TOLERANCE,
