@@ -70,7 +70,7 @@ jobs:
           files=$(python3 .github/scripts/list_test_files.py \
             --test-regex "${{ github.event.inputs.test_regex || '' }}")
 
-          IFS='\n' read -r -a file_array <<< "$files"
+          IFS=' ' read -r -a file_array <<< "$files"
           
           mid=$(( (${#file_array[@]} + 1) / 2 ))
           
