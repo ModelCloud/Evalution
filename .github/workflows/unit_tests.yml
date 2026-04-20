@@ -32,7 +32,7 @@ env:
   PYTHON_GIL: 0
   RUNNER: 10.0.13.31
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
-  BASE_URL: http://10.0.14.249
+  BASE_URL: http://10.0.13.31
 
 concurrency:
   group: ${{ github.event.inputs.ref || github.ref }}-workflow-unit-tests
