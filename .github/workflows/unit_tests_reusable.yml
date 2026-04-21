@@ -1,0 +1,215 @@
+name: Unit Tests Reusable
+
+defaults:
+  run:
+    shell: bash -le {0}
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        description: "GitHub repo {owner}/{repo}"
+        required: false
+        default: ""
+        type: string
+      ref:
+        description: "GitHub ref: Branch, Tag or Commit SHA"
+        required: false
+        default: ""
+        type: string
+      pr_number:
+        description: "PR Number"
+        required: false
+        default: 0
+        type: number
+      check_vm_ip:
+        description: "Selected CI runner IP"
+        required: true
+        type: string
+      check_vm_max_parallel:
+        description: "Serialized max parallel payload"
+        required: true
+        type: string
+      check_vm_cuda_version:
+        description: "Selected CI container CUDA image version"
+        required: true
+        type: string
+      matrix_json:
+        description: "Serialized unit test matrix for this reusable job"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  repo: ${{ inputs.repo || github.repository }}
+  ref: ${{ inputs.ref || github.ref }}
+  CUDA_DEVICE_ORDER: PCI_BUS_ID
+  CUDA_VERSION: 131
+  UV_TORCH_BACKEND: cu130
+  TORCH_VERSION: 2.11.0
+  PYTHON_VERSION: 3.14t
+  UV_PYTHON: 3.14t
+  PYTHON_GIL: 0
+  RUNNER: 10.0.13.31
+  BASE_URL: http://10.0.13.31/gpu
+  LOGBAR_ANIMATION: "0"
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+jobs:
+  test:
+    runs-on: [self-hosted, xeon5]
+    if: ${{ !cancelled() && inputs.matrix_json != '[]' }}
+    container:
+      image: ${{ inputs.check_vm_ip }}:5000/nvidia/cuda:${{ inputs.check_vm_cuda_version }}-ubuntu24.04_0325
+      options: --device /dev/dri --ipc=host --runtime=nvidia --gpus all
+      volumes:
+        - /monster/ci/env/entrypoint.sh:/entrypoint.sh
+        - /monster/ci/env/entrypoint.sh:/etc/profile.d/01-entrypoint.sh
+        - /dev/dri/by-path:/dev/dri/by-path
+        - /monster/ci/models:/monster/data/model
+        - /monster/ci/dataset:/monster/data/model/dataset
+        - /monster/ci/huggingface:/github/home/.cache/huggingface
+        - /github/workspace/uv:/opt/uv
+        - /github/workspace/tmp:/opt/uv/tmp
+        - /monster/ci/uv/python:/opt/uv/python
+        - /monster/ci/uv/cache/python:/opt/uv/cache/python
+        - /monster/ci/uv/setup_uv_venv.sh:/opt/uv/setup_uv_venv.sh
+        - /monster/ci/uv/uv:/opt/uv/uv
+        - /monster/ci/uv/uvx:/opt/uv/uvx
+        - /monster/ci/uv/env:/opt/uv/env
+        - /monster/ci/uv/uv.toml:/opt/uv/uv.toml
+        - /monster/ci/env:/opt/env
+        - /monster/ci/dist:/opt/dist
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.check_vm_max_parallel).size || 20 }}
+      matrix:
+        include: ${{ fromJSON(inputs.matrix_json || '[]') }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.repo }}
+          ref: ${{ env.ref }}
+
+      - name: Prepare checkout
+        run: |
+          bash .github/scripts/ci_prepare_checkout.sh "${{ inputs.pr_number }}"
+
+      - name: Restore uv cache
+        continue-on-error: true
+        run: |
+          bash .github/scripts/ci_restore_uv_cache.sh
+
+      - name: Set test metadata
+        id: meta
+        run: |
+          python3 .github/scripts/ci_tests.py set-metadata \
+            --test-file "${{ matrix.test_file }}"
+
+      - name: Activate uv env
+        run: |
+          export EVALUTION_TORCH_EXTENSIONS_DIR="/tmp/evalution/torch_extensions/${{ github.run_id }}/${{ github.run_attempt }}/${SAFE_NAME}"
+          export TORCH_EXTENSIONS_DIR="$EVALUTION_TORCH_EXTENSIONS_DIR"
+          mkdir -p "$EVALUTION_TORCH_EXTENSIONS_DIR"
+          echo "EVALUTION_TORCH_EXTENSIONS_DIR=$EVALUTION_TORCH_EXTENSIONS_DIR" >> "$GITHUB_ENV"
+          echo "TORCH_EXTENSIONS_DIR=$TORCH_EXTENSIONS_DIR" >> "$GITHUB_ENV"
+
+          uv cache prune --ci
+
+          env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
+          mv "/opt/uv/venvs/$env_name" /opt/uv/tmp || true
+          source /opt/uv/setup_uv_venv.sh "$env_name" "${PYTHON_VERSION}"
+          python -VV
+
+      - name: Setup uv env
+        run: |
+          /opt/env/init_compiler_torch_only.sh ${{ env.CUDA_VERSION }} ${{ env.TORCH_VERSION }} "${UV_PYTHON}"
+          uv pip install device_smi -U
+          python3 .github/scripts/ci_tests.py install-deps \
+            --test-file "${{ matrix.test_file }}" \
+            --uv-python "${UV_PYTHON}" \
+            --runner "${{ env.RUNNER }}" \
+            --install-project
+
+      - name: Print uv env
+        run: |
+          echo "::group::uv python list"
+          uv python list
+          ls -ahl /opt/uv/venvs
+          echo "::endgroup::"
+
+          echo "== python =="
+          python -VV
+          which python
+          which pip || true
+
+          echo "== nvcc =="
+          nvcc --version
+
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+
+          echo "== torch =="
+          uv pip show torch || true
+
+          echo "::group::project files"
+          ls -ahl
+          echo "::endgroup::"
+
+          echo "::group::git status"
+          git config --global --add safe.directory "$(pwd)"
+          git status
+          echo "::endgroup::"
+
+      - name: Find suitable GPU
+        if: ${{ steps.meta.outputs.requires-gpu == 'true' }}
+        run: |
+          python3 .github/scripts/ci_gpu.py allocate \
+            --base-url "${{ env.BASE_URL }}" \
+            --run-id "${{ github.run_id }}" \
+            --test "${{ matrix.test_file }}" \
+            --runner "${{ runner.name }}" \
+            --count "1" \
+            --require-single
+
+      - name: Run test
+        run: |
+          echo "::group::pip list"
+          uv pip list
+          echo "::endgroup::"
+
+          python .github/scripts/ci_tests.py run \
+            --base-url "${{ env.BASE_URL }}" \
+            --run-id "${{ github.run_id }}" \
+            --test-file "${{ matrix.test_file }}" \
+            --runner "${{ runner.name }}" \
+            --gpu-id "${CUDA_VISIBLE_DEVICES:-}" \
+            --artifacts-dir artifacts
+
+      - name: Release GPU
+        if: ${{ always() && steps.meta.outputs.requires-gpu == 'true' }}
+        run: |
+          if [ -n "${CUDA_VISIBLE_DEVICES:-}" ]; then
+            python3 .github/scripts/ci_gpu.py release \
+              --base-url "${{ env.BASE_URL }}" \
+              --run-id "${{ github.run_id }}" \
+              --gpu-id "${CUDA_VISIBLE_DEVICES}" \
+              --test "${{ matrix.test_file }}" \
+              --runner "${{ runner.name }}"
+          else
+            echo "Skip GPU release because allocation metadata is missing."
+          fi
+
+      - name: Clean cache
+        if: always()
+        run: |
+          echo "Cleaning workspace: $PWD"
+          rm -rf ./* .[^.] .??* || true
+          echo "cleaning venv: ${{ env.VIRTUAL_ENV }}"
+          rm -rf "${{ env.VIRTUAL_ENV }}"
+          echo "Cleaning uv cache"
+          uv cache prune --ci

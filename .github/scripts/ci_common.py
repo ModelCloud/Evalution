@@ -1,44 +1,21 @@
+from __future__ import annotations
+
+import json
 import os
 import re
 import subprocess
 import time
-import urllib.parse
 import urllib.error
+import urllib.parse
 import urllib.request
-import json
 from pathlib import Path
 
-
+# Test files with this marker are intentionally scheduled on CPU-only runners.
 GPU_DISABLED_MARKER = re.compile(r"^# GPU=-1\s*$", re.MULTILINE)
 
 
 def now_ms() -> int:
     return time.time_ns() // 1_000_000
-
-
-def fetch_text(url: str, *, timeout: float, suppress_error: bool = False) -> str:
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
-            return response.read().decode("utf-8", errors="replace")
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        if suppress_error:
-            print(f"Request failed for {url}: {exc}")
-            return ""
-        raise
-
-
-def fetch_with_retry(url: str, *, timeout: float, retries: int, retry_delay: float) -> str:
-    last_error: Exception | None = None
-    for attempt in range(retries + 1):
-        try:
-            return fetch_text(url, timeout=timeout)
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            last_error = exc
-            if attempt < retries:
-                time.sleep(retry_delay)
-    if last_error is not None:
-        print(f"Request failed after retries: {last_error}")
-    return ""
 
 
 def normalize_base_url(base_url: str) -> str:
@@ -89,14 +66,14 @@ def request_json_with_retry(
 
 
 def append_github_env(name: str, value: str) -> None:
-    _append_github_file(os.environ.get("GITHUB_ENV"), name, value)
+    append_github_file(os.environ.get("GITHUB_ENV"), name, value)
 
 
 def append_github_output(name: str, value: str) -> None:
-    _append_github_file(os.environ.get("GITHUB_OUTPUT"), name, value)
+    append_github_file(os.environ.get("GITHUB_OUTPUT"), name, value)
 
 
-def _append_github_file(target: str | None, name: str, value: str) -> None:
+def append_github_file(target: str | None, name: str, value: str) -> None:
     if not target:
         return
     with open(target, "a", encoding="utf-8") as fh:
@@ -126,18 +103,12 @@ def test_requires_gpu(test_file: str) -> bool:
     return GPU_DISABLED_MARKER.search(contents) is None
 
 
-def quote_url_value(value: str) -> str:
-    return urllib.parse.quote(value, safe="")
-
-
 def build_server_info() -> dict[str, str]:
     from device_smi import Device
+
     os_info = Device("os")
     cpu_model = Device("cpu").model
-    platform_name = (
-            os.environ.get("GPU_PLATFORM")
-            or cpu_model
-    )
+    platform_name = os.environ.get("GPU_PLATFORM") or cpu_model
     return {
         "platform": platform_name,
         "arch": os_info.arch,
