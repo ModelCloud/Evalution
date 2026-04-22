@@ -117,8 +117,6 @@ jobs:
           echo "EVALUTION_TORCH_EXTENSIONS_DIR=$EVALUTION_TORCH_EXTENSIONS_DIR" >> "$GITHUB_ENV"
           echo "TORCH_EXTENSIONS_DIR=$TORCH_EXTENSIONS_DIR" >> "$GITHUB_ENV"
 
-          uv cache prune --ci
-
           env_name="evalution_${SAFE_NAME}_cu${{ env.CUDA_VERSION }}_torch${{ env.TORCH_VERSION }}_py${PYTHON_VERSION}_release"
           mv "/opt/uv/venvs/$env_name" /opt/uv/tmp || true
           source /opt/uv/setup_uv_venv.sh "$env_name" "${PYTHON_VERSION}"
@@ -211,5 +209,3 @@ jobs:
           rm -rf ./* .[^.] .??* || true
           echo "cleaning venv: ${{ env.VIRTUAL_ENV }}"
           rm -rf "${{ env.VIRTUAL_ENV }}"
-          echo "Cleaning uv cache"
-          uv cache prune --ci
