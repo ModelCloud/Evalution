@@ -62,7 +62,7 @@ jobs:
     runs-on: [self-hosted, xeon5]
     if: ${{ !cancelled() && inputs.matrix_json != '[]' }}
     container:
-      image: ${{ inputs.check_vm_ip }}:5000/nvidia/cuda:${{ inputs.check_vm_cuda_version }}-ubuntu24.04_0325
+      image: ${{ inputs.check_vm_ip }}:5000/nvidia/cuda:${{ inputs.check_vm_cuda_version }}-ubuntu24.04_0415
       options: --device /dev/dri --ipc=host --runtime=nvidia --gpus all
       volumes:
         - /monster/ci/env/entrypoint.sh:/entrypoint.sh
@@ -111,6 +111,10 @@ jobs:
 
       - name: Activate uv env
         run: |
+          echo "::group::-- dust uv cache dir --"
+            dust $(uv cache dir)
+          echo "::endgroup::"
+
           export EVALUTION_TORCH_EXTENSIONS_DIR="/tmp/evalution/torch_extensions/${{ github.run_id }}/${{ github.run_attempt }}/${SAFE_NAME}"
           export TORCH_EXTENSIONS_DIR="$EVALUTION_TORCH_EXTENSIONS_DIR"
           mkdir -p "$EVALUTION_TORCH_EXTENSIONS_DIR"
@@ -209,3 +213,7 @@ jobs:
           rm -rf ./* .[^.] .??* || true
           echo "cleaning venv: ${{ env.VIRTUAL_ENV }}"
           rm -rf "${{ env.VIRTUAL_ENV }}"
+
+          echo "::group::-- dust uv cache dir --"
+            dust $(uv cache dir)
+          echo "::endgroup::"
