@@ -43,9 +43,9 @@ env:
   repo: ${{ github.event.inputs.repo || github.repository }}
   ref: ${{ github.event.inputs.ref || github.ref }}
   CUDA_DEVICE_ORDER: PCI_BUS_ID
-  CUDA_VERSION: 131
+  CUDA_VERSION: 130
   # The runtime image tag tracks the current CUDA base image kept on the CI registry.
-  CUDA_IMAGE_VERSION: 132
+  CUDA_IMAGE_VERSION: 130
   UV_TORCH_BACKEND: cu130
   TORCH_VERSION: 2.11.0
   PYTHON_VERSION: 3.14t
