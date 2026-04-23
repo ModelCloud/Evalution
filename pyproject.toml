@@ -16,7 +16,7 @@ dependencies = [
     "PyPcre>=0.2.15",
     "PyYAML>=6.0",
     "sacrebleu>=2.6.0",
-    "transformers>=5.3.0",
+    "transformers>=5.3.0,<5.6.0",
     "maturin",
 ]
 classifiers = [
