@@ -273,7 +273,9 @@ def test_openai_compatible_server_waits_for_missing_earlier_generation_order() -
         session=backend,
         model_name="fake-model",
         max_batch_size=2,
-        batch_window_s=0.05,
+        # Keep a wider window so slow CI schedulers still observe the delayed earlier
+        # request within the same first refill stream.
+        batch_window_s=0.2,
     ) as server:
         batcher = server._generate_batcher
         assert batcher is not None
@@ -294,7 +296,7 @@ def test_openai_compatible_server_waits_for_missing_earlier_generation_order() -
             futures = [
                 executor.submit(submit, "one", 1),
                 executor.submit(submit, "two", 2),
-                executor.submit(submit, "zero", 0, delay_s=0.01),
+                executor.submit(submit, "zero", 0, delay_s=0.02),
             ]
             outputs = [future.result() for future in futures]
 
