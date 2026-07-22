@@ -12,6 +12,7 @@ import pcre
 
 import evalution
 from evalution.engines.base import GenerationOutput
+from evalution.benchmarks.gsm8k_common import build_variant_specs
 from evalution.scorers.gsm8k import INVALID_ANSWER
 from evalution.scorers.gsm8k import extract_format_insensitive_numeric_answer
 from evalution.scorers.gsm8k import extract_gsm8k_reference_answer
@@ -75,6 +76,14 @@ def test_gsm8k_numeric_parser_is_format_insensitive() -> None:
     assert extract_format_insensitive_numeric_answer("Answer: 1,234") == "1234"
     assert extract_format_insensitive_numeric_answer("Reasoning...\n\\boxed{18}") == "18"
     assert extract_format_insensitive_numeric_answer("No number at all") == INVALID_ANSWER
+
+
+def test_gsm8k_variants_stop_at_assistant_boundary() -> None:
+    """Verify chat-formatted GSM8K generations stop before a repeated assistant turn."""
+    specs = build_variant_specs("gsm8k_platinum")
+
+    assert specs
+    assert all("</assistant>" in spec.stop_strings for spec in specs.values())
 
 
 def test_gsm8k_suite_scores_numeric_primary(monkeypatch) -> None:

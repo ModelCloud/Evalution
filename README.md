@@ -10,6 +10,7 @@ Evalution is a modern LLM evaluation toolkit for fast, benchmark-faithful, multi
 
 ## News
 
+- July 22nd, 2026: Released `v0.0.9` with model-declared multi-EOS and chat-template default preservation.
 - July 20th, 2026: Released `v0.0.8` with Transformers 5.14+ continuous batching and paged-attention compatibility.
 - April 19th, 2026: 🚀 `Tinygrad` engine support added.
 

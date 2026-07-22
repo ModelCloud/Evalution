@@ -10,8 +10,10 @@ import os
 import random
 import sys
 import threading
+from collections.abc import Mapping
 from contextlib import contextmanager, suppress
 from contextvars import ContextVar
+from copy import deepcopy
 from dataclasses import asdict, dataclass, field, replace
 from itertools import chain, islice
 from pathlib import Path
@@ -425,14 +427,30 @@ class BaseTransformerSession(BaseInferenceSession):
     def _render_request_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> str:
         """Render request with tokenizer."""
         if request.messages is not None:
+            template_kwargs = self._default_chat_template_kwargs()
+            # Request-level rendering controls remain authoritative over checkpoint defaults.
+            template_kwargs.update(
+                {
+                    "tokenize": False,
+                    "add_generation_prompt": request.add_generation_prompt,
+                }
+            )
             return tokenizer.apply_chat_template(
                 request.messages,
-                tokenize=False,
-                add_generation_prompt=request.add_generation_prompt,
+                **template_kwargs,
             )
         if request.prompt is None:
             raise ValueError("generation requests must define either `prompt` or `messages`")
         return request.prompt
+
+    # Preserve model-declared template controls such as reasoning mode during evaluator rendering.
+    def _default_chat_template_kwargs(self) -> dict[str, Any]:
+        """Return a copy of the checkpoint's default chat-template keyword arguments."""
+        generation_config = getattr(self.model, "generation_config", None)
+        template_kwargs = getattr(generation_config, "default_chat_template_kwargs", None)
+        if isinstance(template_kwargs, Mapping):
+            return dict(template_kwargs)
+        return {}
 
     @property
     def batch_size(self) -> int | str:
@@ -774,8 +792,9 @@ class BaseTransformerSession(BaseInferenceSession):
             "num_beams": num_beams,
             "pad_token_id": self.tokenizer.pad_token_id,
         }
-        if self.tokenizer.eos_token_id is not None:
-            generation_kwargs.setdefault("eos_token_id", self.tokenizer.eos_token_id)
+        eos_token_id = self._model_eos_token_id()
+        if eos_token_id is not None:
+            generation_kwargs["eos_token_id"] = eos_token_id
         if do_sample:
             generation_kwargs.setdefault("temperature", batch[0].temperature)
         else:
@@ -783,6 +802,19 @@ class BaseTransformerSession(BaseInferenceSession):
             generation_kwargs["top_p"] = 1.0
             generation_kwargs.pop("top_k", None)
         return generation_kwargs
+
+    # Model configs may declare multiple EOS ids even when the tokenizer exposes only one primary EOS token.
+    def _model_eos_token_id(self) -> Any | None:
+        """Resolve EOS ids without discarding model-specific generation terminators."""
+        for source in (
+            getattr(self.model, "generation_config", None),
+            getattr(self.model, "config", None),
+            self.tokenizer,
+        ):
+            eos_token_id = getattr(source, "eos_token_id", None)
+            if eos_token_id is not None:
+                return eos_token_id
+        return None
 
     # Prefer pretokenized ids when available so repeated prompt encoding stays off the hot path.
     def _encode_standard_batch(self, batch: list[GenerationRequest]) -> dict[str, Any]:
@@ -809,7 +841,12 @@ class BaseTransformerSession(BaseInferenceSession):
         from transformers import GenerationConfig
 
         generation_kwargs = self._build_generation_kwargs(batch)
-        generation_config = GenerationConfig.from_model_config(self.model.config)
+        model_generation_config = getattr(self.model, "generation_config", None)
+        generation_config = (
+            deepcopy(model_generation_config)
+            if model_generation_config is not None
+            else GenerationConfig.from_model_config(self.model.config)
+        )
         for key, value in generation_kwargs.items():
             setattr(generation_config, key, value)
         common_stop_strings = _common_stop_strings(batch)
