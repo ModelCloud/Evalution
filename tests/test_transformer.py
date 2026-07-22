@@ -24,7 +24,7 @@ from evalution.engines.base import (
 )
 from evalution.engines.transformers_common import _resolve_input_device, _seed_transformer_runtime
 from evalution.engines.transformers import Transformers, TransformersSession
-from evalution.engines.transformers_compat import TransformersCompat
+from evalution.engines.transformers_compat import TransformersCompat, TransformersCompatSession
 
 
 def test_transformer_defaults_batch_size_to_auto() -> None:
@@ -1282,6 +1282,59 @@ def test_transformer_session_prepare_requests_batches_tokenization() -> None:
     assert prepared[1].input_ids == [2, 3, 4]
     assert prepared[2].rendered_prompt == "Q: 3 + 3\nA:"
     assert prepared[2].input_ids == [9, 9, 9]
+
+
+def test_transformer_session_preserves_model_generation_and_chat_template_defaults() -> None:
+    """Verify checkpoint EOS ids and chat-template defaults survive Evalution request preparation."""
+    class FakeTokenizer:
+        """Capture the template controls used to render a Laguna-shaped request."""
+        # Keep the primary tokenizer EOS distinct from the model's assistant-boundary EOS.
+        pad_token_id = 9
+        eos_token_id = 2
+
+        def __init__(self) -> None:
+            """Initialize this object."""
+            self.template_kwargs: dict[str, object] = {}
+
+        def apply_chat_template(self, messages, **kwargs):
+            """Render a minimal thinking marker while recording template kwargs."""
+            del messages
+            self.template_kwargs = dict(kwargs)
+            marker = "<think>" if kwargs.get("enable_thinking") else "</think>"
+            return f"<assistant>{marker}"
+
+    model_config = PretrainedConfig(eos_token_id=[2, 24], pad_token_id=9)
+    generation_config = transformers.GenerationConfig.from_model_config(model_config)
+    generation_config.default_chat_template_kwargs = {"enable_thinking": True}
+    tokenizer = FakeTokenizer()
+    session = TransformersCompatSession(
+        config=TransformersCompat(device="cpu"),
+        model_config=Model(path="/tmp/laguna"),
+        model=SimpleNamespace(config=model_config, generation_config=generation_config),
+        tokenizer=tokenizer,
+        input_device=torch.device("cpu"),
+    )
+    request = GenerationRequest(
+        messages=[{"role": "user", "content": "What is 2 + 2?"}],
+        stop=["Q:", "</assistant>"],
+    )
+
+    generation_kwargs = session._build_generation_kwargs([request])
+    rendered = session._render_request(request)
+    continuous_config = session._build_generation_config([request])
+
+    assert generation_kwargs["eos_token_id"] == [2, 24]
+    assert rendered == "<assistant><think>"
+    assert tokenizer.template_kwargs == {
+        "enable_thinking": True,
+        "tokenize": False,
+        "add_generation_prompt": True,
+    }
+    assert continuous_config is not generation_config
+    assert continuous_config.eos_token_id == [2, 24]
+    assert continuous_config.default_chat_template_kwargs == {"enable_thinking": True}
+    assert continuous_config.stop_strings == ["Q:", "</assistant>"]
+    assert getattr(generation_config, "stop_strings", None) is None
 
 
 def test_transformer_session_generate_reuses_pretokenized_requests() -> None:

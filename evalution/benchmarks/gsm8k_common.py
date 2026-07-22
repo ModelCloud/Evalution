@@ -141,7 +141,7 @@ def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
     return {
         "base": VariantSpec(
             task_name=task_prefix,
-            stop_strings=("Question:", "</s>", "<|im_end|>"),
+            stop_strings=("Question:", "</s>", "<|im_end|>", "</assistant>"),
             prompt_builder=base_prompt,
             target_builder=full_answer,
             num_fewshot=5,
@@ -149,7 +149,7 @@ def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
         ),
         "cot": VariantSpec(
             task_name=f"{task_prefix}_cot",
-            stop_strings=("Q:", "</s>", "<|im_end|>"),
+            stop_strings=("Q:", "</s>", "<|im_end|>", "</assistant>"),
             prompt_builder=cot_prompt,
             target_builder=full_answer,
             num_fewshot=8,
@@ -157,7 +157,7 @@ def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
         ),
         "cot_zeroshot": VariantSpec(
             task_name=f"{task_prefix}_cot_zeroshot",
-            stop_strings=("Q:", "</s>", "<|im_end|>"),
+            stop_strings=("Q:", "</s>", "<|im_end|>", "</assistant>"),
             prompt_builder=cot_zeroshot_prompt,
             target_builder=full_answer,
             num_fewshot=0,
@@ -165,7 +165,14 @@ def build_variant_specs(task_prefix: str) -> dict[str, VariantSpec]:
         ),
         "cot_llama": VariantSpec(
             task_name=f"{task_prefix}_cot_llama",
-            stop_strings=("<|eot_id|>", "<|start_header_id|>user<|end_header_id|>", "Q:", "</s>", "<|im_end|>"),
+            stop_strings=(
+                "<|eot_id|>",
+                "<|start_header_id|>user<|end_header_id|>",
+                "Q:",
+                "</s>",
+                "<|im_end|>",
+                "</assistant>",
+            ),
             prompt_builder=llama_prompt,
             target_builder=full_answer,
             num_fewshot=8,
