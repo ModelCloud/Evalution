@@ -279,6 +279,20 @@ class BaseEnginePagedBatchingConfig:
     kv_padding_interval_size: int = 0
     max_cached_graphs: int = 0
 
+    def __post_init__(self) -> None:
+        """Disable CUDA graph capture for paged attention by default.
+
+        ``transformers`` continuous batching defaults ``use_cuda_graph=True`` for flash-attention
+        paths, but ``flash_attn_with_kvcache`` is not currently CUDA-graph capture-safe. When
+        ``attn_implementation`` contains a ``paged`` marker and ``use_cuda_graph`` was not
+        explicitly provided, default to disabled so paged Flash Attention can run.
+        """
+        if self.use_cuda_graph is not None:
+            return
+        attn = getattr(self, "attn_implementation", None)
+        if isinstance(attn, str) and "paged" in [part.strip() for part in attn.split("|")]:
+            self.use_cuda_graph = (False, False)
+
 
 # Keep the older type name available inside suite modules while the concrete base class stays explicit.
 InferenceSession = BaseInferenceSession
