@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from datasets import Dataset
+from datasets import Dataset, IterableDataset
 
 from evalution.benchmarks.data import load_suite_dataset, select_docs
 
@@ -38,8 +38,8 @@ def test_load_suite_dataset_uses_local_cache_for_streaming() -> None:
     assert captured["kwargs"]["stream"] is False
 
 
-def test_load_suite_dataset_returns_cached_dataset_for_streaming() -> None:
-    """Verify stream=True returns a lazily-iterable cached Dataset, not a Hub stream."""
+def test_load_suite_dataset_returns_cached_iterable_for_streaming() -> None:
+    """Verify stream=True caches the dataset locally and returns a lazy IterableDataset."""
     captured: dict[str, Any] = {}
     cached = Dataset.from_list([{"value": "cached"}])
 
@@ -60,7 +60,8 @@ def test_load_suite_dataset_returns_cached_dataset_for_streaming() -> None:
         stream=True,
     )
 
-    assert rows is cached
+    assert isinstance(rows, IterableDataset)
+    assert [row["value"] for row in rows] == ["cached"]
     assert captured["kwargs"]["stream"] is False
 
 

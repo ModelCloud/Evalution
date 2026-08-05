@@ -128,8 +128,9 @@ def load_suite_dataset(
     if stream:
         # `stream=True` means the suite wants lazy row iteration for inference batching,
         # not live network streaming from the Hub. Force the loader to use `stream=False`
-        # so the dataset is fetched/cached locally first; the suite then streams reads
-        # from the returned object.
+        # so the dataset is fetched/cached locally first, then convert the cached
+        # Dataset into an IterableDataset that streams rows and shards from disk without
+        # buffering the whole split into memory.
         kwargs["stream"] = False
     dataset_load_started = perf_counter()
     with spinner(f"{task_name}: loading dataset"):
@@ -137,6 +138,12 @@ def load_suite_dataset(
             loaded_docs = _invoke_dataset_loader(loader, dataset_path, **kwargs)
         else:
             loaded_docs = _invoke_dataset_loader(loader, dataset_path, dataset_name, **kwargs)
+    if stream and hasattr(loaded_docs, "to_iterable_dataset"):
+        cached_docs = loaded_docs
+        loaded_docs = cached_docs.to_iterable_dataset()
+        cached_splits = getattr(getattr(cached_docs, "info", None), "splits", None)
+        if cached_splits is not None:
+            loaded_docs.info.splits = cached_splits
     return loaded_docs, perf_counter() - dataset_load_started
 
 
