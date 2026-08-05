@@ -8,8 +8,9 @@ from datasets import Dataset
 from evalution.benchmarks.data import load_suite_dataset, select_docs
 
 
-def test_load_suite_dataset_forwards_streaming_flag() -> None:
-    """Verify load suite dataset forwards streaming flag."""
+def test_load_suite_dataset_uses_local_cache_for_streaming() -> None:
+    """Verify load suite dataset uses local cache instead of streaming from the Hub."""
+    # Use the cached local dataset instead of streaming from the Hub.
     captured: dict[str, Any] = {}
 
     def loader(dataset_path: str, dataset_name: str | None = None, **kwargs: Any) -> list[str]:
@@ -34,7 +35,33 @@ def test_load_suite_dataset_forwards_streaming_flag() -> None:
     assert captured["name"] == "name"
     assert captured["kwargs"]["split"] == "test"
     assert captured["kwargs"]["cache_dir"] == "cache"
-    assert captured["kwargs"]["stream"] is True
+    assert captured["kwargs"]["stream"] is False
+
+
+def test_load_suite_dataset_returns_cached_dataset_for_streaming() -> None:
+    """Verify stream=True returns a lazily-iterable cached Dataset, not a Hub stream."""
+    captured: dict[str, Any] = {}
+    cached = Dataset.from_list([{"value": "cached"}])
+
+    def loader(dataset_path: str, dataset_name: str | None = None, **kwargs: Any) -> Dataset:
+        """Support the surrounding tests with loader."""
+        captured["path"] = dataset_path
+        captured["name"] = dataset_name
+        captured["kwargs"] = kwargs
+        return cached
+
+    rows, _ = load_suite_dataset(
+        loader,
+        task_name="foo",
+        dataset_path="path",
+        dataset_name="name",
+        split="test",
+        cache_dir="cache",
+        stream=True,
+    )
+
+    assert rows is cached
+    assert captured["kwargs"]["stream"] is False
 
 
 def test_load_suite_dataset_falls_back_to_streaming_kwarg() -> None:
@@ -61,7 +88,7 @@ def test_load_suite_dataset_falls_back_to_streaming_kwarg() -> None:
     )
 
     assert rows == ["row"]
-    assert captured["kwargs"]["streaming"] is True
+    assert captured["kwargs"]["streaming"] is False
 
 
 def test_load_suite_dataset_falls_back_to_streaming_after_builder_config_error() -> None:
@@ -88,7 +115,7 @@ def test_load_suite_dataset_falls_back_to_streaming_after_builder_config_error()
     )
 
     assert rows == ["row"]
-    assert captured["kwargs"]["streaming"] is True
+    assert captured["kwargs"]["streaming"] is False
 
 
 def test_select_docs_can_pick_explicit_dataset_rows_before_capping() -> None:

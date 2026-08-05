@@ -125,6 +125,12 @@ def load_suite_dataset(
         # path in `_invoke_dataset_loader` can translate the call at the final boundary.
         "stream": stream,
     }
+    if stream:
+        # `stream=True` means the suite wants lazy row iteration for inference batching,
+        # not live network streaming from the Hub. Force the loader to use `stream=False`
+        # so the dataset is fetched/cached locally first; the suite then streams reads
+        # from the returned object.
+        kwargs["stream"] = False
     dataset_load_started = perf_counter()
     with spinner(f"{task_name}: loading dataset"):
         if dataset_name is None:
