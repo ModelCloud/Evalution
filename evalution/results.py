@@ -44,6 +44,7 @@ class RunResult(_AsDictMixin):
     model: dict[str, Any]
     engine: dict[str, Any]
     tests: list[TestResult]
+    versions: dict[str, str | None] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
