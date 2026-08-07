@@ -89,6 +89,10 @@ class _SGLangPythonClient(_SGLangClient):
             raise RuntimeError("sglang async_generate returned an unexpected batched response")
         return normalized[0]
 
+    def run_coroutine(self, coroutine: Any) -> Any:
+        """Run asynchronous client work on SGLang's persistent event loop."""
+        return self.engine.loop.run_until_complete(coroutine)
+
     def gc(self) -> None:
         """Release reusable intermediate state for this object."""
         flush_cache = getattr(self.engine, "flush_cache", None)
@@ -814,7 +818,10 @@ class SGLangSession(BaseInferenceSession):
                     await asyncio.gather(*pending, return_exceptions=True)
 
             try:
-                asyncio.run(run())
+                # Reuse SGLang's loop so its communicators remain usable by
+                # synchronous control calls such as flush_cache().
+                run_coroutine = getattr(self.client, "run_coroutine", asyncio.run)
+                run_coroutine(run())
             except Exception as exc:
                 result_queue.put(exc)
             finally:
