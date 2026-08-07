@@ -293,6 +293,57 @@ def test_sglang_session_generate_continuous_refills_open_slots_immediately() -> 
     assert event_log.index("start:ae") < event_log.index("end:ab")
 
 
+def test_sglang_python_client_reuses_engine_loop_for_generation_and_gc() -> None:
+    """Continuous generation and cache flushing must use the same event loop."""
+
+    class FakeEngine:
+        """Track the event loop used by data-plane and control-plane calls."""
+
+        def __init__(self) -> None:
+            self.loop = asyncio.new_event_loop()
+            self.generate_loop = None
+            self.flush_loop = None
+
+        async def async_generate(self, **payload):
+            self.generate_loop = asyncio.get_running_loop()
+            input_ids = list(payload["input_ids"])
+            text = "".join(chr(96 + token_id) for token_id in input_ids)
+            return {"text": text + "z", "meta_info": {}}
+
+        def flush_cache(self) -> None:
+            async def flush() -> None:
+                self.flush_loop = asyncio.get_running_loop()
+
+            self.loop.run_until_complete(flush())
+
+    engine = FakeEngine()
+    session = SGLangSession(
+        config=SGLang(batch_size=1),
+        model_config=Model(path="/tmp/model"),
+        model=SimpleNamespace(config=SimpleNamespace(max_position_embeddings=2048)),
+        tokenizer=FakeTokenizer(),
+        prepare_tokenizer=None,
+        input_device=SimpleNamespace(type="cpu"),
+        generation_backend="sglang.generate",
+        client=_SGLangPythonClient(engine=engine),
+    )
+
+    try:
+        outputs = list(
+            session.generate_continuous(
+                [("request", GenerationRequest(prompt="ab"))],
+                batch_size=1,
+            )
+        )
+        session.gc()
+    finally:
+        engine.loop.close()
+
+    assert outputs[0][1].text == "z"
+    assert engine.generate_loop is engine.loop
+    assert engine.flush_loop is engine.loop
+
+
 def test_sglang_session_loglikelihood_uses_in_process_token_scores() -> None:
     """Score continuations from SGLang prompt-logprob metadata."""
 
