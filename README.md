@@ -103,7 +103,11 @@ result = (
 ```
 
 The chained object is already the completed run handle. Accessing `result.model`, `result.engine`,
-`result.tests`, or `result.to_dict()` finalizes the run and closes the engine session implicitly.
+`result.tests`, `result.versions`, or `result.to_dict()` finalizes the run and closes the engine
+session implicitly. Serialized results include a top-level `versions` map for Evalution,
+GPTQModel, vLLM, SGLang, Transformers, Hugging Face Hub, Datasets, Torch, and Triton. Missing
+optional runtimes are recorded as `null`; editable installs and local source links include a
+`local-git-<commit>` suffix.
 
 Compare usage ⚖️
 

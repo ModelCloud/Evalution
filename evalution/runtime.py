@@ -10,6 +10,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Any
 
+from evalution._banner import collect_score_report_versions
 from evalution.config import Model, coerce_model
 from evalution.engines.base import BaseEngine, BaseInferenceSession
 from evalution.logbar import (
@@ -33,6 +34,7 @@ class EvaluationRun:
     _session: BaseInferenceSession | None = field(default=None, init=False, repr=False)
     _execution: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _test_results: list[Any] = field(default_factory=list, init=False, repr=False)
+    _versions: dict[str, str | None] | None = field(default=None, init=False, repr=False)
     _closed: bool = field(default=False, init=False, repr=False)
     _logging_context: LoggingContext | None = field(default=None, init=False, repr=False)
 
@@ -70,6 +72,11 @@ class EvaluationRun:
         """Implement tests for evaluation run."""
         return self._materialize_result(close=True).tests
 
+    @property
+    def versions(self) -> dict[str, str | None]:
+        """Return the exact package versions recorded with this evaluation."""
+        return self._materialize_result(close=True).versions
+
     def result(self, *, close: bool = True) -> RunResult:
         """Implement result for evaluation run."""
         return self._materialize_result(close=close)
@@ -103,6 +110,8 @@ class EvaluationRun:
 
     def _materialize_result(self, *, close: bool) -> RunResult:
         """Implement materialize result for evaluation run."""
+        if self._versions is None:
+            self._versions = collect_score_report_versions()
         if close:
             self.close()
 
@@ -115,6 +124,7 @@ class EvaluationRun:
             model=self._model_config.to_dict(),
             engine=engine_config,
             tests=list(self._test_results),
+            versions=dict(self._versions),
         )
 
     def bind_logging_context(self, context: LoggingContext | None) -> EvaluationRun:

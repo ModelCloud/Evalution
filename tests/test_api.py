@@ -20,6 +20,7 @@ from evalution.engines.base import (
 # Keep shared test fixtures and expectations explicit at module scope.
 gsm8k_platinum_module = importlib.import_module("evalution.benchmarks.gsm8k_platinum")
 arc_challenge_module = importlib.import_module("evalution.benchmarks.arc_challenge")
+runtime_module = importlib.import_module("evalution.runtime")
 
 
 class FakeEngine(BaseEngine):
@@ -100,6 +101,16 @@ class FakeSession(BaseInferenceSession):
 
 def test_run_accepts_dict_model_and_returns_structured_results(monkeypatch) -> None:
     """Verify run accepts dict model and returns structured results."""
+    expected_versions = {
+        "gptqmodel": "7.3.3 (local-git-0123456789ab)",
+        "vllm": None,
+        "torch": "2.13.0",
+    }
+    monkeypatch.setattr(
+        runtime_module,
+        "collect_score_report_versions",
+        lambda: expected_versions,
+    )
     dataset = Dataset.from_list(
         [
             {
@@ -120,6 +131,8 @@ def test_run_accepts_dict_model_and_returns_structured_results(monkeypatch) -> N
     assert result.model["path"] == "/tmp/model"
     assert result.engine["name"] == "fake"
     assert result.engine["execution"]["generation_backend"] == "continuous_batching"
+    assert result.versions == expected_versions
+    assert result.to_dict()["versions"] == expected_versions
     assert len(result.tests) == 1
     assert result.tests[0].name == "gsm8k_platinum_cot"
     assert result.tests[0].metrics["acc,num"] == 1.0
