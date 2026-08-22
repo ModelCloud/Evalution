@@ -13,8 +13,6 @@ from evalution.benchmarks.base import TestSuite
 # Keep benchmark defaults and public task ids explicit at module scope.
 CAPABILITY_GATED_TASKS = (
     "swe_bench_verified",
-    "swe_bench_multilingual",
-    "swe_bench_pro",
     "terminal_bench_2",
     "claw_eval_avg",
     "claw_eval_pass3",
@@ -33,20 +31,6 @@ CAPABILITY_GATED_TASKS = (
 _CAPABILITY_GATED_BENCHMARKS = {
     "swe_bench_verified": {
         "benchmark_name": "SWE-bench Verified",
-        "required_capabilities": (
-            "repository patch execution",
-            "project-specific test harness execution",
-        ),
-    },
-    "swe_bench_multilingual": {
-        "benchmark_name": "SWE-bench Multilingual",
-        "required_capabilities": (
-            "repository patch execution",
-            "project-specific multilingual test harness execution",
-        ),
-    },
-    "swe_bench_pro": {
-        "benchmark_name": "SWE-bench Pro",
         "required_capabilities": (
             "repository patch execution",
             "project-specific test harness execution",
@@ -147,16 +131,6 @@ def _capability_gated(task_id: str, **kwargs: Any) -> CapabilityGatedSuite:
 def swe_bench_verified(**kwargs: Any) -> CapabilityGatedSuite:
     """Implement swe_bench_verified for this module."""
     return _capability_gated("swe_bench_verified", **kwargs)
-
-
-def swe_bench_multilingual(**kwargs: Any) -> CapabilityGatedSuite:
-    """Implement swe_bench_multilingual for this module."""
-    return _capability_gated("swe_bench_multilingual", **kwargs)
-
-
-def swe_bench_pro(**kwargs: Any) -> CapabilityGatedSuite:
-    """Implement swe_bench_pro for this module."""
-    return _capability_gated("swe_bench_pro", **kwargs)
 
 
 def terminal_bench_2(**kwargs: Any) -> CapabilityGatedSuite:

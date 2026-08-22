@@ -824,8 +824,6 @@ def test_package_exports_recent_benchmark_registrations() -> None:
     assert evalution.benchmarks.CapabilityGatedSuite is not None
     assert evalution.benchmarks.CAPABILITY_GATED_TASKS == (
         "swe_bench_verified",
-        "swe_bench_multilingual",
-        "swe_bench_pro",
         "terminal_bench_2",
         "claw_eval_avg",
         "claw_eval_pass3",
