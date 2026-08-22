@@ -752,6 +752,7 @@ built-in suite names covered by that row.
 | --- | --- |
 | `aexams` | EXAMS `hardalov-etal-2020-exams` |
 | `agieval` | AGIEval `zhong2023agieval` |
+| `agentbench`, `gaia`, `gaia_level1`, `gaia_level2`, `gaia_level3`, `osworld`, `swe_bench`, `webarena`, `webarena_hard` | Agentic benchmarks: AgentBench `liu2023agentbench`, GAIA `mialon2023gaia`, OSWorld `xie2024osworld`, SWE-bench `jimenez2024swe-bench`, WebArena `zhou2024webarena` |
 | `afrimgsm` | IrokoBench AfriMGSM `adelani2025irokobench` |
 | `afrimmlu` | IrokoBench AfriMMLU `adelani2025irokobench` |
 | `aime`, `aime24`, `aime25`, `aime26` | AIME `aime_1983_2024`, `aime_2024`, `aime_2025`, `aime_2026` |
