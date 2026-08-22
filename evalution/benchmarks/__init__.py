@@ -286,6 +286,23 @@ from .capability_gated import (
     vita_bench,
     widesearch,
 )
+from .agentic import (
+    AGENTIC_TASKS,
+    AgentBench,
+    GAIA,
+    OSWorld,
+    SWEBench,
+    WebArena,
+    agentbench,
+    gaia,
+    gaia_level1,
+    gaia_level2,
+    gaia_level3,
+    osworld,
+    swe_bench,
+    webarena,
+    webarena_hard,
+)
 
 for _crows_pairs_task in CROWS_PAIRS_TASKS:
     globals()[_crows_pairs_task] = getattr(_crows_pairs_module, _crows_pairs_task)
@@ -1074,6 +1091,12 @@ __all__ = [
     "xwinograd_pt",
     "xwinograd_ru",
     "xwinograd_zh",
+    "AGENTIC_TASKS",
+    "AgentBench",
+    "GAIA",
+    "OSWorld",
+    "SWEBench",
+    "WebArena",
 ]
 
 __all__.extend(BBH_TASKS)
@@ -1111,3 +1134,5 @@ __all__.extend(HAERAE_TASKS)
 __all__.extend(KORMEDMCQA_TASKS)
 __all__.extend(HMMT_TASKS)
 __all__.extend(CAPABILITY_GATED_TASKS)
+__all__.extend(AGENTIC_TASKS)
+__all__ = list(dict.fromkeys(__all__))

@@ -1,0 +1,123 @@
+# SPDX-FileCopyrightText: 2026 ModelCloud.ai
+# SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
+# SPDX-License-Identifier: Apache-2.0
+# Contact: qubitium@modelcloud.ai, x.com/qubitium
+
+"""CPU-only forward-pass validation for the new agentic benchmark suites.
+
+These tests use ``sshleifer/tiny-gpt2`` on CPU with a single sample per suite
+and a very small ``max_new_tokens`` value.  They verify that each suite can
+load data, prepare a request, run a forward pass, and return a ``TestResult``
+without crashing.  Scores are expected to be near zero because the model is
+not solving agentic tasks.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import pytest
+from datasets import Dataset
+
+import evalution.benchmarks.agentic as agentic_module
+from evalution.benchmarks import (
+    agentbench,
+    gaia,
+    gaia_level1,
+    gaia_level2,
+    gaia_level3,
+    osworld,
+    swe_bench,
+    webarena,
+    webarena_hard,
+)
+from evalution.config import Model
+from evalution.engines.transformers_compat import TransformersCompat
+
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+
+TINY_MODEL = "sshleifer/tiny-gpt2"
+
+
+@pytest.fixture(scope="module")
+def session() -> Any:
+    """Build a tiny CPU TransformersCompat session shared by all tests."""
+    engine = TransformersCompat(
+        device="cpu",
+        attn_implementation="eager",
+        batch_size=1,
+        max_new_tokens=5,
+    )
+    return engine.build(Model(path=TINY_MODEL))
+
+
+def _fake_gaia_loader(*args: Any, **kwargs: Any) -> Dataset:
+    """Return a minimal in-memory GAIA split to avoid gated dataset auth."""
+    del args, kwargs
+    return Dataset.from_dict(
+        {
+            "task_id": ["gaia-1"],
+            "Question": ["What is 2 + 2?"],
+            "Final answer": ["4"],
+            "file_name": [""],
+            "file_path": [""],
+            "Level": ["1"],
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        agentbench,
+        osworld,
+        webarena,
+        webarena_hard,
+    ],
+)
+def test_public_agentic_suite_forward_pass(factory: Any, session: Any) -> None:
+    """Run one forward pass for each public agentic benchmark suite."""
+    suite = factory(max_rows=1, batch_size=1, max_new_tokens=5)
+    result = suite.evaluate(session)
+
+    assert result.name == suite.task_name()
+    assert len(result.samples) == 1
+    assert "em" in result.samples[0].scores
+    assert result.metrics == {"em": result.samples[0].scores["em"]}
+
+
+def test_swe_bench_forward_pass(session: Any) -> None:
+    """Run one forward pass for SWE-bench using the dev split for speed."""
+    suite = swe_bench(split="dev", max_rows=1, batch_size=1, max_new_tokens=5)
+    result = suite.evaluate(session)
+
+    assert result.name == "swe_bench"
+    assert len(result.samples) == 1
+    assert "em" in result.samples[0].scores
+
+
+@pytest.mark.parametrize(
+    "factory,expected_name",
+    [
+        (gaia, "gaia"),
+        (gaia_level1, "gaia_level1"),
+        (gaia_level2, "gaia_level2"),
+        (gaia_level3, "gaia_level3"),
+    ],
+)
+def test_gaia_forward_pass(
+    factory: Any,
+    expected_name: str,
+    session: Any,
+    monkeypatch: Any,
+) -> None:
+    """Run one forward pass for each GAIA variant using a mocked dataset."""
+    monkeypatch.setattr(agentic_module, "load_dataset", _fake_gaia_loader)
+
+    suite = factory(max_rows=1, batch_size=1, max_new_tokens=5)
+    result = suite.evaluate(session)
+
+    assert result.name == expected_name
+    assert len(result.samples) == 1
+    assert "em" in result.samples[0].scores
