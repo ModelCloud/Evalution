@@ -24,6 +24,7 @@ import evalution.benchmarks.agentic as agentic_module
 from evalution.agent_runtime import AgentRuntimeResult, BaseAgentRuntime
 from evalution.benchmarks import (
     agentbench,
+    babi,
     deep_swe,
     gaia,
     gaia_level1,
@@ -313,6 +314,64 @@ def test_toolathlon_verified_local_task_forward_pass(tmp_path: Any) -> None:
 def test_tool_calling_tasks_require_agent_runtime(factory: Any) -> None:
     """Refuse to evaluate tool-calling suites when no runtime is configured."""
     suite = factory(dataset_path="/nonexistent-tasks")
+
+    with pytest.raises(ValueError, match="requires.*AgentRuntime"):
+        suite.evaluate(FakeSession("any output"))
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        agentbench,
+        deep_swe,
+        gaia,
+        gaia_level1,
+        gaia_level2,
+        gaia_level3,
+        osworld,
+        swe_atlas_qna,
+        swe_bench,
+        swe_bench_multilingual,
+        swe_bench_pro,
+        terminal_bench_21,
+        toolathlon_verified,
+        webarena,
+        webarena_hard,
+    ],
+)
+def test_agentic_suites_declare_is_agentic(factory: Any) -> None:
+    """Every agentic scaffold carries the declarative is_agentic flag."""
+    assert factory().is_agentic is True
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [terminal_bench_21, deep_swe, toolathlon_verified],
+)
+def test_tool_calling_suites_declare_has_tool_calling(factory: Any) -> None:
+    """Only command-executing suites carry has_tool_calling."""
+    assert factory().has_tool_calling is True
+    assert factory().is_agentic is True
+
+
+def test_text_scaffold_is_not_flagged_as_tool_calling() -> None:
+    """Dataset-backed agentic scaffolds do not execute generated commands."""
+    suite = swe_bench()
+    assert suite.is_agentic is True
+    assert suite.has_tool_calling is False
+
+
+def test_non_agentic_suite_defaults_to_unflagged() -> None:
+    """Regular suites default to both flags off."""
+    suite = babi()
+    assert suite.is_agentic is False
+    assert suite.has_tool_calling is False
+
+
+def test_central_enforcement_applies_to_any_tool_calling_suite() -> None:
+    """The shared pipeline blocks any suite that declares tool calling without a runtime."""
+    suite = babi()
+    suite.has_tool_calling = True
 
     with pytest.raises(ValueError, match="requires.*AgentRuntime"):
         suite.evaluate(FakeSession("any output"))

@@ -17,7 +17,7 @@ import os
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pcre
 from datasets import Dataset, load_dataset
@@ -27,8 +27,8 @@ from evalution.benchmarks.agentic_docker import extract_command
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
 from evalution.config import AgentRuntimeConfig
-from evalution.engines.base import GenerationOutput, GenerationRequest, InferenceSession
-from evalution.results import SampleResult, TestResult
+from evalution.engines.base import GenerationOutput, GenerationRequest
+from evalution.results import SampleResult
 
 # Keep benchmark defaults and public task ids explicit at module scope.
 _STOP_STRINGS = (
@@ -123,6 +123,8 @@ def _agentbench_target(doc: dict[str, Any]) -> str:
 class SWEBench(BaseTestSuite):
     """SWE-bench text-generation scaffold."""
 
+    is_agentic: ClassVar[bool] = True
+
     dataset_path: str = "princeton-nlp/SWE-bench"
     dataset_name: str | None = None
     split: str = "test"
@@ -197,6 +199,8 @@ class SWEBench(BaseTestSuite):
 class WebArena(BaseTestSuite):
     """WebArena text-generation scaffold."""
 
+    is_agentic: ClassVar[bool] = True
+
     dataset_path: str = "AmineHA/WebArena-Verified"
     dataset_name: str | None = None
     split: str = "full"
@@ -270,6 +274,8 @@ class WebArena(BaseTestSuite):
 @dataclass(slots=True)
 class GAIA(BaseTestSuite):
     """GAIA text-generation scaffold."""
+
+    is_agentic: ClassVar[bool] = True
 
     dataset_path: str = "gaia-benchmark/GAIA"
     dataset_name: str = "2023_level1"
@@ -346,6 +352,8 @@ class GAIA(BaseTestSuite):
 class OSWorld(BaseTestSuite):
     """OSWorld text-generation scaffold using the public text-only gold set."""
 
+    is_agentic: ClassVar[bool] = True
+
     dataset_path: str = "hud-evals/OSWorld-Gold"
     dataset_name: str | None = None
     split: str = "train"
@@ -417,6 +425,8 @@ class OSWorld(BaseTestSuite):
 @dataclass(slots=True)
 class AgentBench(BaseTestSuite):
     """AgentBench text-generation scaffold (OSBench split)."""
+
+    is_agentic: ClassVar[bool] = True
 
     dataset_path: str = "iFurySt/AgentBench"
     dataset_name: str = "default"
@@ -728,6 +738,8 @@ class SWEBenchPro(SWEBench):
 class SWEAtlasQnA(BaseTestSuite):
     """SWE Atlas (Codebase QnA) text-generation scaffold."""
 
+    is_agentic: ClassVar[bool] = True
+
     dataset_path: str = "ScaleAI/SWE-Atlas-QnA"
     dataset_name: str | None = None
     split: str = "test"
@@ -806,8 +818,11 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     """Base class for agentic benchmarks that ship as local Harbor task directories.
 
     These suites execute model-generated commands, so ``agent_runtime`` must
-    point at a sandboxed runtime; evaluation refuses to start otherwise.
+    point at a sandboxed runtime; the shared pipeline refuses to start otherwise.
     """
+
+    is_agentic: ClassVar[bool] = True
+    has_tool_calling: ClassVar[bool] = True
 
     dataset_name: str | None = None
     split: str = "test"
@@ -839,11 +854,6 @@ class _LocalAgenticBenchmark(BaseTestSuite):
                 "to explicitly allow unisolated host execution."
             )
         return runtime
-
-    def evaluate(self, session: InferenceSession) -> TestResult:
-        """Refuse to evaluate tool-calling tasks without a configured runtime."""
-        self._require_agent_runtime()
-        return super().evaluate(session)
 
     def result_metadata(
         self,

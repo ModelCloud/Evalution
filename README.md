@@ -814,6 +814,12 @@ suite = benchmarks.deep_swe(
 Custom sandboxes implement `BaseAgentRuntime` (a single async-safe `run(command, ...) -> AgentRuntimeResult`
 method) and plug into `AgentRuntimeConfig` the same way.
 
+Every suite carries two declarative class flags: `is_agentic` marks agentic benchmark families, and
+`has_tool_calling` marks suites that execute model-generated commands. Evalution's shared evaluation
+pipeline reads these flags and refuses to start any tool-calling suite without a configured runtime —
+regardless of how the suite was constructed (Python API or YAML) — so new agentic benchmarks get the
+same enforcement for free by setting `has_tool_calling = True`.
+
 ## Supported Benchmarks 📚
 
 Evalution currently ships the following built-in benchmarks:
