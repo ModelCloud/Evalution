@@ -10,6 +10,10 @@ suite must run them through a sandboxed :class:`BaseAgentRuntime` such as
 :class:`DockerAgentRuntime` or :class:`SmolVmAgentRuntime`.  Running on the
 bare host is only allowed through the explicit, warning-emitting
 :class:`UnsafeLocalRuntime` escape hatch.
+
+Every runtime shares two common settings: ``path`` selects the runtime
+binary (``"auto"`` resolves through the current environment ``PATH``) and
+``image`` selects the default execution image.
 """
 
 from __future__ import annotations
@@ -20,6 +24,8 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+
+AUTO_PATH = "auto"
 
 
 @dataclasses.dataclass(slots=True)
@@ -33,8 +39,36 @@ class AgentRuntimeResult:
     duration_s: float
 
 
+def _resolve_path(path: str, default_binary: str) -> str:
+    """Resolve ``path="auto"`` to the runtime's default binary name."""
+    return default_binary if path == AUTO_PATH else path
+
+
 class BaseAgentRuntime(ABC):
-    """Common interface for isolated agent workload execution."""
+    """Common configuration and interface for isolated agent execution.
+
+    ``path`` locates the runtime CLI binary; the default ``"auto"`` uses the
+    binary name resolved from the current configured bin environment.
+    ``image`` is the default image used when a call does not override it.
+    """
+
+    DEFAULT_BINARY: str = ""
+
+    def __init__(
+        self,
+        *,
+        path: str = AUTO_PATH,
+        image: str | None = None,
+        timeout: float = 60.0,
+    ) -> None:
+        self.path = path
+        self.image = image
+        self.timeout = timeout
+
+    @property
+    def resolved_path(self) -> str:
+        """Return the concrete runtime binary used for execution."""
+        return _resolve_path(self.path, self.DEFAULT_BINARY)
 
     @abstractmethod
     def run(
@@ -54,18 +88,20 @@ class BaseAgentRuntime(ABC):
 class DockerAgentRuntime(BaseAgentRuntime):
     """Run agent commands in disposable Docker containers."""
 
+    DEFAULT_BINARY = "docker"
+    DEFAULT_IMAGE = "alpine:latest"
+
     def __init__(
         self,
-        docker_path: str = "docker",
-        image: str = "alpine:latest",
+        *,
+        path: str = AUTO_PATH,
+        image: str | None = None,
         timeout: float = 60.0,
         network: str = "none",
         pull: str = "never",
         shell: str = "sh",
     ) -> None:
-        self.docker_path = docker_path
-        self.image = image
-        self.timeout = timeout
+        super().__init__(path=path, image=image, timeout=timeout)
         self.network = network
         self.pull = pull
         self.shell = shell
@@ -81,10 +117,10 @@ class DockerAgentRuntime(BaseAgentRuntime):
         workdir: str | None = None,
     ) -> AgentRuntimeResult:
         """Run ``command`` in a fresh container."""
-        resolved_image = image or self.image
+        resolved_image = image or self.image or self.DEFAULT_IMAGE
         resolved_timeout = self.timeout if timeout is None else timeout
         docker_cmd = [
-            self.docker_path,
+            self.resolved_path,
             "run",
             "--rm",
             "-i",
@@ -112,19 +148,21 @@ class SmolVmAgentRuntime(BaseAgentRuntime):
     ephemeral hardware-isolated VM that is removed after exit.
     """
 
+    DEFAULT_BINARY = "smolvm"
+    DEFAULT_IMAGE = "alpine"
+
     def __init__(
         self,
-        smolvm_path: str = "smolvm",
-        image: str = "alpine",
+        *,
+        path: str = AUTO_PATH,
+        image: str | None = None,
         timeout: float = 60.0,
         network: bool = False,
         cpus: int | None = None,
         memory_mib: int | None = None,
         shell: str = "sh",
     ) -> None:
-        self.smolvm_path = smolvm_path
-        self.image = image
-        self.timeout = timeout
+        super().__init__(path=path, image=image, timeout=timeout)
         self.network = network
         self.cpus = cpus
         self.memory_mib = memory_mib
@@ -141,9 +179,9 @@ class SmolVmAgentRuntime(BaseAgentRuntime):
         workdir: str | None = None,
     ) -> AgentRuntimeResult:
         """Run ``command`` in an ephemeral smolvm machine."""
-        resolved_image = image or self.image
+        resolved_image = image or self.image or self.DEFAULT_IMAGE
         resolved_timeout = self.timeout if timeout is None else timeout
-        smolvm_cmd = [self.smolvm_path, "machine", "run"]
+        smolvm_cmd = [self.resolved_path, "machine", "run"]
         if self.network:
             smolvm_cmd.append("--net")
         if self.cpus is not None:
@@ -166,9 +204,11 @@ class SmolVmAgentRuntime(BaseAgentRuntime):
 class UnsafeLocalRuntime(BaseAgentRuntime):
     """Run agent commands directly on the host without any isolation."""
 
-    def __init__(self, shell: str = "sh", timeout: float = 60.0) -> None:
+    DEFAULT_BINARY = "sh"
+
+    def __init__(self, *, shell: str = "sh", timeout: float = 60.0) -> None:
+        super().__init__(path=AUTO_PATH, image=None, timeout=timeout)
         self.shell = shell
-        self.timeout = timeout
         warnings.warn(
             "UnsafeLocalRuntime executes agent commands directly on the host "
             "without sandboxing; only use it for fully trusted workloads.",

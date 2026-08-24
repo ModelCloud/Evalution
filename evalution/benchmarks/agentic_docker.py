@@ -17,6 +17,28 @@ import pcre
 _BASH_TAG_RE = pcre.compile(r"<bash>(.*?)</bash>", pcre.DOTALL | pcre.IGNORECASE)
 
 
+def try_extract_command(text: str) -> str | None:
+    """Return the explicit tool call in ``text``, or ``None`` when absent.
+
+    A tool call is an explicit ``<bash>...</bash>`` tag or a fenced code
+    block; plain prose never counts so agentic loops terminate deterministically.
+    """
+    text = text.strip()
+    bash_match = _BASH_TAG_RE.search(text)
+    if bash_match:
+        return bash_match.group(1).strip()
+
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        return "\n".join(lines).strip()
+
+    return None
+
+
 def extract_command(text: str) -> str:
     """Pull a shell command out of a model generation, stripping code fences."""
     text = text.strip()

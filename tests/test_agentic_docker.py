@@ -72,7 +72,7 @@ def test_docker_runtime_builds_configured_command(monkeypatch: pytest.MonkeyPatc
         return SimpleNamespace(stdout="ok", stderr="", returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    result = DockerAgentRuntime(docker_path="/opt/docker", network="host").run(
+    result = DockerAgentRuntime(path="/opt/docker", network="host").run(
         "printf '%s' hello",
         image="test:latest",
         env={"TOKEN": "value"},
@@ -112,7 +112,7 @@ def test_smolvm_runtime_builds_isolated_command(monkeypatch: pytest.MonkeyPatch)
         return SimpleNamespace(stdout="ok", stderr="", returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    SmolVmAgentRuntime(smolvm_path="/opt/smolvm", network=True).run(
+    SmolVmAgentRuntime(path="/opt/smolvm", network=True).run(
         "echo hello",
         image="alpine",
         env={"MODE": "test"},
@@ -144,6 +144,47 @@ def test_unsafe_local_runtime_warns_on_construction() -> None:
     """Constructing the host runtime emits a security warning."""
     with pytest.warns(RuntimeWarning, match="without sandboxing"):
         UnsafeLocalRuntime()
+
+
+def test_runtime_paths_default_to_auto_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``path="auto"`` resolves each runtime binary from the environment PATH."""
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append(command)
+        return SimpleNamespace(stdout="", stderr="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert DockerAgentRuntime().path == "auto"
+    assert DockerAgentRuntime().resolved_path == "docker"
+    assert SmolVmAgentRuntime().path == "auto"
+    assert SmolVmAgentRuntime().resolved_path == "smolvm"
+
+    DockerAgentRuntime().run("echo docker")
+    SmolVmAgentRuntime().run("echo smolvm")
+
+    assert calls[0][0] == "docker"
+    assert calls[1][0] == "smolvm"
+
+
+def test_runtime_image_defaults_apply(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Image resolution prefers call override, then runtime config, then default."""
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append(command)
+        return SimpleNamespace(stdout="", stderr="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    DockerAgentRuntime().run("echo a")
+    DockerAgentRuntime(image="custom:1").run("echo b")
+    SmolVmAgentRuntime().run("echo c")
+
+    assert calls[0][8] == "alpine:latest"
+    assert calls[1][8] == "custom:1"
+    assert calls[2][4] == "alpine"
 
 
 def test_unsafe_local_runtime_runs_on_host(monkeypatch: pytest.MonkeyPatch) -> None:

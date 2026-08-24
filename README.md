@@ -756,6 +756,16 @@ suite = benchmarks.terminal_bench_21(
 )
 ```
 
+Tool-calling suites run an intercept-execute-resume loop: when a generation contains an explicit
+tool call (a fenced `bash` code block or `<bash>...</bash>` tags), Evalution executes the command
+on the configured runtime, appends the observation to the conversation, and resumes inference
+until the model returns a final answer or `max_tool_turns` is exhausted. Set
+`apply_chat_template=True` on the suite to run the loop with instruct models.
+
+Every runtime shares two common settings: `path` selects the runtime binary and defaults to
+`"auto"`, which resolves the runtime's standard binary (`docker`, `smolvm`) from the current
+environment `PATH`; `image` selects the default execution image and can be overridden per task.
+
 ### DockerAgentRuntime (containers)
 
 Runs every generated command in a disposable `docker run --rm` container with no network access by
@@ -765,11 +775,11 @@ default. Requires a working Docker daemon.
 from evalution import DockerAgentRuntime
 
 runtime = DockerAgentRuntime(
-    docker_path="docker",   # Docker CLI binary
-    image="alpine:latest",  # default image when a task does not pin one
-    timeout=60.0,           # per-command timeout in seconds
-    network="none",         # container network mode; keep "none" for untrusted models
-    pull="never",           # never pull images from the network at run time
+    path="auto",           # "auto" resolves `docker` from PATH; or pass an explicit binary path
+    image="alpine:latest", # default image when a task does not pin one
+    timeout=60.0,          # per-command timeout in seconds
+    network="none",        # container network mode; keep "none" for untrusted models
+    pull="never",          # never pull images from the network at run time
 )
 ```
 
@@ -784,10 +794,10 @@ support (KVM on Linux).
 from evalution import SmolVmAgentRuntime
 
 runtime = SmolVmAgentRuntime(
-    smolvm_path="smolvm",  # smolvm CLI binary
-    image="alpine",        # OCI image to boot
+    path="auto",     # "auto" resolves `smolvm` from PATH
+    image="alpine",  # OCI image to boot
     timeout=60.0,
-    network=False,         # leave disabled for untrusted models
+    network=False,   # leave disabled for untrusted models
 )
 ```
 

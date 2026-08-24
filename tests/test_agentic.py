@@ -105,20 +105,35 @@ def _fake_swe_atlas_qna_loader(*args: Any, **kwargs: Any) -> Dataset:
 
 
 class FakeSession:
-    """Lightweight inference session that returns a fixed string for every request."""
+    """Scripted inference session: pops one reply per generate call.
+
+    A plain string repeats forever; a list is consumed in order and any extra
+    generate call raises so runaway tool loops fail loudly in tests.
+    """
 
     batch_size = 1
 
-    def __init__(self, text: str) -> None:
-        self._text = text
+    def __init__(self, replies: Any) -> None:
+        if isinstance(replies, str):
+            self._replies: list[str] = [replies]
+            self._infinite = True
+        else:
+            self._replies = list(replies)
+            self._infinite = False
+        self.prompts: list[str] = []
 
     def generate(self, requests: list[Any], batch_size: int) -> list[GenerationOutput]:
+        del batch_size
+        if not self._replies:
+            raise AssertionError("FakeSession received an unexpected extra generate() call")
+        text = self._replies[0] if self._infinite else self._replies.pop(0)
+        prompt = getattr(requests[0], "prompt", "") or ""
+        self.prompts.append(prompt)
         return [
             GenerationOutput(
-                prompt=getattr(request, "prompt", "") or "",
-                text=self._text,
+                prompt=prompt,
+                text=text,
             )
-            for request in requests
         ]
 
     def close(self) -> None:
@@ -241,25 +256,28 @@ def test_public_laguna_agentic_suite_forward_pass(
 
 
 def test_terminal_bench_21_local_task_forward_pass(tmp_path: Any) -> None:
-    """Run one forward pass for Terminal-Bench 2.1 using a local task directory."""
+    """Run the tool loop for Terminal-Bench 2.1 using a local task directory."""
     _make_local_task_dir(tmp_path, "task-1", "List files and exit.", "ls\n")
 
+    runtime = FakeAgentRuntime("ls\n")
     suite = terminal_bench_21(
         dataset_path=str(tmp_path),
         max_rows=1,
         batch_size=1,
         max_new_tokens=5,
-        agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("ls\n")),
+        agent_runtime=AgentRuntimeConfig(agent_runtime=runtime),
     )
-    result = suite.evaluate(FakeSession("<bash>ls</bash>"))
+    session = FakeSession(["<bash>ls</bash>", "ls"])
+    result = suite.evaluate(session)
 
     assert result.name == "terminal_bench_21"
     assert len(result.samples) == 1
     assert result.samples[0].scores["em"] == 1.0
+    assert result.samples[0].metadata["commands_executed"] == 1
 
 
 def test_deep_swe_local_task_forward_pass(tmp_path: Any) -> None:
-    """Run one forward pass for DeepSWE using a local task directory."""
+    """Run the tool loop for DeepSWE using a local task directory."""
     _make_local_task_dir(tmp_path, "task-1", "Fix the bug.", "diff --git\n")
 
     suite = deep_swe(
@@ -267,9 +285,9 @@ def test_deep_swe_local_task_forward_pass(tmp_path: Any) -> None:
         max_rows=1,
         batch_size=1,
         max_new_tokens=5,
-        agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("diff --git\n")),
+        agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("applied")),
     )
-    result = suite.evaluate(FakeSession("git apply fix.patch"))
+    result = suite.evaluate(FakeSession(["<bash>git apply fix.patch</bash>", "diff --git"]))
 
     assert result.name == "deep_swe"
     assert len(result.samples) == 1
@@ -277,7 +295,7 @@ def test_deep_swe_local_task_forward_pass(tmp_path: Any) -> None:
 
 
 def test_toolathlon_verified_local_task_forward_pass(tmp_path: Any) -> None:
-    """Run one forward pass for Toolathlon-Verified using a local task directory."""
+    """Run the tool loop for Toolathlon-Verified using a local task directory."""
     tasks_dir = tmp_path / "tasks"
     task_dir = tasks_dir / "task-1"
     task_dir.mkdir(parents=True)
@@ -300,11 +318,58 @@ def test_toolathlon_verified_local_task_forward_pass(tmp_path: Any) -> None:
         max_new_tokens=5,
         agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("expected tool output")),
     )
-    result = suite.evaluate(FakeSession("open the file"))
+    result = suite.evaluate(FakeSession(["<bash>cat answer</bash>", "expected tool output"]))
 
     assert result.name == "toolathlon_verified"
     assert len(result.samples) == 1
     assert result.samples[0].scores["em"] == 1.0
+
+
+def test_tool_loop_intercepts_and_resumes_inference(tmp_path: Any) -> None:
+    """Evalution intercepts the tool call, executes it on the runtime, and resumes."""
+    _make_local_task_dir(tmp_path, "task-1", "Print the marker.", "marker")
+    runtime = FakeAgentRuntime("marker")
+    suite = terminal_bench_21(
+        dataset_path=str(tmp_path),
+        max_rows=1,
+        batch_size=1,
+        max_new_tokens=5,
+        agent_runtime=AgentRuntimeConfig(agent_runtime=runtime),
+    )
+    session = FakeSession(["<bash>echo marker</bash>", "marker"])
+    result = suite.evaluate(session)
+    sample = result.samples[0]
+
+    assert runtime.commands == ["echo marker"]
+    assert len(session.prompts) == 2
+    assert "Print the marker" in session.prompts[0]
+    assert "<bash>echo marker</bash>" in session.prompts[1]
+    assert "<bash_result>" in session.prompts[1]
+    assert "marker" in session.prompts[1]
+    assert sample.metadata["tool_turns"] == 2
+    assert sample.metadata["commands_executed"] == 1
+    assert sample.metadata["runtime_type"] == "FakeAgentRuntime"
+    assert sample.scores["em"] == 1.0
+
+
+def test_tool_loop_stops_at_max_tool_turns(tmp_path: Any) -> None:
+    """A model that never stops emitting tool calls terminates at the turn cap."""
+    _make_local_task_dir(tmp_path, "task-1", "Loop forever.", "anything")
+    runtime = FakeAgentRuntime("ignored")
+    suite = terminal_bench_21(
+        dataset_path=str(tmp_path),
+        max_rows=1,
+        batch_size=1,
+        max_new_tokens=5,
+        max_tool_turns=3,
+        agent_runtime=AgentRuntimeConfig(agent_runtime=runtime),
+    )
+    result = suite.evaluate(FakeSession("<bash>echo loop</bash>"))
+
+    sample = result.samples[0]
+    assert sample.metadata["tool_turns"] == 3
+    assert sample.metadata["commands_executed"] == 3
+    assert runtime.commands == ["echo loop"] * 3
 
 
 @pytest.mark.parametrize(

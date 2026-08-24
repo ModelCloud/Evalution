@@ -16,6 +16,7 @@ import json
 import os
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
+from dataclasses import replace as dataclass_replace
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -23,12 +24,14 @@ import pcre
 from datasets import Dataset, load_dataset
 
 from evalution.agent_runtime import BaseAgentRuntime
-from evalution.benchmarks.agentic_docker import extract_command
+from evalution.benchmarks.agentic_docker import extract_command, try_extract_command
 from evalution.benchmarks.base import BaseTestSuite
+from evalution.benchmarks.data import load_suite_dataset, select_docs
 from evalution.benchmarks.execution import PreparedSample
 from evalution.config import AgentRuntimeConfig
-from evalution.engines.base import GenerationOutput, GenerationRequest
-from evalution.results import SampleResult
+from evalution.engines.base import GenerationOutput, GenerationRequest, InferenceSession
+from evalution.logbar import get_logger
+from evalution.results import SampleResult, TestResult
 
 # Keep benchmark defaults and public task ids explicit at module scope.
 _STOP_STRINGS = (
@@ -817,8 +820,11 @@ class SWEAtlasQnA(BaseTestSuite):
 class _LocalAgenticBenchmark(BaseTestSuite):
     """Base class for agentic benchmarks that ship as local Harbor task directories.
 
-    These suites execute model-generated commands, so ``agent_runtime`` must
-    point at a sandboxed runtime; the shared pipeline refuses to start otherwise.
+    These suites run an intercept-execute-resume tool loop: the model generates
+    text, Evalution intercepts explicit tool calls (``<bash>...</bash>`` tags or
+    fenced blocks), executes them on the configured sandboxed runtime, appends
+    the observation, and resumes inference until the model produces a final
+    answer or ``max_tool_turns`` is exhausted.
     """
 
     is_agentic: ClassVar[bool] = True
@@ -831,8 +837,8 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     batch_size: int = 1
     do_sample: bool = False
     temperature: float = 0.0
-    docker_image: str = "alpine:latest"
-    docker_timeout: float = 60.0
+    max_tool_turns: int = 4
+    apply_chat_template: bool = False
     agent_runtime: AgentRuntimeConfig = dataclass_field(default_factory=AgentRuntimeConfig)
 
     def dataset_loader(self) -> Any:
@@ -870,37 +876,168 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
         """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
-            yield PreparedSample(
-                index=index,
-                doc=doc,
-                target=str(doc.get("patch", "")),
-                request=GenerationRequest(
-                    prompt=_task_prompt(str(doc.get("problem_statement", ""))),
+            task_prompt = _task_prompt(str(doc.get("problem_statement", "")))
+            if self.apply_chat_template:
+                request = GenerationRequest(
+                    messages=[{"role": "user", "content": task_prompt}],
+                    add_generation_prompt=True,
                     stop=list(_STOP_STRINGS),
                     max_new_tokens=self.max_new_tokens,
                     do_sample=self.do_sample,
                     temperature=self.temperature,
-                ),
+                )
+            else:
+                request = GenerationRequest(
+                    prompt=task_prompt,
+                    stop=list(_STOP_STRINGS),
+                    max_new_tokens=self.max_new_tokens,
+                    do_sample=self.do_sample,
+                    temperature=self.temperature,
+                )
+            yield PreparedSample(
+                index=index,
+                doc=doc,
+                target=str(doc.get("patch", "")),
+                request=request,
             )
+
+    def evaluate(self, session: InferenceSession) -> TestResult:
+        """Run the intercept-execute-resume tool loop against the runtime."""
+        runtime = self._require_agent_runtime()
+        task_name = self.task_name()
+        logger = get_logger()
+
+        loaded_docs, _dataset_load_wall_s = load_suite_dataset(
+            self.dataset_loader(),
+            task_name=task_name,
+            dataset_path=self.dataset_path,
+            dataset_name=self.dataset_name,
+            split=self.split,
+            cache_dir=self.cache_dir,
+            stream=self.stream,
+        )
+        docs = list(
+            select_docs(
+                loaded_docs,
+                row_indices=self.row_indices,
+                max_rows=self.max_rows,
+            )
+        )
+        logger.info("%s: evaluating %d sample(s)", task_name, len(docs))
+
+        samples = [
+            self._evaluate_tool_loop_sample(session, runtime, prepared)
+            for prepared in self.iter_prepared_samples(docs)
+        ]
+
+        metrics: dict[str, float] = {}
+        if samples:
+            metrics["em"] = sum(
+                sample.scores.get("em", 0.0) for sample in samples
+            ) / len(samples)
+        return TestResult(
+            name=task_name,
+            metrics=metrics,
+            samples=samples,
+            metadata=self.result_metadata(generation_submission_mode="agentic_tool_loop"),
+        )
+
+    def _evaluate_tool_loop_sample(
+        self,
+        session: InferenceSession,
+        runtime: BaseAgentRuntime,
+        prepared: PreparedSample,
+    ) -> SampleResult:
+        """Intercept tool calls, execute them on the runtime, and resume inference."""
+        doc = prepared.doc
+        target = prepared.target
+        request = prepared.request
+        conversation = request.prompt or ""
+        conversation_messages = list(request.messages) if request.messages else None
+        image = str(doc.get("docker_image", "")) or None
+
+        commands: list[str] = []
+        stdouts: list[str] = []
+        exit_codes: list[int] = []
+        final_answer = ""
+        turns = 0
+        text = ""
+
+        for _ in range(max(1, self.max_tool_turns)):
+            turns += 1
+            if conversation_messages is not None:
+                turn_request = dataclass_replace(request, messages=conversation_messages)
+            else:
+                turn_request = dataclass_replace(request, prompt=conversation)
+            outputs = session.generate([turn_request], batch_size=1)
+            text = outputs[0].text or ""
+            command = try_extract_command(text)
+            if command is None:
+                final_answer = text.strip()
+                break
+            commands.append(command)
+            run_result = runtime.run(command, image=image)
+            stdouts.append(run_result.stdout)
+            exit_codes.append(run_result.exit_code)
+            observation = run_result.stdout
+            if run_result.stderr:
+                observation = f"{observation}\n{run_result.stderr}"
+            observation = observation.strip()
+            if conversation_messages is not None:
+                conversation_messages = conversation_messages + [
+                    {"role": "assistant", "content": text},
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Command output:\n{observation}\n\n"
+                            "Now reply with only the output word."
+                        ),
+                    },
+                ]
+            else:
+                conversation = (
+                    f"{conversation}{text}\n<bash_result>\n{observation}\n</bash_result>\nAnswer:"
+                )
+        else:
+            final_answer = text.strip()
+
+        score = 1.0 if _normalize(final_answer) == _normalize(target) else 0.0
+        return SampleResult(
+            index=prepared.index,
+            prompt=request.prompt or "",
+            target=target,
+            prediction=final_answer,
+            extracted={
+                "final-answer": final_answer,
+                "commands": "\n".join(commands),
+                "stdout": stdouts[-1] if stdouts else "",
+                "prediction-normalized": _normalize(final_answer),
+                "target-normalized": _normalize(target),
+            },
+            scores={"em": score},
+            metadata={
+                "instance_id": str(doc.get("instance_id", "")),
+                "runtime_type": type(runtime).__name__,
+                "runtime_exit_code": exit_codes[-1] if exit_codes else None,
+                "tool_turns": turns,
+                "commands_executed": len(commands),
+            },
+        )
 
     def score_sample(
         self,
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
-        """Score one sample by running its command through the agent runtime."""
+        """Score one sample by running its extracted command through the runtime."""
         doc = prepared_sample.doc
         target = prepared_sample.target
         prediction = output.text
 
         runtime = self._require_agent_runtime()
         command = extract_command(prediction)
-        image = str(doc.get("docker_image", "")) or self.docker_image
-        run_result = runtime.run(
-            command,
-            image=image,
-            timeout=self.docker_timeout,
-        )
+        image = str(doc.get("docker_image", "")) or None
+        run_result = runtime.run(command, image=image)
         score = (
             1.0
             if _normalize(run_result.stdout) == _normalize(target)
@@ -920,9 +1057,8 @@ class _LocalAgenticBenchmark(BaseTestSuite):
             scores={"em": score},
             metadata={
                 "instance_id": str(doc.get("instance_id", "")),
-                "docker_image": image,
-                "runtime_exit_code": run_result.exit_code,
                 "runtime_type": type(runtime).__name__,
+                "runtime_exit_code": run_result.exit_code,
             },
         )
 
@@ -933,7 +1069,6 @@ class TerminalBench21(_LocalAgenticBenchmark):
 
     dataset_path: str = "~/.cache/evalution/terminal-bench-2-1/tasks"
     variant_name: str = "terminal_bench_21"
-    docker_image: str = "alpine:latest"
 
 
 @dataclass(slots=True)
@@ -942,7 +1077,6 @@ class DeepSWE(_LocalAgenticBenchmark):
 
     dataset_path: str = "~/.cache/evalution/deep-swe/tasks"
     variant_name: str = "deep_swe"
-    docker_image: str = "alpine:latest"
 
 
 @dataclass(slots=True)
@@ -951,7 +1085,6 @@ class ToolathlonVerified(_LocalAgenticBenchmark):
 
     dataset_path: str = "~/.cache/evalution/toolathlon/tasks/finalpool"
     variant_name: str = "toolathlon_verified"
-    docker_image: str = "alpine:latest"
 
 
 def swe_bench_multilingual(**kwargs: Any) -> SWEBenchMultilingual:
