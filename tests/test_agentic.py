@@ -40,7 +40,7 @@ from evalution.benchmarks import (
     webarena,
     webarena_hard,
 )
-from evalution.config import AgentRuntimeConfig, Model
+from evalution.config import Model
 from evalution.engines.base import GenerationOutput
 from evalution.engines.transformers_compat import TransformersCompat
 
@@ -265,7 +265,7 @@ def test_terminal_bench_21_local_task_forward_pass(tmp_path: Any) -> None:
         max_rows=1,
         batch_size=1,
         max_new_tokens=5,
-        agent_runtime=AgentRuntimeConfig(agent_runtime=runtime),
+        agent_runtime=runtime,
     )
     session = FakeSession(["<bash>ls</bash>", "ls"])
     result = suite.evaluate(session)
@@ -285,7 +285,7 @@ def test_deep_swe_local_task_forward_pass(tmp_path: Any) -> None:
         max_rows=1,
         batch_size=1,
         max_new_tokens=5,
-        agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("applied")),
+        agent_runtime=FakeAgentRuntime("applied"),
     )
     result = suite.evaluate(FakeSession(["<bash>git apply fix.patch</bash>", "diff --git"]))
 
@@ -316,7 +316,7 @@ def test_toolathlon_verified_local_task_forward_pass(tmp_path: Any) -> None:
         max_rows=1,
         batch_size=1,
         max_new_tokens=5,
-        agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("expected tool output")),
+        agent_runtime=FakeAgentRuntime("expected tool output"),
     )
     result = suite.evaluate(FakeSession(["<bash>cat answer</bash>", "expected tool output"]))
 
@@ -334,7 +334,7 @@ def test_tool_loop_intercepts_and_resumes_inference(tmp_path: Any) -> None:
         max_rows=1,
         batch_size=1,
         max_new_tokens=5,
-        agent_runtime=AgentRuntimeConfig(agent_runtime=runtime),
+        agent_runtime=runtime,
     )
     session = FakeSession(["<bash>echo marker</bash>", "marker"])
     result = suite.evaluate(session)
@@ -362,7 +362,7 @@ def test_tool_loop_stops_at_max_tool_turns(tmp_path: Any) -> None:
         batch_size=1,
         max_new_tokens=5,
         max_tool_turns=3,
-        agent_runtime=AgentRuntimeConfig(agent_runtime=runtime),
+        agent_runtime=runtime,
     )
     result = suite.evaluate(FakeSession("<bash>echo loop</bash>"))
 

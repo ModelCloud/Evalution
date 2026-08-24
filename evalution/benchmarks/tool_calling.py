@@ -1,0 +1,212 @@
+# SPDX-FileCopyrightText: 2026 ModelCloud.ai
+# SPDX-FileCopyrightText: 2026 qubitium@modelcloud.ai
+# SPDX-License-Identifier: Apache-2.0
+# Contact: qubitium@modelcloud.ai, x.com/qubitium
+
+"""Tool-call parsing for agentic benchmarks.
+
+Tool calling is fundamentally different from code output: a tool call is the
+model's deliberate request to execute an action in a sandboxed runtime, while
+code output (for example a fenced ``bash`` snippet inside a plain answer) is
+inert generated text that must never be executed. Because every model family
+signals tool calls differently, the expected protocol is declared explicitly
+per suite and :func:`extract_tool_calls` only ever captures that protocol;
+everything else stays inert model output.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+import pcre
+
+TOOL_CALL_BASH_TAGS = "bash_tags"
+TOOL_CALL_FENCED_SHELL = "fenced_shell"
+TOOL_CALL_NATIVE_JSON = "native_json"
+TOOL_CALL_FORMATS = (
+    TOOL_CALL_BASH_TAGS,
+    TOOL_CALL_FENCED_SHELL,
+    TOOL_CALL_NATIVE_JSON,
+)
+
+# How tool calls are signalled: natively through the model's own pre-trained
+# tool-calling template, or through a generic prompted syntax for models that
+# were never trained to call tools.
+TOOL_CALL_MODE_AUTO = "auto"
+TOOL_CALL_MODE_NATIVE = "native"
+TOOL_CALL_MODE_PROMPTED = "prompted"
+TOOL_CALL_MODES = (TOOL_CALL_MODE_AUTO, TOOL_CALL_MODE_NATIVE, TOOL_CALL_MODE_PROMPTED)
+
+# Generic prompted contract: the most widely supported agent syntax — explicit
+# <bash></bash> action markers. Plain fenced code stays inert model output.
+PROMPTED_TOOL_SYSTEM_MESSAGE = (
+    "You are a terminal agent connected to a sandboxed shell.\n"
+    "To run a shell command, reply with ONLY the command wrapped in <bash> and </bash> markers.\n"
+    "Example reply:\n<bash>echo hello</bash>\n"
+    "After you receive the command output, reply with only the final answer."
+)
+
+# Policy message paired with the model's own native tool schema in native mode.
+NATIVE_TOOL_SYSTEM_MESSAGE = (
+    "You are a terminal agent connected to a sandboxed shell.\n"
+    "Use the run_command tool to run shell commands when asked.\n"
+    "After you receive the command output, reply with only the final answer."
+)
+
+RUN_COMMAND_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "run_command",
+        "description": (
+            "Run a shell command inside the sandboxed task environment "
+            "and return its combined stdout/stderr output."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "The shell command to execute.",
+                }
+            },
+            "required": ["command"],
+        },
+    },
+}
+
+_BASH_TAG_RE = pcre.compile(r"<bash>(.*?)</bash>", pcre.DOTALL | pcre.IGNORECASE)
+_FENCE_RE = pcre.compile(r"```([^\n`]*)\n(.*?)```", pcre.DOTALL)
+_CONSOLE_PROMPT_RE = pcre.compile(r"(?m)^\$\s+")
+_PYTHON_TAG_RE = pcre.compile(r"^\s*<\|python_tag\|>\s*")
+_TOOL_CALL_XML_RE = pcre.compile(r"<tool_call>\s*(.*?)\s*</tool_call>", pcre.DOTALL)
+
+_SHELL_FENCE_LANGUAGES = frozenset(
+    {"", "bash", "sh", "shell", "zsh", "ash", "console", "terminal"}
+)
+
+
+def validate_tool_call_format(tool_call_format: str) -> str:
+    """Raise ``ValueError`` for unknown tool-call protocols."""
+    if tool_call_format not in TOOL_CALL_FORMATS:
+        raise ValueError(
+            f"unknown tool_call_format {tool_call_format!r}; "
+            f"expected one of {', '.join(TOOL_CALL_FORMATS)}"
+        )
+    return tool_call_format
+
+
+def validate_tool_call_mode(tool_call_mode: str) -> str:
+    """Raise ``ValueError`` for unknown tool-call modes."""
+    if tool_call_mode not in TOOL_CALL_MODES:
+        raise ValueError(
+            f"unknown tool_call_mode {tool_call_mode!r}; "
+            f"expected one of {', '.join(TOOL_CALL_MODES)}"
+        )
+    return tool_call_mode
+
+
+def _bash_tag_commands(text: str) -> list[str]:
+    """Capture every ``<bash>...</bash>`` action marker, in document order."""
+    commands = []
+    for match in _BASH_TAG_RE.finditer(text):
+        command = match.group(1).strip()
+        if command:
+            commands.append(command)
+    return commands
+
+
+def _fenced_shell_commands(text: str) -> list[str]:
+    """Capture shell-language fenced blocks; other languages stay inert."""
+    commands = []
+    for match in _FENCE_RE.finditer(text):
+        language = match.group(1).strip().lower()
+        if language not in _SHELL_FENCE_LANGUAGES:
+            continue
+        # Strip `$ `-style console prompts so extracted strings are runnable.
+        command = _CONSOLE_PROMPT_RE.sub("", match.group(2)).strip()
+        if command:
+            commands.append(command)
+    return commands
+
+
+def extract_tool_calls(text: str, tool_call_format: str) -> list[str]:
+    """Return every tool call in ``text`` under the declared protocol.
+
+    Plain prose and undeclared formats are never tool calls, which keeps
+    ordinary code output out of the execution path.
+    """
+    validate_tool_call_format(tool_call_format)
+    if tool_call_format == TOOL_CALL_BASH_TAGS:
+        return _bash_tag_commands(text)
+    return _fenced_shell_commands(text)
+
+
+def try_extract_tool_call(text: str, tool_call_format: str) -> str | None:
+    """Return the first tool call under the protocol, or ``None`` if none."""
+    commands = extract_tool_calls(text, tool_call_format)
+    return commands[0] if commands else None
+
+
+def _json_command(payload: str) -> str | None:
+    """Decode one JSON tool-call object and return its command argument."""
+    import json
+
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(payload):
+        if char != "{":
+            continue
+        try:
+            parsed, _ = decoder.raw_decode(payload[index:])
+        except ValueError:
+            continue
+        if not isinstance(parsed, dict):
+            continue
+        arguments = parsed.get("parameters", parsed.get("arguments"))
+        command = arguments.get("command") if isinstance(arguments, dict) else None
+        if isinstance(command, str) and command.strip():
+            return command.strip()
+    return None
+
+
+def native_tool_commands(text: str) -> list[str]:
+    """Parse model-native tool-call responses into shell commands.
+
+    Covers the encodings used by the major open-model families:
+    Llama ``<|python_tag|>{...}``, Hermes/Qwen ``<tool_call>{...}``, and bare
+    JSON objects carrying ``name`` plus ``parameters``/``arguments``.
+    """
+    if not text:
+        return []
+
+    candidates: list[str] = []
+    stripped = _PYTHON_TAG_RE.sub("", text)
+    xml_matches = _TOOL_CALL_XML_RE.findall(stripped)
+    segments = xml_matches if xml_matches else [stripped]
+    for segment in segments:
+        command = _json_command(segment)
+        if command:
+            candidates.append(command)
+
+    # De-duplicate while preserving order.
+    seen: set[str] = set()
+    unique = [command for command in candidates if not (command in seen or seen.add(command))]
+    return unique
+
+
+def session_supports_native_tool_calls(session: Any) -> bool:
+    """Detect whether the session's tokenizer can render native tool schemas."""
+    tokenizer = getattr(session, "tokenizer", None)
+    apply_template = getattr(tokenizer, "apply_chat_template", None)
+    if not callable(apply_template):
+        return False
+    probe_messages = [{"role": "user", "content": "probe"}]
+    try:
+        rendered = apply_template(
+            probe_messages,
+            tools=[RUN_COMMAND_TOOL],
+            add_generation_prompt=True,
+            tokenize=False,
+        )
+    except Exception:  # noqa: BLE001 — any template failure means "not native"
+        return False
+    return isinstance(rendered, str) and bool(rendered)

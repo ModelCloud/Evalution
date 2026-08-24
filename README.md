@@ -740,27 +740,43 @@ machine. A tool-calling suite without a configured runtime fails before evaluati
 
 ```
 ValueError: terminal_bench_21 executes model-generated commands, which requires an isolated
-AgentRuntime. Configure AgentRuntimeConfig(agent_runtime=DockerAgentRuntime() |
-SmolVmAgentRuntime()), or pass UnsafeLocalRuntime() to explicitly allow unisolated host execution.
+AgentRuntime. Configure agent_runtime=DockerAgentRuntime() | SmolVmAgentRuntime(),
+or pass UnsafeLocalRuntime() to explicitly allow unisolated host execution.
 ```
 
-Pick one of the sandboxed runtimes below and pass it through `AgentRuntimeConfig`:
+Pick one of the sandboxed runtimes below and pass it directly to the suite:
 
 ```python
 import evalution.benchmarks as benchmarks
 from evalution import DockerAgentRuntime
-from evalution.config import AgentRuntimeConfig
-
 suite = benchmarks.terminal_bench_21(
-    agent_runtime=AgentRuntimeConfig(agent_runtime=DockerAgentRuntime()),
+    agent_runtime=DockerAgentRuntime(),
 )
 ```
 
-Tool-calling suites run an intercept-execute-resume loop: when a generation contains an explicit
-tool call (a fenced `bash` code block or `<bash>...</bash>` tags), Evalution executes the command
-on the configured runtime, appends the observation to the conversation, and resumes inference
-until the model returns a final answer or `max_tool_turns` is exhausted. Set
-`apply_chat_template=True` on the suite to run the loop with instruct models.
+Tool-calling suites run an intercept-execute-resume loop, and they draw a hard line between
+**tool calling** (the model's deliberate request to execute an action) and **code output**
+(inert generated text such as a fenced snippet inside a plain answer — never executed). Which
+marker counts as a tool call is resolved per suite from two options:
+
+- `tool_call_mode`: `auto` (default), `native`, or `prompted`. `auto` probes the model's chat
+  template for native tool support and uses the model's own pre-trained tool-calling format
+  explicitly; models without native support fall back to the generic prompted syntax.
+- `tool_call_format`: `auto` (default), `native_json` (model-native response encoding:
+  `<|python_tag|>{...}`, `<tool_call>{...}</tool_call>`, or bare JSON), `bash_tags` (the widely
+  supported generic `<bash>...</bash>` marker syntax used for prompted models), or
+  `fenced_shell` (shell-language code fences as an explicitly opted-in action channel).
+
+An explicit format pins its mode family (`native_json` → native; others → prompted). Under the
+declared protocol, every tool call in a generation is captured and executed on the runtime;
+anything not matching the protocol stays inert model output. For prompted models, the syntax
+contract is injected as a system message automatically.
+
+Tool-calling suites run the loop: when a generation contains a tool call under the declared
+protocol, Evalution executes it on the configured runtime, appends the observation to the
+conversation, and resumes inference until the model returns a final answer or `max_tool_turns`
+is exhausted. Set `apply_chat_template=True` on the suite to run instruct models through their
+chat template.
 
 Every runtime shares two common settings: `path` selects the runtime binary and defaults to
 `"auto"`, which resolves the runtime's standard binary (`docker`, `smolvm`) from the current
@@ -817,12 +833,12 @@ with warnings.catch_warnings():
 
 suite = benchmarks.deep_swe(
     dataset_path="~/.cache/evalution/deep-swe/tasks",
-    agent_runtime=AgentRuntimeConfig(agent_runtime=runtime),
+    agent_runtime=runtime,
 )
 ```
 
 Custom sandboxes implement `BaseAgentRuntime` (a single async-safe `run(command, ...) -> AgentRuntimeResult`
-method) and plug into `AgentRuntimeConfig` the same way.
+method) and pass it as `agent_runtime=` the same way.
 
 Every suite carries two declarative class flags: `is_agentic` marks agentic benchmark families, and
 `has_tool_calling` marks suites that execute model-generated commands. Evalution's shared evaluation

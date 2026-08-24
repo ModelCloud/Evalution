@@ -172,13 +172,13 @@ class BaseTestSuite(TestSuite):
         """Evaluate evaluate. Preserve the fallback order expected by the surrounding caller."""
         task_name = self.task_name()
         if self.has_tool_calling:
-            runtime = getattr(getattr(self, "agent_runtime", None), "runtime", None)
+            runtime = getattr(self, "agent_runtime", None)
             if runtime is None:
                 raise ValueError(
                     f"{task_name} executes model-generated commands, which requires "
-                    "an isolated AgentRuntime. Configure AgentRuntimeConfig(agent_runtime="
-                    "DockerAgentRuntime() | SmolVmAgentRuntime()), or pass UnsafeLocalRuntime() "
-                    "to explicitly allow unisolated host execution."
+                    "an isolated AgentRuntime. Configure agent_runtime=DockerAgentRuntime() | "
+                    "SmolVmAgentRuntime(), or pass UnsafeLocalRuntime() to explicitly allow "
+                    "unisolated host execution."
                 )
         resolved_order = normalize_order(self.order)
         logger = get_logger()

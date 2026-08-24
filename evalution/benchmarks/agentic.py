@@ -15,7 +15,6 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from dataclasses import field as dataclass_field
 from dataclasses import replace as dataclass_replace
 from pathlib import Path
 from typing import Any, ClassVar
@@ -24,11 +23,25 @@ import pcre
 from datasets import Dataset, load_dataset
 
 from evalution.agent_runtime import BaseAgentRuntime
-from evalution.benchmarks.agentic_docker import extract_command, try_extract_command
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.data import load_suite_dataset, select_docs
 from evalution.benchmarks.execution import PreparedSample
-from evalution.config import AgentRuntimeConfig
+from evalution.benchmarks.tool_calling import (
+    NATIVE_TOOL_SYSTEM_MESSAGE,
+    PROMPTED_TOOL_SYSTEM_MESSAGE,
+    RUN_COMMAND_TOOL,
+    TOOL_CALL_BASH_TAGS,
+    TOOL_CALL_MODE_AUTO,
+    TOOL_CALL_MODE_NATIVE,
+    TOOL_CALL_MODE_PROMPTED,
+    TOOL_CALL_NATIVE_JSON,
+    extract_tool_calls,
+    native_tool_commands,
+    session_supports_native_tool_calls,
+    try_extract_tool_call,
+    validate_tool_call_format,
+    validate_tool_call_mode,
+)
 from evalution.engines.base import GenerationOutput, GenerationRequest, InferenceSession
 from evalution.logbar import get_logger
 from evalution.results import SampleResult, TestResult
@@ -44,6 +57,7 @@ _STOP_STRINGS = (
 )
 
 _WS_PATTERN = pcre.compile(r"\s+")
+_SPECIAL_TOKEN_RE = pcre.compile(r"<\|[^>]*\|>")
 
 _TASK_TOML_DOCKER_IMAGE_RE = pcre.compile(r'^docker_image\s*=\s*"([^"]+)"', pcre.MULTILINE)
 _TASK_TOML_NAME_RE = pcre.compile(r'^name\s*=\s*"([^"]+)"', pcre.MULTILINE)
@@ -821,10 +835,12 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     """Base class for agentic benchmarks that ship as local Harbor task directories.
 
     These suites run an intercept-execute-resume tool loop: the model generates
-    text, Evalution intercepts explicit tool calls (``<bash>...</bash>`` tags or
-    fenced blocks), executes them on the configured sandboxed runtime, appends
-    the observation, and resumes inference until the model produces a final
-    answer or ``max_tool_turns`` is exhausted.
+    text, Evalution intercepts tool calls under the declared
+    ``tool_call_format`` protocol, executes them on the configured sandboxed
+    runtime, appends the observation, and resumes inference until the model
+    produces a final answer or ``max_tool_turns`` is exhausted. Anything not
+    matching the declared protocol — including fenced code the model merely
+    outputs as an answer — is inert text and never executed.
     """
 
     is_agentic: ClassVar[bool] = True
@@ -839,7 +855,16 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     temperature: float = 0.0
     max_tool_turns: int = 4
     apply_chat_template: bool = False
-    agent_runtime: AgentRuntimeConfig = dataclass_field(default_factory=AgentRuntimeConfig)
+    # How tool calls are signalled: "auto" probes the model's chat template
+    # for native tool support and uses it explicitly, falling back to the
+    # generic prompted <bash></bash> syntax for models without native tools.
+    tool_call_mode: str = TOOL_CALL_MODE_AUTO
+    # Wire format of an intercepted tool call; "auto" resolves from the mode.
+    tool_call_format: str = "auto"
+    agent_runtime: BaseAgentRuntime | None = None
+
+    def __post_init__(self) -> None:
+        validate_tool_call_mode(self.tool_call_mode)
 
     def dataset_loader(self) -> Any:
         """Return the local task directory loader bound to this suite."""
@@ -851,15 +876,62 @@ class _LocalAgenticBenchmark(BaseTestSuite):
 
     def _require_agent_runtime(self) -> BaseAgentRuntime:
         """Return the configured runtime or refuse to run tool-calling tasks."""
-        runtime = self.agent_runtime.runtime
-        if runtime is None:
+        if self.agent_runtime is None:
             raise ValueError(
                 f"{self.task_name()} executes model-generated commands, which requires "
-                "an isolated AgentRuntime. Configure AgentRuntimeConfig(agent_runtime="
-                "DockerAgentRuntime() | SmolVmAgentRuntime()), or pass UnsafeLocalRuntime() "
-                "to explicitly allow unisolated host execution."
+                "an isolated AgentRuntime. Configure agent_runtime=DockerAgentRuntime() | "
+                "SmolVmAgentRuntime(), or pass UnsafeLocalRuntime() to explicitly allow "
+                "unisolated host execution."
             )
-        return runtime
+        return self.agent_runtime
+
+    def _resolve_tool_calling(self, session: InferenceSession) -> tuple[str, str]:
+        """Resolve the effective tool-call mode/format for this session.
+
+        An explicit format pins its natural mode family (``native_json`` ->
+        native; ``bash_tags``/``fenced_shell`` -> prompted). With everything
+        left on ``auto``, the model's chat template is probed for native tool
+        support and used explicitly when available, falling back to the
+        generic prompted ``<bash></bash>`` syntax otherwise.
+        """
+        validate_tool_call_mode(self.tool_call_mode)
+        native_supported = session_supports_native_tool_calls(session)
+
+        mode = self.tool_call_mode
+        tool_call_format = self.tool_call_format
+        if tool_call_format != "auto":
+            validate_tool_call_format(tool_call_format)
+            if tool_call_format == TOOL_CALL_NATIVE_JSON:
+                if mode == TOOL_CALL_MODE_PROMPTED:
+                    raise ValueError(
+                        "prompted models cannot use the 'native_json' format"
+                    )
+                mode = TOOL_CALL_MODE_NATIVE
+            else:
+                if mode == TOOL_CALL_MODE_NATIVE:
+                    raise ValueError(
+                        f"tool_call_mode='native' requires tool_call_format="
+                        f"'native_json' or 'auto', got {tool_call_format!r}"
+                    )
+                mode = TOOL_CALL_MODE_PROMPTED
+
+        if mode == TOOL_CALL_MODE_AUTO:
+            mode = (
+                TOOL_CALL_MODE_NATIVE if native_supported else TOOL_CALL_MODE_PROMPTED
+            )
+        elif mode == TOOL_CALL_MODE_NATIVE and not native_supported:
+            raise ValueError(
+                f"{self.task_name()} requested native tool calling, but this model's "
+                "chat template does not support tools; use tool_call_mode='prompted'."
+            )
+
+        if tool_call_format == "auto":
+            tool_call_format = (
+                TOOL_CALL_NATIVE_JSON
+                if mode == TOOL_CALL_MODE_NATIVE
+                else TOOL_CALL_BASH_TAGS
+            )
+        return mode, tool_call_format
 
     def result_metadata(
         self,
@@ -905,7 +977,11 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         """Run the intercept-execute-resume tool loop against the runtime."""
         runtime = self._require_agent_runtime()
         task_name = self.task_name()
+        mode, tool_call_format = self._resolve_tool_calling(session)
         logger = get_logger()
+        logger.info(
+            "%s: tool calling mode=%s format=%s", task_name, mode, tool_call_format
+        )
 
         loaded_docs, _dataset_load_wall_s = load_suite_dataset(
             self.dataset_loader(),
@@ -926,7 +1002,7 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         logger.info("%s: evaluating %d sample(s)", task_name, len(docs))
 
         samples = [
-            self._evaluate_tool_loop_sample(session, runtime, prepared)
+            self._evaluate_tool_loop_sample(session, runtime, prepared, mode, tool_call_format)
             for prepared in self.iter_prepared_samples(docs)
         ]
 
@@ -935,11 +1011,14 @@ class _LocalAgenticBenchmark(BaseTestSuite):
             metrics["em"] = sum(
                 sample.scores.get("em", 0.0) for sample in samples
             ) / len(samples)
+        result_metadata = self.result_metadata(generation_submission_mode="agentic_tool_loop")
+        result_metadata["tool_call_mode"] = mode
+        result_metadata["tool_call_format"] = tool_call_format
         return TestResult(
             name=task_name,
             metrics=metrics,
             samples=samples,
-            metadata=self.result_metadata(generation_submission_mode="agentic_tool_loop"),
+            metadata=result_metadata,
         )
 
     def _evaluate_tool_loop_sample(
@@ -947,15 +1026,53 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         session: InferenceSession,
         runtime: BaseAgentRuntime,
         prepared: PreparedSample,
+        mode: str,
+        tool_call_format: str,
     ) -> SampleResult:
         """Intercept tool calls, execute them on the runtime, and resume inference."""
         doc = prepared.doc
         target = prepared.target
         request = prepared.request
-        conversation = request.prompt or ""
-        conversation_messages = list(request.messages) if request.messages else None
         image = str(doc.get("docker_image", "")) or None
 
+        use_native = tool_call_format == TOOL_CALL_NATIVE_JSON
+
+        if use_native:
+            # Native mode renders through the model's own pre-trained
+            # tool-calling template via the tools schema.
+            user_content = request.prompt
+            if user_content is None and request.messages:
+                user_content = next(
+                    (
+                        message.get("content", "")
+                        for message in request.messages
+                        if message.get("role") == "user"
+                    ),
+                    "",
+                )
+            conversation_messages: list[dict[str, str]] | None = [
+                {"role": "user", "content": user_content or ""},
+            ]
+        elif request.messages is not None:
+            conversation_messages = list(request.messages)
+        elif self.apply_chat_template:
+            conversation_messages = [{"role": "user", "content": request.prompt or ""}]
+        else:
+            conversation_messages = None
+
+        system_message: str | None = None
+        if mode == TOOL_CALL_MODE_NATIVE:
+            system_message = NATIVE_TOOL_SYSTEM_MESSAGE
+        elif mode == TOOL_CALL_MODE_PROMPTED:
+            # Prompted models were never trained to call tools, so the generic
+            # <bash></bash> contract is injected as an explicit system prompt.
+            system_message = PROMPTED_TOOL_SYSTEM_MESSAGE
+        if conversation_messages is not None and system_message is not None and (
+            not conversation_messages or conversation_messages[0].get("role") != "system"
+        ):
+            conversation_messages.insert(0, {"role": "system", "content": system_message})
+
+        conversation = request.prompt or ""
         commands: list[str] = []
         stdouts: list[str] = []
         exit_codes: list[int] = []
@@ -966,42 +1083,68 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         for _ in range(max(1, self.max_tool_turns)):
             turns += 1
             if conversation_messages is not None:
-                turn_request = dataclass_replace(request, messages=conversation_messages)
+                turn_request = dataclass_replace(
+                    request,
+                    prompt=None,
+                    messages=conversation_messages,
+                    tools=[RUN_COMMAND_TOOL] if use_native else None,
+                )
             else:
                 turn_request = dataclass_replace(request, prompt=conversation)
             outputs = session.generate([turn_request], batch_size=1)
             text = outputs[0].text or ""
-            command = try_extract_command(text)
-            if command is None:
+            if use_native:
+                turn_commands = native_tool_commands(text)
+            else:
+                turn_commands = extract_tool_calls(text, tool_call_format)
+            if not turn_commands:
                 final_answer = text.strip()
                 break
-            commands.append(command)
-            run_result = runtime.run(command, image=image)
-            stdouts.append(run_result.stdout)
-            exit_codes.append(run_result.exit_code)
-            observation = run_result.stdout
-            if run_result.stderr:
-                observation = f"{observation}\n{run_result.stderr}"
-            observation = observation.strip()
+            observations: list[str] = []
+            for command in turn_commands:
+                commands.append(command)
+                run_result = runtime.run(command, image=image)
+                stdouts.append(run_result.stdout)
+                exit_codes.append(run_result.exit_code)
+                observation = run_result.stdout.strip()
+                # Harness chatter lands on stderr even for successful runs
+                # (for example smolvm boot messages); only surface stderr
+                # for failures so observations stay clean command output.
+                if run_result.exit_code != 0 and run_result.stderr.strip():
+                    observation = f"{observation}\n{run_result.stderr.strip()}"
+                observations.append(observation)
+            joined_observations = "\n---\n".join(observations)
             if conversation_messages is not None:
                 conversation_messages = conversation_messages + [
                     {"role": "assistant", "content": text},
                     {
                         "role": "user",
                         "content": (
-                            f"Command output:\n{observation}\n\n"
+                            f"Command output:\n{joined_observations}\n\n"
                             "Now reply with only the output word."
                         ),
                     },
                 ]
             else:
                 conversation = (
-                    f"{conversation}{text}\n<bash_result>\n{observation}\n</bash_result>\nAnswer:"
+                    f"{conversation}{text}\n"
+                    f"<bash_result>\n{joined_observations}\n</bash_result>\nAnswer:"
                 )
         else:
             final_answer = text.strip()
 
-        score = 1.0 if _normalize(final_answer) == _normalize(target) else 0.0
+        def _answer_key(text: str) -> str:
+            """Normalize a final answer, dropping special-token markers and quotes."""
+            unwrapped = _SPECIAL_TOKEN_RE.sub("", text).strip()
+            if (
+                len(unwrapped) >= 2
+                and unwrapped[0] == unwrapped[-1]
+                and unwrapped[0] in "\"'\u201c\u201d\u2018\u2019"
+            ):
+                unwrapped = unwrapped[1:-1].strip()
+            return _normalize(unwrapped)
+
+        score = 1.0 if _answer_key(final_answer) == _answer_key(target) else 0.0
         return SampleResult(
             index=prepared.index,
             prompt=request.prompt or "",
@@ -1011,8 +1154,8 @@ class _LocalAgenticBenchmark(BaseTestSuite):
                 "final-answer": final_answer,
                 "commands": "\n".join(commands),
                 "stdout": stdouts[-1] if stdouts else "",
-                "prediction-normalized": _normalize(final_answer),
-                "target-normalized": _normalize(target),
+                "prediction-normalized": _answer_key(final_answer),
+                "target-normalized": _answer_key(target),
             },
             scores={"em": score},
             metadata={
@@ -1021,6 +1164,8 @@ class _LocalAgenticBenchmark(BaseTestSuite):
                 "runtime_exit_code": exit_codes[-1] if exit_codes else None,
                 "tool_turns": turns,
                 "commands_executed": len(commands),
+                "tool_call_mode": mode,
+                "tool_call_format": tool_call_format,
             },
         )
 
@@ -1035,7 +1180,10 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         prediction = output.text
 
         runtime = self._require_agent_runtime()
-        command = extract_command(prediction)
+        single_shot_format = (
+            TOOL_CALL_BASH_TAGS if self.tool_call_format == "auto" else self.tool_call_format
+        )
+        command = try_extract_tool_call(prediction, single_shot_format) or ""
         image = str(doc.get("docker_image", "")) or None
         run_result = runtime.run(command, image=image)
         score = (

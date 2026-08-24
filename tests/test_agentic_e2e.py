@@ -3,17 +3,26 @@
 # SPDX-License-Identifier: Apache-2.0
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 
-"""End-to-end agentic runtime verification with Llama-3.2-1B-Instruct.
+"""End-to-end agentic runtime verification with real small models.
 
-Runs a real tool-calling benchmark (Terminal-Bench 2.1 task directory) with a
-real model and sandboxed runtimes to verify that:
+Runs a real tool-calling benchmark (Terminal-Bench 2.1 task directory) with
+sandboxed runtimes to verify that:
 
 a) model-generated commands execute on the configured runtime, not the host —
    the task command prints ``container`` only inside an Alpine runtime, and the
    host is asserted to lack ``/etc/alpine-release`` so a passing score proves
    non-local execution;
-b) Evalution intercepts the model's tool call, executes it on the runtime, and
-   resumes inference with the observation appended until the final answer.
+b) Evalution intercepts tool calls, executes them on the runtime, and resumes
+   inference with the observation appended until the final answer.
+
+Two model classes are covered, matching how models signal tool calls:
+
+- native:    Llama-3.2-1B-Instruct is pre-trained with a tool-calling chat
+             template; Evalution passes the OpenAI-style run_command schema
+             through it and parses the model's native response encoding.
+- prompted:  Falcon-H1-3B-Instruct has no native tool support; the generic,
+             widely supported <bash></bash> marker syntax is injected as a
+             system prompt and parsed from the generation.
 """
 
 from __future__ import annotations
@@ -30,13 +39,15 @@ import pytest
 
 from evalution.agent_runtime import DockerAgentRuntime, SmolVmAgentRuntime
 from evalution.benchmarks import terminal_bench_21
-from evalution.config import AgentRuntimeConfig, Model
+from evalution.benchmarks.tool_calling import TOOL_CALL_FENCED_SHELL
+from evalution.config import Model
 
 MODEL_PATH = Path("/monster/data/model/Llama-3.2-1B-Instruct")
+PROMPTED_MODEL_PATH = Path("/monster/data/model/Falcon-H1-3B-Instruct")
 
 TASK_COMMAND = "test -f /etc/alpine-release && echo container || echo host"
 
-INSTRUCTION = (
+FENCED_INSTRUCTION = (
     "You are a terminal agent in a sandboxed shell.\n"
     "When you need to run a command, reply with a single bash code block "
     "containing exactly the command and nothing else.\n"
@@ -45,6 +56,16 @@ INSTRUCTION = (
     "After you receive the command output, reply with only the output text "
     "and nothing else.\n\n"
     "Task: determine where this shell is running. Run exactly this command:\n"
+    + TASK_COMMAND
+)
+
+PROMPTED_INSTRUCTION = (
+    "Determine where this shell is running. Run exactly this command:\n"
+    + TASK_COMMAND
+)
+
+NATIVE_INSTRUCTION = (
+    "Determine where this shell is running. Run exactly this command:\n"
     + TASK_COMMAND
 )
 
@@ -59,6 +80,22 @@ def _docker_available() -> bool:
         return True
     except (OSError, subprocess.CalledProcessError):
         return False
+
+
+def _build_session(model_path: Path) -> Any:
+    """Build one inference session for the given local model weights."""
+    import torch
+
+    from evalution.engines.transformers_compat import TransformersCompat
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    engine = TransformersCompat(
+        device=device,
+        attn_implementation="eager",
+        batch_size=1,
+        max_new_tokens=96,
+    )
+    return engine.build(Model(path=str(model_path)))
 
 
 @pytest.fixture(scope="module")
@@ -163,31 +200,12 @@ def smolvm_runtime(request: Any) -> Any:
     return SmolVmAgentRuntime(image=str(rootfs))
 
 
-@pytest.fixture(scope="module")
-def session() -> Any:
-    """Build one Llama-3.2-1B-Instruct inference session shared by the e2e tests."""
-    import torch
-
-    from evalution.engines.transformers_compat import TransformersCompat
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    engine = TransformersCompat(
-        device=device,
-        attn_implementation="eager",
-        batch_size=1,
-        max_new_tokens=64,
-    )
-    built = engine.build(Model(path=str(MODEL_PATH)))
-    yield built
-    built.close()
-
-
-def _make_runtime_task(root: Path) -> None:
+def _make_runtime_task(root: Path, instruction: str) -> None:
     """Create a Terminal-Bench task whose answer proves runtime execution."""
     tasks_dir = root / "tasks"
     task_dir = tasks_dir / "runtime-probe"
     task_dir.mkdir(parents=True)
-    (task_dir / "instruction.md").write_text(INSTRUCTION)
+    (task_dir / "instruction.md").write_text(instruction)
     solution_dir = task_dir / "solution"
     solution_dir.mkdir()
     (solution_dir / "solution.patch").write_text("container")
@@ -209,51 +227,126 @@ def _assert_tool_loop_result(result: Any, runtime_type: str) -> None:
 
     # The model resumed with the observed runtime output as its final answer.
     assert sample.scores["em"] == 1.0
-    assert sample.prediction.strip() == "container"
+    assert "container" in sample.prediction.lower()
 
 
-@pytest.mark.skipif(not MODEL_PATH.is_dir(), reason="Llama-3.2-1B-Instruct weights not available")
-@pytest.mark.skipif(not _docker_available(), reason="Docker daemon not available")
-def test_agentic_e2e_docker_runtime(session: Any, tmp_path: Path) -> None:
-    """Llama-3.2-1B completes a Terminal-Bench task through the Docker runtime."""
+def test_agentic_e2e_native_tool_calling_model(tmp_path: Path) -> None:
+    """Llama-3.2-1B-Instruct runs the task through its pre-trained native tools."""
+    if not MODEL_PATH.is_dir():
+        pytest.skip("Llama-3.2-1B-Instruct weights not available")
+    if not _docker_available():
+        pytest.skip("Docker daemon not available")
     # Host sanity: without an Alpine release file, `container` can only come
     # from inside the sandboxed runtime.
     assert not Path("/etc/alpine-release").exists()
 
-    _make_runtime_task(tmp_path)
-    suite = terminal_bench_21(
-        dataset_path=str(tmp_path),
-        max_rows=1,
-        batch_size=1,
-        max_new_tokens=64,
-        max_tool_turns=4,
-        apply_chat_template=True,
-        agent_runtime=AgentRuntimeConfig(
+    session = _build_session(MODEL_PATH)
+    try:
+        _make_runtime_task(tmp_path, NATIVE_INSTRUCTION)
+        suite = terminal_bench_21(
+            dataset_path=str(tmp_path),
+            max_rows=1,
+            batch_size=1,
+            max_new_tokens=96,
+            max_tool_turns=4,
+            apply_chat_template=True,
+            tool_call_mode="native",
             agent_runtime=DockerAgentRuntime(image="alpine:latest", pull="missing"),
-        ),
-    )
-    result = suite.evaluate(session)
+        )
+        result = suite.evaluate(session)
+    finally:
+        session.close()
+
+    # The model's pre-trained native template was used explicitly.
+    assert result.metadata["tool_call_mode"] == "native"
+    assert result.metadata["tool_call_format"] == "native_json"
+    _assert_tool_loop_result(result, "DockerAgentRuntime")
+
+
+def test_agentic_e2e_prompted_tool_calling_model(tmp_path: Path) -> None:
+    """Falcon-H1-3B-Instruct (no native tools) runs via prompted <bash></bash>."""
+    if not PROMPTED_MODEL_PATH.is_dir():
+        pytest.skip("Falcon-H1-3B-Instruct weights not available")
+    if not _docker_available():
+        pytest.skip("Docker daemon not available")
+    assert not Path("/etc/alpine-release").exists()
+
+    session = _build_session(PROMPTED_MODEL_PATH)
+    try:
+        _make_runtime_task(tmp_path, PROMPTED_INSTRUCTION)
+        suite = terminal_bench_21(
+            dataset_path=str(tmp_path),
+            max_rows=1,
+            batch_size=1,
+            max_new_tokens=96,
+            max_tool_turns=4,
+            apply_chat_template=True,
+            tool_call_mode="prompted",
+            agent_runtime=DockerAgentRuntime(image="alpine:latest", pull="missing"),
+        )
+        result = suite.evaluate(session)
+    finally:
+        session.close()
+
+    # The generic prompted <bash></bash> syntax was used explicitly.
+    assert result.metadata["tool_call_mode"] == "prompted"
+    assert result.metadata["tool_call_format"] == "bash_tags"
+    _assert_tool_loop_result(result, "DockerAgentRuntime")
+
+
+def test_agentic_e2e_fenced_shell_protocol(tmp_path: Path) -> None:
+    """Llama-3.2-1B-Instruct also completes the task via fenced_shell protocol."""
+    if not MODEL_PATH.is_dir():
+        pytest.skip("Llama-3.2-1B-Instruct weights not available")
+    if not _docker_available():
+        pytest.skip("Docker daemon not available")
+    assert not Path("/etc/alpine-release").exists()
+
+    session = _build_session(MODEL_PATH)
+    try:
+        _make_runtime_task(tmp_path, FENCED_INSTRUCTION)
+        suite = terminal_bench_21(
+            dataset_path=str(tmp_path),
+            max_rows=1,
+            batch_size=1,
+            max_new_tokens=96,
+            max_tool_turns=4,
+            apply_chat_template=True,
+            tool_call_format=TOOL_CALL_FENCED_SHELL,
+            agent_runtime=DockerAgentRuntime(image="alpine:latest", pull="missing"),
+        )
+        result = suite.evaluate(session)
+    finally:
+        session.close()
+
     _assert_tool_loop_result(result, "DockerAgentRuntime")
 
 
 @pytest.mark.skipif(not MODEL_PATH.is_dir(), reason="Llama-3.2-1B-Instruct weights not available")
 def test_agentic_e2e_smolvm_runtime(
-    session: Any,
     smolvm_runtime: Any,
     tmp_path: Path,
 ) -> None:
-    """Llama-3.2-1B completes a Terminal-Bench task through a smolvm microVM."""
+    """Llama-3.2-1B-Instruct completes a Terminal-Bench task through a smolvm microVM."""
+    if not _docker_available():
+        pytest.skip("Docker daemon not available (needed to export the Alpine rootfs)")
     assert not Path("/etc/alpine-release").exists()
 
-    _make_runtime_task(tmp_path)
-    suite = terminal_bench_21(
-        dataset_path=str(tmp_path),
-        max_rows=1,
-        batch_size=1,
-        max_new_tokens=64,
-        max_tool_turns=4,
-        apply_chat_template=True,
-        agent_runtime=AgentRuntimeConfig(agent_runtime=smolvm_runtime),
-    )
-    result = suite.evaluate(session)
+    session = _build_session(MODEL_PATH)
+    try:
+        _make_runtime_task(tmp_path, NATIVE_INSTRUCTION)
+        suite = terminal_bench_21(
+            dataset_path=str(tmp_path),
+            max_rows=1,
+            batch_size=1,
+            max_new_tokens=96,
+            max_tool_turns=4,
+            apply_chat_template=True,
+            tool_call_mode="native",
+            agent_runtime=smolvm_runtime,
+        )
+        result = suite.evaluate(session)
+    finally:
+        session.close()
+
     _assert_tool_loop_result(result, "SmolVmAgentRuntime")

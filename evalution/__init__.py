@@ -17,7 +17,7 @@ from evalution.agent_runtime import (
     UnsafeLocalRuntime,
 )
 from evalution.compare import CompareRun, compare, run_compare
-from evalution.config import AgentRuntimeConfig, Model
+from evalution.config import Model
 from evalution.engines import (
     BaseEngine,
     BaseEngineDeviceConfig,
@@ -66,7 +66,6 @@ __all__ = [
     "CompareRun",
     "CompareRunResult",
     "CompareTestResult",
-    "AgentRuntimeConfig",
     "AgentRuntimeResult",
     "DockerAgentRuntime",
     "EvaluationRun",
