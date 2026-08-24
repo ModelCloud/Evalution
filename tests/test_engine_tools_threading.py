@@ -214,3 +214,24 @@ def test_shared_renderer_is_inherited_by_wrapper_sessions() -> None:
     expected = BaseTransformerSession._render_request_with_tokenizer
     for session_cls in (GPTQModelSession, OpenVINOSession, TransformersCompatSession):
         assert session_cls._render_request_with_tokenizer is expected
+
+
+def test_transformers_common_merges_chat_template_kwargs() -> None:
+    """Request-level template kwargs merge over defaults alongside tools."""
+    from evalution.engines.transformers_common import BaseTransformerSession
+
+    session = _bare_session(
+        BaseTransformerSession, model=SimpleNamespace(generation_config=None)
+    )
+    request = GenerationRequest(
+        messages=[{"role": "user", "content": "probe"}],
+        tools=[RUN_COMMAND_TOOL],
+        chat_template_kwargs={"enable_thinking": False},
+        add_generation_prompt=True,
+    )
+    tokenizer = RecordingChatTemplateTokenizer()
+    rendered = session._render_request_with_tokenizer(tokenizer, request)
+
+    assert rendered == "<rendered>"
+    assert tokenizer.calls[0]["tools"] == [RUN_COMMAND_TOOL]
+    assert tokenizer.calls[0]["enable_thinking"] is False

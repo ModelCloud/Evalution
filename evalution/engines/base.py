@@ -25,6 +25,9 @@ class GenerationRequest:
     input_ids: list[int] | None = None
     # Native tool-calling schema (OpenAI-style) passed to chat templates that support it.
     tools: list[dict[str, Any]] | None = None
+    # Extra chat-template variables (e.g. enable_thinking=False) merged over
+    # checkpoint defaults by every engine's template renderer.
+    chat_template_kwargs: dict[str, Any] | None = None
     add_generation_prompt: bool = True
     stop: list[str] = field(default_factory=list)
     max_new_tokens: int = 256

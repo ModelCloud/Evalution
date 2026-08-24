@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from dataclasses import replace as dataclass_replace
 from pathlib import Path
 from typing import Any, ClassVar
@@ -58,6 +59,7 @@ _STOP_STRINGS = (
 
 _WS_PATTERN = pcre.compile(r"\s+")
 _SPECIAL_TOKEN_RE = pcre.compile(r"<\|[^>]*\|>")
+_THINK_BLOCK_RE = pcre.compile(r"<(think|mm:think|reasoning)>.*?</\1>", pcre.DOTALL | pcre.IGNORECASE)
 
 _TASK_TOML_DOCKER_IMAGE_RE = pcre.compile(r'^docker_image\s*=\s*"([^"]+)"', pcre.MULTILINE)
 _TASK_TOML_NAME_RE = pcre.compile(r'^name\s*=\s*"([^"]+)"', pcre.MULTILINE)
@@ -861,6 +863,10 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     tool_call_mode: str = TOOL_CALL_MODE_AUTO
     # Wire format of an intercepted tool call; "auto" resolves from the mode.
     tool_call_format: str = "auto"
+    # Extra chat-template variables (e.g. {"enable_thinking": False}) forwarded
+    # on every generation so thinking-capable templates can be pinned to
+    # deterministic single-shot answers.
+    chat_template_kwargs: dict[str, Any] = dataclass_field(default_factory=dict)
     agent_runtime: BaseAgentRuntime | None = None
 
     def __post_init__(self) -> None:
@@ -1086,15 +1092,19 @@ class _LocalAgenticBenchmark(BaseTestSuite):
             # the tool schema is withheld: models otherwise keep issuing calls
             # instead of concluding.
             offer_tools = use_native and turns == 1
+            extra_kwargs: dict[str, Any] = {}
+            if self.chat_template_kwargs:
+                extra_kwargs["chat_template_kwargs"] = dict(self.chat_template_kwargs)
             if conversation_messages is not None:
                 turn_request = dataclass_replace(
                     request,
                     prompt=None,
                     messages=conversation_messages,
                     tools=[RUN_COMMAND_TOOL] if offer_tools else None,
+                    **extra_kwargs,
                 )
             else:
-                turn_request = dataclass_replace(request, prompt=conversation)
+                turn_request = dataclass_replace(request, prompt=conversation, **extra_kwargs)
             outputs = session.generate([turn_request], batch_size=1)
             text = outputs[0].text or ""
             if use_native:
@@ -1139,8 +1149,9 @@ class _LocalAgenticBenchmark(BaseTestSuite):
             final_answer = text.strip()
 
         def _answer_key(text: str) -> str:
-            """Normalize a final answer, dropping special-token markers and quotes."""
-            unwrapped = _SPECIAL_TOKEN_RE.sub("", text).strip()
+            """Normalize a final answer, dropping reasoning blocks and markers."""
+            unwrapped = _THINK_BLOCK_RE.sub("", text)
+            unwrapped = _SPECIAL_TOKEN_RE.sub("", unwrapped).strip()
             if (
                 len(unwrapped) >= 2
                 and unwrapped[0] == unwrapped[-1]

@@ -229,6 +229,8 @@ _INVOKE_RE = pcre.compile(
     r'<invoke\s+name="([^"]+)"\s*>(.*?)</invoke>', pcre.DOTALL | pcre.IGNORECASE
 )
 _PARAM_RE = pcre.compile(r"<([A-Za-z_][\w.-]*)>(.*?)</\1>", pcre.DOTALL)
+_FUNCTION_RE = pcre.compile(r"<function=([^>]*?)>(.*)", pcre.DOTALL | pcre.IGNORECASE)
+_PARAMETER_RE = pcre.compile(r"<parameter=([^>]*?)>\s*(.*?)\s*</parameter>", pcre.DOTALL | pcre.IGNORECASE)
 
 
 def _command_from_native_body(body: str) -> str | None:
@@ -255,7 +257,18 @@ def _command_from_native_body(body: str) -> str | None:
     if pairs.get("command"):
         return pairs["command"]
 
-    # 3) MiniMax-style <invoke name="..."><param>value</param></invoke>
+    # 3) Qwen3.5+/Llama-style nested function XML:
+    #    <tool_call><function=run_command><parameter=command>ls</parameter></function></tool_call>
+    function_match = _FUNCTION_RE.search(body)
+    parameters_text = function_match.group(2) if function_match else body
+    params = {
+        key.strip().lower(): value.strip()
+        for key, value in _PARAMETER_RE.findall(parameters_text)
+    }
+    if params.get("command"):
+        return params["command"]
+
+    # 4) MiniMax-style <invoke name="..."><param>value</param></invoke>
     for _name, inner in _INVOKE_RE.findall(body):
         params = {
             tag.strip().lower(): value.strip()
@@ -273,8 +286,9 @@ def native_tool_commands(text: str) -> list[str]:
     Covers the encodings observed across current open-model families:
     Llama ``<|python_tag|>{...}``, Hermes/Qwen JSON inside
     ``<tool_call></tool_call>``, GLM-5.2 and Laguna-S-2.1 XML
-    ``arg_key``/``arg_value`` bodies, MiniMax-M3 ``<invoke>`` blocks, and bare
-    JSON objects carrying ``name`` plus ``parameters``/``arguments``.
+    ``arg_key``/``arg_value`` bodies, Qwen3.5/Qwen3.6 nested
+    ``<function=...><parameter=...>`` XML, MiniMax-M3 ``<invoke>`` blocks,
+    and bare JSON objects carrying ``name`` plus ``parameters``/``arguments``.
     Slightly malformed JSON (for example ``\\$ `` escapes around shell
     variables) is repaired before decoding.
     """

@@ -440,3 +440,57 @@ def test_central_enforcement_applies_to_any_tool_calling_suite() -> None:
 
     with pytest.raises(ValueError, match="requires.*AgentRuntime"):
         suite.evaluate(FakeSession("any output"))
+
+
+def test_tool_loop_strips_think_blocks_before_scoring(tmp_path: Any) -> None:
+    """Thinking-model reasoning is removed before exact-match scoring."""
+    _make_local_task_dir(tmp_path, "task-1", "Print the marker.", "0")
+
+    suite = terminal_bench_21(
+        dataset_path=str(tmp_path),
+        max_rows=1,
+        batch_size=1,
+        max_new_tokens=5,
+        agent_runtime=FakeAgentRuntime("0"),
+    )
+    result = suite.evaluate(FakeSession(["<tool_call>echo 0</tool_call>", "<think>deliberation</think>0"]))
+
+    sample = result.samples[0]
+    assert sample.scores["em"] == 1.0
+    assert sample.prediction.strip() == "<think>deliberation</think>0"
+
+
+def test_chat_template_kwargs_forwarded_on_every_turn(tmp_path: Any) -> None:
+    """chat_template_kwargs ride along on each generation request."""
+    captured_requests: list[Any] = []
+
+    class RecordingSession:
+        batch_size = 1
+
+        def generate(self, requests: list[Any], batch_size: int) -> list[GenerationOutput]:
+            del batch_size
+            captured_requests.append(requests[0])
+            text = "<tool_call>echo 0</tool_call>" if len(captured_requests) == 1 else "0"
+            return [GenerationOutput(prompt=requests[0].prompt or "", text=text)]
+
+        def close(self) -> None:
+            pass
+
+        def gc(self) -> None:
+            pass
+
+    _make_local_task_dir(tmp_path, "task-1", "Print zero.", "0")
+    suite = terminal_bench_21(
+        dataset_path=str(tmp_path),
+        max_rows=1,
+        batch_size=1,
+        max_new_tokens=5,
+        chat_template_kwargs={"enable_thinking": False},
+        agent_runtime=FakeAgentRuntime("0"),
+    )
+    result = suite.evaluate(RecordingSession())
+
+    assert len(captured_requests) == 2
+    for request in captured_requests:
+        assert request.chat_template_kwargs == {"enable_thinking": False}
+    assert result.samples[0].scores["em"] == 1.0

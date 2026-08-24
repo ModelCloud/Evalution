@@ -894,6 +894,8 @@ class TinygradSession(BaseInferenceSession):
                 "tokenize": False,
                 "add_generation_prompt": request.add_generation_prompt,
             }
+            if request.chat_template_kwargs:
+                template_kwargs.update(request.chat_template_kwargs)
             if request.tools:
                 template_kwargs["tools"] = request.tools
             return apply_chat_template(
@@ -916,6 +918,8 @@ class TinygradSession(BaseInferenceSession):
                     "tokenize": True,
                     "add_generation_prompt": request.add_generation_prompt,
                 }
+                if request.chat_template_kwargs:
+                    chat_kwargs.update(request.chat_template_kwargs)
                 if request.tools:
                     chat_kwargs["tools"] = request.tools
                 tokenized = apply_chat_template(

@@ -452,3 +452,32 @@ def test_native_parser_mixed_families_in_one_generation() -> None:
         "<tool_call>run_command<arg_key>command</arg_key><arg_value>echo b</arg_value></tool_call>"
     )
     assert native_tool_commands(mixed) == ["echo a", "echo b"]
+
+
+def test_native_parser_qwen35_36_function_xml() -> None:
+    """Qwen3.5/3.6 nested <function=...><parameter=...> XML decodes to commands."""
+    from evalution.benchmarks.tool_calling import native_tool_commands
+
+    exact_template_style = (
+        "<tool_call>\n<function=run_command>\n<parameter=command>\n"
+        "ls /etc/alpine-release\n</parameter>\n</function>\n</tool_call>"
+    )
+    assert native_tool_commands(exact_template_style) == ["ls /etc/alpine-release"]
+
+    # Multi-line values and surrounding prose before the call.
+    with_prose = (
+        "Checking now.\n<tool_call>\n<function=run_command>\n"
+        "<parameter=command>\necho 'a b'\nmore lines\n</parameter>\n"
+        "</function>\n</tool_call>"
+    )
+    assert native_tool_commands(with_prose) == ["echo 'a b'\nmore lines"]
+
+    # Bare parameter blocks without a function wrapper are still captured.
+    bare = "<tool_call>\n<parameter=command>\necho hi\n</parameter>\n</tool_call>"
+    assert native_tool_calls_or_empty(bare)
+
+
+def native_tool_calls_or_empty(text: str) -> list[str]:
+    from evalution.benchmarks.tool_calling import native_tool_commands
+
+    return native_tool_commands(text)

@@ -620,6 +620,10 @@ class VLLMSession(BaseInferenceSession):
                 "tokenize": False,
                 "add_generation_prompt": request.add_generation_prompt,
             }
+            if request.chat_template_kwargs:
+                template_kwargs.update(request.chat_template_kwargs)
+            if request.chat_template_kwargs:
+                template_kwargs.update(request.chat_template_kwargs)
             if request.tools:
                 template_kwargs["tools"] = request.tools
             return apply_chat_template(
