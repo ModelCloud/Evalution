@@ -46,7 +46,7 @@ def _docker_available() -> bool:
 @pytest.mark.skipif(not _docker_available(), reason="Docker daemon not available")
 def test_docker_agent_runtime_run_command() -> None:
     """Run a command in an Alpine container and capture stdout/stderr."""
-    runtime = DockerAgentRuntime(pull="missing")
+    runtime = DockerAgentRuntime(opts={"pull": "missing"})
     result = runtime.run("echo hello && echo error >&2")
 
     assert result.exit_code == 0
@@ -58,7 +58,7 @@ def test_docker_agent_runtime_run_command() -> None:
 @pytest.mark.skipif(not _docker_available(), reason="Docker daemon not available")
 def test_docker_agent_runtime_network_isolated() -> None:
     """Verify the default network mode prevents outbound traffic."""
-    runtime = DockerAgentRuntime(pull="missing")
+    runtime = DockerAgentRuntime(opts={"pull": "missing"})
     result = runtime.run("wget -qO- https://example.com || echo 'network-blocked'")
 
     assert result.exit_code == 0 or "network-blocked" in result.stdout
@@ -75,7 +75,7 @@ def test_docker_runtime_builds_configured_command(monkeypatch: pytest.MonkeyPatc
         return SimpleNamespace(stdout="ok", stderr="", returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    result = DockerAgentRuntime(path="/opt/docker", network="host").run(
+    result = DockerAgentRuntime(path="/opt/docker", opts={"network": "host"}).run(
         "printf '%s' hello",
         image="test:latest",
         env={"TOKEN": "value"},
@@ -115,7 +115,7 @@ def test_smolvm_runtime_builds_isolated_command(monkeypatch: pytest.MonkeyPatch)
         return SimpleNamespace(stdout="ok", stderr="", returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    SmolVmAgentRuntime(path="/opt/smolvm", network=True).run(
+    SmolVmAgentRuntime(path="/opt/smolvm", opts={"network": True}).run(
         "echo hello",
         image="alpine",
         env={"MODE": "test"},
@@ -220,20 +220,28 @@ def test_native_parser_handles_model_quirks() -> None:
     """Native parsing survives python_tag prefixes, invalid escapes, and noise."""
     from evalution.benchmarks.tool_calling import native_tool_commands
 
-    llama = (
-        '<|python_tag|>{"name": "run_command", "parameters": '
-        '{"command": "ls /etc/alpine-release > /dev/null 2>&1; echo \\$?"}}'
+    bs = chr(92)
+    # Single backslash before $ is INVALID JSON; repair must drop it.
+    invalid_escape = (
+        "<|python_tag|>{\"name\": \"run_command\", \"parameters\": "
+        '{"command": "ls; echo ' + bs + '$?"}}'
     )
-    assert native_tool_commands(llama) == [
-        "ls /etc/alpine-release > /dev/null 2>&1; echo $?"
-    ]
+    assert native_tool_commands(invalid_escape) == ["ls; echo $?"]
+
+    # Valid double backslash survives as a literal backslash.
+    valid_escape = (
+        "<|python_tag|>{\"name\": \"run_command\", \"parameters\": "
+        '{"command": "ls; echo ' + bs + bs + '$?"}}'
+    )
+    assert native_tool_commands(valid_escape) == [f"ls; echo {bs}$?"]
+
     hermes = (
         '<tool_call>{"name": "run_command", "arguments": {"command": "echo b"}}</tool_call>'
     )
     assert native_tool_commands(hermes) == ["echo b"]
-    assert native_tool_commands('junk before {"name": "run_command", "parameters": {"command": "echo c"}} after') == [
-        "echo c"
-    ]
+    assert native_tool_commands(
+        'junk before {"name": "run_command", "parameters": {"command": "echo c"}} after'
+    ) == ["echo c"]
     assert native_tool_commands("no tool call at all") == []
 
 
@@ -340,3 +348,107 @@ def test_validate_tool_call_format_rejects_unknown() -> None:
     """Unknown protocols fail loudly instead of silently capturing nothing."""
     with pytest.raises(ValueError, match="unknown tool_call_format"):
         validate_tool_call_format("xml_tools")
+
+
+def test_docker_opts_map_to_resource_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Docker resource opts translate to their CLI flags."""
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append(command)
+        return SimpleNamespace(stdout="", stderr="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    DockerAgentRuntime(
+        opts={"memory": "4g", "cpus": 2, "disk": "10g", "gpus": 1, "shm_size": "256m"},
+    ).run("echo hi")
+
+    cmd = calls[0]
+    assert "--memory" in cmd and cmd[cmd.index("--memory") + 1] == "4g"
+    assert "--cpus" in cmd and cmd[cmd.index("--cpus") + 1] == "2"
+    idx = cmd.index("--storage-opt")
+    assert cmd[idx + 1] == "size=10g"
+    assert "--gpus" in cmd and cmd[cmd.index("--gpus") + 1] == "1"
+    assert "--shm-size" in cmd and cmd[cmd.index("--shm-size") + 1] == "256m"
+
+
+def test_smolvm_opts_map_to_resource_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+    """smolvm resource opts translate to --cpus/--mem/--storage/--gpu."""
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append(command)
+        return SimpleNamespace(stdout="", stderr="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    SmolVmAgentRuntime(opts={"cpus": 2, "memory": 2048, "disk": 20, "gpu": True}).run(
+        "echo hi"
+    )
+
+    cmd = calls[0]
+    assert "--cpus" in cmd and cmd[cmd.index("--cpus") + 1] == "2"
+    assert "--mem" in cmd and cmd[cmd.index("--mem") + 1] == "2048"
+    assert "--storage" in cmd and cmd[cmd.index("--storage") + 1] == "20"
+    assert "--gpu" in cmd
+
+
+def test_smolvm_allow_hosts_implies_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    """allow_hosts enables egress per-host flags (and implies --net)."""
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append(command)
+        return SimpleNamespace(stdout="", stderr="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    SmolVmAgentRuntime(opts={"allow_hosts": ["pypi.org", "github.com"]}).run("echo hi")
+
+    cmd = calls[0]
+    assert "--net" in cmd
+    assert cmd.count("--allow-host") == 2
+
+
+@pytest.mark.parametrize("runtime", [DockerAgentRuntime, SmolVmAgentRuntime])
+def test_unknown_opts_rejected(runtime: type) -> None:
+    """Unknown opts fail at construction so typos never weaken the sandbox."""
+    with pytest.raises(ValueError, match="does not support opts"):
+        runtime(opts={"priviledged": True})
+
+
+def test_native_parser_glm_laguna_xml_arguments() -> None:
+    """GLM-5.2 / Laguna-S-2.1 arg_key/arg_value bodies decode to commands."""
+    from evalution.benchmarks.tool_calling import native_tool_commands
+
+    glm = (
+        "<tool_call>run_command<arg_key>command</arg_key>"
+        "<arg_value>ls /etc/alpine-release</arg_value></tool_call>"
+    )
+    assert native_tool_commands(glm) == ["ls /etc/alpine-release"]
+
+    quoted = (
+        '<tool_call>run_command<arg_key>command</arg_key>'
+        '<arg_value>echo "a b"</arg_value></tool_call>'
+    )
+    assert native_tool_commands(quoted) == ['echo "a b"']
+
+
+def test_native_parser_minimax_invoke_block() -> None:
+    """MiniMax-M3 <invoke name=...> blocks decode to commands."""
+    from evalution.benchmarks.tool_calling import native_tool_commands
+
+    block = (
+        "<tool_call>\n<invoke name=\"run_command\">\n"
+        "<command>echo hi</command>\n</invoke>\n</tool_call>"
+    )
+    assert native_tool_commands(block) == ["echo hi"]
+
+
+def test_native_parser_mixed_families_in_one_generation() -> None:
+    """Multiple encodings in one generation are each captured, once."""
+    from evalution.benchmarks.tool_calling import native_tool_commands
+
+    mixed = (
+        "<tool_call>{\"name\": \"run_command\", \"parameters\": {\"command\": \"echo a\"}}</tool_call>\n"
+        "<tool_call>run_command<arg_key>command</arg_key><arg_value>echo b</arg_value></tool_call>"
+    )
+    assert native_tool_commands(mixed) == ["echo a", "echo b"]

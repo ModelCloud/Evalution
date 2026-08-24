@@ -784,6 +784,46 @@ Every runtime shares two common settings: `path` selects the runtime binary and 
 `"auto"`, which resolves the runtime's standard binary (`docker`, `smolvm`) from the current
 environment `PATH`; `image` selects the default execution image and can be overridden per task.
 
+Runtime-specific knobs (memory, CPUs, disk, networking, GPU, ...) go through the generic
+`opts` mapping. Keys are validated against a per-runtime allowlist at construction — unknown
+keys raise immediately so a typo can never silently weaken the sandbox:
+
+```python
+DockerAgentRuntime(opts={
+    "memory": "8g",        # --memory 8g
+    "cpus": 4,             # --cpus 4
+    "disk": "20g",         # --storage-opt size=20g
+    "network": "none",     # docker network mode (default "none")
+    "pull": "missing",     # pull policy (default "never")
+    "gpus": "all",         # --gpus all
+    "shm_size": "256m",    # --shm-size 256m
+})
+
+SmolVmAgentRuntime(opts={
+    "cpus": 2,             # --cpus 2
+    "memory": 4096,        # --mem 4096 (MiB)
+    "disk": 20,            # --storage 20 (GiB)
+    "network": False,      # outbound network off by default
+    "allow_hosts": ["pypi.org"],  # per-host egress (implies --net)
+    "gpu": True,           # virtio-gpu acceleration
+})
+```
+
+Verified native tool-calling compatibility (parsed by `native_json`) against real chat templates:
+
+| Model family | Native encoding |
+| --- | --- |
+| Llama 3.x Instruct | `<|python_tag|>{JSON}` / bare JSON with `parameters`/`arguments` |
+| Qwen3 / Hermes-family | `<tool_call>{JSON}</tool_call>` |
+| GLM-5.2 (Z.ai) | `<tool_call>{fn}<arg_key>k</arg_key><arg_value>v</arg_value></tool_call>` |
+| Laguna-S-2.1 | same XML `arg_key`/`arg_value` style as GLM |
+| MiniMax-M2/M3 | `<tool_call><invoke name="..."><param>v</param></invoke></tool_call>` |
+
+Models without a native tool template (for example DeepSeek-V4-Flash ships none) run in
+`prompted` mode using the strict `<tool_call>...</tool_call>` marker syntax; ordinary code
+output never matches that protocol and is never executed.
+
+
 ### DockerAgentRuntime (containers)
 
 Runs every generated command in a disposable `docker run --rm` container with no network access by

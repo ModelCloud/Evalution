@@ -257,7 +257,7 @@ def test_agentic_e2e_native_tool_calling_model(tmp_path: Path) -> None:
             max_tool_turns=4,
             apply_chat_template=True,
             tool_call_mode="native",
-            agent_runtime=DockerAgentRuntime(image="alpine:latest", pull="missing"),
+            agent_runtime=DockerAgentRuntime(image="alpine:latest", opts={"pull": "missing"}),
         )
         result = suite.evaluate(session)
     finally:
@@ -288,7 +288,7 @@ def test_agentic_e2e_prompted_tool_calling_model(tmp_path: Path) -> None:
             max_tool_turns=4,
             apply_chat_template=True,
             tool_call_mode="prompted",
-            agent_runtime=DockerAgentRuntime(image="alpine:latest", pull="missing"),
+            agent_runtime=DockerAgentRuntime(image="alpine:latest", opts={"pull": "missing"}),
         )
         result = suite.evaluate(session)
     finally:
@@ -319,7 +319,7 @@ def test_agentic_e2e_fenced_shell_protocol(tmp_path: Path) -> None:
             max_tool_turns=4,
             apply_chat_template=True,
             tool_call_format=TOOL_CALL_FENCED_SHELL,
-            agent_runtime=DockerAgentRuntime(image="alpine:latest", pull="missing"),
+            agent_runtime=DockerAgentRuntime(image="alpine:latest", opts={"pull": "missing"}),
         )
         result = suite.evaluate(session)
     finally:
