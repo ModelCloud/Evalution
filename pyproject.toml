@@ -54,6 +54,13 @@ filterwarnings = [
     "ignore:Importing BlockSparseLayout from torchao\\.dtypes is deprecated.*:DeprecationWarning",
 ]
 [project.optional-dependencies]
+llamacpp = [
+    # llama-cpp-python 0.3.35 vendors the stable llama.cpp v0.2.0 API.
+    "llama-cpp-python>=0.3.35,<0.4",
+]
+tinygrad = [
+    "tinygrad>=0.13.0,<0.14; python_version >= '3.11'",
+]
 test = [
     "pytest",
     "torch",

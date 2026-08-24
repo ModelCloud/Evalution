@@ -1322,10 +1322,18 @@ def _build_gguf_runtime(
     del raw_model
     gc.collect()
 
-    tokenizer = modules.llm_cli.SimpleTokenizer.from_gguf_kv(kv)
     prepare_tokenizer = None
     if model_config.tokenizer is not None or model_config.tokenizer_path is not None:
         prepare_tokenizer = _load_prepare_tokenizer(config, model_config)
+    try:
+        tokenizer = modules.llm_cli.SimpleTokenizer.from_gguf_kv(kv)
+    except ValueError:
+        # Stable tinygrad intentionally supports only a small set of GGUF tokenizer presets.
+        # A caller-supplied Hugging Face tokenizer is still sufficient for prompt encoding,
+        # decoding, and stop-token handling, so use it as the runtime tokenizer as well.
+        if prepare_tokenizer is None:
+            raise
+        tokenizer = prepare_tokenizer
     return model, tokenizer, prepare_tokenizer, str(kv.get("general.architecture", "gguf"))
 
 

@@ -543,7 +543,7 @@ GGUF models through tinygrad's own LLM runtime. Evalution keeps `generate(...)`,
 `generate_continuous(...)`, `loglikelihood(...)`, and `loglikelihood_rolling(...)` on the same
 shared engine contract.
 
-Install the runtime with `pip install tinygrad`.
+Install the stable runtime supported by this engine with `pip install 'evalution[tinygrad]'`.
 
 Tinygrad engine summary:
 
@@ -608,12 +608,15 @@ Use `engines.LlamaCpp()` in Python or `engine.type: LlamaCpp` in YAML when you w
 `generate_continuous(...)`, `loglikelihood(...)`, and `loglikelihood_rolling(...)` on the same
 shared engine contract. The current backend expects `num_beams=1`.
 
+Install the stable CPU runtime supported by this engine with
+`pip install 'evalution[llamacpp]'`.
+
 Install from source when you need CUDA support:
 
 ```bash
 CMAKE_ARGS="-DGGML_CUDA=on -DCUDAToolkit_ROOT=/usr/local/cuda-12.8" \
 FORCE_CMAKE=1 \
-pip install --no-binary=:all: --force-reinstall llama-cpp-python
+pip install --no-binary=:all: --force-reinstall 'llama-cpp-python>=0.3.35,<0.4'
 ```
 
 Notes:
