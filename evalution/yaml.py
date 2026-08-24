@@ -357,6 +357,11 @@ for _click_task in benchmarks.CLICK_TASKS:
 
 del _click_task
 
+for _agentic_task in benchmarks.AGENTIC_TASKS:
+    _TEST_FACTORIES[_agentic_task] = getattr(benchmarks, _agentic_task)
+
+del _agentic_task
+
 for _task_name in benchmarks.CABBQ_TASKS:
     _TEST_FACTORIES[_task_name] = getattr(benchmarks, _task_name)
 
