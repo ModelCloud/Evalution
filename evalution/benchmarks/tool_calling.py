@@ -220,31 +220,78 @@ def _decode_lenient_json(payload: str) -> Any:
         return None
 
 
+_NATIVE_BLOCK_RE = pcre.compile(r"<tool_call>(.*?)</tool_call>", pcre.DOTALL)
+_ARG_PAIR_RE = pcre.compile(
+    r"<arg_key>(.*?)</arg_key>\s*<arg_value>(.*?)</arg_value>",
+    pcre.DOTALL | pcre.IGNORECASE,
+)
+_INVOKE_RE = pcre.compile(
+    r'<invoke\s+name="([^"]+)"\s*>(.*?)</invoke>', pcre.DOTALL | pcre.IGNORECASE
+)
+_PARAM_RE = pcre.compile(r"<([A-Za-z_][\w.-]*)>(.*?)</\1>", pcre.DOTALL)
+
+
+def _command_from_native_body(body: str) -> str | None:
+    """Decode one native tool-call body (JSON, GLM/Laguna XML, MiniMax invoke).
+
+    Returns the shell command when the body references a ``command`` argument;
+    anything else is not a runnable action request.
+    """
+    # 1) JSON payloads: Hermes/Qwen style {"name": ..., "parameters"/"arguments": {...}}
+    for payload in _balanced_json_objects(body):
+        parsed = _decode_lenient_json(payload)
+        if isinstance(parsed, dict):
+            arguments = parsed.get("parameters", parsed.get("arguments"))
+            command = arguments.get("command") if isinstance(arguments, dict) else None
+            if isinstance(command, str) and command.strip():
+                return command.strip()
+
+    # 2) GLM / Laguna XML arguments:
+    #    run_command<arg_key>command</arg_key><arg_value>ls</arg_value>
+    pairs = {
+        key.strip().lower(): value.strip()
+        for key, value in _ARG_PAIR_RE.findall(body)
+    }
+    if pairs.get("command"):
+        return pairs["command"]
+
+    # 3) MiniMax-style <invoke name="..."><param>value</param></invoke>
+    for _name, inner in _INVOKE_RE.findall(body):
+        params = {
+            tag.strip().lower(): value.strip()
+            for tag, value in _PARAM_RE.findall(inner)
+        }
+        if params.get("command"):
+            return params["command"]
+
+    return None
+
+
 def native_tool_commands(text: str) -> list[str]:
     """Parse model-native tool-call responses into shell commands.
 
-    Covers the encodings used by the major open-model families:
-    Llama ``<|python_tag|>{...}``, Hermes/Qwen ``<tool_call>{...}``, and bare
-    JSON objects carrying ``name`` plus ``parameters``/``arguments``. Slightly
-    malformed JSON (for example ``\\$ `` escapes around shell variables) is
-    repaired before decoding.
+    Covers the encodings observed across current open-model families:
+    Llama ``<|python_tag|>{...}``, Hermes/Qwen JSON inside
+    ``<tool_call></tool_call>``, GLM-5.2 and Laguna-S-2.1 XML
+    ``arg_key``/``arg_value`` bodies, MiniMax-M3 ``<invoke>`` blocks, and bare
+    JSON objects carrying ``name`` plus ``parameters``/``arguments``.
+    Slightly malformed JSON (for example ``\\$ `` escapes around shell
+    variables) is repaired before decoding.
     """
     if not text:
         return []
 
     candidates: list[str] = []
     stripped = _PYTHON_TAG_RE.sub("", text)
-    xml_matches = _NATIVE_XML_RE.findall(stripped)
-    segments = xml_matches if xml_matches else [stripped]
+
+    segments = [stripped]
+    for block_match in _NATIVE_BLOCK_RE.finditer(stripped):
+        segments.append(block_match.group(1))
+
     for segment in segments:
-        for payload in _balanced_json_objects(segment):
-            parsed = _decode_lenient_json(payload)
-            if not isinstance(parsed, dict):
-                continue
-            arguments = parsed.get("parameters", parsed.get("arguments"))
-            command = arguments.get("command") if isinstance(arguments, dict) else None
-            if isinstance(command, str) and command.strip():
-                candidates.append(command.strip())
+        command = _command_from_native_body(segment)
+        if command:
+            candidates.append(command)
 
     # De-duplicate while preserving order.
     seen: set[str] = set()

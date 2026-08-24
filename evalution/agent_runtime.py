@@ -11,9 +11,11 @@ suite must run them through a sandboxed :class:`BaseAgentRuntime` such as
 bare host is only allowed through the explicit, warning-emitting
 :class:`UnsafeLocalRuntime` escape hatch.
 
-Every runtime shares two common settings: ``path`` selects the runtime
-binary (``"auto"`` resolves through the current environment ``PATH``) and
-``image`` selects the default execution image.
+Every runtime shares common settings: ``path`` selects the runtime binary
+(``"auto"`` resolves through the current environment ``PATH``), ``image``
+selects the default execution image, ``timeout`` bounds each command, and
+``opts`` carries runtime-specific resource knobs (memory, CPUs, disk,
+networking, ...) validated against a per-runtime allowlist.
 """
 
 from __future__ import annotations
@@ -50,9 +52,16 @@ class BaseAgentRuntime(ABC):
     ``path`` locates the runtime CLI binary; the default ``"auto"`` uses the
     binary name resolved from the current configured bin environment.
     ``image`` is the default image used when a call does not override it.
+    ``shell`` is the guest shell invoked as ``<shell> -c <command>``.
+
+    ``opts`` holds runtime-specific arguments such as ``memory``, ``cpus``,
+    ``disk`` and networking toggles. Keys are validated against each runtime's
+    ``ALLOWED_OPTS`` allowlist — unknown keys raise immediately so typos never
+    silently change sandbox semantics.
     """
 
     DEFAULT_BINARY: str = ""
+    ALLOWED_OPTS: frozenset[str] = frozenset()
 
     def __init__(
         self,
@@ -60,10 +69,20 @@ class BaseAgentRuntime(ABC):
         path: str = AUTO_PATH,
         image: str | None = None,
         timeout: float = 60.0,
+        shell: str = "sh",
+        opts: Mapping[str, object] | None = None,
     ) -> None:
         self.path = path
         self.image = image
         self.timeout = timeout
+        self.shell = shell
+        self.opts: dict[str, object] = dict(opts) if opts else {}
+        unknown = sorted(set(self.opts) - set(self.ALLOWED_OPTS))
+        if unknown:
+            raise ValueError(
+                f"{type(self).__name__} does not support opts {unknown}; "
+                f"allowed keys: {', '.join(sorted(self.ALLOWED_OPTS))}"
+            )
 
     @property
     def resolved_path(self) -> str:
@@ -90,6 +109,17 @@ class DockerAgentRuntime(BaseAgentRuntime):
 
     DEFAULT_BINARY = "docker"
     DEFAULT_IMAGE = "alpine:latest"
+    ALLOWED_OPTS = frozenset(
+        {
+            "network",  # docker network mode: "none" (default), "bridge", "host", ...
+            "pull",     # pull policy: never (default), missing, always
+            "memory",   # --memory, e.g. "4g"
+            "cpus",     # --cpus, e.g. 2
+            "disk",     # --storage-opt size=..., e.g. "10g"
+            "gpus",     # --gpus, e.g. "all" or 1
+            "shm_size", # --shm-size, e.g. "256m"
+        }
+    )
 
     def __init__(
         self,
@@ -97,14 +127,12 @@ class DockerAgentRuntime(BaseAgentRuntime):
         path: str = AUTO_PATH,
         image: str | None = None,
         timeout: float = 60.0,
-        network: str = "none",
-        pull: str = "never",
         shell: str = "sh",
+        opts: Mapping[str, object] | None = None,
     ) -> None:
-        super().__init__(path=path, image=image, timeout=timeout)
-        self.network = network
-        self.pull = pull
-        self.shell = shell
+        super().__init__(path=path, image=image, timeout=timeout, shell=shell, opts=opts)
+        self.opts.setdefault("network", "none")
+        self.opts.setdefault("pull", "never")
 
     def run(
         self,
@@ -125,10 +153,25 @@ class DockerAgentRuntime(BaseAgentRuntime):
             "--rm",
             "-i",
             "--pull",
-            self.pull,
+            str(self.opts["pull"]),
             "--network",
-            self.network,
+            str(self.opts["network"]),
         ]
+        resource_flags = {
+            "memory": ("--memory",),
+            "cpus": ("--cpus",),
+            "disk": ("--storage-opt",),
+            "gpus": ("--gpus",),
+            "shm_size": ("--shm-size",),
+        }
+        for key, flag in resource_flags.items():
+            value = self.opts.get(key)
+            if value is None:
+                continue
+            if key == "disk":
+                docker_cmd.extend([flag[0], f"size={value}"])
+            else:
+                docker_cmd.extend([flag[0], str(value)])
         if env:
             for key, value in env.items():
                 docker_cmd.extend(["-e", f"{key}={value}"])
@@ -150,6 +193,16 @@ class SmolVmAgentRuntime(BaseAgentRuntime):
 
     DEFAULT_BINARY = "smolvm"
     DEFAULT_IMAGE = "alpine"
+    ALLOWED_OPTS = frozenset(
+        {
+            "network",      # bool: enable outbound network (--net)
+            "cpus",         # --cpus, number of virtual CPUs
+            "memory",       # --mem, MiB (int)
+            "disk",         # --storage, GiB (int)
+            "allow_hosts",  # list of hostnames with egress (implies --net)
+            "gpu",          # bool: virtio-gpu acceleration
+        }
+    )
 
     def __init__(
         self,
@@ -157,16 +210,10 @@ class SmolVmAgentRuntime(BaseAgentRuntime):
         path: str = AUTO_PATH,
         image: str | None = None,
         timeout: float = 60.0,
-        network: bool = False,
-        cpus: int | None = None,
-        memory_mib: int | None = None,
         shell: str = "sh",
+        opts: Mapping[str, object] | None = None,
     ) -> None:
-        super().__init__(path=path, image=image, timeout=timeout)
-        self.network = network
-        self.cpus = cpus
-        self.memory_mib = memory_mib
-        self.shell = shell
+        super().__init__(path=path, image=image, timeout=timeout, shell=shell, opts=opts)
 
     def run(
         self,
@@ -182,12 +229,20 @@ class SmolVmAgentRuntime(BaseAgentRuntime):
         resolved_image = image or self.image or self.DEFAULT_IMAGE
         resolved_timeout = self.timeout if timeout is None else timeout
         smolvm_cmd = [self.resolved_path, "machine", "run"]
-        if self.network:
+        allow_hosts = self.opts.get("allow_hosts") or []
+        network = bool(self.opts.get("network")) or bool(allow_hosts)
+        if network:
             smolvm_cmd.append("--net")
-        if self.cpus is not None:
-            smolvm_cmd.extend(["--cpus", str(self.cpus)])
-        if self.memory_mib is not None:
-            smolvm_cmd.extend(["--mem", str(self.memory_mib)])
+        if self.opts.get("cpus") is not None:
+            smolvm_cmd.extend(["--cpus", str(self.opts["cpus"])])
+        if self.opts.get("memory") is not None:
+            smolvm_cmd.extend(["--mem", str(self.opts["memory"])])
+        if self.opts.get("disk") is not None:
+            smolvm_cmd.extend(["--storage", str(self.opts["disk"])])
+        if self.opts.get("gpu"):
+            smolvm_cmd.append("--gpu")
+        for host in allow_hosts:
+            smolvm_cmd.extend(["--allow-host", str(host)])
         smolvm_cmd.extend(["--image", resolved_image])
         if env:
             for key, value in env.items():
@@ -207,8 +262,7 @@ class UnsafeLocalRuntime(BaseAgentRuntime):
     DEFAULT_BINARY = "sh"
 
     def __init__(self, *, shell: str = "sh", timeout: float = 60.0) -> None:
-        super().__init__(path=AUTO_PATH, image=None, timeout=timeout)
-        self.shell = shell
+        super().__init__(path=AUTO_PATH, image=None, timeout=timeout, shell=shell)
         warnings.warn(
             "UnsafeLocalRuntime executes agent commands directly on the host "
             "without sandboxing; only use it for fully trusted workloads.",
