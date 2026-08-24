@@ -5,9 +5,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field, replace
-from typing import Any, TypeAlias
+from typing import Any
+
+from evalution.agent_runtime import BaseAgentRuntime
 
 
 @dataclass(slots=True, frozen=True)
@@ -42,3 +43,20 @@ def model_with_label(model: Model, *, label: str | None) -> Model:
     if label is None:
         return model
     return replace(model, label=label)
+
+
+@dataclass(slots=True, frozen=True)
+class AgentRuntimeConfig:
+    """Select the isolated runtime used by an agentic benchmark.
+
+    ``agent_runtime`` must be a sandboxed :class:`BaseAgentRuntime` such as
+    :class:`DockerAgentRuntime` or :class:`SmolVmAgentRuntime`; pass
+    :class:`UnsafeLocalRuntime` to explicitly allow unisolated host execution.
+    """
+
+    agent_runtime: BaseAgentRuntime | None = None
+
+    @property
+    def runtime(self) -> BaseAgentRuntime | None:
+        """Return the configured agent runtime."""
+        return self.agent_runtime

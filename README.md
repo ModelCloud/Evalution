@@ -731,6 +731,89 @@ result = (
 
 YAML flows can only configure `tokenizer_path`; passing a live tokenizer object is Python-only.
 
+## Agent Runtimes 🛡️
+
+Some agentic benchmarks do more than score text: the tool-calling suites (`terminal_bench_21`,
+`deep_swe`, and `toolathlon_verified`) execute model-generated shell commands to verify task
+outcomes. Because those commands come from an LLM, Evalution refuses to run them directly on your
+machine. A tool-calling suite without a configured runtime fails before evaluation starts:
+
+```
+ValueError: terminal_bench_21 executes model-generated commands, which requires an isolated
+AgentRuntime. Configure AgentRuntimeConfig(agent_runtime=DockerAgentRuntime() |
+SmolVmAgentRuntime()), or pass UnsafeLocalRuntime() to explicitly allow unisolated host execution.
+```
+
+Pick one of the sandboxed runtimes below and pass it through `AgentRuntimeConfig`:
+
+```python
+import evalution.benchmarks as benchmarks
+from evalution import DockerAgentRuntime
+from evalution.config import AgentRuntimeConfig
+
+suite = benchmarks.terminal_bench_21(
+    agent_runtime=AgentRuntimeConfig(agent_runtime=DockerAgentRuntime()),
+)
+```
+
+### DockerAgentRuntime (containers)
+
+Runs every generated command in a disposable `docker run --rm` container with no network access by
+default. Requires a working Docker daemon.
+
+```python
+from evalution import DockerAgentRuntime
+
+runtime = DockerAgentRuntime(
+    docker_path="docker",   # Docker CLI binary
+    image="alpine:latest",  # default image when a task does not pin one
+    timeout=60.0,           # per-command timeout in seconds
+    network="none",         # container network mode; keep "none" for untrusted models
+    pull="never",           # never pull images from the network at run time
+)
+```
+
+### SmolVmAgentRuntime (microVMs)
+
+Runs every generated command in an ephemeral [smolvm](https://github.com/smol-machines/smolvm)
+microVM — a hardware-isolated virtual machine with its own guest kernel that is removed after exit.
+Networking is off unless you enable it. Requires the `smolvm` CLI and platform virtualization
+support (KVM on Linux).
+
+```python
+from evalution import SmolVmAgentRuntime
+
+runtime = SmolVmAgentRuntime(
+    smolvm_path="smolvm",  # smolvm CLI binary
+    image="alpine",        # OCI image to boot
+    timeout=60.0,
+    network=False,         # leave disabled for untrusted models
+)
+```
+
+### UnsafeLocalRuntime (explicit host bypass)
+
+To run commands directly on the host with no isolation, you must explicitly opt in with
+`UnsafeLocalRuntime`. It emits a `RuntimeWarning` on construction so the choice is visible in logs
+and CI. Only use it for fully trusted workloads on disposable machines.
+
+```python
+import warnings
+from evalution import UnsafeLocalRuntime
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", RuntimeWarning)  # acknowledge the warning once
+    runtime = UnsafeLocalRuntime()
+
+suite = benchmarks.deep_swe(
+    dataset_path="~/.cache/evalution/deep-swe/tasks",
+    agent_runtime=AgentRuntimeConfig(agent_runtime=runtime),
+)
+```
+
+Custom sandboxes implement `BaseAgentRuntime` (a single async-safe `run(command, ...) -> AgentRuntimeResult`
+method) and plug into `AgentRuntimeConfig` the same way.
+
 ## Supported Benchmarks 📚
 
 Evalution currently ships the following built-in benchmarks:
@@ -758,7 +841,8 @@ their task files in the directories expected by Evalution:
 Create the applicable directory and populate it with the benchmark's task files before running the
 suite. This repository does not include a setup or download script for these files, so all three
 suites currently require manual task provisioning; otherwise evaluation fails with a local task
-directory error.
+directory error. These three suites execute model-generated commands, so they additionally require
+a sandboxed agent runtime; see [Agent Runtimes](#agent-runtimes-️) above.
 
 | Suite | Original benchmark |
 | --- | --- |

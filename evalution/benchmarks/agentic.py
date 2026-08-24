@@ -15,17 +15,20 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from pathlib import Path
 from typing import Any
 
 import pcre
 from datasets import Dataset, load_dataset
 
-from evalution.benchmarks.agentic_docker import DockerSandbox, extract_command
+from evalution.agent_runtime import BaseAgentRuntime
+from evalution.benchmarks.agentic_docker import extract_command
 from evalution.benchmarks.base import BaseTestSuite
 from evalution.benchmarks.execution import PreparedSample
-from evalution.engines.base import GenerationOutput, GenerationRequest
-from evalution.results import SampleResult
+from evalution.config import AgentRuntimeConfig
+from evalution.engines.base import GenerationOutput, GenerationRequest, InferenceSession
+from evalution.results import SampleResult, TestResult
 
 # Keep benchmark defaults and public task ids explicit at module scope.
 _STOP_STRINGS = (
@@ -800,7 +803,11 @@ class SWEAtlasQnA(BaseTestSuite):
 
 @dataclass(slots=True)
 class _LocalAgenticBenchmark(BaseTestSuite):
-    """Base class for agentic benchmarks that ship as local Harbor task directories."""
+    """Base class for agentic benchmarks that ship as local Harbor task directories.
+
+    These suites execute model-generated commands, so ``agent_runtime`` must
+    point at a sandboxed runtime; evaluation refuses to start otherwise.
+    """
 
     dataset_name: str | None = None
     split: str = "test"
@@ -809,9 +816,9 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     batch_size: int = 1
     do_sample: bool = False
     temperature: float = 0.0
-    use_docker: bool = False
     docker_image: str = "alpine:latest"
     docker_timeout: float = 60.0
+    agent_runtime: AgentRuntimeConfig = dataclass_field(default_factory=AgentRuntimeConfig)
 
     def dataset_loader(self) -> Any:
         """Return the local task directory loader bound to this suite."""
@@ -821,20 +828,32 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         """Return the exported task name for this suite."""
         return self.variant_name
 
+    def _require_agent_runtime(self) -> BaseAgentRuntime:
+        """Return the configured runtime or refuse to run tool-calling tasks."""
+        runtime = self.agent_runtime.runtime
+        if runtime is None:
+            raise ValueError(
+                f"{self.task_name()} executes model-generated commands, which requires "
+                "an isolated AgentRuntime. Configure AgentRuntimeConfig(agent_runtime="
+                "DockerAgentRuntime() | SmolVmAgentRuntime()), or pass UnsafeLocalRuntime() "
+                "to explicitly allow unisolated host execution."
+            )
+        return runtime
+
+    def evaluate(self, session: InferenceSession) -> TestResult:
+        """Refuse to evaluate tool-calling tasks without a configured runtime."""
+        self._require_agent_runtime()
+        return super().evaluate(session)
+
     def result_metadata(
         self,
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
         """Return the result metadata emitted for this suite."""
-        scoring_mode = (
-            "docker_stdout_exact_match"
-            if self.use_docker
-            else "patch_exact_match"
-        )
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
-            "scoring_mode": scoring_mode,
+            "scoring_mode": "agent_runtime_stdout_exact_match",
             "primary_metric": "em",
         }
 
@@ -859,57 +878,41 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
-        """Score one sample against its expected outputs."""
+        """Score one sample by running its command through the agent runtime."""
         doc = prepared_sample.doc
         target = prepared_sample.target
         prediction = output.text
 
-        if self.use_docker:
-            command = extract_command(prediction)
-            image = str(doc.get("docker_image", "")) or self.docker_image
-            sandbox = DockerSandbox(
-                image=image,
-                timeout=self.docker_timeout,
-                pull="never",
-            )
-            run_result = sandbox.run(command)
-            score = (
-                1.0
-                if _normalize(run_result.stdout) == _normalize(target)
-                else 0.0
-            )
-            return SampleResult(
-                index=prepared_sample.index,
-                prompt=output.prompt,
-                target=target,
-                prediction=prediction,
-                extracted={
-                    "command": command,
-                    "stdout": run_result.stdout,
-                    "prediction-normalized": _normalize(prediction),
-                    "target-normalized": _normalize(target),
-                },
-                scores={"em": score},
-                metadata={
-                    "instance_id": str(doc.get("instance_id", "")),
-                    "docker_image": image,
-                    "docker_exit_code": run_result.exit_code,
-                },
-            )
-
+        runtime = self._require_agent_runtime()
+        command = extract_command(prediction)
+        image = str(doc.get("docker_image", "")) or self.docker_image
+        run_result = runtime.run(
+            command,
+            image=image,
+            timeout=self.docker_timeout,
+        )
+        score = (
+            1.0
+            if _normalize(run_result.stdout) == _normalize(target)
+            else 0.0
+        )
         return SampleResult(
             index=prepared_sample.index,
             prompt=output.prompt,
             target=target,
             prediction=prediction,
             extracted={
+                "command": command,
+                "stdout": run_result.stdout,
                 "prediction-normalized": _normalize(prediction),
                 "target-normalized": _normalize(target),
             },
-            scores={"em": _exact_score(prediction, target)},
+            scores={"em": score},
             metadata={
                 "instance_id": str(doc.get("instance_id", "")),
-                "docker_image": str(doc.get("docker_image", "")),
+                "docker_image": image,
+                "runtime_exit_code": run_result.exit_code,
+                "runtime_type": type(runtime).__name__,
             },
         )
 

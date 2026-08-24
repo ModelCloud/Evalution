@@ -21,6 +21,7 @@ import pytest
 from datasets import Dataset
 
 import evalution.benchmarks.agentic as agentic_module
+from evalution.agent_runtime import AgentRuntimeResult, BaseAgentRuntime
 from evalution.benchmarks import (
     agentbench,
     deep_swe,
@@ -38,7 +39,7 @@ from evalution.benchmarks import (
     webarena,
     webarena_hard,
 )
-from evalution.config import Model
+from evalution.config import AgentRuntimeConfig, Model
 from evalution.engines.base import GenerationOutput
 from evalution.engines.transformers_compat import TransformersCompat
 
@@ -124,6 +125,25 @@ class FakeSession:
 
     def gc(self) -> None:
         pass
+
+
+class FakeAgentRuntime(BaseAgentRuntime):
+    """Agent runtime test double that returns canned stdout without executing."""
+
+    def __init__(self, stdout: str) -> None:
+        self.stdout = stdout
+        self.commands: list[str] = []
+
+    def run(self, command: str, **kwargs: Any) -> AgentRuntimeResult:
+        del kwargs
+        self.commands.append(command)
+        return AgentRuntimeResult(
+            stdout=self.stdout,
+            stderr="",
+            exit_code=0,
+            command=[command],
+            duration_s=0.0,
+        )
 
 
 def _make_local_task_dir(root: Any, task_name: str, instruction: str, solution: str) -> None:
@@ -223,8 +243,14 @@ def test_terminal_bench_21_local_task_forward_pass(tmp_path: Any) -> None:
     """Run one forward pass for Terminal-Bench 2.1 using a local task directory."""
     _make_local_task_dir(tmp_path, "task-1", "List files and exit.", "ls\n")
 
-    suite = terminal_bench_21(dataset_path=str(tmp_path), max_rows=1, batch_size=1, max_new_tokens=5)
-    result = suite.evaluate(FakeSession("ls\n"))
+    suite = terminal_bench_21(
+        dataset_path=str(tmp_path),
+        max_rows=1,
+        batch_size=1,
+        max_new_tokens=5,
+        agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("ls\n")),
+    )
+    result = suite.evaluate(FakeSession("<bash>ls</bash>"))
 
     assert result.name == "terminal_bench_21"
     assert len(result.samples) == 1
@@ -235,8 +261,14 @@ def test_deep_swe_local_task_forward_pass(tmp_path: Any) -> None:
     """Run one forward pass for DeepSWE using a local task directory."""
     _make_local_task_dir(tmp_path, "task-1", "Fix the bug.", "diff --git\n")
 
-    suite = deep_swe(dataset_path=str(tmp_path), max_rows=1, batch_size=1, max_new_tokens=5)
-    result = suite.evaluate(FakeSession("diff --git\n"))
+    suite = deep_swe(
+        dataset_path=str(tmp_path),
+        max_rows=1,
+        batch_size=1,
+        max_new_tokens=5,
+        agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("diff --git\n")),
+    )
+    result = suite.evaluate(FakeSession("git apply fix.patch"))
 
     assert result.name == "deep_swe"
     assert len(result.samples) == 1
@@ -260,9 +292,27 @@ def test_toolathlon_verified_local_task_forward_pass(tmp_path: Any) -> None:
     solution_dir.mkdir()
     (solution_dir / "solution.patch").write_text("expected tool output")
 
-    suite = toolathlon_verified(dataset_path=str(tmp_path), max_rows=1, batch_size=1, max_new_tokens=5)
-    result = suite.evaluate(FakeSession("expected tool output"))
+    suite = toolathlon_verified(
+        dataset_path=str(tmp_path),
+        max_rows=1,
+        batch_size=1,
+        max_new_tokens=5,
+        agent_runtime=AgentRuntimeConfig(agent_runtime=FakeAgentRuntime("expected tool output")),
+    )
+    result = suite.evaluate(FakeSession("open the file"))
 
     assert result.name == "toolathlon_verified"
     assert len(result.samples) == 1
     assert result.samples[0].scores["em"] == 1.0
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [terminal_bench_21, deep_swe, toolathlon_verified],
+)
+def test_tool_calling_tasks_require_agent_runtime(factory: Any) -> None:
+    """Refuse to evaluate tool-calling suites when no runtime is configured."""
+    suite = factory(dataset_path="/nonexistent-tasks")
+
+    with pytest.raises(ValueError, match="requires.*AgentRuntime"):
+        suite.evaluate(FakeSession("any output"))
