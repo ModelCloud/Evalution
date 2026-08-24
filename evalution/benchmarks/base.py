@@ -311,6 +311,13 @@ class BaseTestSuite(TestSuite):
             invalid_predictions += self.invalid_prediction_count(sample)
             samples_by_index[sample.index] = sample
             processed_count += 1
+            logger.info(
+                "%s: completed sample %d/%d (dataset_index=%d)",
+                task_name,
+                processed_count,
+                total,
+                sample.index,
+            )
             score_bar.title(
                 self.score_progress_title(
                     processed=processed_count,
