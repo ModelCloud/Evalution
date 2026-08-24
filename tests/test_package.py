@@ -4,6 +4,7 @@
 # Contact: qubitium@modelcloud.ai, x.com/qubitium
 # GPU=-1
 import evalution
+from evalution.yaml import _TEST_FACTORIES
 
 
 def test_package_import() -> None:
@@ -28,6 +29,26 @@ def test_package_import() -> None:
     assert evalution.engines.Transformers is not None
     assert evalution.engines.TransformersCompat is not None
     assert evalution.engines.VLLM is not None
+
+
+def test_benchmark_exports_are_unique_and_importable() -> None:
+    """Verify every declared benchmark export exists exactly once."""
+    exports = evalution.benchmarks.__all__
+
+    assert len(exports) == len(set(exports))
+    for export_name in exports:
+        assert getattr(evalution.benchmarks, export_name) is not None
+
+
+def test_agentic_tasks_are_registered_and_constructible() -> None:
+    """Verify every agentic task is available to YAML without loading data."""
+    agentic_tasks = evalution.benchmarks.AGENTIC_TASKS
+
+    assert set(agentic_tasks) <= set(_TEST_FACTORIES)
+    for task_name in agentic_tasks:
+        factory = _TEST_FACTORIES[task_name]
+        assert callable(factory)
+        assert isinstance(factory(), evalution.benchmarks.TestSuite)
 
 
 def test_package_exports_benchmarks_namespace() -> None:
@@ -824,8 +845,6 @@ def test_package_exports_recent_benchmark_registrations() -> None:
     assert evalution.benchmarks.CapabilityGatedSuite is not None
     assert evalution.benchmarks.CAPABILITY_GATED_TASKS == (
         "swe_bench_verified",
-        "swe_bench_multilingual",
-        "swe_bench_pro",
         "terminal_bench_2",
         "claw_eval_avg",
         "claw_eval_pass3",

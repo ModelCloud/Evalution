@@ -15,8 +15,6 @@ import evalution
     ("factory_name", "benchmark_name"),
     [
         ("swe_bench_verified", "SWE-bench Verified"),
-        ("swe_bench_multilingual", "SWE-bench Multilingual"),
-        ("swe_bench_pro", "SWE-bench Pro"),
         ("terminal_bench_2", "Terminal-Bench 2.0"),
         ("claw_eval_avg", "Claw-Eval Avg"),
         ("claw_eval_pass3", "Claw-Eval Pass^3"),
