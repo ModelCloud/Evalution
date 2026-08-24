@@ -748,12 +748,24 @@ logic, those implementation details can shift results.
 Variant-heavy families are folded into a single row below. Brace notation indicates the concrete
 built-in suite names covered by that row.
 
+Three agentic suites do not download a dataset automatically. Before using them, manually provision
+their task files in the directories expected by Evalution:
+
+- `deep_swe`: `~/.cache/evalution/deep-swe/tasks`
+- `terminal_bench_21`: `~/.cache/evalution/terminal-bench-2-1/tasks`
+- `toolathlon_verified`: `~/.cache/evalution/toolathlon/tasks/finalpool`
+
+Create the applicable directory and populate it with the benchmark's task files before running the
+suite. This repository does not include a setup or download script for these files, so all three
+suites currently require manual task provisioning; otherwise evaluation fails with a local task
+directory error.
+
 | Suite | Original benchmark |
 | --- | --- |
 | `aexams` | EXAMS `hardalov-etal-2020-exams` |
 | `agieval` | AGIEval `zhong2023agieval` |
 | `agentbench`, `gaia`, `gaia_level1`, `gaia_level2`, `gaia_level3`, `osworld`, `swe_bench`, `webarena`, `webarena_hard` | Agentic benchmarks: AgentBench `liu2023agentbench`, GAIA `mialon2023gaia`, OSWorld `xie2024osworld`, SWE-bench `jimenez2024swe-bench`, WebArena `zhou2024webarena` |
-| `deep_swe`, `swe_atlas_qna`, `swe_bench_multilingual`, `swe_bench_pro`, `terminal_bench_21`, `toolathlon_verified` | PoolSide Laguna S 2.1 agentic benchmarks: Terminal-Bench 2.1, SWE-bench Multilingual `SWE-bench/SWE-bench_Multilingual`, SWE-bench Pro `ScaleAI/SWE-bench_Pro`, DeepSWE `datacurve/deep-swe`, SWE Atlas `ScaleAI/SWE-Atlas-QnA`, Toolathlon-Verified `hkust-nlp/Toolathlon-Verified_Trajectories` |
+| `deep_swe`, `swe_atlas_qna`, `swe_bench_multilingual`, `swe_bench_pro`, `terminal_bench_21`, `toolathlon_verified` | PoolSide Laguna S 2.1 agentic benchmarks: Terminal-Bench 2.1, SWE-bench Multilingual `SWE-bench/SWE-bench_Multilingual`, SWE-bench Pro `ScaleAI/SWE-bench_Pro`, DeepSWE, SWE Atlas `ScaleAI/SWE-Atlas-QnA`, Toolathlon-Verified. DeepSWE, Terminal-Bench 2.1, and Toolathlon-Verified require manually provisioned local tasks; see the provisioning note above. |
 | `afrimgsm` | IrokoBench AfriMGSM `adelani2025irokobench` |
 | `afrimmlu` | IrokoBench AfriMMLU `adelani2025irokobench` |
 | `aime`, `aime24`, `aime25`, `aime26` | AIME `aime_1983_2024`, `aime_2024`, `aime_2025`, `aime_2026` |
