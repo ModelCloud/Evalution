@@ -267,7 +267,7 @@ def test_terminal_bench_21_local_task_forward_pass(tmp_path: Any) -> None:
         max_new_tokens=5,
         agent_runtime=runtime,
     )
-    session = FakeSession(["<bash>ls</bash>", "ls"])
+    session = FakeSession(["<tool_call>ls</tool_call>", "ls"])
     result = suite.evaluate(session)
 
     assert result.name == "terminal_bench_21"
@@ -287,7 +287,7 @@ def test_deep_swe_local_task_forward_pass(tmp_path: Any) -> None:
         max_new_tokens=5,
         agent_runtime=FakeAgentRuntime("applied"),
     )
-    result = suite.evaluate(FakeSession(["<bash>git apply fix.patch</bash>", "diff --git"]))
+    result = suite.evaluate(FakeSession(["<tool_call>git apply fix.patch</tool_call>", "diff --git"]))
 
     assert result.name == "deep_swe"
     assert len(result.samples) == 1
@@ -318,7 +318,7 @@ def test_toolathlon_verified_local_task_forward_pass(tmp_path: Any) -> None:
         max_new_tokens=5,
         agent_runtime=FakeAgentRuntime("expected tool output"),
     )
-    result = suite.evaluate(FakeSession(["<bash>cat answer</bash>", "expected tool output"]))
+    result = suite.evaluate(FakeSession(["<tool_call>cat answer</tool_call>", "expected tool output"]))
 
     assert result.name == "toolathlon_verified"
     assert len(result.samples) == 1
@@ -336,14 +336,14 @@ def test_tool_loop_intercepts_and_resumes_inference(tmp_path: Any) -> None:
         max_new_tokens=5,
         agent_runtime=runtime,
     )
-    session = FakeSession(["<bash>echo marker</bash>", "marker"])
+    session = FakeSession(["<tool_call>echo marker</tool_call>", "marker"])
     result = suite.evaluate(session)
     sample = result.samples[0]
 
     assert runtime.commands == ["echo marker"]
     assert len(session.prompts) == 2
     assert "Print the marker" in session.prompts[0]
-    assert "<bash>echo marker</bash>" in session.prompts[1]
+    assert "<tool_call>echo marker</tool_call>" in session.prompts[1]
     assert "<bash_result>" in session.prompts[1]
     assert "marker" in session.prompts[1]
     assert sample.metadata["tool_turns"] == 2
@@ -364,7 +364,7 @@ def test_tool_loop_stops_at_max_tool_turns(tmp_path: Any) -> None:
         max_tool_turns=3,
         agent_runtime=runtime,
     )
-    result = suite.evaluate(FakeSession("<bash>echo loop</bash>"))
+    result = suite.evaluate(FakeSession("<tool_call>echo loop</tool_call>"))
 
     sample = result.samples[0]
     assert sample.metadata["tool_turns"] == 3

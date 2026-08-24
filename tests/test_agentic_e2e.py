@@ -21,13 +21,14 @@ Two model classes are covered, matching how models signal tool calls:
              template; Evalution passes the OpenAI-style run_command schema
              through it and parses the model's native response encoding.
 - prompted:  Falcon-H1-3B-Instruct has no native tool support; the generic,
-             widely supported <bash></bash> marker syntax is injected as a
+             widely supported <tool_call></tool_call> marker syntax is injected as a
              system prompt and parsed from the generation.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -45,7 +46,9 @@ from evalution.config import Model
 MODEL_PATH = Path("/monster/data/model/Llama-3.2-1B-Instruct")
 PROMPTED_MODEL_PATH = Path("/monster/data/model/Falcon-H1-3B-Instruct")
 
-TASK_COMMAND = "test -f /etc/alpine-release && echo container || echo host"
+# Deterministic single-character probe: prints "0" only where Alpine's
+# release file exists (inside the sandbox runtime), "1" everywhere else.
+TASK_COMMAND = "ls /etc/alpine-release > /dev/null 2>&1; echo $?"
 
 FENCED_INSTRUCTION = (
     "You are a terminal agent in a sandboxed shell.\n"
@@ -62,6 +65,8 @@ FENCED_INSTRUCTION = (
 PROMPTED_INSTRUCTION = (
     "Determine where this shell is running. Run exactly this command:\n"
     + TASK_COMMAND
+    + "\n\nBegin your reply with <tool_call>. Copy the command exactly "
+    "without adding or changing anything."
 )
 
 NATIVE_INSTRUCTION = (
@@ -208,7 +213,7 @@ def _make_runtime_task(root: Path, instruction: str) -> None:
     (task_dir / "instruction.md").write_text(instruction)
     solution_dir = task_dir / "solution"
     solution_dir.mkdir()
-    (solution_dir / "solution.patch").write_text("container")
+    (solution_dir / "solution.patch").write_text("0")
 
 
 def _assert_tool_loop_result(result: Any, runtime_type: str) -> None:
@@ -223,11 +228,12 @@ def _assert_tool_loop_result(result: Any, runtime_type: str) -> None:
 
     # a) The command executed on the sandbox runtime, not the host.
     assert sample.metadata["runtime_type"] == runtime_type
-    assert sample.extracted["stdout"].strip() == "container"
+    assert sample.extracted["stdout"].strip() == "0"
 
     # The model resumed with the observed runtime output as its final answer.
     assert sample.scores["em"] == 1.0
-    assert "container" in sample.prediction.lower()
+    prediction_clean = re.sub(r"<\|[^>]*\|>", "", sample.prediction).strip().strip('"')
+    assert prediction_clean == "0"
 
 
 def test_agentic_e2e_native_tool_calling_model(tmp_path: Path) -> None:
@@ -264,7 +270,7 @@ def test_agentic_e2e_native_tool_calling_model(tmp_path: Path) -> None:
 
 
 def test_agentic_e2e_prompted_tool_calling_model(tmp_path: Path) -> None:
-    """Falcon-H1-3B-Instruct (no native tools) runs via prompted <bash></bash>."""
+    """Falcon-H1-3B-Instruct (no native tools) runs via prompted <tool_call></tool_call>."""
     if not PROMPTED_MODEL_PATH.is_dir():
         pytest.skip("Falcon-H1-3B-Instruct weights not available")
     if not _docker_available():
@@ -288,9 +294,9 @@ def test_agentic_e2e_prompted_tool_calling_model(tmp_path: Path) -> None:
     finally:
         session.close()
 
-    # The generic prompted <bash></bash> syntax was used explicitly.
+    # The generic prompted <tool_call></tool_call> syntax was used explicitly.
     assert result.metadata["tool_call_mode"] == "prompted"
-    assert result.metadata["tool_call_format"] == "bash_tags"
+    assert result.metadata["tool_call_format"] == "tool_call_tags"
     _assert_tool_loop_result(result, "DockerAgentRuntime")
 
 

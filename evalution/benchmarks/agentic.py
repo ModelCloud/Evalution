@@ -30,11 +30,11 @@ from evalution.benchmarks.tool_calling import (
     NATIVE_TOOL_SYSTEM_MESSAGE,
     PROMPTED_TOOL_SYSTEM_MESSAGE,
     RUN_COMMAND_TOOL,
-    TOOL_CALL_BASH_TAGS,
     TOOL_CALL_MODE_AUTO,
     TOOL_CALL_MODE_NATIVE,
     TOOL_CALL_MODE_PROMPTED,
     TOOL_CALL_NATIVE_JSON,
+    TOOL_CALL_TAGS,
     extract_tool_calls,
     native_tool_commands,
     session_supports_native_tool_calls,
@@ -857,7 +857,7 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     apply_chat_template: bool = False
     # How tool calls are signalled: "auto" probes the model's chat template
     # for native tool support and uses it explicitly, falling back to the
-    # generic prompted <bash></bash> syntax for models without native tools.
+    # generic prompted <tool_call></tool_call> syntax for models without native tools.
     tool_call_mode: str = TOOL_CALL_MODE_AUTO
     # Wire format of an intercepted tool call; "auto" resolves from the mode.
     tool_call_format: str = "auto"
@@ -889,10 +889,10 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         """Resolve the effective tool-call mode/format for this session.
 
         An explicit format pins its natural mode family (``native_json`` ->
-        native; ``bash_tags``/``fenced_shell`` -> prompted). With everything
+        native; ``tool_call_tags``/``fenced_shell`` -> prompted). With everything
         left on ``auto``, the model's chat template is probed for native tool
         support and used explicitly when available, falling back to the
-        generic prompted ``<bash></bash>`` syntax otherwise.
+        generic prompted ``<tool_call></tool_call>`` syntax otherwise.
         """
         validate_tool_call_mode(self.tool_call_mode)
         native_supported = session_supports_native_tool_calls(session)
@@ -929,7 +929,7 @@ class _LocalAgenticBenchmark(BaseTestSuite):
             tool_call_format = (
                 TOOL_CALL_NATIVE_JSON
                 if mode == TOOL_CALL_MODE_NATIVE
-                else TOOL_CALL_BASH_TAGS
+                else TOOL_CALL_TAGS
             )
         return mode, tool_call_format
 
@@ -1065,7 +1065,7 @@ class _LocalAgenticBenchmark(BaseTestSuite):
             system_message = NATIVE_TOOL_SYSTEM_MESSAGE
         elif mode == TOOL_CALL_MODE_PROMPTED:
             # Prompted models were never trained to call tools, so the generic
-            # <bash></bash> contract is injected as an explicit system prompt.
+            # <tool_call></tool_call> contract is injected as an explicit system prompt.
             system_message = PROMPTED_TOOL_SYSTEM_MESSAGE
         if conversation_messages is not None and system_message is not None and (
             not conversation_messages or conversation_messages[0].get("role") != "system"
@@ -1082,12 +1082,16 @@ class _LocalAgenticBenchmark(BaseTestSuite):
 
         for _ in range(max(1, self.max_tool_turns)):
             turns += 1
+            # Once observations exist this turn asks for the final answer, so
+            # the tool schema is withheld: models otherwise keep issuing calls
+            # instead of concluding.
+            offer_tools = use_native and turns == 1
             if conversation_messages is not None:
                 turn_request = dataclass_replace(
                     request,
                     prompt=None,
                     messages=conversation_messages,
-                    tools=[RUN_COMMAND_TOOL] if use_native else None,
+                    tools=[RUN_COMMAND_TOOL] if offer_tools else None,
                 )
             else:
                 turn_request = dataclass_replace(request, prompt=conversation)
@@ -1121,7 +1125,8 @@ class _LocalAgenticBenchmark(BaseTestSuite):
                         "role": "user",
                         "content": (
                             f"Command output:\n{joined_observations}\n\n"
-                            "Now reply with only the output word."
+                            "Final answer: reply with ONLY the exact output "
+                            "above, character for character."
                         ),
                     },
                 ]
@@ -1181,7 +1186,7 @@ class _LocalAgenticBenchmark(BaseTestSuite):
 
         runtime = self._require_agent_runtime()
         single_shot_format = (
-            TOOL_CALL_BASH_TAGS if self.tool_call_format == "auto" else self.tool_call_format
+            TOOL_CALL_TAGS if self.tool_call_format == "auto" else self.tool_call_format
         )
         command = try_extract_tool_call(prediction, single_shot_format) or ""
         image = str(doc.get("docker_image", "")) or None

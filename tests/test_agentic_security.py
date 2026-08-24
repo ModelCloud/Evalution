@@ -114,7 +114,7 @@ def test_auto_mode_resolves_native_for_capable_models(tmp_path: Path) -> None:
 
 
 def test_auto_mode_falls_back_to_prompted_syntax(tmp_path: Path) -> None:
-    """Models without native tools fall back to generic <bash></bash> markers."""
+    """Models without native tools fall back to generic <tool_call></tool_call> markers."""
     _make_task(tmp_path)
     suite = terminal_bench_21(
         dataset_path=str(tmp_path),
@@ -125,7 +125,7 @@ def test_auto_mode_falls_back_to_prompted_syntax(tmp_path: Path) -> None:
     mode, fmt = suite._resolve_tool_calling(session)
 
     assert mode == "prompted"
-    assert fmt == "bash_tags"
+    assert fmt == "tool_call_tags"
 
 
 def test_forced_native_without_support_fails_closed(tmp_path: Path) -> None:
@@ -271,7 +271,7 @@ def test_task_image_is_routed_to_runtime(tmp_path: Path) -> None:
         max_rows=1,
         agent_runtime=runtime,
     )
-    suite.evaluate(ScriptedSession(["<bash>echo probe</bash>", "done"]))
+    suite.evaluate(ScriptedSession(["<tool_call>echo probe</tool_call>", "done"]))
 
     assert runtime.images == ["harbor/security-probe:7"]
 
@@ -282,7 +282,7 @@ def test_missing_runtime_fails_closed_for_loop_and_single_shot(tmp_path: Path) -
     suite = terminal_bench_21(dataset_path=str(tmp_path), max_rows=1)
 
     with pytest.raises(ValueError, match="requires.*AgentRuntime"):
-        suite.evaluate(ScriptedSession(["<bash>anything</bash>"]))
+        suite.evaluate(ScriptedSession(["<tool_call>anything</tool_call>"]))
 
     from evalution.benchmarks.agentic import _load_local_tasks_dataset
     from evalution.benchmarks.execution import PreparedSample
@@ -291,4 +291,4 @@ def test_missing_runtime_fails_closed_for_loop_and_single_shot(tmp_path: Path) -
     prepared = next(suite.iter_prepared_samples(docs))
     assert isinstance(prepared, PreparedSample)
     with pytest.raises(ValueError, match="requires.*AgentRuntime"):
-        suite.score_sample(prepared, GenerationOutput(prompt="p", text="<bash>x</bash>"))
+        suite.score_sample(prepared, GenerationOutput(prompt="p", text="<tool_call>x</tool_call>"))

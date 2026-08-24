@@ -761,10 +761,12 @@ marker counts as a tool call is resolved per suite from two options:
 
 - `tool_call_mode`: `auto` (default), `native`, or `prompted`. `auto` probes the model's chat
   template for native tool support and uses the model's own pre-trained tool-calling format
-  explicitly; models without native support fall back to the generic prompted syntax.
+  explicitly; models without native support fall back to the generic prompted
+  `<tool_call></tool_call>` marker syntax, injected automatically as a system message.
 - `tool_call_format`: `auto` (default), `native_json` (model-native response encoding:
-  `<|python_tag|>{...}`, `<tool_call>{...}</tool_call>`, or bare JSON), `bash_tags` (the widely
-  supported generic `<bash>...</bash>` marker syntax used for prompted models), or
+  `<|python_tag|>{...}`, `<tool_call>{...}</tool_call>`, or bare JSON), `tool_call_tags` (the widely
+  supported generic `<tool_call>...</tool_call>` action-marker syntax used for prompted models —
+  deliberately distinct from ordinary bash code output), or
   `fenced_shell` (shell-language code fences as an explicitly opted-in action channel).
 
 An explicit format pins its mode family (`native_json` → native; others → prompted). Under the
