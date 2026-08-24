@@ -15,17 +15,36 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from dataclasses import replace as dataclass_replace
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pcre
 from datasets import Dataset, load_dataset
 
-from evalution.benchmarks.agentic_docker import DockerSandbox, extract_command
+from evalution.agent_runtime import BaseAgentRuntime
 from evalution.benchmarks.base import BaseTestSuite
+from evalution.benchmarks.data import load_suite_dataset, select_docs
 from evalution.benchmarks.execution import PreparedSample
-from evalution.engines.base import GenerationOutput, GenerationRequest
-from evalution.results import SampleResult
+from evalution.benchmarks.tool_calling import (
+    NATIVE_TOOL_SYSTEM_MESSAGE,
+    PROMPTED_TOOL_SYSTEM_MESSAGE,
+    RUN_COMMAND_TOOL,
+    TOOL_CALL_MODE_AUTO,
+    TOOL_CALL_MODE_NATIVE,
+    TOOL_CALL_MODE_PROMPTED,
+    TOOL_CALL_NATIVE_JSON,
+    TOOL_CALL_TAGS,
+    extract_tool_calls,
+    native_tool_commands,
+    session_supports_native_tool_calls,
+    try_extract_tool_call,
+    validate_tool_call_format,
+    validate_tool_call_mode,
+)
+from evalution.engines.base import GenerationOutput, GenerationRequest, InferenceSession
+from evalution.logbar import get_logger
+from evalution.results import SampleResult, TestResult
 
 # Keep benchmark defaults and public task ids explicit at module scope.
 _STOP_STRINGS = (
@@ -38,6 +57,7 @@ _STOP_STRINGS = (
 )
 
 _WS_PATTERN = pcre.compile(r"\s+")
+_SPECIAL_TOKEN_RE = pcre.compile(r"<\|[^>]*\|>")
 
 _TASK_TOML_DOCKER_IMAGE_RE = pcre.compile(r'^docker_image\s*=\s*"([^"]+)"', pcre.MULTILINE)
 _TASK_TOML_NAME_RE = pcre.compile(r'^name\s*=\s*"([^"]+)"', pcre.MULTILINE)
@@ -120,6 +140,8 @@ def _agentbench_target(doc: dict[str, Any]) -> str:
 class SWEBench(BaseTestSuite):
     """SWE-bench text-generation scaffold."""
 
+    is_agentic: ClassVar[bool] = True
+
     dataset_path: str = "princeton-nlp/SWE-bench"
     dataset_name: str | None = None
     split: str = "test"
@@ -194,6 +216,8 @@ class SWEBench(BaseTestSuite):
 class WebArena(BaseTestSuite):
     """WebArena text-generation scaffold."""
 
+    is_agentic: ClassVar[bool] = True
+
     dataset_path: str = "AmineHA/WebArena-Verified"
     dataset_name: str | None = None
     split: str = "full"
@@ -267,6 +291,8 @@ class WebArena(BaseTestSuite):
 @dataclass(slots=True)
 class GAIA(BaseTestSuite):
     """GAIA text-generation scaffold."""
+
+    is_agentic: ClassVar[bool] = True
 
     dataset_path: str = "gaia-benchmark/GAIA"
     dataset_name: str = "2023_level1"
@@ -343,6 +369,8 @@ class GAIA(BaseTestSuite):
 class OSWorld(BaseTestSuite):
     """OSWorld text-generation scaffold using the public text-only gold set."""
 
+    is_agentic: ClassVar[bool] = True
+
     dataset_path: str = "hud-evals/OSWorld-Gold"
     dataset_name: str | None = None
     split: str = "train"
@@ -414,6 +442,8 @@ class OSWorld(BaseTestSuite):
 @dataclass(slots=True)
 class AgentBench(BaseTestSuite):
     """AgentBench text-generation scaffold (OSBench split)."""
+
+    is_agentic: ClassVar[bool] = True
 
     dataset_path: str = "iFurySt/AgentBench"
     dataset_name: str = "default"
@@ -725,6 +755,8 @@ class SWEBenchPro(SWEBench):
 class SWEAtlasQnA(BaseTestSuite):
     """SWE Atlas (Codebase QnA) text-generation scaffold."""
 
+    is_agentic: ClassVar[bool] = True
+
     dataset_path: str = "ScaleAI/SWE-Atlas-QnA"
     dataset_name: str | None = None
     split: str = "test"
@@ -800,7 +832,19 @@ class SWEAtlasQnA(BaseTestSuite):
 
 @dataclass(slots=True)
 class _LocalAgenticBenchmark(BaseTestSuite):
-    """Base class for agentic benchmarks that ship as local Harbor task directories."""
+    """Base class for agentic benchmarks that ship as local Harbor task directories.
+
+    These suites run an intercept-execute-resume tool loop: the model generates
+    text, Evalution intercepts tool calls under the declared
+    ``tool_call_format`` protocol, executes them on the configured sandboxed
+    runtime, appends the observation, and resumes inference until the model
+    produces a final answer or ``max_tool_turns`` is exhausted. Anything not
+    matching the declared protocol — including fenced code the model merely
+    outputs as an answer — is inert text and never executed.
+    """
+
+    is_agentic: ClassVar[bool] = True
+    has_tool_calling: ClassVar[bool] = True
 
     dataset_name: str | None = None
     split: str = "test"
@@ -809,9 +853,18 @@ class _LocalAgenticBenchmark(BaseTestSuite):
     batch_size: int = 1
     do_sample: bool = False
     temperature: float = 0.0
-    use_docker: bool = False
-    docker_image: str = "alpine:latest"
-    docker_timeout: float = 60.0
+    max_tool_turns: int = 4
+    apply_chat_template: bool = False
+    # How tool calls are signalled: "auto" probes the model's chat template
+    # for native tool support and uses it explicitly, falling back to the
+    # generic prompted <tool_call></tool_call> syntax for models without native tools.
+    tool_call_mode: str = TOOL_CALL_MODE_AUTO
+    # Wire format of an intercepted tool call; "auto" resolves from the mode.
+    tool_call_format: str = "auto"
+    agent_runtime: BaseAgentRuntime | None = None
+
+    def __post_init__(self) -> None:
+        validate_tool_call_mode(self.tool_call_mode)
 
     def dataset_loader(self) -> Any:
         """Return the local task directory loader bound to this suite."""
@@ -821,95 +874,344 @@ class _LocalAgenticBenchmark(BaseTestSuite):
         """Return the exported task name for this suite."""
         return self.variant_name
 
+    def _require_agent_runtime(self) -> BaseAgentRuntime:
+        """Return the configured runtime or refuse to run tool-calling tasks."""
+        if self.agent_runtime is None:
+            raise ValueError(
+                f"{self.task_name()} executes model-generated commands, which requires "
+                "an isolated AgentRuntime. Configure agent_runtime=DockerAgentRuntime() | "
+                "SmolVmAgentRuntime(), or pass UnsafeLocalRuntime() to explicitly allow "
+                "unisolated host execution."
+            )
+        return self.agent_runtime
+
+    def _resolve_tool_calling(self, session: InferenceSession) -> tuple[str, str]:
+        """Resolve the effective tool-call mode/format for this session.
+
+        An explicit format pins its natural mode family (``native_json`` ->
+        native; ``tool_call_tags``/``fenced_shell`` -> prompted). With everything
+        left on ``auto``, the model's chat template is probed for native tool
+        support and used explicitly when available, falling back to the
+        generic prompted ``<tool_call></tool_call>`` syntax otherwise.
+        """
+        validate_tool_call_mode(self.tool_call_mode)
+        native_supported = session_supports_native_tool_calls(session)
+
+        mode = self.tool_call_mode
+        tool_call_format = self.tool_call_format
+        if tool_call_format != "auto":
+            validate_tool_call_format(tool_call_format)
+            if tool_call_format == TOOL_CALL_NATIVE_JSON:
+                if mode == TOOL_CALL_MODE_PROMPTED:
+                    raise ValueError(
+                        "prompted models cannot use the 'native_json' format"
+                    )
+                mode = TOOL_CALL_MODE_NATIVE
+            else:
+                if mode == TOOL_CALL_MODE_NATIVE:
+                    raise ValueError(
+                        f"tool_call_mode='native' requires tool_call_format="
+                        f"'native_json' or 'auto', got {tool_call_format!r}"
+                    )
+                mode = TOOL_CALL_MODE_PROMPTED
+
+        if mode == TOOL_CALL_MODE_AUTO:
+            mode = (
+                TOOL_CALL_MODE_NATIVE if native_supported else TOOL_CALL_MODE_PROMPTED
+            )
+        elif mode == TOOL_CALL_MODE_NATIVE and not native_supported:
+            raise ValueError(
+                f"{self.task_name()} requested native tool calling, but this model's "
+                "chat template does not support tools; use tool_call_mode='prompted'."
+            )
+
+        if tool_call_format == "auto":
+            tool_call_format = (
+                TOOL_CALL_NATIVE_JSON
+                if mode == TOOL_CALL_MODE_NATIVE
+                else TOOL_CALL_TAGS
+            )
+        return mode, tool_call_format
+
     def result_metadata(
         self,
         *,
         generation_submission_mode: str,
     ) -> dict[str, Any]:
         """Return the result metadata emitted for this suite."""
-        scoring_mode = (
-            "docker_stdout_exact_match"
-            if self.use_docker
-            else "patch_exact_match"
-        )
         return {
             **self.base_result_metadata(generation_submission_mode=generation_submission_mode),
-            "scoring_mode": scoring_mode,
+            "scoring_mode": "agent_runtime_stdout_exact_match",
             "primary_metric": "em",
         }
 
     def iter_prepared_samples(self, docs: list[dict[str, Any]] | Any) -> Any:
         """Yield prepared samples for the current dataset rows."""
         for index, doc in enumerate(docs):
-            yield PreparedSample(
-                index=index,
-                doc=doc,
-                target=str(doc.get("patch", "")),
-                request=GenerationRequest(
-                    prompt=_task_prompt(str(doc.get("problem_statement", ""))),
+            task_prompt = _task_prompt(str(doc.get("problem_statement", "")))
+            if self.apply_chat_template:
+                request = GenerationRequest(
+                    messages=[{"role": "user", "content": task_prompt}],
+                    add_generation_prompt=True,
                     stop=list(_STOP_STRINGS),
                     max_new_tokens=self.max_new_tokens,
                     do_sample=self.do_sample,
                     temperature=self.temperature,
-                ),
+                )
+            else:
+                request = GenerationRequest(
+                    prompt=task_prompt,
+                    stop=list(_STOP_STRINGS),
+                    max_new_tokens=self.max_new_tokens,
+                    do_sample=self.do_sample,
+                    temperature=self.temperature,
+                )
+            yield PreparedSample(
+                index=index,
+                doc=doc,
+                target=str(doc.get("patch", "")),
+                request=request,
             )
+
+    def evaluate(self, session: InferenceSession) -> TestResult:
+        """Run the intercept-execute-resume tool loop against the runtime."""
+        runtime = self._require_agent_runtime()
+        task_name = self.task_name()
+        mode, tool_call_format = self._resolve_tool_calling(session)
+        logger = get_logger()
+        logger.info(
+            "%s: tool calling mode=%s format=%s", task_name, mode, tool_call_format
+        )
+
+        loaded_docs, _dataset_load_wall_s = load_suite_dataset(
+            self.dataset_loader(),
+            task_name=task_name,
+            dataset_path=self.dataset_path,
+            dataset_name=self.dataset_name,
+            split=self.split,
+            cache_dir=self.cache_dir,
+            stream=self.stream,
+        )
+        docs = list(
+            select_docs(
+                loaded_docs,
+                row_indices=self.row_indices,
+                max_rows=self.max_rows,
+            )
+        )
+        logger.info("%s: evaluating %d sample(s)", task_name, len(docs))
+
+        samples = [
+            self._evaluate_tool_loop_sample(session, runtime, prepared, mode, tool_call_format)
+            for prepared in self.iter_prepared_samples(docs)
+        ]
+
+        metrics: dict[str, float] = {}
+        if samples:
+            metrics["em"] = sum(
+                sample.scores.get("em", 0.0) for sample in samples
+            ) / len(samples)
+        result_metadata = self.result_metadata(generation_submission_mode="agentic_tool_loop")
+        result_metadata["tool_call_mode"] = mode
+        result_metadata["tool_call_format"] = tool_call_format
+        return TestResult(
+            name=task_name,
+            metrics=metrics,
+            samples=samples,
+            metadata=result_metadata,
+        )
+
+    def _evaluate_tool_loop_sample(
+        self,
+        session: InferenceSession,
+        runtime: BaseAgentRuntime,
+        prepared: PreparedSample,
+        mode: str,
+        tool_call_format: str,
+    ) -> SampleResult:
+        """Intercept tool calls, execute them on the runtime, and resume inference."""
+        doc = prepared.doc
+        target = prepared.target
+        request = prepared.request
+        image = str(doc.get("docker_image", "")) or None
+
+        use_native = tool_call_format == TOOL_CALL_NATIVE_JSON
+
+        if use_native:
+            # Native mode renders through the model's own pre-trained
+            # tool-calling template via the tools schema.
+            user_content = request.prompt
+            if user_content is None and request.messages:
+                user_content = next(
+                    (
+                        message.get("content", "")
+                        for message in request.messages
+                        if message.get("role") == "user"
+                    ),
+                    "",
+                )
+            conversation_messages: list[dict[str, str]] | None = [
+                {"role": "user", "content": user_content or ""},
+            ]
+        elif request.messages is not None:
+            conversation_messages = list(request.messages)
+        elif self.apply_chat_template:
+            conversation_messages = [{"role": "user", "content": request.prompt or ""}]
+        else:
+            conversation_messages = None
+
+        system_message: str | None = None
+        if mode == TOOL_CALL_MODE_NATIVE:
+            system_message = NATIVE_TOOL_SYSTEM_MESSAGE
+        elif mode == TOOL_CALL_MODE_PROMPTED:
+            # Prompted models were never trained to call tools, so the generic
+            # <tool_call></tool_call> contract is injected as an explicit system prompt.
+            system_message = PROMPTED_TOOL_SYSTEM_MESSAGE
+        if conversation_messages is not None and system_message is not None and (
+            not conversation_messages or conversation_messages[0].get("role") != "system"
+        ):
+            conversation_messages.insert(0, {"role": "system", "content": system_message})
+
+        conversation = request.prompt or ""
+        commands: list[str] = []
+        stdouts: list[str] = []
+        exit_codes: list[int] = []
+        final_answer = ""
+        turns = 0
+        text = ""
+
+        for _ in range(max(1, self.max_tool_turns)):
+            turns += 1
+            # Once observations exist this turn asks for the final answer, so
+            # the tool schema is withheld: models otherwise keep issuing calls
+            # instead of concluding.
+            offer_tools = use_native and turns == 1
+            if conversation_messages is not None:
+                turn_request = dataclass_replace(
+                    request,
+                    prompt=None,
+                    messages=conversation_messages,
+                    tools=[RUN_COMMAND_TOOL] if offer_tools else None,
+                )
+            else:
+                turn_request = dataclass_replace(request, prompt=conversation)
+            outputs = session.generate([turn_request], batch_size=1)
+            text = outputs[0].text or ""
+            if use_native:
+                turn_commands = native_tool_commands(text)
+            else:
+                turn_commands = extract_tool_calls(text, tool_call_format)
+            if not turn_commands:
+                final_answer = text.strip()
+                break
+            observations: list[str] = []
+            for command in turn_commands:
+                commands.append(command)
+                run_result = runtime.run(command, image=image)
+                stdouts.append(run_result.stdout)
+                exit_codes.append(run_result.exit_code)
+                observation = run_result.stdout.strip()
+                # Harness chatter lands on stderr even for successful runs
+                # (for example smolvm boot messages); only surface stderr
+                # for failures so observations stay clean command output.
+                if run_result.exit_code != 0 and run_result.stderr.strip():
+                    observation = f"{observation}\n{run_result.stderr.strip()}"
+                observations.append(observation)
+            joined_observations = "\n---\n".join(observations)
+            if conversation_messages is not None:
+                conversation_messages = conversation_messages + [
+                    {"role": "assistant", "content": text},
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Command output:\n{joined_observations}\n\n"
+                            "Final answer: reply with ONLY the exact output "
+                            "above, character for character."
+                        ),
+                    },
+                ]
+            else:
+                conversation = (
+                    f"{conversation}{text}\n"
+                    f"<bash_result>\n{joined_observations}\n</bash_result>\nAnswer:"
+                )
+        else:
+            final_answer = text.strip()
+
+        def _answer_key(text: str) -> str:
+            """Normalize a final answer, dropping special-token markers and quotes."""
+            unwrapped = _SPECIAL_TOKEN_RE.sub("", text).strip()
+            if (
+                len(unwrapped) >= 2
+                and unwrapped[0] == unwrapped[-1]
+                and unwrapped[0] in "\"'\u201c\u201d\u2018\u2019"
+            ):
+                unwrapped = unwrapped[1:-1].strip()
+            return _normalize(unwrapped)
+
+        score = 1.0 if _answer_key(final_answer) == _answer_key(target) else 0.0
+        return SampleResult(
+            index=prepared.index,
+            prompt=request.prompt or "",
+            target=target,
+            prediction=final_answer,
+            extracted={
+                "final-answer": final_answer,
+                "commands": "\n".join(commands),
+                "stdout": stdouts[-1] if stdouts else "",
+                "prediction-normalized": _answer_key(final_answer),
+                "target-normalized": _answer_key(target),
+            },
+            scores={"em": score},
+            metadata={
+                "instance_id": str(doc.get("instance_id", "")),
+                "runtime_type": type(runtime).__name__,
+                "runtime_exit_code": exit_codes[-1] if exit_codes else None,
+                "tool_turns": turns,
+                "commands_executed": len(commands),
+                "tool_call_mode": mode,
+                "tool_call_format": tool_call_format,
+            },
+        )
 
     def score_sample(
         self,
         prepared_sample: PreparedSample,
         output: GenerationOutput,
     ) -> SampleResult:
-        """Score one sample against its expected outputs."""
+        """Score one sample by running its extracted command through the runtime."""
         doc = prepared_sample.doc
         target = prepared_sample.target
         prediction = output.text
 
-        if self.use_docker:
-            command = extract_command(prediction)
-            image = str(doc.get("docker_image", "")) or self.docker_image
-            sandbox = DockerSandbox(
-                image=image,
-                timeout=self.docker_timeout,
-                pull="never",
-            )
-            run_result = sandbox.run(command)
-            score = (
-                1.0
-                if _normalize(run_result.stdout) == _normalize(target)
-                else 0.0
-            )
-            return SampleResult(
-                index=prepared_sample.index,
-                prompt=output.prompt,
-                target=target,
-                prediction=prediction,
-                extracted={
-                    "command": command,
-                    "stdout": run_result.stdout,
-                    "prediction-normalized": _normalize(prediction),
-                    "target-normalized": _normalize(target),
-                },
-                scores={"em": score},
-                metadata={
-                    "instance_id": str(doc.get("instance_id", "")),
-                    "docker_image": image,
-                    "docker_exit_code": run_result.exit_code,
-                },
-            )
-
+        runtime = self._require_agent_runtime()
+        single_shot_format = (
+            TOOL_CALL_TAGS if self.tool_call_format == "auto" else self.tool_call_format
+        )
+        command = try_extract_tool_call(prediction, single_shot_format) or ""
+        image = str(doc.get("docker_image", "")) or None
+        run_result = runtime.run(command, image=image)
+        score = (
+            1.0
+            if _normalize(run_result.stdout) == _normalize(target)
+            else 0.0
+        )
         return SampleResult(
             index=prepared_sample.index,
             prompt=output.prompt,
             target=target,
             prediction=prediction,
             extracted={
+                "command": command,
+                "stdout": run_result.stdout,
                 "prediction-normalized": _normalize(prediction),
                 "target-normalized": _normalize(target),
             },
-            scores={"em": _exact_score(prediction, target)},
+            scores={"em": score},
             metadata={
                 "instance_id": str(doc.get("instance_id", "")),
-                "docker_image": str(doc.get("docker_image", "")),
+                "runtime_type": type(runtime).__name__,
+                "runtime_exit_code": run_result.exit_code,
             },
         )
 
@@ -920,7 +1222,6 @@ class TerminalBench21(_LocalAgenticBenchmark):
 
     dataset_path: str = "~/.cache/evalution/terminal-bench-2-1/tasks"
     variant_name: str = "terminal_bench_21"
-    docker_image: str = "alpine:latest"
 
 
 @dataclass(slots=True)
@@ -929,7 +1230,6 @@ class DeepSWE(_LocalAgenticBenchmark):
 
     dataset_path: str = "~/.cache/evalution/deep-swe/tasks"
     variant_name: str = "deep_swe"
-    docker_image: str = "alpine:latest"
 
 
 @dataclass(slots=True)
@@ -938,7 +1238,6 @@ class ToolathlonVerified(_LocalAgenticBenchmark):
 
     dataset_path: str = "~/.cache/evalution/toolathlon/tasks/finalpool"
     variant_name: str = "toolathlon_verified"
-    docker_image: str = "alpine:latest"
 
 
 def swe_bench_multilingual(**kwargs: Any) -> SWEBenchMultilingual:

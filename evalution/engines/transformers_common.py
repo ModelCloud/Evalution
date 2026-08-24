@@ -435,6 +435,8 @@ class BaseTransformerSession(BaseInferenceSession):
                     "add_generation_prompt": request.add_generation_prompt,
                 }
             )
+            if request.tools:
+                template_kwargs["tools"] = request.tools
             return tokenizer.apply_chat_template(
                 request.messages,
                 **template_kwargs,

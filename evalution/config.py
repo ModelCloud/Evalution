@@ -5,9 +5,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field, replace
-from typing import Any, TypeAlias
+from typing import Any
 
 
 @dataclass(slots=True, frozen=True)

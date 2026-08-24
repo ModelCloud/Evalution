@@ -9,6 +9,13 @@ import sys
 from contextlib import redirect_stdout
 
 from evalution._banner import ASCII_LOGO, get_startup_banner
+from evalution.agent_runtime import (
+    AgentRuntimeResult,
+    BaseAgentRuntime,
+    DockerAgentRuntime,
+    SmolVmAgentRuntime,
+    UnsafeLocalRuntime,
+)
 from evalution.compare import CompareRun, compare, run_compare
 from evalution.config import Model
 from evalution.engines import (
@@ -53,11 +60,14 @@ __all__ = [
     "BaseEngineQuantizationConfig",
     "BaseEngineTokenizerModeConfig",
     "BaseEngineTransformersRuntimeConfig",
+    "BaseAgentRuntime",
     "BaseInferenceSession",
     "CompareMetricResult",
     "CompareRun",
     "CompareRunResult",
     "CompareTestResult",
+    "AgentRuntimeResult",
+    "DockerAgentRuntime",
     "EvaluationRun",
     "GPTQModel",
     "LlamaCpp",
@@ -66,12 +76,14 @@ __all__ = [
     "RunResult",
     "SGLang",
     "SampleResult",
+    "SmolVmAgentRuntime",
     "SharedEngineConfig",
     "TensorRTLLM",
     "Tinygrad",
     "TestResult",
     "Transformers",
     "TransformersCompat",
+    "UnsafeLocalRuntime",
     "VLLM",
     "benchmarks",
     "compare",

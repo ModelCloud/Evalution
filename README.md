@@ -731,6 +731,123 @@ result = (
 
 YAML flows can only configure `tokenizer_path`; passing a live tokenizer object is Python-only.
 
+## Agent Runtimes 🛡️
+
+Some agentic benchmarks do more than score text: the tool-calling suites (`terminal_bench_21`,
+`deep_swe`, and `toolathlon_verified`) execute model-generated shell commands to verify task
+outcomes. Because those commands come from an LLM, Evalution refuses to run them directly on your
+machine. A tool-calling suite without a configured runtime fails before evaluation starts:
+
+```
+ValueError: terminal_bench_21 executes model-generated commands, which requires an isolated
+AgentRuntime. Configure agent_runtime=DockerAgentRuntime() | SmolVmAgentRuntime(),
+or pass UnsafeLocalRuntime() to explicitly allow unisolated host execution.
+```
+
+Pick one of the sandboxed runtimes below and pass it directly to the suite:
+
+```python
+import evalution.benchmarks as benchmarks
+from evalution import DockerAgentRuntime
+suite = benchmarks.terminal_bench_21(
+    agent_runtime=DockerAgentRuntime(),
+)
+```
+
+Tool-calling suites run an intercept-execute-resume loop, and they draw a hard line between
+**tool calling** (the model's deliberate request to execute an action) and **code output**
+(inert generated text such as a fenced snippet inside a plain answer — never executed). Which
+marker counts as a tool call is resolved per suite from two options:
+
+- `tool_call_mode`: `auto` (default), `native`, or `prompted`. `auto` probes the model's chat
+  template for native tool support and uses the model's own pre-trained tool-calling format
+  explicitly; models without native support fall back to the generic prompted
+  `<tool_call></tool_call>` marker syntax, injected automatically as a system message.
+- `tool_call_format`: `auto` (default), `native_json` (model-native response encoding:
+  `<|python_tag|>{...}`, `<tool_call>{...}</tool_call>`, or bare JSON), `tool_call_tags` (the widely
+  supported generic `<tool_call>...</tool_call>` action-marker syntax used for prompted models —
+  deliberately distinct from ordinary bash code output), or
+  `fenced_shell` (shell-language code fences as an explicitly opted-in action channel).
+
+An explicit format pins its mode family (`native_json` → native; others → prompted). Under the
+declared protocol, every tool call in a generation is captured and executed on the runtime;
+anything not matching the protocol stays inert model output. For prompted models, the syntax
+contract is injected as a system message automatically.
+
+Tool-calling suites run the loop: when a generation contains a tool call under the declared
+protocol, Evalution executes it on the configured runtime, appends the observation to the
+conversation, and resumes inference until the model returns a final answer or `max_tool_turns`
+is exhausted. Set `apply_chat_template=True` on the suite to run instruct models through their
+chat template.
+
+Every runtime shares two common settings: `path` selects the runtime binary and defaults to
+`"auto"`, which resolves the runtime's standard binary (`docker`, `smolvm`) from the current
+environment `PATH`; `image` selects the default execution image and can be overridden per task.
+
+### DockerAgentRuntime (containers)
+
+Runs every generated command in a disposable `docker run --rm` container with no network access by
+default. Requires a working Docker daemon.
+
+```python
+from evalution import DockerAgentRuntime
+
+runtime = DockerAgentRuntime(
+    path="auto",           # "auto" resolves `docker` from PATH; or pass an explicit binary path
+    image="alpine:latest", # default image when a task does not pin one
+    timeout=60.0,          # per-command timeout in seconds
+    network="none",        # container network mode; keep "none" for untrusted models
+    pull="never",          # never pull images from the network at run time
+)
+```
+
+### SmolVmAgentRuntime (microVMs)
+
+Runs every generated command in an ephemeral [smolvm](https://github.com/smol-machines/smolvm)
+microVM — a hardware-isolated virtual machine with its own guest kernel that is removed after exit.
+Networking is off unless you enable it. Requires the `smolvm` CLI and platform virtualization
+support (KVM on Linux).
+
+```python
+from evalution import SmolVmAgentRuntime
+
+runtime = SmolVmAgentRuntime(
+    path="auto",     # "auto" resolves `smolvm` from PATH
+    image="alpine",  # OCI image to boot
+    timeout=60.0,
+    network=False,   # leave disabled for untrusted models
+)
+```
+
+### UnsafeLocalRuntime (explicit host bypass)
+
+To run commands directly on the host with no isolation, you must explicitly opt in with
+`UnsafeLocalRuntime`. It emits a `RuntimeWarning` on construction so the choice is visible in logs
+and CI. Only use it for fully trusted workloads on disposable machines.
+
+```python
+import warnings
+from evalution import UnsafeLocalRuntime
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", RuntimeWarning)  # acknowledge the warning once
+    runtime = UnsafeLocalRuntime()
+
+suite = benchmarks.deep_swe(
+    dataset_path="~/.cache/evalution/deep-swe/tasks",
+    agent_runtime=runtime,
+)
+```
+
+Custom sandboxes implement `BaseAgentRuntime` (a single async-safe `run(command, ...) -> AgentRuntimeResult`
+method) and pass it as `agent_runtime=` the same way.
+
+Every suite carries two declarative class flags: `is_agentic` marks agentic benchmark families, and
+`has_tool_calling` marks suites that execute model-generated commands. Evalution's shared evaluation
+pipeline reads these flags and refuses to start any tool-calling suite without a configured runtime —
+regardless of how the suite was constructed (Python API or YAML) — so new agentic benchmarks get the
+same enforcement for free by setting `has_tool_calling = True`.
+
 ## Supported Benchmarks 📚
 
 Evalution currently ships the following built-in benchmarks:
@@ -758,7 +875,8 @@ their task files in the directories expected by Evalution:
 Create the applicable directory and populate it with the benchmark's task files before running the
 suite. This repository does not include a setup or download script for these files, so all three
 suites currently require manual task provisioning; otherwise evaluation fails with a local task
-directory error.
+directory error. These three suites execute model-generated commands, so they additionally require
+a sandboxed agent runtime; see [Agent Runtimes](#agent-runtimes-️) above.
 
 | Suite | Original benchmark |
 | --- | --- |

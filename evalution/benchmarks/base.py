@@ -10,7 +10,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
 from time import perf_counter
-from typing import Any
+from typing import Any, ClassVar
 
 from evalution.engines.base import GenerationOutput, InferenceSession
 from evalution.logbar import get_logger, manual_progress
@@ -62,6 +62,12 @@ class BaseTestSuite(TestSuite):
     row_indices: tuple[int, ...] | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
+
+    # Declared by concrete suites so Evalution can auto-enforce sandboxing rules:
+    # `is_agentic` marks agentic benchmark families, and any suite with
+    # `has_tool_calling` must expose an `agent_runtime` config or evaluation refuses to start.
+    is_agentic: ClassVar[bool] = False
+    has_tool_calling: ClassVar[bool] = False
 
     # Return the callable used to fetch the underlying dataset rows.
     @abstractmethod
@@ -165,6 +171,15 @@ class BaseTestSuite(TestSuite):
     def evaluate(self, session: InferenceSession) -> TestResult:
         """Evaluate evaluate. Preserve the fallback order expected by the surrounding caller."""
         task_name = self.task_name()
+        if self.has_tool_calling:
+            runtime = getattr(self, "agent_runtime", None)
+            if runtime is None:
+                raise ValueError(
+                    f"{task_name} executes model-generated commands, which requires "
+                    "an isolated AgentRuntime. Configure agent_runtime=DockerAgentRuntime() | "
+                    "SmolVmAgentRuntime(), or pass UnsafeLocalRuntime() to explicitly allow "
+                    "unisolated host execution."
+                )
         resolved_order = normalize_order(self.order)
         logger = get_logger()
         loaded_docs, dataset_load_wall_s = load_suite_dataset(
