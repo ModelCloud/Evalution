@@ -319,12 +319,30 @@ class OpenAICompatibleSession(BaseInferenceSession):
                 "stop": list(request_item.stop),
                 "metadata": dict(request_item.metadata),
             }
+            if request_item.tools:
+                payload["tools"] = list(request_item.tools)
             response = self._post_json(self.config.chat_completions_path, payload)
             choices = response.get("choices") or []
             if not choices:
                 raise RuntimeError("chat completion response did not include any choices")
             message = choices[0].get("message") or {}
             text = str(message.get("content", ""))
+            if not text and message.get("tool_calls"):
+                import json
+
+                serialized: list[str] = []
+                for call in message["tool_calls"]:
+                    function = call.get("function") or {}
+                    arguments = function.get("arguments", "{}")
+                    if isinstance(arguments, str):
+                        try:
+                            arguments = json.loads(arguments)
+                        except ValueError:
+                            pass
+                    serialized.append(
+                        json.dumps({"name": function.get("name"), "parameters": arguments})
+                    )
+                text = "\n".join(serialized)
             prompt = request_item.rendered_prompt or str(request_item.messages)
             metadata = dict(request_item.metadata)
             metadata["openai_response"] = response

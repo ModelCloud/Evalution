@@ -583,10 +583,15 @@ class TensorRTLLMSession(BaseInferenceSession):
             apply_chat_template = getattr(tokenizer, "apply_chat_template", None)
             if not callable(apply_chat_template):
                 raise ValueError("generation requests with messages require tokenizer.apply_chat_template")
+            template_kwargs = {
+                "tokenize": False,
+                "add_generation_prompt": request.add_generation_prompt,
+            }
+            if request.tools:
+                template_kwargs["tools"] = request.tools
             return apply_chat_template(
                 request.messages,
-                tokenize=False,
-                add_generation_prompt=request.add_generation_prompt,
+                **template_kwargs,
             )
         if request.prompt is None:
             raise ValueError("generation requests must define either `prompt` or `messages`")

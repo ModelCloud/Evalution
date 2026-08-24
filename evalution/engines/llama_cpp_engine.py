@@ -863,8 +863,9 @@ class LlamaCppSession(BaseInferenceSession):
                 seed=self.config.seed,
                 stream=False,
                 logprobs=False,
+                tools=_llama_tools_payload(request.tools),
             )
-            text = _extract_chat_completion_text(response)
+            text = _extract_chat_completion_text(response) or _tool_calls_to_text(response)
             prompt_text = self._messages_display_prompt(request.messages)
             metadata = {
                 **dict(request.metadata),
@@ -901,10 +902,15 @@ class LlamaCppSession(BaseInferenceSession):
                 apply_chat_template = getattr(self.prepare_tokenizer, "apply_chat_template", None)
                 if not callable(apply_chat_template):
                     raise ValueError("generation requests with messages require tokenizer.apply_chat_template")
+                template_kwargs = {
+                    "tokenize": False,
+                    "add_generation_prompt": request.add_generation_prompt,
+                }
+                if request.tools:
+                    template_kwargs["tools"] = request.tools
                 prompt_text = apply_chat_template(
                     request.messages,
-                    tokenize=False,
-                    add_generation_prompt=request.add_generation_prompt,
+                    **template_kwargs,
                 )
             else:
                 prompt_text = self._messages_display_prompt(request.messages)
@@ -1279,6 +1285,30 @@ def _maybe_load_prepare_tokenizer(
             tokenizer.padding_side = padding_side
         return tokenizer
     return None
+
+
+def _llama_tools_payload(tools: list[dict[str, Any]] | None) -> list[dict[str, Any]] | None:
+    """Convert GenerationRequest.tools into llama.cpp chat-completion form."""
+    return list(tools) if tools else None
+
+
+def _tool_calls_to_text(response: dict[str, Any]) -> str:
+    """Serialize native chat tool_calls into text the agentic parser understands."""
+    import json
+
+    message = response["choices"][0].get("message", {}) or {}
+    calls = message.get("tool_calls") or []
+    serialized: list[str] = []
+    for call in calls:
+        function = call.get("function") or {}
+        arguments = function.get("arguments", {})
+        if isinstance(arguments, str):
+            try:
+                arguments = json.loads(arguments)
+            except ValueError:
+                pass
+        serialized.append(json.dumps({"name": function.get("name"), "parameters": arguments}))
+    return "\n".join(serialized)
 
 
 def _extract_chat_completion_text(response: dict[str, Any]) -> str:

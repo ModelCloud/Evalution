@@ -769,8 +769,12 @@ marker counts as a tool call is resolved per suite from two options:
   deliberately distinct from ordinary bash code output), or
   `fenced_shell` (shell-language code fences as an explicitly opted-in action channel).
 
-An explicit format pins its mode family (`native_json` → native; others → prompted). Under the
-declared protocol, every tool call in a generation is captured and executed on the runtime;
+An explicit format pins its mode family (`native_json` → native; others → prompted). The tool
+schema is forwarded by every execution engine — Transformers/TransformersCompat/GPTQModel/
+OpenVINO (shared chat-template renderer), vLLM, SGLang, TensorRT-LLM, tinygrad, llama.cpp
+(native chat API), and OpenAI-compatible HTTP endpoints — so native mode works identically
+across backends. Under the declared protocol, every tool call in a generation is captured and
+executed on the runtime;
 anything not matching the protocol stays inert model output. For prompted models, the syntax
 contract is injected as a system message automatically.
 

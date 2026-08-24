@@ -460,10 +460,15 @@ class SGLangSession(BaseInferenceSession):
     def _render_request_with_tokenizer(self, tokenizer: Any, request: GenerationRequest) -> str:
         """Render request with tokenizer."""
         if request.messages is not None:
+            template_kwargs = {
+                "tokenize": False,
+                "add_generation_prompt": request.add_generation_prompt,
+            }
+            if request.tools:
+                template_kwargs["tools"] = request.tools
             return tokenizer.apply_chat_template(
                 request.messages,
-                tokenize=False,
-                add_generation_prompt=request.add_generation_prompt,
+                **template_kwargs,
             )
         if request.prompt is None:
             raise ValueError("generation requests must define either `prompt` or `messages`")
