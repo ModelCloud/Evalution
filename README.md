@@ -8,19 +8,24 @@
 
 Evalution is a modern LLM evaluation toolkit for fast, benchmark-faithful, multi-engine model evaluation. 🚀
 
-## News
+## News 🗞️
 
-- July 22nd, 2026: Released `v0.0.9` with model-declared multi-EOS and chat-template default preservation.
-- July 20th, 2026: Released `v0.0.8` with Transformers 5.14+ continuous batching and paged-attention compatibility.
-- April 19th, 2026: 🚀 `Tinygrad` engine support added.
+- 🚀 **August 2026 — `v0.0.14`**: Agentic benchmark scaffolds landed with PoolSide Laguna S 2.1 suites and sandboxed `DockerAgentRuntime` / `SmolVmAgentRuntime`. Native tool schemas now forward through every execution engine, with added GLM-5.2, Laguna-S-2.1, MiniMax-M2/M3, and Qwen 3.5/3.6 function-XML tool-call parsing. Stable `llama.cpp` and `tinygrad` runtimes are now synchronized.
+- 📦 **August 2026 — `v0.0.13`**: Evaluation results now include a top-level `versions` map of Evalution and all runtime packages, with `local-git-<commit>` suffixes for editable/local installs.
+- 🔧 **August 2026 — `v0.0.12`**: `stream=True` evaluations use locally cached datasets, and `use_cuda_graph` defaults to `False` for paged-attention continuous batching.
+- 🤗 **July 2026 — `v0.0.11`**: Preserve model-declared multi-EOS and chat-template defaults; Transformers 5.14+ continuous batching and paged-attention compatibility.
+- 🛡️ **July 2026 — `v0.0.10`**: Safer defaults for paged-attention continuous batching with `use_cuda_graph=False`.
+- 🧠 **April 2026**: `Tinygrad` engine support added for local GGUF checkpoints.
 
-Install ⚡
+## Install ⚡
+
+### From PyPI 📦
 
 ```bash
 pip install Evalution
 ```
 
-Install from source 🛠️
+### Install from source 🛠️
 
 ```bash
 git clone https://github.com/modelcloud/Evalution.git
@@ -32,27 +37,31 @@ Core runtime dependencies stay lean: `transformers`, `datasets`, `logbar`, `PyPc
 
 ## Why Evalution ✨
 
-**9 engines. 153 built-in benchmark families. 215 in-repo GPU benchmark regression tests.**
+**🚀 10 inference engines. 📚 153 built-in benchmark families. 🧪 215 in-repo GPU benchmark regression tests.**
 
-- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `OpenAICompatible`, `GPTQModel`, `OpenVINO`, and `Tinygrad`.
+- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `OpenAICompatible`, `GPTQModel`, `OpenVINO`, `Tinygrad`, and `LlamaCpp`.
 - 📚 Broad benchmark coverage: 153 documented built-in benchmark families spanning reasoning, multilingual evals, coding, long-context, QA, perplexity, safety, and more.
+- 🤖 Agentic & tool-calling ready: sandboxed `DockerAgentRuntime` and `SmolVmAgentRuntime`, native tool schemas forwarded through every engine, and PoolSide Laguna S 2.1 agentic suites.
 - 🧪 GPU validated: the repo includes 215 in-repo GPU benchmark regression tests for individual Llama 3.2 benchmark runs, with RTX 4090 and A100-aware baselines where scores are pinned.
 - ⚡ Speed: Evalution is faster than many evaluators and attempts continuous batching by default when the selected engine supports it.
 - 🪶 Minimal core deps: the default install stays focused and avoids dragging in every backend dependency up front.
 - 🧼 Clean API: Python, YAML, CLI, single-model runs, and compare flows all share the same readable shape.
 - 🧩 Extensible: Evalution has a clean extension API for execution engines, benchmark suites, and scorers.
 - 📝 YAML support: run configs from YAML and emit Python back from YAML when you want a code path.
+- 📦 Reproducible runs: every result carries a top-level `versions` map for Evalution, engines, and runtime packages.
 - 🔌 Easy to extend: adding new engines and new benchmark suites follows a clear public contract with contributor docs in-tree.
 - ⚖️ Side-by-side compare mode: run threaded left/right model lanes against the same suite list and get one consolidated summary.
 - 🎯 Benchmark-faithful by default: suites aim to stay close to original papers and released reference behavior, not just headline numbers.
 
-Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
-Metric-key glossary lives in [docs/scores.md](docs/scores.md). Scoring implementation notes and
+📖 Engine implementation notes for backend authors live in [docs/engine.md](docs/engine.md).
+📊 Metric-key glossary lives in [docs/scores.md](docs/scores.md). 🎯 Scoring implementation notes and
 scorer-module mapping live in [docs/scorers.md](docs/scorers.md).
-Contributor guidance for adding new eval/benchmark/test suites lives in
+🤝 Contributor guidance for adding new eval/benchmark/test suites lives in
 [docs/benchmark_suite_guidelines.md](docs/benchmark_suite_guidelines.md).
 
-Simple usage 🧪
+## Quickstart 🚀
+
+### Simple usage 🧪
 
 ```python
 import evalution.benchmarks as benchmarks
@@ -65,7 +74,7 @@ result = (
 )
 ```
 
-Advanced usage 🧠
+### Advanced usage 🧠
 
 ```python
 import evalution as eval
@@ -109,7 +118,7 @@ GPTQModel, vLLM, SGLang, Transformers, Hugging Face Hub, Datasets, Torch, and Tr
 optional runtimes are recorded as `null`; editable installs and local source links include a
 `local-git-<commit>` suffix.
 
-Compare usage ⚖️
+### Compare usage ⚖️
 
 ```python
 import evalution as eval
@@ -139,7 +148,7 @@ suite list on both lanes while allowing different engines and model configs on t
 When the terminal supports LogBar split panes, Evalution binds each lane to its own pane and
 renders a consolidated compare summary when the run closes.
 
-YAML usage 📝
+### YAML usage 📝
 
 ```yaml
 engine:
@@ -172,7 +181,7 @@ result = eval.run_yaml("evalution.yaml")
 python_script = eval.python_from_yaml("evalution.yaml")
 ```
 
-CLI usage 💻
+### CLI usage 💻
 
 ```bash
 evalution evalution.yaml
@@ -222,7 +231,7 @@ Supported values:
 - `length|asc`: execute shorter prepared requests first.
 - `length|desc`: execute longer prepared requests first.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution.benchmarks as benchmarks
@@ -231,7 +240,7 @@ suite = benchmarks.gsm8k(order="length|desc")
 suite = benchmarks.gsm8k_platinum(order="shuffle|245")
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 tests:
@@ -241,7 +250,7 @@ tests:
     order: shuffle|245
 ```
 
-Notes:
+📝 Notes:
 
 - `shuffle` without an explicit seed is normalized to `shuffle|7`.
 - Ordering is applied after the benchmark's selected rows are loaded and capped by `max_rows`.
@@ -258,7 +267,7 @@ Currently this applies to `mmlu` and `mmlu_pro`.
 - `subsets: [stem, humanities]` runs the union of multiple selections.
 - Deeper paths are supported by the same syntax when a suite defines them.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution as eval
@@ -273,7 +282,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 tests:
@@ -299,7 +308,7 @@ compatibility backend explicitly.
 Use `engines.Transformers()` in Python or `engine.type: Transformers` in YAML when you want the
 preferred Hugging Face runtime.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution.benchmarks as benchmarks
@@ -315,7 +324,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -337,14 +346,14 @@ Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelih
 `loglikelihood_rolling(...)` through the same shared engine contract. The current sglang backend
 expects `num_beams=1`.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution as eval
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
-# Extra dependency: `pip install sglang`
+# ⚙️ Extra dependency: `pip install sglang`
 if __name__ == '__main__':
     result = (
         engines.SGLang(
@@ -356,7 +365,7 @@ if __name__ == '__main__':
     )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -378,14 +387,14 @@ Evalution will preserve `generate(...)`, `generate_continuous(...)`, `loglikelih
 `loglikelihood_rolling(...)` through the same shared engine contract. The current vLLM backend
 expects `num_beams=1`.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution as eval
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
-# Extra dependency: `pip install vllm`
+# ⚙️ Extra dependency: `pip install vllm`
 result = (
     engines.VLLM(
         batch_size=16,
@@ -398,7 +407,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -420,14 +429,14 @@ tests:
 Use `engines.TensorRTLLM()` in Python or `engine.type: TensorRTLLM` in YAML when you want the
 TensorRT-LLM runtime. The current backend expects `num_beams=1`.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution as eval
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
-# Extra dependency: install `tensorrt_llm`.
+# ⚙️ Extra dependency: install `tensorrt_llm`.
 result = (
     engines.TensorRTLLM(
         batch_size=16,
@@ -438,7 +447,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -462,7 +471,7 @@ such as `/v1/chat/completions` or `/v1/completions`, plus the Evalution scoring 
 `.model(...)` for its shared run API, and this engine converts `.model(path=...)` into the remote
 OpenAI-compatible HTTP `model` argument.
 
-Python:
+🐍 Python:
 
 ```python
 import os
@@ -481,7 +490,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -502,13 +511,13 @@ tests:
 Use `engines.GPTQModel()` in Python or `engine.type: GPTQModel` in YAML when you want to load a
 quantized checkpoint through GPTQModel's native loader.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
-# Extra dependency: `pip install gptqmodel`
+# ⚙️ Extra dependency: `pip install gptqmodel`
 result = (
     engines.GPTQModel(
         device="cuda:0",
@@ -520,7 +529,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -555,7 +564,7 @@ Tinygrad engine summary:
 | Continuous batching | Emulated fixed-batch submission over the same static batched path |
 | Default CUDA runtime profile | `jit=2`, `jitbeam=0` |
 
-Notes:
+📝 Notes:
 
 - `model.path` must point to a local `.gguf` file.
 - For chat-template benchmarks such as `gsm8k_platinum`, set `model.tokenizer_path` to the
@@ -565,7 +574,7 @@ Notes:
   finish the startup profile sweep in time. Override `jit` or `jitbeam` explicitly if you want to
   experiment with a different tinygrad runtime profile.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution as eval
@@ -585,7 +594,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -619,7 +628,7 @@ FORCE_CMAKE=1 \
 pip install --no-binary=:all: --force-reinstall 'llama-cpp-python>=0.3.35,<0.4'
 ```
 
-Notes:
+📝 Notes:
 
 - `device` can be `auto`, `cuda`, `cpu`, or `mlx`. When a GPU-backed request is not available in
   the installed binding, Evalution falls back to CPU instead of aborting engine construction.
@@ -630,7 +639,7 @@ Notes:
 - `LlamaCpp` uses llama.cpp's native tokenizer for prompt tokenization and scoring. An optional
   Hugging Face tokenizer is only loaded when needed for chat template rendering.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution as eval
@@ -652,7 +661,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -675,14 +684,14 @@ tests:
 Use `engines.OpenVINO()` in Python or `engine.type: OpenVINO` in YAML when you want to run an
 Optimum Intel `OVModelForCausalLM` backend.
 
-Python:
+🐍 Python:
 
 ```python
 import evalution as eval
 import evalution.benchmarks as benchmarks
 import evalution.engines as engines
 
-# Extra dependency: `pip install "optimum[openvino]"`
+# ⚙️ Extra dependency: `pip install "optimum[openvino]"`
 result = (
     engines.OpenVINO(
         device="cpu",
@@ -692,7 +701,7 @@ result = (
 )
 ```
 
-YAML:
+📋 YAML:
 
 ```yaml
 engine:
@@ -706,7 +715,7 @@ tests:
   - type: gsm8k_platinum
 ```
 
-`Tokenicer` is used to load tokenizers for the transformer, transformer-compat, OpenVINO,
+🔤 `Tokenicer` is used to load tokenizers for the transformer, transformer-compat, OpenVINO,
 GPTQModel, Tinygrad, vLLM, and optionally LlamaCpp engines. When `engine.model(...)` is called
 with a model config, Evalution resolves tokenizer loading in this order:
 `tokenizer` (preinitialized object), `tokenizer_path`, then `path`.
@@ -831,7 +840,7 @@ Models without a native tool template (for example DeepSeek-V4-Flash ships none)
 output never matches that protocol and is never executed.
 
 
-### DockerAgentRuntime (containers)
+### 🐳 DockerAgentRuntime (containers)
 
 Runs every generated command in a disposable `docker run --rm` container with no network access by
 default. Requires a working Docker daemon.
@@ -848,7 +857,7 @@ runtime = DockerAgentRuntime(
 )
 ```
 
-### SmolVmAgentRuntime (microVMs)
+### 🖥️ SmolVmAgentRuntime (microVMs)
 
 Runs every generated command in an ephemeral [smolvm](https://github.com/smol-machines/smolvm)
 microVM — a hardware-isolated virtual machine with its own guest kernel that is removed after exit.
@@ -866,7 +875,7 @@ runtime = SmolVmAgentRuntime(
 )
 ```
 
-### UnsafeLocalRuntime (explicit host bypass)
+### ⚠️ UnsafeLocalRuntime (explicit host bypass)
 
 To run commands directly on the host with no isolation, you must explicitly opt in with
 `UnsafeLocalRuntime`. It emits a `RuntimeWarning` on construction so the choice is visible in logs
@@ -923,7 +932,7 @@ Create the applicable directory and populate it with the benchmark's task files 
 suite. This repository does not include a setup or download script for these files, so all three
 suites currently require manual task provisioning; otherwise evaluation fails with a local task
 directory error. These three suites execute model-generated commands, so they additionally require
-a sandboxed agent runtime; see [Agent Runtimes](#agent-runtimes-️) above.
+a sandboxed agent runtime; see [Agent Runtimes](#agent-runtimes) above.
 
 | Suite | Original benchmark |
 | --- | --- |
