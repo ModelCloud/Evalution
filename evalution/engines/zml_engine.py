@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from urllib import error, request
+from urllib import error, parse, request
 
 from evalution.config import Model
 from evalution.engines.base import BaseInferenceSession
@@ -60,6 +60,19 @@ class ZML(OpenAICompatible):
     prefix_caching: bool = True
     attention_backend: str = "auto"
     tensor_parallel_size: int | str = "auto"
+
+    # LLMD scheduler, prefill, page, and memory controls.  These map directly
+    # to the documented LLMD command-line options when this adapter manages the
+    # server process.
+    token_batch_size: int = 1024
+    max_context_len: int = 128_000
+    prefill_chunk_size: int = 256
+    page_chunk_size: int = 16
+    gpu_memory_fraction: float = 0.9
+    cache_memory_fraction: float = 0.95
+    topk: int = 50
+    dflash_draft_count: int | None = None
+    listen: str | None = None
 
     # DFlash is the one documented optional generation accelerator exposed as a
     # server launch flag.  It is not applicable to the Llama 3.2 smoke test but
@@ -126,6 +139,15 @@ class ZMLSession(OpenAICompatibleSession):
             "prefix_caching": self.config.prefix_caching,
             "attention_backend": self.config.attention_backend,
             "tensor_parallel_size": self.config.tensor_parallel_size,
+            "token_batch_size": self.config.token_batch_size,
+            "max_context_len": self.config.max_context_len,
+            "prefill_chunk_size": self.config.prefill_chunk_size,
+            "page_chunk_size": self.config.page_chunk_size,
+            "gpu_memory_fraction": self.config.gpu_memory_fraction,
+            "cache_memory_fraction": self.config.cache_memory_fraction,
+            "topk": self.config.topk,
+            "dflash_draft_count": self.config.dflash_draft_count,
+            "listen": self.config.listen,
             "dflash_model": self.config.dflash_model,
             "server_managed": self._server_process is not None,
         }
@@ -160,9 +182,26 @@ def _launch_server(config: ZML, model_config: Model) -> subprocess.Popen[Any]:
     if config.server_command:
         command = list(config.server_command)
     else:
-        command = [config.executable, f"--model={model_config.path}"]
+        command = [
+            config.executable,
+            f"--model={model_config.path}",
+            f"--batch-size={int(config.batch_size)}",
+            f"--token-batch-size={int(config.token_batch_size)}",
+            f"--max-context-len={int(config.max_context_len)}",
+            f"--prefill-chunk-size={int(config.prefill_chunk_size)}",
+            f"--page-chunk-size={int(config.page_chunk_size)}",
+            f"--backend={config.attention_backend}",
+            f"--gpu-memory-fraction={float(config.gpu_memory_fraction)}",
+            f"--cache-memory-fraction={float(config.cache_memory_fraction)}",
+            f"--topk={int(config.topk)}",
+            f"--listen={config.listen or _listen_address(config.base_url)}",
+        ]
+        if config.model_name is not None:
+            command.append(f"--model-name={config.model_name}")
         if config.dflash_model is not None:
             command.append(f"--dflash-model={config.dflash_model}")
+        if config.dflash_draft_count is not None:
+            command.append(f"--dflash-draft-count={int(config.dflash_draft_count)}")
         command.extend(config.server_args)
 
     environment = os.environ.copy()
@@ -177,6 +216,18 @@ def _launch_server(config: ZML, model_config: Model) -> subprocess.Popen[Any]:
         ) from exc
     except OSError as exc:
         raise RuntimeError(f"ZML engine failed to start LLMD command {command!r}: {exc}") from exc
+
+
+def _listen_address(base_url: str) -> str:
+    """Derive LLMD's listen address from the configured HTTP base URL."""
+
+    parsed = parse.urlsplit(base_url)
+    if parsed.hostname is None:
+        return "0.0.0.0:8000"
+    host = parsed.hostname
+    if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+    return f"{host}:{parsed.port or 8000}"
 
 
 def _wait_for_server(
