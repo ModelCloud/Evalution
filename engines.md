@@ -16,6 +16,7 @@ Built-in engines at a glance:
 | `SGLang` | `sglang` | Hugging Face checkpoints | Runtime-dependent | In-process SGLang backend |
 | `TensorRTLLM` | `tensorrt_llm` | TensorRT-LLM exports | Runtime-dependent | NVIDIA TensorRT-LLM backend |
 | `VLLM` | `vllm` | Hugging Face checkpoints | Native when low-level request APIs are available | vLLM local runtime |
+| `ZML` | ZML/LLMD OpenAI-compatible HTTP | Hugging Face checkpoints, local or remote | Native server-side continuous batching | Python-free portable runtime with paged attention and automatic optimized attention kernels |
 
 Use [docs/engine.md](docs/engine.md) for backend contracts, built-in engine behavior, and
 implementation guidance for new runtimes.

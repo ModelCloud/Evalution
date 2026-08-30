@@ -37,9 +37,9 @@ Core runtime dependencies stay lean: `transformers`, `datasets`, `logbar`, `PyPc
 
 ## Why Evalution ✨
 
-**🚀 10 inference engines. 📚 153 built-in benchmark families. 🧪 215 in-repo GPU benchmark regression tests.**
+**🚀 11 inference engines. 📚 153 built-in benchmark families. 🧪 215 in-repo GPU benchmark regression tests.**
 
-- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `OpenAICompatible`, `GPTQModel`, `OpenVINO`, `Tinygrad`, and `LlamaCpp`.
+- 🚂 Multi-engine out of the box: `Transformers`, `TransformersCompat`, `VLLM`, `SGLang`, `TensorRTLLM`, `OpenAICompatible`, `GPTQModel`, `OpenVINO`, `Tinygrad`, `LlamaCpp`, and `ZML`.
 - 📚 Broad benchmark coverage: 153 documented built-in benchmark families spanning reasoning, multilingual evals, coding, long-context, QA, perplexity, safety, and more.
 - 🤖 Agentic & tool-calling ready: sandboxed `DockerAgentRuntime` and `SmolVmAgentRuntime`, native tool schemas forwarded through every engine, and PoolSide Laguna S 2.1 agentic suites.
 - 🧪 GPU validated: the repo includes 215 in-repo GPU benchmark regression tests for individual Llama 3.2 benchmark runs, with RTX 4090 and A100-aware baselines where scores are pinned.
@@ -200,6 +200,14 @@ evalution emit-python evalution.yaml
 `engines.SGLang(...)` accepts SGLang runtime options such as `tp_size`,
 `mem_fraction_static`, `context_length`, `quantization`, `attention_backend`, `sampling_backend`, `tokenizer_mode`,
 and `max_running_requests`.
+
+`engines.ZML(...)` connects to ZML/LLMD's OpenAI-compatible server. Its default client queue is
+wide enough to exercise LLMD's native continuous batching, while LLMD automatically selects its
+paged-attention and platform-optimized attention kernels, including FlashAttention 2/3 on
+supported CUDA devices. Set `launch_server=True` to manage a local `llmd` process, or pass a
+complete `server_command` for a containerized LLMD deployment. Use `server_args` for additional
+flags introduced by a particular LLMD release; `dflash_model` maps to LLMD's documented DFlash
+flag.
 
 `engines.LlamaCpp(...)` accepts llama.cpp runtime options such as `device`, `n_ctx`,
 `n_gpu_layers`, `flash_attn`, `main_gpu`, and `llama_kwargs`.
@@ -422,6 +430,39 @@ model:
 
 tests:
   - type: gsm8k_platinum
+```
+
+### ZML / LLMD ⚡
+
+Use `engines.ZML()` to benchmark a ZML/LLMD server through its OpenAI-compatible API. LLMD owns
+continuous batching, paged attention, prefix caching, tensor/expert sharding, and automatic
+platform-specific attention kernels, including FlashAttention 2/3 on supported CUDA devices.
+
+```python
+import evalution
+
+result = (
+    evalution.ZML(
+        base_url="http://127.0.0.1:8000",
+        model_name="Llama-3.2-1B-Instruct",
+        batch_size=16,
+        max_parallel_requests=64,
+    )
+    .model(path="/monster/data/model/Llama-3.2-1B-Instruct")
+    .run(evalution.benchmarks.gsm8k_platinum(max_rows=128, max_new_tokens=96))
+)
+```
+
+Start LLMD separately with `--model=/monster/data/model/Llama-3.2-1B-Instruct`, or set
+`launch_server=True` to let Evalution start a local `llmd` executable. For Docker and other
+deployments, pass the complete command with `server_command`; use `server_args` for additional
+LLMD release-specific flags. The runnable matrix command is:
+
+```bash
+python benchmarks/benchmark_llama3_2_gsm8k_zml.py \
+  --base-url http://127.0.0.1:8000 \
+  --model-path /monster/data/model/Llama-3.2-1B-Instruct \
+  --max-rows 128
 ```
 
 ### TensorRTLLM 🧠

@@ -101,7 +101,7 @@ class ZMLSession(OpenAICompatibleSession):
         if config.launch_server:
             server_process = _launch_server(config, model_config)
             try:
-                _wait_for_server(config)
+                _wait_for_server(config, server_process=server_process)
             except Exception:
                 _terminate_process(server_process)
                 raise
@@ -134,6 +134,15 @@ class ZMLSession(OpenAICompatibleSession):
         """Leave cache lifetime to LLMD, which owns the compiled runtime."""
 
         return None
+
+    def _effective_batch_size(self, batch_size: int | None) -> int:
+        """Cap client refill concurrency before requests enter LLMD's native scheduler."""
+
+        configured = super()._effective_batch_size(batch_size)
+        limit = int(self.config.max_parallel_requests)
+        if limit <= 0:
+            return 1
+        return min(configured, limit)
 
     def close(self) -> None:
         """Close the HTTP session and stop a server started by this session."""
@@ -170,13 +179,22 @@ def _launch_server(config: ZML, model_config: Model) -> subprocess.Popen[Any]:
         raise RuntimeError(f"ZML engine failed to start LLMD command {command!r}: {exc}") from exc
 
 
-def _wait_for_server(config: ZML) -> None:
+def _wait_for_server(
+    config: ZML,
+    *,
+    server_process: subprocess.Popen[Any] | None = None,
+) -> None:
     """Wait until LLMD's documented model route accepts requests."""
 
     deadline = time.monotonic() + max(float(config.startup_timeout_s), 0.0)
     endpoint = f"{config.base_url.rstrip('/')}/{config.health_path.lstrip('/')}"
     last_error: Exception | None = None
     while time.monotonic() <= deadline:
+        if server_process is not None and server_process.poll() is not None:
+            raise RuntimeError(
+                f"ZML/LLMD exited before becoming ready with return code "
+                f"{server_process.returncode}"
+            )
         try:
             with request.urlopen(endpoint, timeout=max(float(config.health_interval_s), 0.1)) as response:
                 if 200 <= response.status < 300:
