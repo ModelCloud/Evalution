@@ -1612,6 +1612,8 @@ def test_repeated_engine_keys_live_on_dedicated_base_configs() -> None:
         "q_padding_interval_size",
         "kv_padding_interval_size",
         "max_cached_graphs",
+        "compile_config",
+        "default_compile_level",
     }
 
 

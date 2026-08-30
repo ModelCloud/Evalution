@@ -273,6 +273,20 @@ def _get_cuda_graph_booleans(use_cuda_graph: bool | tuple[bool, bool] | None) ->
     return bool(use_cuda_graph[0]), bool(use_cuda_graph[1])
 
 
+def _coerce_compile_config(value: Any) -> Any | None:
+    """Convert a serializable compile-config mapping into Transformers' CompileConfig object."""
+    if value is None:
+        return None
+
+    from transformers.generation.configuration_utils import CompileConfig
+
+    if isinstance(value, CompileConfig):
+        return value
+    if isinstance(value, dict):
+        return CompileConfig(**value)
+    raise TypeError("compile_config must be a Transformers CompileConfig or a mapping of its options")
+
+
 def _set_use_cuda_graph_varlen(inputs_and_outputs: Any, use_cuda_graph_varlen: bool) -> None:
     """Propagate the varlen CUDA-graph flag to whichever IO objects the installed runtime created."""
 
@@ -1256,6 +1270,16 @@ class TransformersSession(BaseTransformerSession):
                 continuous_batching_config_kwargs["max_cached_graphs"] = self.config.max_cached_graphs
             continuous_batching_config_signature = inspect.signature(ContinuousBatchingConfig)
             supported_cb_keys = set(continuous_batching_config_signature.parameters)
+            compile_config = _coerce_compile_config(getattr(self.config, "compile_config", None))
+            if compile_config is not None:
+                # Transformers 5.14+ has separate compile controls for prefill and decode. Use the
+                # same explicit config for both paths so an opt-in applies to the whole scheduler.
+                if "varlen_compile_config" in supported_cb_keys:
+                    continuous_batching_config_kwargs["varlen_compile_config"] = compile_config
+                if "decode_compile_config" in supported_cb_keys:
+                    continuous_batching_config_kwargs["decode_compile_config"] = compile_config
+            if "default_compile_level" in supported_cb_keys:
+                continuous_batching_config_kwargs["default_compile_level"] = self.config.default_compile_level
             continuous_batching_config_kwargs = {
                 key: value
                 for key, value in continuous_batching_config_kwargs.items()

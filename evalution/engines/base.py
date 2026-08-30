@@ -283,6 +283,10 @@ class BaseEnginePagedBatchingConfig:
     q_padding_interval_size: int = 0
     kv_padding_interval_size: int = 0
     max_cached_graphs: int = 0
+    # Optional transformers CompileConfig fields forwarded to continuous-batching varlen/decode paths.
+    compile_config: dict[str, Any] | None = None
+    # Upstream automatic compile level; zero keeps compilation disabled by default.
+    default_compile_level: int = 0
 
     def __post_init__(self) -> None:
         """Disable CUDA graph capture for paged attention by default.

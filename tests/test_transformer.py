@@ -42,6 +42,8 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.q_padding_interval_size == 0
     assert engine.kv_padding_interval_size == 0
     assert engine.max_cached_graphs == 0
+    assert engine.compile_config is None
+    assert engine.default_compile_level == 0
     assert engine.to_dict()["batch_size"] == "auto"
     assert engine.to_dict()["seed"] is None
     assert engine.to_dict()["manual_eviction"] is False
@@ -53,6 +55,8 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
+    assert engine.to_dict()["compile_config"] is None
+    assert engine.to_dict()["default_compile_level"] == 0
 
 
 def test_resolve_input_device_keeps_cpu_only_hf_device_maps_on_cpu() -> None:
@@ -2012,6 +2016,42 @@ def test_transformer_session_builds_transformers_5_14_continuous_batching_config
     assert manager.continuous_batching_config is not None
     assert manager.continuous_batching_config.max_batch_tokens == 1536
     assert manager.continuous_batching_config.max_cached_graphs is None
+
+
+@pytest.mark.skipif(
+    not isinstance(getattr(transformers.ContinuousBatchingConfig, "cuda_graph_booleans", None), property),
+    reason="requires the Transformers 5.14 native continuous-batching config API",
+)
+def test_transformer_session_forwards_compile_config_to_both_paths() -> None:
+    """Verify public compile settings reach the varlen and decode continuous-batching paths."""
+    class FakeModernContinuousBatchingManager:
+        """Capture the config object passed through the modern manager constructor."""
+
+        def __init__(self, model, generation_config, continuous_batching_config) -> None:
+            """Store the modern manager inputs for the surrounding assertions."""
+            self.model = model
+            self.generation_config = generation_config
+            self.continuous_batching_config = continuous_batching_config
+
+    session = TransformersSession(
+        config=Transformers(
+            compile_config={"mode": "default", "dynamic": False},
+        ),
+        model_config=Model(path="/tmp/model"),
+        model=object(),
+        tokenizer=SimpleNamespace(),
+        input_device=SimpleNamespace(type="cuda"),
+    )
+
+    manager = session._build_continuous_batching_manager(
+        ContinuousBatchingManager=FakeModernContinuousBatchingManager,
+        generation_config=object(),
+    )
+
+    assert manager.continuous_batching_config.varlen_compile_config is not None
+    assert manager.continuous_batching_config.decode_compile_config is not None
+    assert manager.continuous_batching_config.varlen_compile_config.mode == "default"
+    assert manager.continuous_batching_config.decode_compile_config.dynamic is False
 
 
 def test_transformer_session_restores_paged_marker_after_loading_base_attention(

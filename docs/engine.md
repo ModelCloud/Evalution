@@ -146,6 +146,11 @@ explicit fixed-batch execution path.
 The modern `engines.Transformers(...)` engine also exposes the upstream continuous batching manager
 knobs `manual_eviction`, `allow_block_sharing`, `max_blocks_per_request`, `use_async_batching`,
 `use_cuda_graph`, `q_padding_interval_size`, `kv_padding_interval_size`, and `max_cached_graphs`.
+For Transformers releases with compile-aware continuous batching, `compile_config` accepts a
+mapping of `CompileConfig` options (for example `{"mode": "default", "dynamic": false}`) and
+forwards it to both the varlen and decode paths. `default_compile_level` enables the upstream
+automatic compile policy when set above zero. Compilation is opt-in and applies to continuous
+batching; it is not the same as calling a nonexistent generic `model.compile()` method.
 When `attn_implementation` resolves to paged FlashAttention and `max_blocks_per_request` is left
 unset in Evalution, the engine seeds the block-table decode fast path defaults it needs for that
 runtime. For patched or newer `transformers` builds, `use_cuda_graph` follows the upstream

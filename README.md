@@ -10,6 +10,7 @@ Evalution is a modern LLM evaluation toolkit for fast, benchmark-faithful, multi
 
 ## News 🗞️
 
+- 🚀 **August 2026 — `v0.0.15`**: ZML/LLMD benchmarking is now documented alongside a full GSM8K-Platinum comparison of ZML, vLLM, SGLang, and Transformers, including active attention paths, continuous batching settings, throughput, peak VRAM, and scores.
 - 🚀 **August 2026 — `v0.0.14`**: Agentic benchmark scaffolds landed with PoolSide Laguna S 2.1 suites and sandboxed `DockerAgentRuntime` / `SmolVmAgentRuntime`. Native tool schemas now forward through every execution engine, with added GLM-5.2, Laguna-S-2.1, MiniMax-M2/M3, and Qwen 3.5/3.6 function-XML tool-call parsing. Stable `llama.cpp` and `tinygrad` runtimes are now synchronized.
 - 📦 **August 2026 — `v0.0.13`**: Evaluation results now include a top-level `versions` map of Evalution and all runtime packages, with `local-git-<commit>` suffixes for editable/local installs.
 - 🔧 **August 2026 — `v0.0.12`**: `stream=True` evaluations use locally cached datasets, and `use_cuda_graph` defaults to `False` for paged-attention continuous batching.
@@ -91,7 +92,9 @@ result = (
         max_batch_tokens=None,
         max_blocks_per_request=None,
         use_async_batching=None,
-        use_cuda_graph=None,
+        use_cuda_graph=(True, True),
+        compile_config=None,
+        default_compile_level=0,
         max_new_tokens=256,
     )
     .model(path="meta-llama/Llama-3.2-1B-Instruct")
@@ -464,6 +467,45 @@ python benchmarks/benchmark_llama3_2_gsm8k_zml.py \
   --model-path /monster/data/model/Llama-3.2-1B-Instruct \
   --max-rows 128
 ```
+
+### GPU benchmark snapshot 📈
+
+The following full GSM8K-Platinum test-split run used the same Llama 3.2 1B Instruct
+checkpoint (`/monster/data/model/Llama-3.2-1B-Instruct`), COT prompts with the chat template,
+`batch_size=16`, a 4K context, a 16K scheduler token budget, `max_new_tokens=256`, and all
+1,209 rows. Generation time excludes dataset loading and scoring; throughput is completed
+benchmark samples per generation second. Runtime-native scheduler and attention flags are mapped
+to equivalent settings because each backend exposes them under different names.
+
+| Engine | Active attention and batching path | Generation (s) | Samples/s | Peak VRAM | Score |
+| --- | --- | ---: | ---: | ---: | ---: |
+| SGLang | FlashInfer, paged KV (page 16), prefix/Radix cache, CUDA graphs | 31.858 | 37.95 | 89,970 MiB | 0.4789 |
+| vLLM | FlashAttention 2, paged KV (block 16), prefix cache, chunked prefill, CUDA graphs | 27.129 | 44.56 | 87,331 MiB | 0.4897 |
+| ZML / LLMD | Automatic CUDA attention, paged KV (page 16), continuous batching | 26.952 | 44.86 | 88,233 MiB | 0.4864 |
+| Transformers (CUDA graphs on) | FlashAttention 2, paged cache, continuous refill batching, CUDA graphs | 41.634 | 29.03 | 82,285 MiB | 0.4773 |
+| Transformers (CUDA graphs off) | FlashAttention 2, paged cache, continuous refill batching | 166.569 | 7.26 | 81,215 MiB | 0.4897 |
+
+The SGLang and vLLM rows ran through Evalution's `OpenAICompatible` adapter with
+`max_parallel_requests=16`; all rows used the same benchmark and scoring path. vLLM's server log
+confirmed active FlashAttention 2, while SGLang selected FlashInfer. ZML used `backend=auto` for
+the successful run; an explicit LLMD `cuda_fa2` probe was excluded after the tested image aborted
+with an internal batch-shape mismatch. The vLLM and ZML runs were within 0.7% of each other in
+throughput. Enabling both Transformers CUDA-graph paths improved this run by approximately 4.0x
+with about 1.0 GiB additional peak VRAM; it remained about 1.5x slower than vLLM. The successful
+graph run logged captures for both varlen and decode shapes. To try the same setting:
+
+```python
+engines.Transformers(
+    attn_implementation="paged|flash_attention_2",
+    use_async_batching=True,
+    use_cuda_graph=(True, True),
+)
+```
+
+Transformers 5.14+ can also opt into its compiled continuous-batching paths with
+`compile_config={"mode": "default", "dynamic": False}` or `default_compile_level=1`; this
+incurs a warmup/compile cost and should be benchmarked separately from CUDA graphs. The generic
+model object does not expose a portable `model.compile()` method for this path.
 
 ### TensorRTLLM 🧠
 
