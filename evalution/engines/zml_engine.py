@@ -133,7 +133,7 @@ class ZMLSession(OpenAICompatibleSession):
     def gc(self) -> None:
         """Leave cache lifetime to LLMD, which owns the compiled runtime."""
 
-        return None
+        return
 
     def _effective_batch_size(self, batch_size: int | None) -> int:
         """Cap client refill concurrency before requests enter LLMD's native scheduler."""
