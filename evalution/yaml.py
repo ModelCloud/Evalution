@@ -26,6 +26,7 @@ from evalution.engines import (
     Transformers,
     TransformersCompat,
     VLLM,
+    ZML,
 )
 from evalution.runtime import EvaluationRun
 
@@ -53,6 +54,7 @@ _ENGINE_REGISTRY: dict[str, _EngineRegistryEntry] = {
     "tinygrad": _EngineSpec(factory=Tinygrad, emit_alias="Tinygrad"),
     "vllm": _EngineSpec(factory=VLLM, emit_alias="VLLM"),
     "sglang": _EngineSpec(factory=SGLang, emit_alias="SGLang"),
+    "zml": _EngineSpec(factory=ZML, emit_alias="ZML"),
 }
 
 # Map every YAML/CLI benchmark name to the corresponding benchmark factory.

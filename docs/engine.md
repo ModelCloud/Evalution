@@ -125,6 +125,7 @@ Evalution ships these built-in engines:
 - `engines.SGLang()`: the in-process SGLang runtime backend
 - `engines.TensorRTLLM()`: the TensorRT-LLM runtime backend
 - `engines.VLLM()`: the vLLM runtime backend
+- `engines.ZML()`: the standalone ZML/LLMD HTTP backend
 
 The preferred import shape is:
 
@@ -221,6 +222,16 @@ submitting request ids into `llm_engine.add_request(...)`, reading finished outp
 `llm_engine.step()`, and reconciling completions by request id instead of by positional order. If
 the installed vLLM runtime does not expose that lower-level request API, the engine falls back to
 fixed-batch emulation to preserve the `generate_continuous(...)` contract.
+
+`engines.ZML()` connects to the standalone ZML/LLMD server over its OpenAI-compatible API. LLMD
+keeps continuous batching, paged attention, prefix caching, tensor/expert sharding, and optimized
+attention kernel selection inside the server, so Evalution does not replace those paths with a
+Python-side scheduler. The default `batch_size=16` and `max_parallel_requests=64` provide enough
+client-side concurrency to exercise the LLMD scheduler; tune them for the target device. LLMD's
+public API exposes generation, but not Evalution's scoring routes, so generation benchmarks such
+as `gsm8k_platinum` are supported directly while log-likelihood suites require a compatible
+scoring proxy configured through the inherited endpoint options. Set `launch_server=True` for a
+local `llmd --model=...` process, or use `server_command` for Docker and other deployment forms.
 
 `engines.LlamaCpp()` returns full request completions from `generate(...)` and
 `generate_continuous(...)`; it does not stream partial token text to callers. The current

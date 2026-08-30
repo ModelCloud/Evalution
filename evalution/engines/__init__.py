@@ -24,6 +24,7 @@ from .tinygrad_engine import Tinygrad
 from .transformers import Transformers
 from .transformers_compat import TransformersCompat
 from .vllm_engine import VLLM
+from .zml_engine import ZML
 
 # Keep engine defaults and compatibility flags explicit at module scope.
 __all__ = [
@@ -46,5 +47,6 @@ __all__ = [
     "Transformers",
     "TransformersCompat",
     "VLLM",
+    "ZML",
     "build_openai_compatible_server",
 ]
