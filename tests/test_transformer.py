@@ -2408,6 +2408,7 @@ def test_transformer_session_loglikelihood_reuses_shared_prefix_kv_cache() -> No
         config=Transformers(
             batch_size=8,
             loglikelihood_prefix_cache=True,
+            loglikelihood_prefix_cache_prewarm=False,
             loglikelihood_prefix_cache_min_tokens=2,
             loglikelihood_prefix_cache_max_entries=4,
         ),
