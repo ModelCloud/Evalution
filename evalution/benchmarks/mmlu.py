@@ -249,16 +249,6 @@ class MMLU(TestSuite):
                 )
 
         outputs = session.loglikelihood(requests, batch_size=self.batch_size)
-        release_prefix_cache = getattr(session, "release_loglikelihood_prefix_cache", None)
-        if callable(release_prefix_cache) and bool(
-            getattr(getattr(session, "config", None), "loglikelihood_prefix_cache", False)
-            and getattr(
-                getattr(session, "config", None),
-                "loglikelihood_prefix_cache_release_after_group",
-                True,
-            )
-        ):
-            release_prefix_cache()
         logger.info("%s: executed %d/%d sample(s)", task_name, len(sample_docs), total)
 
         sample_results: list[SampleResult] = []
@@ -409,15 +399,6 @@ class MMLU(TestSuite):
                         metadata=dict(request_progress_metadata),
                     )
 
-        release_prefix_cache = getattr(session, "release_loglikelihood_prefix_cache", None)
-        release_after_group = callable(release_prefix_cache) and bool(
-            getattr(getattr(session, "config", None), "loglikelihood_prefix_cache", False)
-            and getattr(
-                getattr(session, "config", None),
-                "loglikelihood_prefix_cache_release_after_group",
-                True,
-            )
-        )
         for group_docs in iter_subject_groups():
             group_start = len(sample_docs)
             for (sample_index, choice_index), output in loglikelihood_continuous(
@@ -433,9 +414,6 @@ class MMLU(TestSuite):
                 )
                 if score_bar is not None:
                     score_bar.next().draw()
-            if release_after_group:
-                release_prefix_cache()
-
         executed = len(sample_docs)
         if total is None:
             logger.info("%s: executed %d sample(s)", task_name, executed)

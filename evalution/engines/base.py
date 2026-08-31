@@ -268,9 +268,11 @@ class BaseEngineTransformersRuntimeConfig(BaseEngineDeviceConfig):
     """Define the base engine transformers runtime config helper class."""
     attn_implementation: str | None = None
     device_map: str | dict[str, Any] | None = None
-    # Opt-in scorer-side reuse for repeated long prefixes in loglikelihood workloads.
+    # Enable scorer-side reuse for repeated long prefixes in loglikelihood workloads.
     # Generation continuous batching owns a separate KV cache and cannot serve direct scoring.
-    loglikelihood_prefix_cache: bool = False
+    # The optimization is exact and narrowly applies to duplicate one-token-choice prefixes;
+    # callers can still disable it for compatibility with ``loglikelihood_prefix_cache=False``.
+    loglikelihood_prefix_cache: bool = True
     # Prefill eligible shared prefixes before their scoring batch so scoring lookups are warm.
     # The prefill itself is reported separately from steady-state cache-hit metrics.
     loglikelihood_prefix_cache_prewarm: bool = True

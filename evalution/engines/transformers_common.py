@@ -146,7 +146,7 @@ class BaseTransformerSession(BaseInferenceSession):
         repr=False,
     )
     # Direct loglikelihood forwards do not pass through the generation manager. Keep a small,
-    # explicit LRU of immutable prefix caches for opt-in repeated-prefix scoring workloads.
+    # explicit LRU of immutable prefix caches for repeated-prefix scoring workloads.
     _loglikelihood_prefix_cache: OrderedDict[tuple[int, ...], Any] = field(
         default_factory=OrderedDict,
         init=False,
@@ -197,10 +197,13 @@ class BaseTransformerSession(BaseInferenceSession):
         with self._generation_lock:
             prepared_requests = [self._prepare_loglikelihood_request(request) for request in requests]
             effective_batch_size = batch_size or self._resolve_scoring_batch_size(prepared_requests)
-            return self._score_prepared_loglikelihood_requests(
-                prepared_requests,
-                batch_size=effective_batch_size,
-            )
+            try:
+                return self._score_prepared_loglikelihood_requests(
+                    prepared_requests,
+                    batch_size=effective_batch_size,
+                )
+            finally:
+                self._release_loglikelihood_prefix_cache_after_call()
 
     # Keep log-likelihood request submission decoupled from caller iteration so suites can stream
     # rows lazily while this session keeps fixed-size scoring batches full on a worker thread.
@@ -258,14 +261,17 @@ class BaseTransformerSession(BaseInferenceSession):
                     if prepared_batch:
                         self._emit_scored_loglikelihood_batch(prepared_batch, put_result)
 
-            yield from stream_request_results(
-                items,
-                producer_name=f"{type(self).__name__}.loglikelihood_request_producer",
-                consumer_name=f"{type(self).__name__}.loglikelihood_request_consumer",
-                process_requests=consume_requests,
-                require_non_main_thread=self.request_executor_requires_non_main_thread,
-                request_queue_max_size=max(effective_batch_size * 2, 1),
-            )
+            try:
+                yield from stream_request_results(
+                    items,
+                    producer_name=f"{type(self).__name__}.loglikelihood_request_producer",
+                    consumer_name=f"{type(self).__name__}.loglikelihood_request_consumer",
+                    process_requests=consume_requests,
+                    require_non_main_thread=self.request_executor_requires_non_main_thread,
+                    request_queue_max_size=max(effective_batch_size * 2, 1),
+                )
+            finally:
+                self._release_loglikelihood_prefix_cache_after_call()
 
         return iterator()
 
@@ -1283,8 +1289,9 @@ class BaseTransformerSession(BaseInferenceSession):
 
     # Reuse one long prefix KV prefill for a batch of divergent one-token choices. This is kept
     # separate from the exact-prefix choice deduplication above: MMLU questions share a subject
-    # few-shot prefix, but their full contexts are different. The cache is deliberately opt-in
-    # because direct loglikelihood remains the compatibility path for arbitrary model wrappers.
+    # few-shot prefix, but their full contexts are different. The cache is enabled by default for
+    # transformer sessions and remains narrowly guarded; callers can disable it when a custom
+    # model wrapper does not support cache-enabled prefix forwards.
     def _score_one_token_choice_prefix_cache(
         self,
         batch: list[_ScoringChunk],
@@ -1505,6 +1512,19 @@ class BaseTransformerSession(BaseInferenceSession):
             self._loglikelihood_prefix_cache_enabled()
             and getattr(self.config, "loglikelihood_prefix_cache_prewarm", False)
         )
+
+    def _release_loglikelihood_prefix_cache_after_call(self) -> None:
+        """Drop scorer-side KV entries when one loglikelihood request lifecycle ends."""
+        if not self._loglikelihood_prefix_cache_enabled() and not self._loglikelihood_prefix_cache:
+            return
+        try:
+            release_after_call = bool(
+                getattr(self.config, "loglikelihood_prefix_cache_release_after_group", True)
+            )
+        except (TypeError, ValueError):
+            release_after_call = True
+        if release_after_call:
+            self.release_loglikelihood_prefix_cache()
 
     def _loglikelihood_prefix_cache_prewarm_batch_size(self) -> int:
         """Resolve the bounded number of distinct prefixes in one prefill forward."""

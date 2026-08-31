@@ -42,6 +42,10 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.q_padding_interval_size == 0
     assert engine.kv_padding_interval_size == 0
     assert engine.max_cached_graphs == 0
+    assert engine.loglikelihood_prefix_cache is True
+    assert engine.loglikelihood_prefix_cache_prewarm is True
+    assert engine.loglikelihood_prefix_cache_prewarm_batch_size == 32
+    assert engine.loglikelihood_prefix_cache_release_after_group is True
     assert engine.to_dict()["batch_size"] == "auto"
     assert engine.to_dict()["seed"] is None
     assert engine.to_dict()["manual_eviction"] is False
@@ -53,6 +57,8 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
+    assert engine.to_dict()["loglikelihood_prefix_cache"] is True
+    assert engine.to_dict()["loglikelihood_prefix_cache_prewarm"] is True
 
 
 def test_resolve_input_device_keeps_cpu_only_hf_device_maps_on_cpu() -> None:
@@ -2409,6 +2415,7 @@ def test_transformer_session_loglikelihood_reuses_shared_prefix_kv_cache() -> No
             batch_size=8,
             loglikelihood_prefix_cache=True,
             loglikelihood_prefix_cache_prewarm=False,
+            loglikelihood_prefix_cache_release_after_group=False,
             loglikelihood_prefix_cache_min_tokens=2,
             loglikelihood_prefix_cache_max_entries=4,
         ),
@@ -2512,6 +2519,7 @@ def test_transformer_session_loglikelihood_prewarm_reports_steady_state_hits() -
             batch_size=8,
             loglikelihood_prefix_cache=True,
             loglikelihood_prefix_cache_prewarm=True,
+            loglikelihood_prefix_cache_release_after_group=False,
             loglikelihood_prefix_cache_min_tokens=2,
             loglikelihood_prefix_cache_max_entries=4,
         ),
@@ -2631,7 +2639,9 @@ def test_transformer_session_loglikelihood_prewarm_batches_prefixes() -> None:
     assert stats["warmup_batches"] == 1
     assert stats["warmup_prefixes"] == 2
     assert stats["warmup_misses"] == 2
-    assert stats["entries"] == 2
+    assert stats["released_prefixes"] == 2
+    assert stats["release_calls"] == 1
+    assert stats["entries"] == 0
 
 def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before_scoring(
     monkeypatch,

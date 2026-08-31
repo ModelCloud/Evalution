@@ -339,8 +339,8 @@ def test_mmlu_streams_requests_into_loglikelihood_continuous(monkeypatch) -> Non
     ]
 
 
-def test_mmlu_releases_prefix_cache_after_each_subject_group(monkeypatch) -> None:
-    """Release subject-local prefix entries before the next MMLU subject starts."""
+def test_mmlu_processes_subject_groups_for_session_lifecycle(monkeypatch) -> None:
+    """Submit contiguous subjects separately so the session can release each lifecycle."""
     test = Dataset.from_list(
         [
             {
@@ -382,20 +382,17 @@ def test_mmlu_releases_prefix_cache_after_each_subject_group(monkeypatch) -> Non
         )
 
         def __init__(self) -> None:
-            self.release_calls = 0
+            self.group_calls = 0
 
         def loglikelihood_continuous(self, requests, *, batch_size=None):
             assert batch_size == 8
+            self.group_calls += 1
             for (sample_index, choice_index), _request in requests:
                 yield (sample_index, choice_index), LoglikelihoodOutput(
                     logprob=0.0 if choice_index == 0 else -1.0,
                     is_greedy=choice_index == 0,
                     token_count=1,
                 )
-
-        def release_loglikelihood_prefix_cache(self):
-            self.release_calls += 1
-            return 1
 
     session = GroupReleaseSession()
     monkeypatch.setattr(mmlu_module, "load_suite_dataset", fake_load_suite_dataset)
@@ -408,7 +405,7 @@ def test_mmlu_releases_prefix_cache_after_each_subject_group(monkeypatch) -> Non
     ).evaluate(session)
 
     assert len(result.samples) == 2
-    assert session.release_calls == 2
+    assert session.group_calls == 2
 
 
 def test_mmlu_subset_node_filter_uses_distinct_result_name(monkeypatch) -> None:
