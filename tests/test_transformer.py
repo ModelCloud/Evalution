@@ -42,6 +42,10 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.q_padding_interval_size == 0
     assert engine.kv_padding_interval_size == 0
     assert engine.max_cached_graphs == 0
+    assert engine.loglikelihood_prefix_cache is True
+    assert engine.loglikelihood_prefix_cache_prewarm is True
+    assert engine.loglikelihood_prefix_cache_prewarm_batch_size == 32
+    assert engine.loglikelihood_prefix_cache_release_after_group is True
     assert engine.to_dict()["batch_size"] == "auto"
     assert engine.to_dict()["seed"] is None
     assert engine.to_dict()["manual_eviction"] is False
@@ -53,6 +57,8 @@ def test_transformer_defaults_batch_size_to_auto() -> None:
     assert engine.to_dict()["q_padding_interval_size"] == 0
     assert engine.to_dict()["kv_padding_interval_size"] == 0
     assert engine.to_dict()["max_cached_graphs"] == 0
+    assert engine.to_dict()["loglikelihood_prefix_cache"] is True
+    assert engine.to_dict()["loglikelihood_prefix_cache_prewarm"] is True
 
 
 def test_resolve_input_device_keeps_cpu_only_hf_device_maps_on_cpu() -> None:
@@ -2311,6 +2317,376 @@ def test_transformer_session_loglikelihood_right_pads_batches_without_attention_
     assert len(outputs) == 2
     assert outputs[0].logprob == pytest.approx(expected_token_logprob * 2, abs=1e-6)
     assert outputs[1].logprob == pytest.approx(expected_token_logprob, abs=1e-6)
+
+
+def test_transformer_session_loglikelihood_deduplicates_one_token_choice_prefixes() -> None:
+    """Score repeated one-token choices from one prefix forward."""
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+            self.calls: list[tuple[int, int]] = []
+
+        def __call__(self, *, input_ids, **kwargs):
+            assert kwargs == {}
+            self.calls.append(tuple(input_ids.shape))
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            # Make the final prefix position predict the next token with a
+            # distinct score for each candidate, matching a causal LM.
+            for row in range(batch_size):
+                logits[row, -1, 4] = 3.0
+                logits[row, -1, 7] = 2.0
+                logits[row, -1, 8] = 1.0
+                logits[row, -1, 9] = 0.0
+            return SimpleNamespace(logits=logits)
+
+    model = FakeModel()
+    session = TransformersSession(
+        config=Transformers(batch_size=4),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(context_input_ids=[5, 6], continuation_input_ids=[4]),
+            LoglikelihoodRequest(context_input_ids=[5, 6], continuation_input_ids=[7]),
+            LoglikelihoodRequest(context_input_ids=[5, 6], continuation_input_ids=[8]),
+            LoglikelihoodRequest(context_input_ids=[5, 6], continuation_input_ids=[9]),
+        ],
+        batch_size=4,
+    )
+
+    assert model.calls == [(1, 2)]
+    assert [output.token_count for output in outputs] == [1, 1, 1, 1]
+    assert [output.is_greedy for output in outputs] == [True, False, False, False]
+    reference_logits = torch.full((16,), -2.0)
+    reference_logits[[4, 7, 8, 9]] = torch.tensor([3.0, 2.0, 1.0, 0.0])
+    reference_logprobs = torch.log_softmax(reference_logits, dim=0)
+    expected = [float(reference_logprobs[index].item()) for index in [4, 7, 8, 9]]
+    assert [output.logprob for output in outputs] == pytest.approx(expected, abs=1e-6)
+
+
+def test_transformer_session_loglikelihood_reuses_shared_prefix_kv_cache() -> None:
+    """Reuse one prefix prefill for divergent one-token choice contexts."""
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+    class FakeCache:
+        def __init__(self) -> None:
+            self.repeats = 1
+
+        def batch_repeat_interleave(self, repeats: int) -> None:
+            self.repeats = repeats
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=32)
+            self.calls: list[tuple[tuple[int, int], bool, bool]] = []
+
+        def __call__(self, *, input_ids, use_cache=False, past_key_values=None, **kwargs):
+            assert kwargs == {}
+            self.calls.append((tuple(input_ids.shape), bool(use_cache), past_key_values is not None))
+            batch_size, sequence_length = input_ids.shape
+            logits = torch.full((batch_size, sequence_length, 16), -2.0)
+            logits[:, -1, 4] = 3.0
+            if past_key_values is None:
+                assert use_cache is True
+                return SimpleNamespace(logits=logits, past_key_values=FakeCache())
+            assert use_cache is True
+            assert past_key_values.repeats == batch_size
+            return SimpleNamespace(logits=logits)
+
+    model = FakeModel()
+    session = TransformersSession(
+        config=Transformers(
+            batch_size=8,
+            loglikelihood_prefix_cache=True,
+            loglikelihood_prefix_cache_prewarm=False,
+            loglikelihood_prefix_cache_release_after_group=False,
+            loglikelihood_prefix_cache_min_tokens=2,
+            loglikelihood_prefix_cache_max_entries=4,
+        ),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+    requests = [
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[8]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 8], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 8], continuation_input_ids=[8]),
+    ]
+
+    outputs = session.loglikelihood(requests, batch_size=4)
+    assert len(outputs) == 4
+    assert model.calls == [((1, 2), True, False), ((2, 1), True, True)]
+    assert session.loglikelihood_prefix_cache_stats() == {
+        "hits": 0,
+        "misses": 1,
+        "lookups": 1,
+        "hit_rate": 0.0,
+        "warmup_hits": 0,
+        "warmup_misses": 0,
+        "warmup_lookups": 0,
+        "warmup_hit_rate": 0.0,
+        "steady_state_hits": 0,
+        "steady_state_misses": 1,
+        "steady_state_lookups": 1,
+        "steady_state_hit_rate": 0.0,
+        "warmup_batches": 0,
+        "warmup_prefixes": 0,
+        "released_prefixes": 0,
+        "release_calls": 0,
+        "entries": 1,
+    }
+    session.loglikelihood(requests, batch_size=4)
+    assert model.calls == [
+        ((1, 2), True, False),
+        ((2, 1), True, True),
+        ((2, 1), True, True),
+    ]
+    assert session.loglikelihood_prefix_cache_stats() == {
+        "hits": 1,
+        "misses": 1,
+        "lookups": 2,
+        "hit_rate": 0.5,
+        "warmup_hits": 0,
+        "warmup_misses": 0,
+        "warmup_lookups": 0,
+        "warmup_hit_rate": 0.0,
+        "steady_state_hits": 1,
+        "steady_state_misses": 1,
+        "steady_state_lookups": 2,
+        "steady_state_hit_rate": 0.5,
+        "warmup_batches": 0,
+        "warmup_prefixes": 0,
+        "released_prefixes": 0,
+        "release_calls": 0,
+        "entries": 1,
+    }
+
+
+def test_transformer_session_loglikelihood_prewarm_reports_steady_state_hits() -> None:
+    """Prefill a shared prefix once and keep the scoring lookup phase warm."""
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+    class FakeCache:
+        def __init__(self) -> None:
+            self.repeats = 1
+
+        def batch_repeat_interleave(self, repeats: int) -> None:
+            self.repeats = repeats
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=32)
+            self.calls: list[tuple[tuple[int, int], bool, bool]] = []
+
+        def __call__(self, *, input_ids, use_cache=False, past_key_values=None, **kwargs):
+            assert kwargs == {}
+            self.calls.append((tuple(input_ids.shape), bool(use_cache), past_key_values is not None))
+            batch_size, sequence_length = input_ids.shape
+            logits = torch.full((batch_size, sequence_length, 16), -2.0)
+            logits[:, -1, 4] = 3.0
+            if past_key_values is None:
+                assert use_cache is True
+                return SimpleNamespace(logits=logits, past_key_values=FakeCache())
+            assert use_cache is True
+            assert past_key_values.repeats == batch_size
+            return SimpleNamespace(logits=logits)
+
+    model = FakeModel()
+    session = TransformersSession(
+        config=Transformers(
+            batch_size=8,
+            loglikelihood_prefix_cache=True,
+            loglikelihood_prefix_cache_prewarm=True,
+            loglikelihood_prefix_cache_release_after_group=False,
+            loglikelihood_prefix_cache_min_tokens=2,
+            loglikelihood_prefix_cache_max_entries=4,
+        ),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+    requests = [
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[8]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 8], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 8], continuation_input_ids=[8]),
+    ]
+
+    outputs = session.loglikelihood(requests, batch_size=4)
+    assert len(outputs) == 4
+    assert model.calls == [((1, 2), True, False), ((2, 1), True, True)]
+    assert session.loglikelihood_prefix_cache_stats() == {
+        "hits": 1,
+        "misses": 0,
+        "lookups": 1,
+        "hit_rate": 1.0,
+        "warmup_hits": 0,
+        "warmup_misses": 1,
+        "warmup_lookups": 1,
+        "warmup_hit_rate": 0.0,
+        "steady_state_hits": 1,
+        "steady_state_misses": 0,
+        "steady_state_lookups": 1,
+        "steady_state_hit_rate": 1.0,
+        "warmup_batches": 1,
+        "warmup_prefixes": 1,
+        "released_prefixes": 0,
+        "release_calls": 0,
+        "entries": 1,
+    }
+    assert session.release_loglikelihood_prefix_cache() == 1
+    released_stats = session.loglikelihood_prefix_cache_stats()
+    assert released_stats["entries"] == 0
+    assert released_stats["released_prefixes"] == 1
+    assert released_stats["release_calls"] == 1
+
+
+def test_transformer_session_loglikelihood_prewarm_batches_prefixes() -> None:
+    """Batch distinct shared prefixes and split their cache rows for suffix scoring."""
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+    class FakeCache:
+        def __init__(self) -> None:
+            self.repeats = 1
+            self.layers = [
+                SimpleNamespace(
+                    keys=torch.empty((2, 1, 1, 1)),
+                    values=torch.empty((2, 1, 1, 1)),
+                ),
+                SimpleNamespace(
+                    keys=torch.empty((2, 1, 1, 1), device="meta"),
+                    values=torch.empty((2, 1, 1, 1), device="meta"),
+                ),
+            ]
+
+        def batch_select_indices(self, indices) -> None:
+            raise AssertionError("per-layer cache selection must not use one global device")
+
+        def batch_repeat_interleave(self, repeats: int) -> None:
+            self.repeats = repeats
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=32)
+            self.calls: list[tuple[tuple[int, int], bool, bool]] = []
+
+        def __call__(self, *, input_ids, use_cache=False, past_key_values=None, **kwargs):
+            assert kwargs == {}
+            self.calls.append((tuple(input_ids.shape), bool(use_cache), past_key_values is not None))
+            batch_size, sequence_length = input_ids.shape
+            logits = torch.full((batch_size, sequence_length, 16), -2.0)
+            logits[:, -1, 4] = 3.0
+            if past_key_values is None:
+                return SimpleNamespace(logits=logits, past_key_values=FakeCache())
+            assert past_key_values.repeats == batch_size
+            return SimpleNamespace(logits=logits)
+
+    model = FakeModel()
+    session = TransformersSession(
+        config=Transformers(
+            batch_size=8,
+            loglikelihood_prefix_cache=True,
+            loglikelihood_prefix_cache_prewarm=True,
+            loglikelihood_prefix_cache_prewarm_batch_size=2,
+            loglikelihood_prefix_cache_min_tokens=2,
+            loglikelihood_prefix_cache_max_entries=4,
+        ),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+    requests = [
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[8]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 8], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 8], continuation_input_ids=[8]),
+        LoglikelihoodRequest(context_input_ids=[9, 10, 11], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[9, 10, 11], continuation_input_ids=[8]),
+        LoglikelihoodRequest(context_input_ids=[9, 10, 12], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[9, 10, 12], continuation_input_ids=[8]),
+    ]
+
+    outputs = session.loglikelihood(requests, batch_size=8)
+    assert len(outputs) == 8
+    assert model.calls == [
+        ((2, 2), True, False),
+        ((2, 1), True, True),
+        ((2, 1), True, True),
+    ]
+    stats = session.loglikelihood_prefix_cache_stats()
+    assert stats["hits"] == 2
+    assert stats["misses"] == 0
+    assert stats["steady_state_hit_rate"] == 1.0
+    assert stats["warmup_batches"] == 1
+    assert stats["warmup_prefixes"] == 2
+    assert stats["warmup_misses"] == 2
+    assert stats["released_prefixes"] == 2
+    assert stats["release_calls"] == 1
+    assert stats["entries"] == 0
+
+
+def test_transformer_session_loglikelihood_prefix_cache_propagates_oom() -> None:
+    """Do not hide allocator failures behind an uncached retry."""
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+    class OOMModel:
+        config = SimpleNamespace(max_position_embeddings=32)
+
+        def __call__(self, **kwargs):
+            del kwargs
+            raise torch.OutOfMemoryError("CUDA out of memory")
+
+    session = TransformersSession(
+        config=Transformers(
+            batch_size=4,
+            loglikelihood_prefix_cache=True,
+            loglikelihood_prefix_cache_min_tokens=2,
+        ),
+        model_config=Model(path="/tmp/model"),
+        model=OOMModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+    requests = [
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[8]),
+    ]
+
+    with pytest.raises(torch.OutOfMemoryError, match="out of memory"):
+        session.loglikelihood(requests, batch_size=2)
+    assert session._loglikelihood_prefix_cache_disabled is False
 
 
 def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before_scoring(

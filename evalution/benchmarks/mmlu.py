@@ -356,9 +356,30 @@ class MMLU(TestSuite):
             else {}
         )
 
-        def iter_request_stream() -> Any:
-            """Iterate over request stream. Keep the nested traversal explicit so ordering and metadata stay aligned."""
-            for index, doc in enumerate(docs):
+        def iter_subject_groups() -> Any:
+            """Yield contiguous subject groups without reading past an explicit row limit."""
+            group: list[dict[str, Any]] = []
+            group_subject: str | None = None
+            seen = 0
+            for doc in docs:
+                subject_key = normalize_subset_token(str(doc["subject"]))
+                if group and subject_key != group_subject:
+                    yield group
+                    group = []
+                group.append(doc)
+                group_subject = subject_key
+                seen += 1
+                # ``limit_docs`` uses islice for streaming datasets.  Do not ask that
+                # iterator for one more row merely to detect the final group boundary.
+                if self.max_rows is not None and seen >= self.max_rows:
+                    break
+            if group:
+                yield group
+
+        def iter_request_stream(group_docs: list[dict[str, Any]], start_index: int) -> Any:
+            """Iterate one subject group while preserving global sample indices."""
+            for local_index, doc in enumerate(group_docs):
+                index = start_index + local_index
                 subject = str(doc["subject"])
                 subject_key = normalize_subset_token(subject)
                 prompt = _fewshot_prompt(
@@ -378,20 +399,21 @@ class MMLU(TestSuite):
                         metadata=dict(request_progress_metadata),
                     )
 
-        for (sample_index, choice_index), output in loglikelihood_continuous(
-            iter_request_stream(),
-            batch_size=self.batch_size,
-        ):
-            sample_choice_scores[int(sample_index)].append(
-                (
-                    int(choice_index),
-                    output.logprob,
-                    output.token_count,
+        for group_docs in iter_subject_groups():
+            group_start = len(sample_docs)
+            for (sample_index, choice_index), output in loglikelihood_continuous(
+                iter_request_stream(group_docs, group_start),
+                batch_size=self.batch_size,
+            ):
+                sample_choice_scores[int(sample_index)].append(
+                    (
+                        int(choice_index),
+                        output.logprob,
+                        output.token_count,
+                    )
                 )
-            )
-            if score_bar is not None:
-                score_bar.next().draw()
-
+                if score_bar is not None:
+                    score_bar.next().draw()
         executed = len(sample_docs)
         if total is None:
             logger.info("%s: executed %d sample(s)", task_name, executed)
