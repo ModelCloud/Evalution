@@ -1086,6 +1086,13 @@ class BaseTransformerSession(BaseInferenceSession):
                     shift_log_probs = torch.log_softmax(logits[:, :-1, :], dim=-1)
                     shift_labels = encoded["input_ids"][:, 1:]
 
+                # Keep reductions and greedy checks on device until every row in
+                # this forward has been assembled.  ``Tensor.item()`` and
+                # ``torch.equal()`` both synchronize CUDA streams, so doing
+                # either inside this loop serializes continuous scoring one
+                # continuation at a time.
+                batch_logprobs: list[Any] = []
+                batch_greedy: list[Any] = []
                 for row_index, chunk in enumerate(batch):
                     if logits_to_keep is not None:
                         # `logits_to_keep` returns only the tail window logits, so absolute
@@ -1100,10 +1107,27 @@ class BaseTransformerSession(BaseInferenceSession):
                         sample_targets = shift_labels[row_index, shift_start:shift_end]
                     gathered = sample_log_probs.gather(-1, sample_targets.unsqueeze(-1)).squeeze(-1)
                     greedy_tokens = sample_log_probs.argmax(dim=-1)
+
+                    batch_logprobs.append(gathered.sum())
+                    batch_greedy.append(torch.all(greedy_tokens == sample_targets))
+
+                # Preserve the original reduction dtype while packing the bool
+                # flag into the same transfer.  This is one synchronization and
+                # one contiguous D2H copy per forward batch rather than one per
+                # scored continuation.
+                packed = torch.stack(
+                    [
+                        torch.stack(batch_logprobs),
+                        torch.stack(batch_greedy).to(dtype=batch_logprobs[0].dtype),
+                    ],
+                    dim=1,
+                )
+                host_rows = packed.detach().cpu().tolist()
+                for chunk, (logprob, is_greedy) in zip(batch, host_rows, strict=True):
                     scored_chunks.append(
                         LoglikelihoodOutput(
-                            logprob=float(gathered.sum().item()),
-                            is_greedy=bool(torch.equal(greedy_tokens, sample_targets)),
+                            logprob=float(logprob),
+                            is_greedy=bool(is_greedy),
                             token_count=chunk.score_count,
                             metadata=dict(chunk.metadata),
                         )
