@@ -86,6 +86,38 @@ _LOGLIKELIHOOD_DISABLE_CHUNK_PROGRESS_METADATA_KEY = (
 )
 
 
+def _is_recoverable_cache_runtime_error(exc: RuntimeError) -> bool:
+    """Identify narrow cache-API runtime mismatches that can safely use the old scorer."""
+    try:
+        import torch
+
+        if isinstance(exc, torch.OutOfMemoryError):
+            return False
+    except (ImportError, AttributeError):
+        pass
+    message = str(exc).lower()
+    fatal_markers = (
+        "out of memory",
+        "illegal memory access",
+        "device-side assert",
+        "launch failure",
+        "misaligned address",
+        "unspecified launch failure",
+        "cuda error",
+    )
+    if any(marker in message for marker in fatal_markers):
+        return False
+    compatibility_markers = (
+        "past_key_values",
+        "batch_select_indices",
+        "batch_repeat_interleave",
+        "cache object",
+        "cache type",
+        "unsupported cache",
+    )
+    return any(marker in message for marker in compatibility_markers)
+
+
 @dataclass(slots=True)
 class _ScoringChunk:
     # Track one model forward slice plus which token span contributes to the score.
@@ -1411,7 +1443,12 @@ class BaseTransformerSession(BaseInferenceSession):
                 )
             self._report_loglikelihood_prefix_cache_once()
             return [output_by_batch_index[index] for index in range(len(batch))]
-        except (TypeError, AttributeError, NotImplementedError, RuntimeError) as exc:
+        except (TypeError, AttributeError, NotImplementedError) as exc:
+            self._disable_loglikelihood_prefix_cache(str(exc))
+            return None
+        except RuntimeError as exc:
+            if not _is_recoverable_cache_runtime_error(exc):
+                raise
             self._disable_loglikelihood_prefix_cache(str(exc))
             return None
 
@@ -1568,6 +1605,10 @@ class BaseTransformerSession(BaseInferenceSession):
         ]
         if not eligible_prefixes:
             return
+        max_entries = self._loglikelihood_prefix_cache_max_entries()
+        # Never prefill more entries than the LRU can retain. Otherwise early prefixes would be
+        # evicted before this scoring batch consumes them, turning the prewarm into wasted work.
+        eligible_prefixes = eligible_prefixes[:max_entries]
         self._loglikelihood_prefix_cache_warmup_prefixes += len(eligible_prefixes)
 
         import torch
@@ -1588,7 +1629,7 @@ class BaseTransformerSession(BaseInferenceSession):
 
         batch_size = min(
             self._loglikelihood_prefix_cache_prewarm_batch_size(),
-            self._loglikelihood_prefix_cache_max_entries(),
+            max_entries,
         )
         for start in range(0, len(missing_prefixes), batch_size):
             prefix_batch = missing_prefixes[start : start + batch_size]
@@ -1616,29 +1657,93 @@ class BaseTransformerSession(BaseInferenceSession):
                         else self._select_loglikelihood_cache_row(prefix_cache, index)
                     )
                     if selected_cache is None:
-                        self._disable_loglikelihood_prefix_cache(
-                            "past_key_values does not support batched prewarm row selection"
-                        )
-                        return
+                        # Unknown cache wrappers may not expose per-layer tensors. Preserve the
+                        # optimization by retrying this chunk as independent one-prefix forwards
+                        # rather than disabling caching for the whole session.
+                        for fallback_prefix_key in prefix_batch:
+                            self._prefill_loglikelihood_prefix(fallback_prefix_key)
+                        self._loglikelihood_prefix_cache_warmup_batches += 1 + len(prefix_batch)
+                        self._loglikelihood_prefix_cache_warmup_misses += len(prefix_batch)
+                        break
                     self._put_loglikelihood_prefix_cache(prefix_key, selected_cache)
-                self._loglikelihood_prefix_cache_warmup_batches += 1
-                self._loglikelihood_prefix_cache_warmup_misses += len(prefix_batch)
-            except (TypeError, AttributeError, NotImplementedError, RuntimeError) as exc:
+                else:
+                    self._loglikelihood_prefix_cache_warmup_batches += 1
+                    self._loglikelihood_prefix_cache_warmup_misses += len(prefix_batch)
+            except (TypeError, AttributeError, NotImplementedError) as exc:
                 self._disable_loglikelihood_prefix_cache(str(exc))
                 return
+            except RuntimeError as exc:
+                if not _is_recoverable_cache_runtime_error(exc):
+                    raise
+                self._disable_loglikelihood_prefix_cache(str(exc))
+                return
+
+    def _prefill_loglikelihood_prefix(self, prefix_key: tuple[int, ...]) -> None:
+        """Prefill one prefix for cache wrappers that cannot split a batched result."""
+        import torch
+
+        prefix_ids = torch.tensor(
+            [list(prefix_key)],
+            dtype=torch.long,
+            device=self.input_device,
+        )
+        with self._scoring_attention_context(), torch.inference_mode():
+            prefix_outputs = self.model(
+                input_ids=prefix_ids,
+                use_cache=True,
+            )
+        prefix_cache = getattr(prefix_outputs, "past_key_values", None)
+        if prefix_cache is None:
+            raise TypeError("model did not return past_key_values for a cache-enabled prefill")
+        self._put_loglikelihood_prefix_cache(prefix_key, prefix_cache)
 
     def _select_loglikelihood_cache_row(self, cache: Any, index: int) -> Any | None:
         """Extract one independent batch row from a prefetched KV cache."""
         import torch
 
-        if index == 0 and self._cache_batch_size(cache) == 1:
-            return cache
         selected = deepcopy(cache)
-        indices = torch.tensor([index], dtype=torch.long, device=self.input_device)
-        batch_select_indices = getattr(selected, "batch_select_indices", None)
-        if callable(batch_select_indices):
-            batch_select_indices(indices)
+        # Native HF caches may shard/offload layers independently. Build one index on each
+        # key/value tensor's device instead of passing a single input-device index to all layers.
+        layers = getattr(selected, "layers", None)
+        if layers is not None:
+            if not layers:
+                return selected
+            for layer in layers:
+                keys = getattr(layer, "keys", None)
+                values = getattr(layer, "values", None)
+                if keys is None or values is None:
+                    return None
+                key_indices = torch.tensor([index], dtype=torch.long, device=keys.device)
+                value_indices = torch.tensor([index], dtype=torch.long, device=values.device)
+                layer.keys = keys.index_select(0, key_indices)
+                layer.values = values.index_select(0, value_indices)
             return selected
+
+        # Older wrappers expose separate key/value lists rather than ``layers``.
+        key_cache = getattr(selected, "key_cache", None)
+        value_cache = getattr(selected, "value_cache", None)
+        if isinstance(key_cache, (tuple, list)) and isinstance(value_cache, (tuple, list)):
+            if len(key_cache) != len(value_cache):
+                return None
+            selected_keys = []
+            selected_values = []
+            for keys, values in zip(key_cache, value_cache, strict=True):
+                if keys is None or values is None:
+                    return None
+                key_indices = torch.tensor([index], dtype=torch.long, device=keys.device)
+                value_indices = torch.tensor([index], dtype=torch.long, device=values.device)
+                selected_keys.append(keys.index_select(0, key_indices))
+                selected_values.append(values.index_select(0, value_indices))
+            selected.key_cache = (
+                tuple(selected_keys) if isinstance(key_cache, tuple) else selected_keys
+            )
+            selected.value_cache = (
+                tuple(selected_values) if isinstance(value_cache, tuple) else selected_values
+            )
+            return selected
+
+        # Unknown cache wrappers are handled by the caller's unbatched-prefill fallback. Avoid
+        # invoking a selector that may internally broadcast one index tensor across devices.
         if isinstance(selected, (tuple, list)):
             selected_layers = []
             for layer in selected:
@@ -1648,6 +1753,7 @@ class BaseTransformerSession(BaseInferenceSession):
                 for tensor in layer[:2]:
                     if not hasattr(tensor, "index_select"):
                         return None
+                    indices = torch.tensor([index], dtype=torch.long, device=tensor.device)
                     tensors.append(tensor.index_select(0, indices))
                 selected_layers.append(
                     tuple(tensors) + tuple(layer[2:])

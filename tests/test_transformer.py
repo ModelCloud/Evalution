@@ -2575,10 +2575,19 @@ def test_transformer_session_loglikelihood_prewarm_batches_prefixes() -> None:
     class FakeCache:
         def __init__(self) -> None:
             self.repeats = 1
-            self.selected = None
+            self.layers = [
+                SimpleNamespace(
+                    keys=torch.empty((2, 1, 1, 1)),
+                    values=torch.empty((2, 1, 1, 1)),
+                ),
+                SimpleNamespace(
+                    keys=torch.empty((2, 1, 1, 1), device="meta"),
+                    values=torch.empty((2, 1, 1, 1), device="meta"),
+                ),
+            ]
 
         def batch_select_indices(self, indices) -> None:
-            self.selected = tuple(int(value) for value in indices.tolist())
+            raise AssertionError("per-layer cache selection must not use one global device")
 
         def batch_repeat_interleave(self, repeats: int) -> None:
             self.repeats = repeats
@@ -2642,6 +2651,43 @@ def test_transformer_session_loglikelihood_prewarm_batches_prefixes() -> None:
     assert stats["released_prefixes"] == 2
     assert stats["release_calls"] == 1
     assert stats["entries"] == 0
+
+
+def test_transformer_session_loglikelihood_prefix_cache_propagates_oom() -> None:
+    """Do not hide allocator failures behind an uncached retry."""
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+    class OOMModel:
+        config = SimpleNamespace(max_position_embeddings=32)
+
+        def __call__(self, **kwargs):
+            del kwargs
+            raise torch.OutOfMemoryError("CUDA out of memory")
+
+    session = TransformersSession(
+        config=Transformers(
+            batch_size=4,
+            loglikelihood_prefix_cache=True,
+            loglikelihood_prefix_cache_min_tokens=2,
+        ),
+        model_config=Model(path="/tmp/model"),
+        model=OOMModel(),
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+    requests = [
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[8]),
+    ]
+
+    with pytest.raises(torch.OutOfMemoryError, match="out of memory"):
+        session.loglikelihood(requests, batch_size=2)
+    assert session._loglikelihood_prefix_cache_disabled is False
+
 
 def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before_scoring(
     monkeypatch,
