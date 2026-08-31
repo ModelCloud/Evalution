@@ -154,6 +154,8 @@ class BaseTransformerSession(BaseInferenceSession):
     )
     _loglikelihood_prefix_cache_hits: int = field(default=0, init=False, repr=False)
     _loglikelihood_prefix_cache_misses: int = field(default=0, init=False, repr=False)
+    _loglikelihood_prefix_cache_warmup_hits: int = field(default=0, init=False, repr=False)
+    _loglikelihood_prefix_cache_warmup_misses: int = field(default=0, init=False, repr=False)
     _loglikelihood_prefix_cache_disabled: bool = field(default=False, init=False, repr=False)
     _loglikelihood_prefix_cache_reported: bool = field(default=False, init=False, repr=False)
 
@@ -420,6 +422,8 @@ class BaseTransformerSession(BaseInferenceSession):
                 self._loglikelihood_prefix_cache.clear()
                 self._loglikelihood_prefix_cache_hits = 0
                 self._loglikelihood_prefix_cache_misses = 0
+                self._loglikelihood_prefix_cache_warmup_hits = 0
+                self._loglikelihood_prefix_cache_warmup_misses = 0
                 self._loglikelihood_prefix_cache_disabled = False
                 self._loglikelihood_prefix_cache_reported = False
                 self.execution_logged = False
@@ -1084,6 +1088,10 @@ class BaseTransformerSession(BaseInferenceSession):
                     prefix = tuple(chunk.input_ids[: chunk.score_start])
                     choice_groups.setdefault(prefix, []).append((batch_index, chunk))
             if choice_groups and len(choice_groups) < len(batch):
+                self._prewarm_loglikelihood_prefix_cache_for_batch(
+                    choice_groups,
+                    pad_token_id=int(pad_token_id),
+                )
                 cached_choice_outputs = self._score_one_token_choice_prefix_cache_partitioned(
                     batch,
                     choice_groups=choice_groups,
@@ -1483,6 +1491,74 @@ class BaseTransformerSession(BaseInferenceSession):
             and self._loglikelihood_prefix_cache_max_entries() > 0
         )
 
+    def _loglikelihood_prefix_cache_prewarm_enabled(self) -> bool:
+        """Return whether eligible shared prefixes should be filled before scoring."""
+        return bool(
+            self._loglikelihood_prefix_cache_enabled()
+            and getattr(self.config, "loglikelihood_prefix_cache_prewarm", False)
+        )
+
+    def _prewarm_loglikelihood_prefix_cache_for_batch(
+        self,
+        choice_groups: dict[tuple[int, ...], list[tuple[int, _ScoringChunk]]],
+        *,
+        pad_token_id: int,
+    ) -> None:
+        """Prefill one shared prefix per eligible choice batch before suffix scoring.
+
+        Multiple-choice rows are grouped by their fixed token prefix rather than by answer
+        label. A prefix is worth prewarming only when at least two distinct question contexts
+        in the current batch share it; a singleton would pay a prefill without avoiding any
+        subsequent work. The scoring path then observes a cache hit for every eligible lookup,
+        while the compulsory model prefill is reported separately as a warmup miss.
+        """
+        if not self._loglikelihood_prefix_cache_prewarm_enabled() or not choice_groups:
+            return
+
+        min_tokens = self._loglikelihood_prefix_cache_min_tokens()
+        prefix_contexts: dict[tuple[int, ...], set[tuple[int, ...]]] = {}
+        for context in choice_groups:
+            if len(context) <= min_tokens:
+                continue
+            prefix_key = tuple(context[:min_tokens])
+            prefix_contexts.setdefault(prefix_key, set()).add(context)
+
+        for prefix_key, contexts in prefix_contexts.items():
+            if len(contexts) < 2:
+                continue
+            cached = self._get_loglikelihood_prefix_cache(
+                prefix_key,
+                prefix_token_id=pad_token_id,
+            )
+            if cached is not None:
+                self._loglikelihood_prefix_cache_warmup_hits += 1
+                continue
+
+            try:
+                import torch
+
+                prefix_ids = torch.tensor(
+                    [list(prefix_key)],
+                    dtype=torch.long,
+                    device=self.input_device,
+                )
+                with self._scoring_attention_context(), torch.inference_mode():
+                    prefix_outputs = self.model(
+                        input_ids=prefix_ids,
+                        use_cache=True,
+                    )
+                prefix_cache = getattr(prefix_outputs, "past_key_values", None)
+                if prefix_cache is None:
+                    self._disable_loglikelihood_prefix_cache(
+                        "model did not return past_key_values for a cache-enabled prefill"
+                    )
+                    return
+                self._put_loglikelihood_prefix_cache(prefix_key, prefix_cache)
+                self._loglikelihood_prefix_cache_warmup_misses += 1
+            except (TypeError, AttributeError, NotImplementedError, RuntimeError) as exc:
+                self._disable_loglikelihood_prefix_cache(str(exc))
+                return
+
     def _loglikelihood_prefix_cache_min_tokens(self) -> int:
         """Resolve the minimum prefix length that justifies a second prefill."""
         try:
@@ -1560,9 +1636,13 @@ class BaseTransformerSession(BaseInferenceSession):
         total = self._loglikelihood_prefix_cache_hits + self._loglikelihood_prefix_cache_misses
         hit_rate = self._loglikelihood_prefix_cache_hits / total if total else 0.0
         get_logger().info(
-            "loglikelihood prefix KV cache active: hits=%d misses=%d hit_rate=%.1f%% entries=%d",
+            "loglikelihood prefix KV cache active: hits=%d misses=%d hit_rate=%.1f%% "
+            "warmup_hits=%d warmup_misses=%d steady_state_hit_rate=%.1f%% entries=%d",
             self._loglikelihood_prefix_cache_hits,
             self._loglikelihood_prefix_cache_misses,
+            hit_rate * 100.0,
+            self._loglikelihood_prefix_cache_warmup_hits,
+            self._loglikelihood_prefix_cache_warmup_misses,
             hit_rate * 100.0,
             len(self._loglikelihood_prefix_cache),
         )
@@ -1570,11 +1650,29 @@ class BaseTransformerSession(BaseInferenceSession):
     def loglikelihood_prefix_cache_stats(self) -> dict[str, int | float]:
         """Return scorer-side prefix KV cache counters for benchmark telemetry."""
         lookups = self._loglikelihood_prefix_cache_hits + self._loglikelihood_prefix_cache_misses
+        warmup_lookups = (
+            self._loglikelihood_prefix_cache_warmup_hits
+            + self._loglikelihood_prefix_cache_warmup_misses
+        )
         return {
             "hits": self._loglikelihood_prefix_cache_hits,
             "misses": self._loglikelihood_prefix_cache_misses,
             "lookups": lookups,
             "hit_rate": self._loglikelihood_prefix_cache_hits / lookups if lookups else 0.0,
+            "warmup_hits": self._loglikelihood_prefix_cache_warmup_hits,
+            "warmup_misses": self._loglikelihood_prefix_cache_warmup_misses,
+            "warmup_lookups": warmup_lookups,
+            "warmup_hit_rate": (
+                self._loglikelihood_prefix_cache_warmup_hits / warmup_lookups
+                if warmup_lookups
+                else 0.0
+            ),
+            "steady_state_hits": self._loglikelihood_prefix_cache_hits,
+            "steady_state_misses": self._loglikelihood_prefix_cache_misses,
+            "steady_state_lookups": lookups,
+            "steady_state_hit_rate": (
+                self._loglikelihood_prefix_cache_hits / lookups if lookups else 0.0
+            ),
             "entries": len(self._loglikelihood_prefix_cache),
         }
 

@@ -2431,6 +2431,14 @@ def test_transformer_session_loglikelihood_reuses_shared_prefix_kv_cache() -> No
         "misses": 1,
         "lookups": 1,
         "hit_rate": 0.0,
+        "warmup_hits": 0,
+        "warmup_misses": 0,
+        "warmup_lookups": 0,
+        "warmup_hit_rate": 0.0,
+        "steady_state_hits": 0,
+        "steady_state_misses": 1,
+        "steady_state_lookups": 1,
+        "steady_state_hit_rate": 0.0,
         "entries": 1,
     }
 
@@ -2445,9 +2453,90 @@ def test_transformer_session_loglikelihood_reuses_shared_prefix_kv_cache() -> No
         "misses": 1,
         "lookups": 2,
         "hit_rate": 0.5,
+        "warmup_hits": 0,
+        "warmup_misses": 0,
+        "warmup_lookups": 0,
+        "warmup_hit_rate": 0.0,
+        "steady_state_hits": 1,
+        "steady_state_misses": 1,
+        "steady_state_lookups": 2,
+        "steady_state_hit_rate": 0.5,
         "entries": 1,
     }
 
+
+def test_transformer_session_loglikelihood_prewarm_reports_steady_state_hits() -> None:
+    """Prefill a shared prefix once and keep the scoring lookup phase warm."""
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+    class FakeCache:
+        def __init__(self) -> None:
+            self.repeats = 1
+
+        def batch_repeat_interleave(self, repeats: int) -> None:
+            self.repeats = repeats
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=32)
+            self.calls: list[tuple[tuple[int, int], bool, bool]] = []
+
+        def __call__(self, *, input_ids, use_cache=False, past_key_values=None, **kwargs):
+            assert kwargs == {}
+            self.calls.append((tuple(input_ids.shape), bool(use_cache), past_key_values is not None))
+            batch_size, sequence_length = input_ids.shape
+            logits = torch.full((batch_size, sequence_length, 16), -2.0)
+            logits[:, -1, 4] = 3.0
+            if past_key_values is None:
+                assert use_cache is True
+                return SimpleNamespace(logits=logits, past_key_values=FakeCache())
+            assert use_cache is True
+            assert past_key_values.repeats == batch_size
+            return SimpleNamespace(logits=logits)
+
+    model = FakeModel()
+    session = TransformersSession(
+        config=Transformers(
+            batch_size=8,
+            loglikelihood_prefix_cache=True,
+            loglikelihood_prefix_cache_prewarm=True,
+            loglikelihood_prefix_cache_min_tokens=2,
+            loglikelihood_prefix_cache_max_entries=4,
+        ),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+    requests = [
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 7], continuation_input_ids=[8]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 8], continuation_input_ids=[4]),
+        LoglikelihoodRequest(context_input_ids=[5, 6, 8], continuation_input_ids=[8]),
+    ]
+
+    outputs = session.loglikelihood(requests, batch_size=4)
+    assert len(outputs) == 4
+    assert model.calls == [((1, 2), True, False), ((2, 1), True, True)]
+    assert session.loglikelihood_prefix_cache_stats() == {
+        "hits": 1,
+        "misses": 0,
+        "lookups": 1,
+        "hit_rate": 1.0,
+        "warmup_hits": 0,
+        "warmup_misses": 1,
+        "warmup_lookups": 1,
+        "warmup_hit_rate": 0.0,
+        "steady_state_hits": 1,
+        "steady_state_misses": 0,
+        "steady_state_lookups": 1,
+        "steady_state_hit_rate": 1.0,
+        "entries": 1,
+    }
 
 def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before_scoring(
     monkeypatch,

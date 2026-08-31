@@ -271,6 +271,9 @@ class BaseEngineTransformersRuntimeConfig(BaseEngineDeviceConfig):
     # Opt-in scorer-side reuse for repeated long prefixes in loglikelihood workloads.
     # Generation continuous batching owns a separate KV cache and cannot serve direct scoring.
     loglikelihood_prefix_cache: bool = False
+    # Prefill eligible shared prefixes before their scoring batch so scoring lookups are warm.
+    # The prefill itself is reported separately from steady-state cache-hit metrics.
+    loglikelihood_prefix_cache_prewarm: bool = False
     loglikelihood_prefix_cache_min_tokens: int = 256
     loglikelihood_prefix_cache_max_entries: int = 32
 
