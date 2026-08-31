@@ -10,6 +10,7 @@ import os
 import random
 import sys
 import threading
+from collections import OrderedDict
 from collections.abc import Mapping
 from contextlib import contextmanager, suppress
 from contextvars import ContextVar
@@ -144,6 +145,17 @@ class BaseTransformerSession(BaseInferenceSession):
         init=False,
         repr=False,
     )
+    # Direct loglikelihood forwards do not pass through the generation manager. Keep a small,
+    # explicit LRU of immutable prefix caches for opt-in repeated-prefix scoring workloads.
+    _loglikelihood_prefix_cache: OrderedDict[tuple[int, ...], Any] = field(
+        default_factory=OrderedDict,
+        init=False,
+        repr=False,
+    )
+    _loglikelihood_prefix_cache_hits: int = field(default=0, init=False, repr=False)
+    _loglikelihood_prefix_cache_misses: int = field(default=0, init=False, repr=False)
+    _loglikelihood_prefix_cache_disabled: bool = field(default=False, init=False, repr=False)
+    _loglikelihood_prefix_cache_reported: bool = field(default=False, init=False, repr=False)
 
     # Run fixed-batch generation for engines that do not own a paged continuous batching manager.
     def generate(
@@ -405,6 +417,11 @@ class BaseTransformerSession(BaseInferenceSession):
             with self._state_lock:
                 self.stop_criteria_cache.clear()
                 self.auto_batch_size_cache.clear()
+                self._loglikelihood_prefix_cache.clear()
+                self._loglikelihood_prefix_cache_hits = 0
+                self._loglikelihood_prefix_cache_misses = 0
+                self._loglikelihood_prefix_cache_disabled = False
+                self._loglikelihood_prefix_cache_reported = False
                 self.execution_logged = False
         gc.collect()
         with suppress(Exception):
@@ -1067,6 +1084,14 @@ class BaseTransformerSession(BaseInferenceSession):
                     prefix = tuple(chunk.input_ids[: chunk.score_start])
                     choice_groups.setdefault(prefix, []).append((batch_index, chunk))
             if choice_groups and len(choice_groups) < len(batch):
+                cached_choice_outputs = self._score_one_token_choice_prefix_cache_partitioned(
+                    batch,
+                    choice_groups=choice_groups,
+                    pad_token_id=int(pad_token_id),
+                )
+                if cached_choice_outputs is not None:
+                    scored_chunks.extend(cached_choice_outputs)
+                    continue
                 encoded = None
                 logits = None
                 try:
@@ -1239,6 +1264,319 @@ class BaseTransformerSession(BaseInferenceSession):
                 if encoded is not None:
                     del encoded
         return scored_chunks
+
+    # Reuse one long prefix KV prefill for a batch of divergent one-token choices. This is kept
+    # separate from the exact-prefix choice deduplication above: MMLU questions share a subject
+    # few-shot prefix, but their full contexts are different. The cache is deliberately opt-in
+    # because direct loglikelihood remains the compatibility path for arbitrary model wrappers.
+    def _score_one_token_choice_prefix_cache(
+        self,
+        batch: list[_ScoringChunk],
+        *,
+        choice_groups: dict[tuple[int, ...], list[tuple[int, _ScoringChunk]]],
+        pad_token_id: int,
+    ) -> list[LoglikelihoodOutput] | None:
+        """Score one-token choices through a shared prefix KV cache when the batch is cacheable."""
+        import torch
+
+        if not self._loglikelihood_prefix_cache_enabled() or not choice_groups:
+            return None
+
+        min_tokens = self._loglikelihood_prefix_cache_min_tokens()
+        contexts = list(choice_groups)
+        if not contexts or any(len(context) <= min_tokens for context in contexts):
+            return None
+
+        # Use a fixed prefix length so the same cache key remains discoverable when a subject
+        # crosses a scoring-batch boundary. The prompt construction is responsible for making
+        # this prefix identical; unrelated batches simply fall back to the established scorer.
+        prefix_keys = {tuple(context[:min_tokens]) for context in contexts}
+        if len(prefix_keys) != 1:
+            return None
+        prefix_key = next(iter(prefix_keys))
+        suffixes = [context[min_tokens:] for context in contexts]
+        if any(not suffix for suffix in suffixes):
+            return None
+
+        try:
+            prefix_cache = self._get_loglikelihood_prefix_cache(
+                prefix_key,
+                prefix_token_id=pad_token_id,
+            )
+            if prefix_cache is None:
+                prefix_ids = torch.tensor(
+                    [list(prefix_key)],
+                    dtype=torch.long,
+                    device=self.input_device,
+                )
+                with self._scoring_attention_context(), torch.inference_mode():
+                    prefix_outputs = self.model(
+                        input_ids=prefix_ids,
+                        use_cache=True,
+                    )
+                prefix_cache = getattr(prefix_outputs, "past_key_values", None)
+                if prefix_cache is None:
+                    self._disable_loglikelihood_prefix_cache(
+                        "model did not return past_key_values for a cache-enabled prefill"
+                    )
+                    return None
+                self._put_loglikelihood_prefix_cache(prefix_key, prefix_cache)
+                self._loglikelihood_prefix_cache_misses += 1
+            else:
+                self._loglikelihood_prefix_cache_hits += 1
+
+            max_suffix_length = max(len(suffix) for suffix in suffixes)
+            suffix_rows = [
+                list(suffix) + [pad_token_id] * (max_suffix_length - len(suffix))
+                for suffix in suffixes
+            ]
+            suffix_ids = torch.tensor(
+                suffix_rows,
+                dtype=torch.long,
+                device=self.input_device,
+            )
+            branch_cache = self._repeat_loglikelihood_cache(deepcopy(prefix_cache), len(suffixes))
+            if branch_cache is None:
+                self._disable_loglikelihood_prefix_cache(
+                    "past_key_values does not support batch cache expansion"
+                )
+                return None
+            with self._scoring_attention_context(), torch.inference_mode():
+                outputs = self.model(
+                    input_ids=suffix_ids,
+                    past_key_values=branch_cache,
+                    use_cache=True,
+                )
+            logits = outputs.logits
+            row_indices = torch.arange(
+                len(suffixes),
+                dtype=torch.long,
+                device=logits.device,
+            )
+            final_positions = torch.tensor(
+                [len(suffix) - 1 for suffix in suffixes],
+                dtype=torch.long,
+                device=logits.device,
+            )
+            final_logits = logits[row_indices, final_positions, :]
+            final_log_probs = torch.log_softmax(final_logits, dim=-1)
+            final_greedy = final_logits.argmax(dim=-1)
+
+            packed_rows: list[torch.Tensor] = []
+            output_indices: list[int] = []
+            for group_index, context in enumerate(contexts):
+                for batch_index, chunk in choice_groups[context]:
+                    target = int(chunk.input_ids[chunk.score_start])
+                    packed_rows.append(
+                        torch.stack(
+                            (
+                                final_log_probs[group_index, target],
+                                (final_greedy[group_index] == target).to(final_log_probs.dtype),
+                            )
+                        )
+                    )
+                    output_indices.append(batch_index)
+            host_rows = torch.stack(packed_rows).detach().cpu().tolist()
+            output_by_batch_index: dict[int, LoglikelihoodOutput] = {}
+            for batch_index, (logprob, is_greedy) in zip(output_indices, host_rows, strict=True):
+                chunk = batch[batch_index]
+                output_by_batch_index[batch_index] = LoglikelihoodOutput(
+                    logprob=float(logprob),
+                    is_greedy=bool(is_greedy),
+                    token_count=1,
+                    metadata=dict(chunk.metadata),
+                )
+            self._report_loglikelihood_prefix_cache_once()
+            return [output_by_batch_index[index] for index in range(len(batch))]
+        except (TypeError, AttributeError, NotImplementedError, RuntimeError) as exc:
+            self._disable_loglikelihood_prefix_cache(str(exc))
+            return None
+
+    # Partition mixed-task scoring batches by their fixed shared-prefix key. MMLU rows are
+    # subject-contiguous in the source dataset, but a batch can straddle two subjects; optimizing
+    # the eligible buckets independently keeps the remaining contexts on the exact old path.
+    def _score_one_token_choice_prefix_cache_partitioned(
+        self,
+        batch: list[_ScoringChunk],
+        *,
+        choice_groups: dict[tuple[int, ...], list[tuple[int, _ScoringChunk]]],
+        pad_token_id: int,
+    ) -> list[LoglikelihoodOutput] | None:
+        """Score cacheable prefix buckets and fall back for ineligible contexts."""
+        if not self._loglikelihood_prefix_cache_enabled() or not choice_groups:
+            return None
+        min_tokens = self._loglikelihood_prefix_cache_min_tokens()
+        buckets: dict[tuple[int, ...], list[tuple[int, ...]]] = {}
+        for context in choice_groups:
+            if len(context) <= min_tokens:
+                continue
+            key = tuple(context[:min_tokens])
+            buckets.setdefault(key, []).append(context)
+
+        optimized_by_batch_index: dict[int, LoglikelihoodOutput] = {}
+        for contexts in buckets.values():
+            # A cache hit can make a singleton worthwhile after a prior batch populated it; a
+            # cache miss is intentionally deferred until at least two divergent contexts share it.
+            if len(contexts) == 1 and (
+                self._get_loglikelihood_prefix_cache(
+                    contexts[0][:min_tokens],
+                    prefix_token_id=pad_token_id,
+                )
+                is None
+            ):
+                continue
+            local_indices = [
+                batch_index
+                for context in contexts
+                for batch_index, _chunk in choice_groups[context]
+            ]
+            local_index_by_global = {
+                global_index: local_index for local_index, global_index in enumerate(local_indices)
+            }
+            local_batch = [batch[index] for index in local_indices]
+            local_groups = {
+                context: [
+                    (local_index_by_global[batch_index], chunk)
+                    for batch_index, chunk in choice_groups[context]
+                ]
+                for context in contexts
+            }
+            local_outputs = self._score_one_token_choice_prefix_cache(
+                local_batch,
+                choice_groups=local_groups,
+                pad_token_id=pad_token_id,
+            )
+            if local_outputs is None:
+                continue
+            for local_index, output in enumerate(local_outputs):
+                optimized_by_batch_index[local_indices[local_index]] = output
+
+        if not optimized_by_batch_index:
+            return None
+
+        remaining_indices = [
+            index for index in range(len(batch)) if index not in optimized_by_batch_index
+        ]
+        fallback_by_batch_index: dict[int, LoglikelihoodOutput] = {}
+        if remaining_indices:
+            remaining_batch = [batch[index] for index in remaining_indices]
+            fallback_outputs = self._score_chunks(
+                remaining_batch,
+                batch_size=max(len(remaining_batch), 1),
+            )
+            for local_index, output in enumerate(fallback_outputs):
+                fallback_by_batch_index[remaining_indices[local_index]] = output
+
+        ordered_outputs: list[LoglikelihoodOutput] = []
+        for index in range(len(batch)):
+            output = optimized_by_batch_index.get(index)
+            if output is None:
+                output = fallback_by_batch_index[index]
+            ordered_outputs.append(output)
+        return ordered_outputs
+
+    def _loglikelihood_prefix_cache_enabled(self) -> bool:
+        """Return whether scorer-side prefix KV reuse was explicitly requested."""
+        return bool(
+            getattr(self.config, "loglikelihood_prefix_cache", False)
+            and not self._loglikelihood_prefix_cache_disabled
+            and self._loglikelihood_prefix_cache_max_entries() > 0
+        )
+
+    def _loglikelihood_prefix_cache_min_tokens(self) -> int:
+        """Resolve the minimum prefix length that justifies a second prefill."""
+        try:
+            return max(int(getattr(self.config, "loglikelihood_prefix_cache_min_tokens", 256)), 1)
+        except (TypeError, ValueError):
+            return 256
+
+    def _loglikelihood_prefix_cache_max_entries(self) -> int:
+        """Resolve the bounded GPU cache capacity."""
+        try:
+            return max(int(getattr(self.config, "loglikelihood_prefix_cache_max_entries", 32)), 0)
+        except (TypeError, ValueError):
+            return 32
+
+    def _get_loglikelihood_prefix_cache(
+        self,
+        prefix_key: tuple[int, ...],
+        *,
+        prefix_token_id: int,
+    ) -> Any | None:
+        """Look up one prefix cache and retain it as the most recently used entry."""
+        del prefix_token_id  # Reserved for future cache-key validation across tokenizer changes.
+        with self._state_lock:
+            cached = self._loglikelihood_prefix_cache.get(prefix_key)
+            if cached is not None:
+                self._loglikelihood_prefix_cache.move_to_end(prefix_key)
+            return cached
+
+    def _put_loglikelihood_prefix_cache(self, prefix_key: tuple[int, ...], prefix_cache: Any) -> None:
+        """Insert one prefix cache and evict the oldest entry before GPU memory grows unbounded."""
+        with self._state_lock:
+            self._loglikelihood_prefix_cache[prefix_key] = prefix_cache
+            self._loglikelihood_prefix_cache.move_to_end(prefix_key)
+            max_entries = self._loglikelihood_prefix_cache_max_entries()
+            while len(self._loglikelihood_prefix_cache) > max_entries:
+                self._loglikelihood_prefix_cache.popitem(last=False)
+
+    def _repeat_loglikelihood_cache(self, cache: Any, repeats: int) -> Any | None:
+        """Expand one prefix cache for a divergent suffix batch without mutating the stored entry."""
+        repeat_interleave = getattr(cache, "batch_repeat_interleave", None)
+        if callable(repeat_interleave):
+            repeat_interleave(repeats)
+            return cache
+        if isinstance(cache, (tuple, list)):
+            # Support legacy Transformers tuple caches used by older model wrappers.
+            repeated_layers = []
+            for layer in cache:
+                if not isinstance(layer, (tuple, list)) or len(layer) < 2:
+                    return None
+                for tensor in layer[:2]:
+                    if not hasattr(tensor, "repeat_interleave"):
+                        return None
+                repeated_layers.append(
+                    tuple(tensor.repeat_interleave(repeats, dim=0) for tensor in layer[:2])
+                    + tuple(layer[2:])
+                )
+            return tuple(repeated_layers) if isinstance(cache, tuple) else repeated_layers
+        return None
+
+    def _disable_loglikelihood_prefix_cache(self, reason: str) -> None:
+        """Disable the optional optimization after a model-specific cache incompatibility."""
+        if self._loglikelihood_prefix_cache_disabled:
+            return
+        self._loglikelihood_prefix_cache_disabled = True
+        get_logger().warning(
+            "disabling loglikelihood prefix KV cache after model incompatibility: %s",
+            reason,
+        )
+
+    def _report_loglikelihood_prefix_cache_once(self) -> None:
+        """Emit one auditable hit/miss report after the first successful cached scoring batch."""
+        if self._loglikelihood_prefix_cache_reported:
+            return
+        self._loglikelihood_prefix_cache_reported = True
+        total = self._loglikelihood_prefix_cache_hits + self._loglikelihood_prefix_cache_misses
+        hit_rate = self._loglikelihood_prefix_cache_hits / total if total else 0.0
+        get_logger().info(
+            "loglikelihood prefix KV cache active: hits=%d misses=%d hit_rate=%.1f%% entries=%d",
+            self._loglikelihood_prefix_cache_hits,
+            self._loglikelihood_prefix_cache_misses,
+            hit_rate * 100.0,
+            len(self._loglikelihood_prefix_cache),
+        )
+
+    def loglikelihood_prefix_cache_stats(self) -> dict[str, int | float]:
+        """Return scorer-side prefix KV cache counters for benchmark telemetry."""
+        lookups = self._loglikelihood_prefix_cache_hits + self._loglikelihood_prefix_cache_misses
+        return {
+            "hits": self._loglikelihood_prefix_cache_hits,
+            "misses": self._loglikelihood_prefix_cache_misses,
+            "lookups": lookups,
+            "hit_rate": self._loglikelihood_prefix_cache_hits / lookups if lookups else 0.0,
+            "entries": len(self._loglikelihood_prefix_cache),
+        }
 
     # Reuse the shared chunk scorer for both eager and continuous log-likelihood submission paths.
     def _score_prepared_loglikelihood_requests(

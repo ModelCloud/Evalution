@@ -268,6 +268,11 @@ class BaseEngineTransformersRuntimeConfig(BaseEngineDeviceConfig):
     """Define the base engine transformers runtime config helper class."""
     attn_implementation: str | None = None
     device_map: str | dict[str, Any] | None = None
+    # Opt-in scorer-side reuse for repeated long prefixes in loglikelihood workloads.
+    # Generation continuous batching owns a separate KV cache and cannot serve direct scoring.
+    loglikelihood_prefix_cache: bool = False
+    loglikelihood_prefix_cache_min_tokens: int = 256
+    loglikelihood_prefix_cache_max_entries: int = 32
 
 
 @dataclass
