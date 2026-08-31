@@ -1043,6 +1043,105 @@ class BaseTransformerSession(BaseInferenceSession):
             if score_bar is not None:
                 batch_index = (start // batch_size) + 1
                 score_bar.subtitle(f"batch={batch_index}/{total_batches} batch_size={batch_size}")
+
+            # Multiple-choice suites commonly submit one-token continuations for
+            # the same context (for example, `` A``, `` B``, `` C``, `` D`` in
+            # MMLU).  The ordinary path below appends each candidate token and
+            # re-runs the complete decoder prefill for every choice.  When a
+            # scoring batch contains duplicate prefixes, run each prefix once
+            # and gather all candidate logits from its final position.  This is
+            # exact for causal models: the logit at the last context token is
+            # the next-token distribution used to score every one-token
+            # continuation.  Keep the optimization narrowly guarded so
+            # multi-token and non-identical requests retain the established
+            # token-by-token semantics.
+            pad_token_id = getattr(self.tokenizer, "pad_token_id", None)
+            if pad_token_id is None:
+                pad_token_id = self._prefix_token_id()
+            choice_groups: dict[tuple[int, ...], list[tuple[int, _ScoringChunk]]] = {}
+            if batch and all(
+                chunk.score_count == 1 and chunk.score_start == len(chunk.input_ids) - 1
+                for chunk in batch
+            ):
+                for batch_index, chunk in enumerate(batch):
+                    prefix = tuple(chunk.input_ids[: chunk.score_start])
+                    choice_groups.setdefault(prefix, []).append((batch_index, chunk))
+            if choice_groups and len(choice_groups) < len(batch):
+                encoded = None
+                logits = None
+                try:
+                    prefixes = list(choice_groups)
+                    padded_length = max(len(prefix) for prefix in prefixes)
+                    padded_rows = [
+                        list(prefix) + ([int(pad_token_id)] * (padded_length - len(prefix)))
+                        for prefix in prefixes
+                    ]
+                    encoded = {
+                        "input_ids": torch.tensor(
+                            padded_rows,
+                            dtype=torch.long,
+                            device=self.input_device,
+                        )
+                    }
+                    with self._scoring_attention_context():
+                        with torch.inference_mode():
+                            outputs = self.model(**encoded)
+                    logits = outputs.logits
+                    context_lengths = torch.tensor(
+                        [len(prefix) for prefix in prefixes],
+                        dtype=torch.long,
+                        device=logits.device,
+                    )
+                    row_indices = torch.arange(
+                        len(prefixes),
+                        dtype=torch.long,
+                        device=logits.device,
+                    )
+                    final_logits = logits[row_indices, context_lengths - 1, :]
+                    final_log_probs = torch.log_softmax(final_logits, dim=-1)
+                    final_greedy = final_logits.argmax(dim=-1)
+                    # One packed D2H transfer for the reduced choice rows,
+                    # matching the no-sync reduction policy of the normal path.
+                    packed_rows: list[torch.Tensor] = []
+                    for group_index, prefix in enumerate(prefixes):
+                        for _batch_index, chunk in choice_groups[prefix]:
+                            target = int(chunk.input_ids[chunk.score_start])
+                            packed_rows.append(
+                                torch.stack(
+                                    (
+                                        final_log_probs[group_index, target],
+                                        (final_greedy[group_index] == target).to(final_log_probs.dtype),
+                                    )
+                                )
+                            )
+                    host_rows = torch.stack(packed_rows).detach().cpu().tolist()
+                    # Restore the original batch order; choice_groups is keyed
+                    # by prefix for the compact forward, not request ordering.
+                    output_by_batch_index: dict[int, tuple[float, bool]] = {}
+                    packed_cursor = 0
+                    for prefix in prefixes:
+                        for batch_index, _chunk in choice_groups[prefix]:
+                            logprob, is_greedy = host_rows[packed_cursor]
+                            output_by_batch_index[batch_index] = (float(logprob), bool(is_greedy))
+                            packed_cursor += 1
+                    for batch_index, chunk in enumerate(batch):
+                        logprob, is_greedy = output_by_batch_index[batch_index]
+                        scored_chunks.append(
+                            LoglikelihoodOutput(
+                                logprob=logprob,
+                                is_greedy=is_greedy,
+                                token_count=1,
+                                metadata=dict(chunk.metadata),
+                            )
+                        )
+                        if score_bar is not None:
+                            score_bar.next().draw()
+                finally:
+                    if logits is not None:
+                        del logits
+                    if encoded is not None:
+                        del encoded
+                continue
             encoded = None
             logits = None
             try:

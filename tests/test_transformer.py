@@ -2313,6 +2313,63 @@ def test_transformer_session_loglikelihood_right_pads_batches_without_attention_
     assert outputs[1].logprob == pytest.approx(expected_token_logprob, abs=1e-6)
 
 
+def test_transformer_session_loglikelihood_deduplicates_one_token_choice_prefixes() -> None:
+    """Score repeated one-token choices from one prefix forward."""
+
+    class FakeTokenizer:
+        pad_token_id = 0
+        eos_token_id = 1
+        padding_side = "right"
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.config = SimpleNamespace(max_position_embeddings=8)
+            self.calls: list[tuple[int, int]] = []
+
+        def __call__(self, *, input_ids, **kwargs):
+            assert kwargs == {}
+            self.calls.append(tuple(input_ids.shape))
+            batch_size, sequence_length = input_ids.shape
+            vocab_size = 16
+            logits = torch.full((batch_size, sequence_length, vocab_size), -2.0)
+            # Make the final prefix position predict the next token with a
+            # distinct score for each candidate, matching a causal LM.
+            for row in range(batch_size):
+                logits[row, -1, 4] = 3.0
+                logits[row, -1, 7] = 2.0
+                logits[row, -1, 8] = 1.0
+                logits[row, -1, 9] = 0.0
+            return SimpleNamespace(logits=logits)
+
+    model = FakeModel()
+    session = TransformersSession(
+        config=Transformers(batch_size=4),
+        model_config=Model(path="/tmp/model"),
+        model=model,
+        tokenizer=FakeTokenizer(),
+        input_device=torch.device("cpu"),
+    )
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(context_input_ids=[5, 6], continuation_input_ids=[4]),
+            LoglikelihoodRequest(context_input_ids=[5, 6], continuation_input_ids=[7]),
+            LoglikelihoodRequest(context_input_ids=[5, 6], continuation_input_ids=[8]),
+            LoglikelihoodRequest(context_input_ids=[5, 6], continuation_input_ids=[9]),
+        ],
+        batch_size=4,
+    )
+
+    assert model.calls == [(1, 2)]
+    assert [output.token_count for output in outputs] == [1, 1, 1, 1]
+    assert [output.is_greedy for output in outputs] == [True, False, False, False]
+    reference_logits = torch.full((16,), -2.0)
+    reference_logits[[4, 7, 8, 9]] = torch.tensor([3.0, 2.0, 1.0, 0.0])
+    reference_logprobs = torch.log_softmax(reference_logits, dim=0)
+    expected = [float(reference_logprobs[index].item()) for index in [4, 7, 8, 9]]
+    assert [output.logprob for output in outputs] == pytest.approx(expected, abs=1e-6)
+
+
 def test_transformer_session_loglikelihood_sorts_requests_by_total_length_before_scoring(
     monkeypatch,
 ) -> None:
