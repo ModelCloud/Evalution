@@ -1761,21 +1761,6 @@ class BaseTransformerSession(BaseInferenceSession):
             return tuple(selected_layers) if isinstance(selected, tuple) else selected_layers
         return None
 
-    def _cache_batch_size(self, cache: Any) -> int:
-        """Best-effort batch-size inspection for a freshly prefetched cache."""
-        layers = getattr(cache, "layers", None)
-        if layers:
-            keys = getattr(layers[0], "keys", None)
-            if keys is not None and getattr(keys, "ndim", 0) > 0:
-                return int(keys.shape[0])
-        if isinstance(cache, (tuple, list)) and cache:
-            layer = cache[0]
-            if isinstance(layer, (tuple, list)) and layer:
-                tensor = layer[0]
-                if hasattr(tensor, "shape") and len(tensor.shape) > 0:
-                    return int(tensor.shape[0])
-        return 0
-
     def _loglikelihood_prefix_cache_min_tokens(self) -> int:
         """Resolve the minimum prefix length that justifies a second prefill."""
         try:
