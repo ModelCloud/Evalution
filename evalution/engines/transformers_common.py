@@ -156,6 +156,10 @@ class BaseTransformerSession(BaseInferenceSession):
     _loglikelihood_prefix_cache_misses: int = field(default=0, init=False, repr=False)
     _loglikelihood_prefix_cache_warmup_hits: int = field(default=0, init=False, repr=False)
     _loglikelihood_prefix_cache_warmup_misses: int = field(default=0, init=False, repr=False)
+    _loglikelihood_prefix_cache_warmup_batches: int = field(default=0, init=False, repr=False)
+    _loglikelihood_prefix_cache_warmup_prefixes: int = field(default=0, init=False, repr=False)
+    _loglikelihood_prefix_cache_released_prefixes: int = field(default=0, init=False, repr=False)
+    _loglikelihood_prefix_cache_release_calls: int = field(default=0, init=False, repr=False)
     _loglikelihood_prefix_cache_disabled: bool = field(default=False, init=False, repr=False)
     _loglikelihood_prefix_cache_reported: bool = field(default=False, init=False, repr=False)
 
@@ -424,6 +428,10 @@ class BaseTransformerSession(BaseInferenceSession):
                 self._loglikelihood_prefix_cache_misses = 0
                 self._loglikelihood_prefix_cache_warmup_hits = 0
                 self._loglikelihood_prefix_cache_warmup_misses = 0
+                self._loglikelihood_prefix_cache_warmup_batches = 0
+                self._loglikelihood_prefix_cache_warmup_prefixes = 0
+                self._loglikelihood_prefix_cache_released_prefixes = 0
+                self._loglikelihood_prefix_cache_release_calls = 0
                 self._loglikelihood_prefix_cache_disabled = False
                 self._loglikelihood_prefix_cache_reported = False
                 self.execution_logged = False
@@ -1498,6 +1506,16 @@ class BaseTransformerSession(BaseInferenceSession):
             and getattr(self.config, "loglikelihood_prefix_cache_prewarm", False)
         )
 
+    def _loglikelihood_prefix_cache_prewarm_batch_size(self) -> int:
+        """Resolve the bounded number of distinct prefixes in one prefill forward."""
+        try:
+            return max(
+                int(getattr(self.config, "loglikelihood_prefix_cache_prewarm_batch_size", 32)),
+                1,
+            )
+        except (TypeError, ValueError):
+            return 32
+
     def _prewarm_loglikelihood_prefix_cache_for_batch(
         self,
         choice_groups: dict[tuple[int, ...], list[tuple[int, _ScoringChunk]]],
@@ -1523,22 +1541,40 @@ class BaseTransformerSession(BaseInferenceSession):
             prefix_key = tuple(context[:min_tokens])
             prefix_contexts.setdefault(prefix_key, set()).add(context)
 
-        for prefix_key, contexts in prefix_contexts.items():
-            if len(contexts) < 2:
-                continue
+        eligible_prefixes = [
+            prefix_key
+            for prefix_key, contexts in prefix_contexts.items()
+            if len(contexts) >= 2
+        ]
+        if not eligible_prefixes:
+            return
+        self._loglikelihood_prefix_cache_warmup_prefixes += len(eligible_prefixes)
+
+        import torch
+
+        missing_prefixes: list[tuple[int, ...]] = []
+        for prefix_key in eligible_prefixes:
             cached = self._get_loglikelihood_prefix_cache(
                 prefix_key,
                 prefix_token_id=pad_token_id,
             )
-            if cached is not None:
+            if cached is None:
+                missing_prefixes.append(prefix_key)
+            else:
                 self._loglikelihood_prefix_cache_warmup_hits += 1
-                continue
 
+        if not missing_prefixes:
+            return
+
+        batch_size = min(
+            self._loglikelihood_prefix_cache_prewarm_batch_size(),
+            self._loglikelihood_prefix_cache_max_entries(),
+        )
+        for start in range(0, len(missing_prefixes), batch_size):
+            prefix_batch = missing_prefixes[start : start + batch_size]
             try:
-                import torch
-
                 prefix_ids = torch.tensor(
-                    [list(prefix_key)],
+                    [list(prefix_key) for prefix_key in prefix_batch],
                     dtype=torch.long,
                     device=self.input_device,
                 )
@@ -1553,11 +1589,66 @@ class BaseTransformerSession(BaseInferenceSession):
                         "model did not return past_key_values for a cache-enabled prefill"
                     )
                     return
-                self._put_loglikelihood_prefix_cache(prefix_key, prefix_cache)
-                self._loglikelihood_prefix_cache_warmup_misses += 1
+                for index, prefix_key in enumerate(prefix_batch):
+                    selected_cache = (
+                        prefix_cache
+                        if len(prefix_batch) == 1
+                        else self._select_loglikelihood_cache_row(prefix_cache, index)
+                    )
+                    if selected_cache is None:
+                        self._disable_loglikelihood_prefix_cache(
+                            "past_key_values does not support batched prewarm row selection"
+                        )
+                        return
+                    self._put_loglikelihood_prefix_cache(prefix_key, selected_cache)
+                self._loglikelihood_prefix_cache_warmup_batches += 1
+                self._loglikelihood_prefix_cache_warmup_misses += len(prefix_batch)
             except (TypeError, AttributeError, NotImplementedError, RuntimeError) as exc:
                 self._disable_loglikelihood_prefix_cache(str(exc))
                 return
+
+    def _select_loglikelihood_cache_row(self, cache: Any, index: int) -> Any | None:
+        """Extract one independent batch row from a prefetched KV cache."""
+        import torch
+
+        if index == 0 and self._cache_batch_size(cache) == 1:
+            return cache
+        selected = deepcopy(cache)
+        indices = torch.tensor([index], dtype=torch.long, device=self.input_device)
+        batch_select_indices = getattr(selected, "batch_select_indices", None)
+        if callable(batch_select_indices):
+            batch_select_indices(indices)
+            return selected
+        if isinstance(selected, (tuple, list)):
+            selected_layers = []
+            for layer in selected:
+                if not isinstance(layer, (tuple, list)) or len(layer) < 2:
+                    return None
+                tensors = []
+                for tensor in layer[:2]:
+                    if not hasattr(tensor, "index_select"):
+                        return None
+                    tensors.append(tensor.index_select(0, indices))
+                selected_layers.append(
+                    tuple(tensors) + tuple(layer[2:])
+                )
+            return tuple(selected_layers) if isinstance(selected, tuple) else selected_layers
+        return None
+
+    def _cache_batch_size(self, cache: Any) -> int:
+        """Best-effort batch-size inspection for a freshly prefetched cache."""
+        layers = getattr(cache, "layers", None)
+        if layers:
+            keys = getattr(layers[0], "keys", None)
+            if keys is not None and getattr(keys, "ndim", 0) > 0:
+                return int(keys.shape[0])
+        if isinstance(cache, (tuple, list)) and cache:
+            layer = cache[0]
+            if isinstance(layer, (tuple, list)) and layer:
+                tensor = layer[0]
+                if hasattr(tensor, "shape") and len(tensor.shape) > 0:
+                    return int(tensor.shape[0])
+        return 0
 
     def _loglikelihood_prefix_cache_min_tokens(self) -> int:
         """Resolve the minimum prefix length that justifies a second prefill."""
@@ -1595,6 +1686,29 @@ class BaseTransformerSession(BaseInferenceSession):
             max_entries = self._loglikelihood_prefix_cache_max_entries()
             while len(self._loglikelihood_prefix_cache) > max_entries:
                 self._loglikelihood_prefix_cache.popitem(last=False)
+
+    def release_loglikelihood_prefix_cache(
+        self,
+        prefix_keys: list[tuple[int, ...]] | tuple[tuple[int, ...], ...] | None = None,
+    ) -> int:
+        """Release scorer prefix KV entries whose request group has completed.
+
+        Dropping the Python references releases the underlying device tensors when no temporary
+        suffix branch still owns them. The CUDA allocator may retain freed blocks for reuse, so
+        this deliberately avoids an implicit ``empty_cache`` synchronization in the hot path.
+        """
+        with self._state_lock:
+            if prefix_keys is None:
+                released = len(self._loglikelihood_prefix_cache)
+                self._loglikelihood_prefix_cache.clear()
+            else:
+                released = 0
+                for prefix_key in prefix_keys:
+                    if self._loglikelihood_prefix_cache.pop(tuple(prefix_key), None) is not None:
+                        released += 1
+            self._loglikelihood_prefix_cache_release_calls += 1
+            self._loglikelihood_prefix_cache_released_prefixes += released
+            return released
 
     def _repeat_loglikelihood_cache(self, cache: Any, repeats: int) -> Any | None:
         """Expand one prefix cache for a divergent suffix batch without mutating the stored entry."""
@@ -1673,6 +1787,10 @@ class BaseTransformerSession(BaseInferenceSession):
             "steady_state_hit_rate": (
                 self._loglikelihood_prefix_cache_hits / lookups if lookups else 0.0
             ),
+            "warmup_batches": self._loglikelihood_prefix_cache_warmup_batches,
+            "warmup_prefixes": self._loglikelihood_prefix_cache_warmup_prefixes,
+            "released_prefixes": self._loglikelihood_prefix_cache_released_prefixes,
+            "release_calls": self._loglikelihood_prefix_cache_release_calls,
             "entries": len(self._loglikelihood_prefix_cache),
         }
 

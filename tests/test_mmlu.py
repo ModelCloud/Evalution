@@ -339,6 +339,78 @@ def test_mmlu_streams_requests_into_loglikelihood_continuous(monkeypatch) -> Non
     ]
 
 
+def test_mmlu_releases_prefix_cache_after_each_subject_group(monkeypatch) -> None:
+    """Release subject-local prefix entries before the next MMLU subject starts."""
+    test = Dataset.from_list(
+        [
+            {
+                "question": "Algebra question",
+                "subject": "abstract_algebra",
+                "choices": ["a", "b", "c", "d"],
+                "answer": 0,
+            },
+            {
+                "question": "Learning question",
+                "subject": "machine_learning",
+                "choices": ["a", "b", "c", "d"],
+                "answer": 0,
+            },
+        ]
+    )
+
+    def fake_load_suite_dataset(
+        loader,
+        *,
+        task_name,
+        dataset_path,
+        dataset_name,
+        split,
+        cache_dir,
+        stream,
+        purpose=None,
+    ):
+        del loader, task_name, dataset_path, dataset_name, cache_dir, stream, purpose
+        assert split == "test"
+        return test, 0.0
+
+    class GroupReleaseSession:
+        """Provide continuous scoring and an observable prefix-cache release hook."""
+
+        config = SimpleNamespace(
+            loglikelihood_prefix_cache=True,
+            loglikelihood_prefix_cache_release_after_group=True,
+        )
+
+        def __init__(self) -> None:
+            self.release_calls = 0
+
+        def loglikelihood_continuous(self, requests, *, batch_size=None):
+            assert batch_size == 8
+            for (sample_index, choice_index), _request in requests:
+                yield (sample_index, choice_index), LoglikelihoodOutput(
+                    logprob=0.0 if choice_index == 0 else -1.0,
+                    is_greedy=choice_index == 0,
+                    token_count=1,
+                )
+
+        def release_loglikelihood_prefix_cache(self):
+            self.release_calls += 1
+            return 1
+
+    session = GroupReleaseSession()
+    monkeypatch.setattr(mmlu_module, "load_suite_dataset", fake_load_suite_dataset)
+    result = evalution.benchmarks.mmlu(
+        subsets="all",
+        num_fewshot=0,
+        max_rows=2,
+        batch_size=8,
+        stream=True,
+    ).evaluate(session)
+
+    assert len(result.samples) == 2
+    assert session.release_calls == 2
+
+
 def test_mmlu_subset_node_filter_uses_distinct_result_name(monkeypatch) -> None:
     """Verify MMLU subset node filter uses distinct result name."""
     test = Dataset.from_list(

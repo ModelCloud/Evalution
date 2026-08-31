@@ -274,6 +274,10 @@ class BaseEngineTransformersRuntimeConfig(BaseEngineDeviceConfig):
     # Prefill eligible shared prefixes before their scoring batch so scoring lookups are warm.
     # The prefill itself is reported separately from steady-state cache-hit metrics.
     loglikelihood_prefix_cache_prewarm: bool = True
+    # Limit one batched prefill to avoid an unbounded activation/cache peak.
+    loglikelihood_prefix_cache_prewarm_batch_size: int = 32
+    # MMLU-style subject groups can release their prefix entries as soon as the group completes.
+    loglikelihood_prefix_cache_release_after_group: bool = True
     loglikelihood_prefix_cache_min_tokens: int = 256
     loglikelihood_prefix_cache_max_entries: int = 32
 
