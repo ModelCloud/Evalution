@@ -568,3 +568,22 @@ def test_llama_cpp_session_loglikelihood_scores_continuation_tokens() -> None:
             metadata={"suite": "demo"},
         )
     ]
+
+
+def test_llama_cpp_session_scores_shared_prefix_single_token_choices_once() -> None:
+    """Verify multiple-choice continuations reuse one byte-identical prefix evaluation."""
+
+    session = _build_session()
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(context="ab", continuation="\x02", metadata={"choice": "c"}),
+            LoglikelihoodRequest(context="ab", continuation="\x03", metadata={"choice": "d"}),
+        ]
+    )
+
+    assert session.llm.eval_calls == [[1, ord("a"), ord("b")]]
+    assert outputs == [
+        LoglikelihoodOutput(logprob=-10.0, is_greedy=False, token_count=1, metadata={"choice": "c"}),
+        LoglikelihoodOutput(logprob=-10.0, is_greedy=False, token_count=1, metadata={"choice": "d"}),
+    ]

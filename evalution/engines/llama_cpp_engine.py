@@ -352,6 +352,8 @@ class LlamaCppSession(BaseInferenceSession):
 
         del batch_size
         prepared_requests = [self._prepare_loglikelihood_request(request) for request in requests]
+        if all(len(target_ids) == 1 for _prefix_ids, target_ids, _metadata in prepared_requests):
+            return self._score_single_token_continuations(prepared_requests)
         chunk_counts: list[int] = []
         chunk_outputs: list[list[LoglikelihoodOutput]] = []
         with self._generation_lock:
@@ -391,6 +393,36 @@ class LlamaCppSession(BaseInferenceSession):
                 )
             )
         return outputs
+
+    def _score_single_token_continuations(
+        self,
+        prepared_requests: list[tuple[list[int], list[int], dict[str, Any]]],
+    ) -> list[LoglikelihoodOutput]:
+        """Score shared-prefix one-token choices once per prefix without changing logits."""
+
+        grouped: dict[tuple[int, ...], list[tuple[int, int, dict[str, Any]]]] = {}
+        for index, (prefix_ids, target_ids, metadata) in enumerate(prepared_requests):
+            effective_prefix = prefix_ids or [self._prefix_token_id()]
+            grouped.setdefault(tuple(effective_prefix), []).append((index, int(target_ids[0]), metadata))
+
+        outputs: list[LoglikelihoodOutput | None] = [None] * len(prepared_requests)
+        with self._generation_lock:
+            for prefix, choices in grouped.items():
+                self.llm.reset()
+                self.llm.eval(list(prefix))
+                token_logprobs = self.llama_module.Llama.logits_to_logprobs(self.llm._scores)[len(prefix) - 1]
+                greedy_token = int(token_logprobs.argmax())
+                for index, token_id, metadata in choices:
+                    outputs[index] = LoglikelihoodOutput(
+                        logprob=float(token_logprobs[token_id]),
+                        is_greedy=greedy_token == token_id,
+                        token_count=1,
+                        metadata=dict(metadata),
+                    )
+
+        if any(output is None for output in outputs):
+            raise RuntimeError("llama.cpp shared-prefix scorer did not produce every requested output")
+        return [output for output in outputs if output is not None]
 
     def loglikelihood_continuous(
         self,
