@@ -9,12 +9,14 @@ import gc
 import importlib
 import sys
 import threading
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import closing, suppress
 from dataclasses import asdict, dataclass, field
 from itertools import chain, islice
 from pathlib import Path
 from typing import Any
+
+import numpy as np
 
 from evalution.config import Model
 from evalution.engines.base import (
@@ -63,6 +65,7 @@ class LlamaCpp(BaseEngineDeviceConfig, SharedEngineConfig):
     chat_format: str | None = None
     verbose: bool = False
     logits_all: bool = True
+    native_loglikelihood_batching: bool = True
     llama_kwargs: dict[str, Any] = field(default_factory=dict)
 
     def build(self, model: Model) -> BaseInferenceSession:
@@ -182,6 +185,7 @@ class LlamaCppSession(BaseInferenceSession):
             "gpu_offload_supported": self.gpu_offload_supported,
             "n_gpu_layers": self.effective_n_gpu_layers,
             "flash_attn": self.config.flash_attn,
+            "native_loglikelihood_batching": self.config.native_loglikelihood_batching,
             "max_model_len": self._max_scoring_input_length(),
         }
 
@@ -352,6 +356,8 @@ class LlamaCppSession(BaseInferenceSession):
 
         del batch_size
         prepared_requests = [self._prepare_loglikelihood_request(request) for request in requests]
+        if all(len(target_ids) == 1 for _prefix_ids, target_ids, _metadata in prepared_requests):
+            return self._score_single_token_continuations(prepared_requests)
         chunk_counts: list[int] = []
         chunk_outputs: list[list[LoglikelihoodOutput]] = []
         with self._generation_lock:
@@ -391,6 +397,143 @@ class LlamaCppSession(BaseInferenceSession):
                 )
             )
         return outputs
+
+    def _score_single_token_continuations(
+        self,
+        prepared_requests: list[tuple[list[int], list[int], dict[str, Any]]],
+    ) -> list[LoglikelihoodOutput]:
+        """Score shared-prefix one-token choices once per prefix without changing logits."""
+
+        if (
+            self.config.native_loglikelihood_batching
+            and getattr(self.llm, "_ctx", None) is not None
+            and getattr(self.llm, "_batch", None) is not None
+        ):
+            return self._score_single_token_continuations_native(prepared_requests)
+
+        grouped: dict[tuple[int, ...], list[tuple[int, int, dict[str, Any]]]] = {}
+        for index, (prefix_ids, target_ids, metadata) in enumerate(prepared_requests):
+            effective_prefix = prefix_ids or [self._prefix_token_id()]
+            grouped.setdefault(tuple(effective_prefix), []).append((index, int(target_ids[0]), metadata))
+
+        outputs: list[LoglikelihoodOutput | None] = [None] * len(prepared_requests)
+        with self._generation_lock:
+            for prefix, choices in grouped.items():
+                self.llm.reset()
+                self.llm.eval(list(prefix))
+                token_logprobs = self.llama_module.Llama.logits_to_logprobs(self.llm._scores)[len(prefix) - 1]
+                greedy_token = int(token_logprobs.argmax())
+                for index, token_id, metadata in choices:
+                    outputs[index] = LoglikelihoodOutput(
+                        logprob=float(token_logprobs[token_id]),
+                        is_greedy=greedy_token == token_id,
+                        token_count=1,
+                        metadata=dict(metadata),
+                    )
+
+        if any(output is None for output in outputs):
+            raise RuntimeError("llama.cpp shared-prefix scorer did not produce every requested output")
+        return [output for output in outputs if output is not None]
+
+    def _score_single_token_continuations_native(
+        self,
+        prepared_requests: list[tuple[list[int], list[int], dict[str, Any]]],
+    ) -> list[LoglikelihoodOutput]:
+        """Score multiple distinct prefixes in official llama_batch sequence lanes."""
+
+        grouped: dict[tuple[int, ...], list[tuple[int, int, dict[str, Any]]]] = {}
+        for index, (prefix_ids, target_ids, metadata) in enumerate(prepared_requests):
+            effective_prefix = prefix_ids or [self._prefix_token_id()]
+            grouped.setdefault(tuple(effective_prefix), []).append((index, int(target_ids[0]), metadata))
+
+        ctx = getattr(self.llm, "_ctx", None)
+        batch = getattr(self.llm, "_batch", None)
+        if ctx is None or batch is None:
+            raise RuntimeError("native llama.cpp loglikelihood batching requires low-level internals")
+
+        outputs: list[LoglikelihoodOutput | None] = [None] * len(prepared_requests)
+        pending = list(grouped.items())
+        max_sequences = self._native_sequence_capacity()
+        max_context_tokens = self._max_input_tokens()
+        max_batch_tokens = max(int(self.llm.n_batch), 1)
+        vocabulary_size = int(self.llm.n_vocab())
+
+        with self._generation_lock:
+            while pending:
+                selected: list[tuple[tuple[int, ...], list[tuple[int, int, dict[str, Any]]]]] = []
+                selected_tokens = 0
+                while pending and len(selected) < max_sequences:
+                    prefix, choices = pending[0]
+                    if len(prefix) > max_context_tokens:
+                        raise ValueError("loglikelihood prefix exceeds llama.cpp context window")
+                    if selected and selected_tokens + len(prefix) > max_context_tokens:
+                        break
+                    pending.pop(0)
+                    selected.append((prefix, choices))
+                    selected_tokens += len(prefix)
+
+                ctx.kv_cache_clear()
+                cursors = [0] * len(selected)
+                prefix_logprobs: list[np.ndarray | None] = [None] * len(selected)
+                while any(cursor < len(selected[index][0]) for index, cursor in enumerate(cursors)):
+                    batch.reset()
+                    remaining_capacity = max_batch_tokens
+                    active = [
+                        index
+                        for index, cursor in enumerate(cursors)
+                        if cursor < len(selected[index][0])
+                    ]
+                    for offset, selected_index in enumerate(active):
+                        if remaining_capacity <= 0:
+                            break
+                        prefix = selected[selected_index][0]
+                        active_count = len(active) - offset
+                        take = min(
+                            len(prefix) - cursors[selected_index],
+                            max(remaining_capacity // active_count, 1),
+                        )
+                        chunk = list(prefix[cursors[selected_index] : cursors[selected_index] + take])
+                        self._append_llama_batch_tokens(
+                            batch=batch,
+                            tokens=chunk,
+                            start_pos=cursors[selected_index],
+                            seq_id=selected_index,
+                            request_logits=cursors[selected_index] + take == len(prefix),
+                        )
+                        cursors[selected_index] += take
+                        remaining_capacity -= take
+                    ctx.decode(batch)
+                    for selected_index in active:
+                        if cursors[selected_index] != len(selected[selected_index][0]):
+                            continue
+                        logits_index = next(
+                            index
+                            for index in range(batch.batch.n_tokens - 1, -1, -1)
+                            if batch.batch.seq_id[index][0] == selected_index
+                            and batch.batch.logits[index]
+                        )
+                        prefix_logprobs[selected_index] = np.ctypeslib.as_array(
+                            ctx.get_logits_ith(logits_index),
+                            shape=(vocabulary_size,),
+                        ).copy()
+
+                for selected_index, (_prefix, choices) in enumerate(selected):
+                    logits = prefix_logprobs[selected_index]
+                    if logits is None:
+                        raise RuntimeError("native llama.cpp batch did not return prefix logits")
+                    token_logprobs = self.llama_module.Llama.logits_to_logprobs(logits[None, :])[0]
+                    greedy_token = int(token_logprobs.argmax())
+                    for index, token_id, metadata in choices:
+                        outputs[index] = LoglikelihoodOutput(
+                            logprob=float(token_logprobs[token_id]),
+                            is_greedy=greedy_token == token_id,
+                            token_count=1,
+                            metadata=dict(metadata),
+                        )
+
+        if any(output is None for output in outputs):
+            raise RuntimeError("native llama.cpp batch did not produce every requested output")
+        return [output for output in outputs if output is not None]
 
     def loglikelihood_continuous(
         self,
@@ -876,7 +1019,10 @@ class LlamaCppSession(BaseInferenceSession):
 
         prompt_text, prompt_tokens = self._prepare_generation_prompt(request)
         response = self.llm.create_completion(
-            prompt=prompt_tokens if request.input_ids is not None else prompt_text,
+            # Always pass the already-prepared token ids.  Re-tokenizing an HF
+            # rendered chat prompt inside llama.cpp can duplicate BOS or parse
+            # special-token text differently from the pinned tokenizer.
+            prompt=prompt_tokens,
             max_tokens=request.max_new_tokens,
             temperature=request.temperature if request.do_sample else 0.0,
             stop=list(request.stop) if request.stop else None,
@@ -895,6 +1041,7 @@ class LlamaCppSession(BaseInferenceSession):
     def _prepare_generation_prompt(self, request: GenerationRequest) -> tuple[str, list[int]]:
         """Render one request into the prompt text and prompt tokens consumed by llama.cpp."""
 
+        rendered_token_ids: list[int] | None = None
         if request.rendered_prompt is not None:
             prompt_text = request.rendered_prompt
         elif request.messages is not None:
@@ -914,6 +1061,23 @@ class LlamaCppSession(BaseInferenceSession):
                     request.messages,
                     **template_kwargs,
                 )
+                encoded = apply_chat_template(
+                    request.messages,
+                    **{**template_kwargs, "tokenize": True},
+                )
+                if isinstance(encoded, Mapping):
+                    encoded = encoded.get("input_ids")
+                if hasattr(encoded, "tolist"):
+                    encoded = encoded.tolist()
+                if isinstance(encoded, tuple):
+                    encoded = list(encoded)
+                if isinstance(encoded, list) and encoded and isinstance(encoded[0], list):
+                    if len(encoded) != 1:
+                        raise ValueError("chat template returned more than one token sequence")
+                    encoded = encoded[0]
+                if not isinstance(encoded, Sequence) or isinstance(encoded, (str, bytes)):
+                    raise TypeError("chat template must return a list of token ids")
+                rendered_token_ids = [int(token_id) for token_id in encoded]
             else:
                 prompt_text = self._messages_display_prompt(request.messages)
         elif request.prompt is not None:
@@ -924,6 +1088,8 @@ class LlamaCppSession(BaseInferenceSession):
         prompt_tokens = (
             list(request.input_ids)
             if request.input_ids is not None
+            else rendered_token_ids
+            if rendered_token_ids is not None
             else self._tokenize_text(prompt_text, add_bos=True)
         )
         return prompt_text, prompt_tokens

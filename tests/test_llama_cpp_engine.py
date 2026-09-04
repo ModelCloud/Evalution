@@ -35,8 +35,9 @@ class FakePrepareTokenizer:
     def apply_chat_template(self, messages, *, tokenize=False, add_generation_prompt=True):
         """Render chat messages into one deterministic prompt string."""
 
-        del tokenize, add_generation_prompt
-        return "\n".join(f"{message['role']}: {message['content']}" for message in messages)
+        del add_generation_prompt
+        rendered = "\n".join(f"{message['role']}: {message['content']}" for message in messages)
+        return [1, *map(ord, rendered)] if tokenize else rendered
 
 
 class FakeLlamaRuntime:
@@ -365,7 +366,7 @@ def test_llama_cpp_session_generate_uses_completion_and_chat_paths() -> None:
 
     assert session.llm.create_completion_calls == [
         {
-            "prompt": "Hello",
+            "prompt": [1, 72, 101, 108, 108, 111],
             "max_tokens": 256,
             "temperature": 0.0,
             "stop": None,
@@ -380,9 +381,10 @@ def test_llama_cpp_session_generate_uses_completion_and_chat_paths() -> None:
             "temperature": 0.0,
             "stop": None,
             "seed": None,
-            "stream": False,
-            "logprobs": False,
-        }
+                "stream": False,
+                "logprobs": False,
+                "tools": None,
+            }
     ]
     assert outputs == [
         GenerationOutput(
@@ -422,7 +424,7 @@ def test_llama_cpp_session_generate_renders_messages_with_prepare_tokenizer() ->
     assert session.llm.create_chat_completion_calls == []
     assert session.llm.create_completion_calls == [
         {
-            "prompt": "user: Hi",
+            "prompt": [1, 117, 115, 101, 114, 58, 32, 72, 105],
             "max_tokens": 256,
             "temperature": 0.0,
             "stop": None,
@@ -565,4 +567,23 @@ def test_llama_cpp_session_loglikelihood_scores_continuation_tokens() -> None:
             token_count=2,
             metadata={"suite": "demo"},
         )
+    ]
+
+
+def test_llama_cpp_session_scores_shared_prefix_single_token_choices_once() -> None:
+    """Verify multiple-choice continuations reuse one byte-identical prefix evaluation."""
+
+    session = _build_session()
+
+    outputs = session.loglikelihood(
+        [
+            LoglikelihoodRequest(context="ab", continuation="\x02", metadata={"choice": "c"}),
+            LoglikelihoodRequest(context="ab", continuation="\x03", metadata={"choice": "d"}),
+        ]
+    )
+
+    assert session.llm.eval_calls == [[1, ord("a"), ord("b")]]
+    assert outputs == [
+        LoglikelihoodOutput(logprob=-10.0, is_greedy=False, token_count=1, metadata={"choice": "c"}),
+        LoglikelihoodOutput(logprob=-10.0, is_greedy=False, token_count=1, metadata={"choice": "d"}),
     ]
