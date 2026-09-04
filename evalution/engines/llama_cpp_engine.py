@@ -9,7 +9,7 @@ import gc
 import importlib
 import sys
 import threading
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import closing, suppress
 from dataclasses import asdict, dataclass, field
 from itertools import chain, islice
@@ -876,7 +876,10 @@ class LlamaCppSession(BaseInferenceSession):
 
         prompt_text, prompt_tokens = self._prepare_generation_prompt(request)
         response = self.llm.create_completion(
-            prompt=prompt_tokens if request.input_ids is not None else prompt_text,
+            # Always pass the already-prepared token ids.  Re-tokenizing an HF
+            # rendered chat prompt inside llama.cpp can duplicate BOS or parse
+            # special-token text differently from the pinned tokenizer.
+            prompt=prompt_tokens,
             max_tokens=request.max_new_tokens,
             temperature=request.temperature if request.do_sample else 0.0,
             stop=list(request.stop) if request.stop else None,
@@ -895,6 +898,7 @@ class LlamaCppSession(BaseInferenceSession):
     def _prepare_generation_prompt(self, request: GenerationRequest) -> tuple[str, list[int]]:
         """Render one request into the prompt text and prompt tokens consumed by llama.cpp."""
 
+        rendered_token_ids: list[int] | None = None
         if request.rendered_prompt is not None:
             prompt_text = request.rendered_prompt
         elif request.messages is not None:
@@ -914,6 +918,23 @@ class LlamaCppSession(BaseInferenceSession):
                     request.messages,
                     **template_kwargs,
                 )
+                encoded = apply_chat_template(
+                    request.messages,
+                    **{**template_kwargs, "tokenize": True},
+                )
+                if isinstance(encoded, Mapping):
+                    encoded = encoded.get("input_ids")
+                if hasattr(encoded, "tolist"):
+                    encoded = encoded.tolist()
+                if isinstance(encoded, tuple):
+                    encoded = list(encoded)
+                if isinstance(encoded, list) and encoded and isinstance(encoded[0], list):
+                    if len(encoded) != 1:
+                        raise ValueError("chat template returned more than one token sequence")
+                    encoded = encoded[0]
+                if not isinstance(encoded, Sequence) or isinstance(encoded, (str, bytes)):
+                    raise TypeError("chat template must return a list of token ids")
+                rendered_token_ids = [int(token_id) for token_id in encoded]
             else:
                 prompt_text = self._messages_display_prompt(request.messages)
         elif request.prompt is not None:
@@ -924,6 +945,8 @@ class LlamaCppSession(BaseInferenceSession):
         prompt_tokens = (
             list(request.input_ids)
             if request.input_ids is not None
+            else rendered_token_ids
+            if rendered_token_ids is not None
             else self._tokenize_text(prompt_text, add_bos=True)
         )
         return prompt_text, prompt_tokens

@@ -30,9 +30,9 @@ class RecordingChatTemplateTokenizer:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
 
-    def apply_chat_template(self, messages: Any, **kwargs: Any) -> str:
+    def apply_chat_template(self, messages: Any, **kwargs: Any) -> str | list[int]:
         self.calls.append(kwargs)
-        return "<rendered>"
+        return [1, 2, 3] if kwargs.get("tokenize") else "<rendered>"
 
 
 def _chat_request() -> GenerationRequest:

@@ -35,8 +35,9 @@ class FakePrepareTokenizer:
     def apply_chat_template(self, messages, *, tokenize=False, add_generation_prompt=True):
         """Render chat messages into one deterministic prompt string."""
 
-        del tokenize, add_generation_prompt
-        return "\n".join(f"{message['role']}: {message['content']}" for message in messages)
+        del add_generation_prompt
+        rendered = "\n".join(f"{message['role']}: {message['content']}" for message in messages)
+        return [1, *map(ord, rendered)] if tokenize else rendered
 
 
 class FakeLlamaRuntime:
@@ -365,7 +366,7 @@ def test_llama_cpp_session_generate_uses_completion_and_chat_paths() -> None:
 
     assert session.llm.create_completion_calls == [
         {
-            "prompt": "Hello",
+            "prompt": [1, 72, 101, 108, 108, 111],
             "max_tokens": 256,
             "temperature": 0.0,
             "stop": None,
@@ -380,9 +381,10 @@ def test_llama_cpp_session_generate_uses_completion_and_chat_paths() -> None:
             "temperature": 0.0,
             "stop": None,
             "seed": None,
-            "stream": False,
-            "logprobs": False,
-        }
+                "stream": False,
+                "logprobs": False,
+                "tools": None,
+            }
     ]
     assert outputs == [
         GenerationOutput(
@@ -422,7 +424,7 @@ def test_llama_cpp_session_generate_renders_messages_with_prepare_tokenizer() ->
     assert session.llm.create_chat_completion_calls == []
     assert session.llm.create_completion_calls == [
         {
-            "prompt": "user: Hi",
+            "prompt": [1, 117, 115, 101, 114, 58, 32, 72, 105],
             "max_tokens": 256,
             "temperature": 0.0,
             "stop": None,
