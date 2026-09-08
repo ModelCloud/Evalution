@@ -16,8 +16,10 @@ and Evalution `ZMLNative` continuous scheduler. No LLMD, GPT-QModel-Ultra, or
 OpenAI HTTP transport is used by this new path. Scheduler unit tests cover
 ragged/chunked prefill, refill, page isolation, EOS, stop strings, and slow input.
 GPU parity and command-buffer replay validation passed on the CUDA candidate
-before the final upstream-pin rebuild; that rebuild succeeded and its final
-reference parity rerun is in progress. Full-row
+on QVQ `470336257` after its merged-pin rebuild: final non-paged reference
+parity and three batched repetitions passed (`/tmp/zml_native_merged198_parity.log`).
+The subsequent QVQ/ZML speedup integration is rebuilding and must be revalidated.
+Full-row
 benchmarks have not resumed; earlier 128-row smoke results are not full results.
 
 Dependency issue found: importing Evalution loaded cuBLAS 13.1.1.3 from its Python
@@ -43,9 +45,15 @@ These checks cover the tested geometry/device, not every configuration.
 Earlier serial scores using the faulty dispatch must also be rerun.
 
 Latest fetched and integrated upstream bases: QVQ
-`470336257e4cbad96dcb5c20e9d67de7529c5d3f` (pinned by ZML), ZML `5017208` (`origin/master`),
+`5b6fe5645b74c62089c4a64206e9c0c99e5a2ff5` (pinned by ZML), ZML
+`dde7319c65c30dc837ab9a7539d6da08a50379f5` (`origin/master`),
 Evalution `8cbed6e` (`origin/main`). Native feature PR preparation excludes the
 earlier HTTP transport and unvalidated legacy W4 fallback.
+
+Open implementation PRs: https://github.com/ModelCloud/ZML-Ultra/pull/52 and
+https://github.com/ModelCloud/Evalution/pull/144. The latest ZML integration also
+needs an explicit `Tensor.Pad` type in grouped rank8 packing to compile with the
+repository's Zig version; the fix is included in the native feature branch.
 
 Native build targets in zml-ultra:
 
