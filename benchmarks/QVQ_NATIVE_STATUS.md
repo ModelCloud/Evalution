@@ -1,5 +1,23 @@
 # QVQ rank-8 native evaluation status (2026-09-08)
 
+PROVENANCE CORRECTION: the September 8 spectral base was not the unchanged
+older F6/seed7 base. `spectral_refinement` was incorrectly enabled; 268 tensor
+payloads differ, including all 112 projection trellises. The rank8 CUDA result
+below is not a controlled rank8-only comparison. See `QVQ_RANK8_BASE_AUDIT.md`.
+The user confirmed refinement should have remained disabled. A corrected
+rank8 artifact must fit factors against the unchanged older base; changing
+metadata on the newer artifact cannot undo its changed weights.
+
+The unchanged older F6/seed7 checkpoint now runs natively with legacy non-P32 W4
+support in ZML PR https://github.com/ModelCloud/ZML-Ultra/pull/54 (`7e31e029`).
+With spectral refinement disabled and no rank8, the complete GSM8K-Platinum run
+scored **530/1,209 (43.8379%)**. Mixed prefill prompt throughput was 4,018.64
+tokens/s, decode-only aggregate throughput 513.83 tokens/s, total 410.393 s.
+See `QVQ_F6_SEED7_OLDER_RETEST.md` for the original snapshot path, result path,
+checksum, settings and timing scope. A corrected rank8-only artifact has not
+yet been generated. Historical candidate details below are not a controlled
+comparison against this baseline.
+
 Requested snapshot:
 
 `/monster/data/model/qvq/modelcloud-qvq__llama-3.2-1b-instruct__f6-p32-r8-spectral__qvq-p32__yaqa125x__seed7__20260908`
