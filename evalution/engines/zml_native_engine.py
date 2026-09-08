@@ -8,6 +8,7 @@ import json
 import os
 import threading
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -205,6 +206,10 @@ class ZMLNativeSession(BaseInferenceSession):
                 add_generation_prompt=request.add_generation_prompt,
                 **kwargs,
             )
+            # New Transformers tokenizers may return a BatchEncoding rather
+            # than a bare list even with tokenize=True.
+            if isinstance(ids, Mapping):
+                ids = ids["input_ids"]
         else:
             ids = self.tokenizer.encode(request.prompt or "", add_special_tokens=False)
         if not ids or len(ids) + request.max_new_tokens > self.config.max_context_len:

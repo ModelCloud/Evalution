@@ -22,7 +22,9 @@ as the CUDA-converted snapshot, not assumed identical to the original artifact.
 - Dataset cache revision: `e762492455a1cf7967de89f05b6bef72fc713b66`;
   datasets fingerprint: `b4f3f45576df4897`.
 - Evalution CoT variant with chat template; greedy generation, 256 output-token
-  cap; batch 8, prefill capacity 128, context 8192. No implicit truncation.
+  cap; batch 8, prefill capacity 128, context 2048. No implicit truncation.
+  All 1,209 chat-rendered prompts were preflighted: 796–959 tokens, 1,006,268
+  prompt tokens total. The longest prompt plus generation fits context 2048.
 - Public ZML C ABI, continuous slot refill, Triton paged attention, command
   buffers enabled. No HTTP/OpenAI transport, LLMD or GPT-QModel-Ultra.
 - ZML merged revision: `db2a07b52225471c7c6920285aebd5b7d61d5d49`.

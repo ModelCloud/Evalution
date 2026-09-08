@@ -17,6 +17,21 @@ def test_native_engine_yaml_registration():
     assert engine.batch_size == 4
 
 
+def test_chat_template_batch_encoding_is_unwrapped():
+    s = session()
+    s.tokenizer.apply_chat_template = lambda *args, **kwargs: {
+        "input_ids": [1, 2, 3],
+        "attention_mask": [1, 1, 1],
+    }
+    prepared = s._prepare(
+        0,
+        GenerationRequest(
+            messages=[{"role": "user", "content": "hello"}], max_new_tokens=2
+        ),
+    )
+    assert prepared["ids"] == [1, 2, 3]
+
+
 class Tokenizer:
     def decode(self, tokens, **kwargs):
         return " ".join(map(str, tokens))
