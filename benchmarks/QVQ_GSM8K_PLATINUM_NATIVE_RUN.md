@@ -1,7 +1,34 @@
 # Rank-8 GSM8K-Platinum native run — 2026-09-08
 
-Status: preparing; final latest-runtime parity is pending. No performance or
-accuracy result is claimed until the complete evaluation finishes.
+Status: complete. All 1,209 unique test rows were evaluated successfully;
+533 correct, numeric accuracy **44.0860%**. Latest-runtime parity also passed
+(non-paged reference and three batched repetitions, command buffers enabled).
+
+## Results
+
+| Measurement | Result |
+| --- | ---: |
+| Mixed prefill phase, useful prompt throughput | 4,630.80 prompt tokens/s |
+| Mixed prefill phase, all useful token throughput | 4,882.71 tokens/s |
+| Decode-only phase, aggregate throughput | 537.50 tokens/s |
+| Prefill-phase wall time | 217.299 s |
+| Decode-only phase wall time | 101.852 s |
+| Evalution generation wall time | 326.553 s |
+| Evaluation and close wall time | 332.321 s |
+| Model load and compilation | 33.285 s |
+| Warmup | 1.567 s |
+| Total run wall time | 367.173 s |
+
+Prefill: 8,516 calls, 1,006,268 prompt tokens and 54,741 concurrent decode
+tokens; 29,039 padding rows excluded. Decode-only: 6,973 calls, 54,746 useful
+decode tokens; 1,038 padding rows excluded. Mixed prefill timing cannot be
+interpreted as an isolated prefill kernel benchmark. The reported decode rate
+is aggregated over active requests, not single-request tokens/s.
+
+Artifact checks passed: 1,209 samples, unique indices exactly 0–1208, all
+1,006,268 independently preflighted prompt tokens accounted for, no row limit.
+The result is 748,951 bytes; SHA256:
+`58eded6fdf423b07810e0aadc2df44b6185f5479770745bd1dd79dc0fb0dfe46`.
 
 Validated deployment snapshot selected for this run:
 
@@ -28,6 +55,8 @@ as the CUDA-converted snapshot, not assumed identical to the original artifact.
 - Public ZML C ABI, continuous slot refill, Triton paged attention, command
   buffers enabled. No HTTP/OpenAI transport, LLMD or GPT-QModel-Ultra.
 - ZML merged revision: `db2a07b52225471c7c6920285aebd5b7d61d5d49`.
+- Evalution runner revision: `8c027726a8567eab3e1a3537e996ee9615a2c33c`
+  (native adapter PR #144 atop latest `origin/main`).
 - QVQ dependency: `5b6fe5645b74c62089c4a64206e9c0c99e5a2ff5`.
 - CUDA QVQ library SHA256:
   `abfc2aa259d948a5414f532270aef71198136d0a7afd9e6351eaae009d1a9bbe`.
@@ -51,4 +80,4 @@ Expected outputs:
 - `/tmp/qvq_gsm8k_platinum_native_full_rank8.log`
 - `/monster/data/model/qvq/gsm8k_platinum_native_full_rank8_20260908.json`
 
-These paths are reserved for the forthcoming run, not evidence of completion.
+The result JSON and complete log are present. Run exit code: 0.

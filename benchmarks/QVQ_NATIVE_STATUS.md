@@ -18,9 +18,13 @@ ragged/chunked prefill, refill, page isolation, EOS, stop strings, and slow inpu
 GPU parity and command-buffer replay validation passed on the CUDA candidate
 on QVQ `470336257` after its merged-pin rebuild: final non-paged reference
 parity and three batched repetitions passed (`/tmp/zml_native_merged198_parity.log`).
-The subsequent QVQ/ZML speedup integration is rebuilding and must be revalidated.
-Full-row
-benchmarks have not resumed; earlier 128-row smoke results are not full results.
+The subsequent QVQ `5b6fe5645` / ZML `db2a07b` integration also passed final
+non-paged reference parity and three batched repetitions. The full 1,209-row
+GSM8K-Platinum run completed through the native ABI, with phase timing:
+533/1,209 correct (44.0860%), mixed-phase prompt throughput 4,630.80 tokens/s,
+decode-only aggregate throughput 537.50 tokens/s, total wall time 367.173 s;
+see `QVQ_GSM8K_PLATINUM_NATIVE_RUN.md`. Earlier 128-row smoke results are not full
+results and must not be reused as scores from the corrected runtime.
 
 Dependency issue found: importing Evalution loaded cuBLAS 13.1.1.3 from its Python
 environment, while ZML bundles CUDA 13.3 with cuBLAS 13.5.1.27. Loading ZML cuBLAS then failed with
@@ -46,14 +50,15 @@ Earlier serial scores using the faulty dispatch must also be rerun.
 
 Latest fetched and integrated upstream bases: QVQ
 `5b6fe5645b74c62089c4a64206e9c0c99e5a2ff5` (pinned by ZML), ZML
-`dde7319c65c30dc837ab9a7539d6da08a50379f5` (`origin/master`),
+`db2a07b52225471c7c6920285aebd5b7d61d5d49` (`origin/master`),
 Evalution `8cbed6e` (`origin/main`). Native feature PR preparation excludes the
 earlier HTTP transport and unvalidated legacy W4 fallback.
 
-Open implementation PRs: https://github.com/ModelCloud/ZML-Ultra/pull/52 and
-https://github.com/ModelCloud/Evalution/pull/144. The latest ZML integration also
-needs an explicit `Tensor.Pad` type in grouped rank8 packing to compile with the
-repository's Zig version; the fix is included in the native feature branch.
+ZML https://github.com/ModelCloud/ZML-Ultra/pull/52 is merged; Evalution
+https://github.com/ModelCloud/Evalution/pull/144 remains open. The explicit
+`Tensor.Pad` fix is included in merged ZML. Evalution additionally unwraps newer
+Transformers chat-template `BatchEncoding` results before native generation;
+17 focused tests pass, including that compatibility case and timing counts.
 
 Native build targets in zml-ultra:
 
@@ -71,4 +76,5 @@ standalone packaged distribution.
 Scoring caveat: native ABI currently exposes greedy token generation only.
 Canonical MMLU requires likelihood scoring, which is not implemented. The older
 humanities script explicitly produces generated-choice accuracy, not canonical
-MMLU accuracy. GSM8K-Platinum is also not silently equivalent to GSM8K-Pro.
+MMLU accuracy. The user subsequently explicitly selected GSM8K-Platinum for the
+current full-row run; it is not being labeled GSM8K-Pro.
