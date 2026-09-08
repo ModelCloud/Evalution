@@ -65,6 +65,32 @@ def expected(prompt, maximum):
     return output
 
 
+def test_native_phase_timing_counts_real_tokens_not_padding(monkeypatch):
+    s = session()
+    s.config.collect_timing = True
+    s.step_metrics = []
+    ticks = iter(range(1000))
+    monkeypatch.setattr(
+        "evalution.engines.zml_native_engine.time.perf_counter", lambda: next(ticks)
+    )
+    results = {}
+    s._run(
+        enumerate(
+            [
+                GenerationRequest(input_ids=[1, 2], max_new_tokens=3),
+                GenerationRequest(input_ids=[3, 4, 5], max_new_tokens=2),
+            ]
+        ),
+        3,
+        results.__setitem__,
+    )
+    assert sum(m["prompt_tokens"] for m in s.step_metrics) == 5
+    assert sum(m["decode_tokens"] for m in s.step_metrics) == 3
+    assert {m["phase"] for m in s.step_metrics} == {"prefill", "decode"}
+    assert all(m["seconds"] == 1 for m in s.step_metrics)
+    assert sum(m["padding_rows"] for m in s.step_metrics) > 0
+
+
 def test_ragged_chunked_prefill_refill_and_request_isolation():
     s = session()
     prompts = [[1, 2], list(range(1, 20)), [7], [31, 17, 8], [4] * 13]

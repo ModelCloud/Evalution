@@ -7,6 +7,7 @@ import ctypes as C
 import json
 import os
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -119,6 +120,7 @@ class ZMLNative(SharedEngineConfig):
     batch_size: int = 8
     max_context_len: int = 2048
     token_batch_size: int = 128
+    collect_timing: bool = False
 
     def build(self, model):
         if not self.library:
@@ -166,6 +168,7 @@ class ZMLNativeSession(BaseInferenceSession):
             config.token_batch_size,
         )
         self._lock = threading.Lock()
+        self.step_metrics = []
 
     def describe_execution(self):
         return {
@@ -320,6 +323,15 @@ class ZMLNativeSession(BaseInferenceSession):
             slots.extend(batch * pages * 16 + p for p in range(padding))
             lengths.append(padding)
             starts.append(rows)
+            measure = getattr(self.config, "collect_timing", False)
+            if measure:
+                prompt_tokens = sum(
+                    advanced[lane]
+                    for lane, state in enumerate(lanes)
+                    if state is not None and state["position"] < len(state["ids"])
+                )
+                active_tokens = sum(advanced)
+                started = time.perf_counter()
             sampled = self.runtime.step(
                 prefill=prefill,
                 tokens=tokens,
@@ -330,6 +342,18 @@ class ZMLNativeSession(BaseInferenceSession):
                 lengths=lengths,
                 starts=starts,
             )
+            if measure:
+                # step returns only after native output readiness. This measures
+                # host ABI + transfers + GPU execution, not kernel-only time.
+                self.step_metrics.append(
+                    {
+                        "phase": "prefill" if prefill else "decode",
+                        "seconds": time.perf_counter() - started,
+                        "prompt_tokens": prompt_tokens,
+                        "decode_tokens": active_tokens - prompt_tokens,
+                        "padding_rows": rows - active_tokens,
+                    }
+                )
             for lane, state in enumerate(lanes):
                 if state is None:
                     continue
