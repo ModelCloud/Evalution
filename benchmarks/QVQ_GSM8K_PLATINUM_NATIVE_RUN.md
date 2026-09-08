@@ -1,5 +1,10 @@
 # Rank-8 GSM8K-Platinum native run — 2026-09-08
 
+IMPORTANT: subsequent tensor audit found that this artifact's spectral base
+differs from the older F6/seed7 base in 268 tensors, including all 112 projection
+trellises. This result does not isolate the effect of rank8 on the older base.
+See `QVQ_RANK8_BASE_AUDIT.md`.
+
 Status: complete. All 1,209 unique test rows were evaluated successfully;
 533 correct, numeric accuracy **44.0860%**. Latest-runtime parity also passed
 (non-paged reference and three batched repetitions, command buffers enabled).
