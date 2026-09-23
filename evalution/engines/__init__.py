@@ -25,6 +25,7 @@ from .transformers import Transformers
 from .transformers_compat import TransformersCompat
 from .vllm_engine import VLLM
 from .zml_engine import ZML
+from .zml_native_engine import ZMLNative
 
 # Keep engine defaults and compatibility flags explicit at module scope.
 __all__ = [
@@ -48,5 +49,6 @@ __all__ = [
     "TransformersCompat",
     "VLLM",
     "ZML",
+    "ZMLNative",
     "build_openai_compatible_server",
 ]
