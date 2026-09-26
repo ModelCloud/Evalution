@@ -63,10 +63,8 @@ _MMLU_PRO_SUBSET_TREE = {
     },
 }
 _MMLU_PRO_SUBSETS = SubsetTree(_MMLU_PRO_SUBSET_TREE)
-_EXPLICIT_ANSWER_PATTERNS = (
-    pcre.compile(r"(?i)\bthe answer is\s*\(?([A-Z])\)?"),
-    pcre.compile(r"(?i)\banswer is\s*\(?([A-Z])\)?"),
-    pcre.compile(r"(?i)\banswer\s*[:\-]\s*\(?([A-Z])\)?"),
+_EXPLICIT_ANSWER_PATTERN = pcre.compile(
+    r"(?i)\b(?:the\s+)?answer\s*(?:is|[:\-])\s*(?:\(([A-Z])\)|([A-Z])\b)"
 )
 _CHOICE_TOKEN_PATTERN = pcre.compile(r"\b([A-Z])\b")
 
@@ -148,14 +146,13 @@ def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
     """Use the last explicit answer in the generated response."""
     response = text or ""
     last_label = _INVALID_CHOICE
-    last_position = -1
-    for pattern in _EXPLICIT_ANSWER_PATTERNS:
-        for match in pattern.finditer(response):
-            candidate = str(match.group(1)).strip().upper()
-            if candidate in valid_labels and match.start() >= last_position:
-                last_label = candidate
-                last_position = match.start()
-    if last_position >= 0:
+    found_explicit = False
+    for match in _EXPLICIT_ANSWER_PATTERN.finditer(response):
+        candidate = str(match.group(1) or match.group(2)).upper()
+        if candidate in valid_labels:
+            last_label = candidate
+            found_explicit = True
+    if found_explicit:
         return last_label
 
     matches = list(_CHOICE_TOKEN_PATTERN.findall(response))
@@ -298,7 +295,7 @@ class MMLUPro(TestSuite):
     batch_size: int | None = None
     cache_dir: str | None = None
     apply_chat_template: bool = False
-    max_new_tokens: int = 1024
+    max_new_tokens: int = 2048
     do_sample: bool = False
     temperature: float = 0.0
     _fewshot_by_subset_value: dict[str, list[dict[str, Any]]] = field(
