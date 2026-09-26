@@ -34,7 +34,9 @@ from evalution.benchmarks.subsets import ResolvedSubsets, SubsetTree, normalize_
 # Keep benchmark defaults and public task ids explicit at module scope.
 _INVALID_CHOICE = "[invalid]"
 _OPTION_LABELS = tuple("ABCDEFGHIJKLMNOP")
-_STOP_STRINGS = ("Question:", "</s>", "<|im_end|>", "<|eot_id|>")
+# A model may write "Question:" while explaining the current answer. Stopping
+# there can discard the answer before it is generated.
+_STOP_STRINGS = ("</s>", "<|im_end|>", "<|eot_id|>")
 _NON_ALNUM_PATTERN = pcre.compile(r"[^a-z0-9]+")
 _MMLU_PRO_SUBSET_TREE = {
     "stem": {
@@ -143,13 +145,18 @@ def _normalize_choice_text(text: Any) -> str:
 
 
 def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
-    """Extract choice label. Keep the nested traversal explicit so ordering and metadata stay aligned."""
+    """Use the last explicit answer in the generated response."""
     response = text or ""
+    last_label = _INVALID_CHOICE
+    last_position = -1
     for pattern in _EXPLICIT_ANSWER_PATTERNS:
-        for match in pattern.findall(response):
-            candidate = str(match).strip().upper()
-            if candidate in valid_labels:
-                return candidate
+        for match in pattern.finditer(response):
+            candidate = str(match.group(1)).strip().upper()
+            if candidate in valid_labels and match.start() >= last_position:
+                last_label = candidate
+                last_position = match.start()
+    if last_position >= 0:
+        return last_label
 
     matches = list(_CHOICE_TOKEN_PATTERN.findall(response))
     for match in reversed(matches):
