@@ -37,6 +37,7 @@ from evalution.engines import (
     TransformersCompat,
     VLLM,
     ZML,
+    ZMLNative,
 )
 from evalution.logbar import get_logger
 from evalution.results import (
@@ -87,6 +88,7 @@ __all__ = [
     "UnsafeLocalRuntime",
     "VLLM",
     "ZML",
+    "ZMLNative",
     "benchmarks",
     "compare",
     "engines",
