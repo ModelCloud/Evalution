@@ -269,6 +269,11 @@ tests:
 Subset-aware benchmarks use a `subsets` selector instead of benchmark-specific selector names.
 Currently this applies to `mmlu` and `mmlu_pro`.
 
+`mmlu_pro` defaults to 2,048 generated tokens for chain-of-thought answers.
+Its stop strings are model end-of-sequence/end-of-turn markers; the literal
+`Question:` is not a stop because it may occur within an explanation. Scoring
+uses the last valid explicit answer label in the generated response.
+
 - `subsets: all` runs the full benchmark.
 - `subsets: stem` runs the full `stem` subtree.
 - `subsets: stem.math` or `subsets: stem.abstract_algebra` runs a single leaf path.

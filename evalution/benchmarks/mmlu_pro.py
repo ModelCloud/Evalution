@@ -34,7 +34,9 @@ from evalution.benchmarks.subsets import ResolvedSubsets, SubsetTree, normalize_
 # Keep benchmark defaults and public task ids explicit at module scope.
 _INVALID_CHOICE = "[invalid]"
 _OPTION_LABELS = tuple("ABCDEFGHIJKLMNOP")
-_STOP_STRINGS = ("Question:", "</s>", "<|im_end|>", "<|eot_id|>")
+# A model may write "Question:" while explaining the current answer. Stopping
+# there can discard the answer before it is generated.
+_STOP_STRINGS = ("</s>", "<|im_end|>", "<|eot_id|>")
 _NON_ALNUM_PATTERN = pcre.compile(r"[^a-z0-9]+")
 _MMLU_PRO_SUBSET_TREE = {
     "stem": {
@@ -61,10 +63,8 @@ _MMLU_PRO_SUBSET_TREE = {
     },
 }
 _MMLU_PRO_SUBSETS = SubsetTree(_MMLU_PRO_SUBSET_TREE)
-_EXPLICIT_ANSWER_PATTERNS = (
-    pcre.compile(r"(?i)\bthe answer is\s*\(?([A-Z])\)?"),
-    pcre.compile(r"(?i)\banswer is\s*\(?([A-Z])\)?"),
-    pcre.compile(r"(?i)\banswer\s*[:\-]\s*\(?([A-Z])\)?"),
+_EXPLICIT_ANSWER_PATTERN = pcre.compile(
+    r"(?i)\b(?:the\s+)?answer\s*(?:is|[:\-])\s*(?:\(([A-Z])\)|([A-Z])\b)"
 )
 _CHOICE_TOKEN_PATTERN = pcre.compile(r"\b([A-Z])\b")
 
@@ -143,13 +143,17 @@ def _normalize_choice_text(text: Any) -> str:
 
 
 def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
-    """Extract choice label. Keep the nested traversal explicit so ordering and metadata stay aligned."""
+    """Use the last explicit answer in the generated response."""
     response = text or ""
-    for pattern in _EXPLICIT_ANSWER_PATTERNS:
-        for match in pattern.findall(response):
-            candidate = str(match).strip().upper()
-            if candidate in valid_labels:
-                return candidate
+    last_label = _INVALID_CHOICE
+    found_explicit = False
+    for match in _EXPLICIT_ANSWER_PATTERN.finditer(response):
+        candidate = str(match.group(1) or match.group(2)).upper()
+        if candidate in valid_labels:
+            last_label = candidate
+            found_explicit = True
+    if found_explicit:
+        return last_label
 
     matches = list(_CHOICE_TOKEN_PATTERN.findall(response))
     for match in reversed(matches):
@@ -291,7 +295,7 @@ class MMLUPro(TestSuite):
     batch_size: int | None = None
     cache_dir: str | None = None
     apply_chat_template: bool = False
-    max_new_tokens: int = 1024
+    max_new_tokens: int = 2048
     do_sample: bool = False
     temperature: float = 0.0
     _fewshot_by_subset_value: dict[str, list[dict[str, Any]]] = field(

@@ -29,7 +29,8 @@ class FakeSession:
             "Question:\nA prime number larger than 2 is\nOptions:\nA. 9\nB. 11\nC. 12\nAnswer: Let's think step by step."
         )
         assert "about business." in requests[1].prompt
-        assert requests[1].stop[0] == "Question:"
+        assert "Question:" not in requests[1].stop
+        assert "<|eot_id|>" in requests[1].stop
         return [
             GenerationOutput(prompt=requests[0].prompt or "", text="After reasoning, the answer is (B)."),
             GenerationOutput(prompt=requests[1].prompt or "", text="Answer: B"),
