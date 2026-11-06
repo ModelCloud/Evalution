@@ -18,7 +18,7 @@ from evalution.logbar import get_logger, manual_progress
 from evalution.results import SampleResult, TestResult
 from evalution.scorers.choice_label import choice_label_exact_match
 from evalution.benchmarks.base import TestSuite
-from evalution.benchmarks.data import limit_docs, load_suite_dataset
+from evalution.benchmarks.data import load_suite_dataset, select_docs
 from evalution.benchmarks.execution import (
     AUTO_BATCH_PREVIEW_ROWS,
     PreparedSample,
@@ -36,7 +36,12 @@ _INVALID_CHOICE = "[invalid]"
 _OPTION_LABELS = tuple("ABCDEFGHIJKLMNOP")
 # A model may write "Question:" while explaining the current answer. Stopping
 # there can discard the answer before it is generated.
-_STOP_STRINGS = ("</s>", "<|im_end|>", "<|eot_id|>")
+#
+# Few-shot sections are joined with "\n\n\n" (see _build_prompt), so a model
+# that fails to emit EOS after answering continues by writing a *new* example
+# that starts with "\n\n\nQuestion:". Stopping on that boundary keeps the
+# answer and avoids generating several kilobytes of hallucinated questions.
+_STOP_STRINGS = ("</s>", "<|im_end|>", "<|eot_id|>", "\n\n\nQuestion:")
 _NON_ALNUM_PATTERN = pcre.compile(r"[^a-z0-9]+")
 _MMLU_PRO_SUBSET_TREE = {
     "stem": {
@@ -143,8 +148,22 @@ def _normalize_choice_text(text: Any) -> str:
 
 
 def _extract_choice_label(text: str, valid_labels: set[str]) -> str:
-    """Use the last explicit answer in the generated response."""
+    """Use the last explicit answer, ignoring any continuation past the prompt's
+    own few-shot boundary.
+
+    A model that fails to emit EOS keeps writing *new* examples, each of which
+    ends with its own "the answer is (X)". Those follow-ups belong to invented
+    questions, so scoring them measures hallucination rather than the answer.
+    Few-shot sections are joined with "\\n\\n\\n" (see ``_build_prompt``), so the
+    first ``"\\n\\n\\nQuestion:"`` marks the end of the real answer. Trimming
+    there keeps the last-answer preference (which handles a model that writes
+    "Question:" while still explaining) without ever scoring a follow-up.
+    """
     response = text or ""
+    boundary = response.find("\n\n\nQuestion:")
+    if boundary != -1:
+        response = response[:boundary]
+
     last_label = _INVALID_CHOICE
     found_explicit = False
     for match in _EXPLICIT_ANSWER_PATTERN.finditer(response):
@@ -292,6 +311,10 @@ class MMLUPro(TestSuite):
     num_fewshot: int = 5
     stream: bool = True
     max_rows: int | None = None
+    # Explicit row subset over the evaluated split. Lets a caller score one
+    # strided shard per process and merge the shards, which is how MMLU-Pro is
+    # run data-parallel across GPUs.
+    row_indices: tuple[int, ...] | None = None
     batch_size: int | None = None
     cache_dir: str | None = None
     apply_chat_template: bool = False
@@ -334,6 +357,7 @@ class MMLUPro(TestSuite):
             "selection_mode": resolved_subsets.selection_mode,
             "num_fewshot": self.num_fewshot,
             "stream": self.stream,
+            "row_indices": list(self.row_indices) if self.row_indices is not None else None,
             "apply_chat_template": self.apply_chat_template,
             "generation_submission_mode": generation_submission_mode,
             "scoring_mode": "generated_choice_label_exact_match",
@@ -373,7 +397,7 @@ class MMLUPro(TestSuite):
             stream=self.stream,
         )
         docs = self._select_docs([_preprocess_doc(doc) for doc in loaded_docs])
-        docs = limit_docs(docs, self.max_rows)
+        docs = select_docs(docs, row_indices=self.row_indices, max_rows=self.max_rows)
         if not isinstance(docs, list):
             docs = list(docs)
         total = len(docs)

@@ -585,3 +585,40 @@ def test_mmlu_pro_subsets_list_combines_multiple_paths(monkeypatch) -> None:
         "stem.computer_science",
         "humanities.law",
     }
+
+
+def test_mmlu_pro_stops_at_the_fewshot_boundary() -> None:
+    """A model that misses EOS keeps writing new examples.
+
+    The few-shot separator is "\\n\\n\\n", so the continuation starts with
+    "\\n\\n\\nQuestion:". Stopping there ends generation right after the answer
+    instead of producing kilobytes of invented questions.
+    """
+    assert "\n\n\nQuestion:" in mmlu_pro_module._STOP_STRINGS
+    # A bare "Question:" must not stop generation: models write it mid-reasoning.
+    assert "Question:" not in mmlu_pro_module._STOP_STRINGS
+
+
+def test_mmlu_pro_ignores_answers_past_the_fewshot_boundary() -> None:
+    """Only the answer to the asked question may be scored.
+
+    The continuation contains further "the answer is (X)" statements, one per
+    hallucinated follow-up question. Taking the last one overall measures
+    hallucination instead of the answer.
+    """
+    text = (
+        "We reason about it. The answer is (C)."
+        "\n\n\nQuestion:\nAn invented follow-up?\nOptions:\nA. x\nB. y"
+        "\nAnswer: Let's think step by step. The answer is (A)."
+    )
+    assert mmlu_pro_module._extract_choice_label(text, set("ABCDEFGHIJ")) == "C"
+
+
+def test_mmlu_pro_keeps_last_answer_within_the_answer() -> None:
+    """A "Question:" written mid-explanation must not hide the real answer.
+
+    Only the "\\n\\n\\nQuestion:" few-shot boundary truncates; the final answer
+    preference from #145 is preserved inside the answer itself.
+    """
+    text = "Question: is this a trap? No. Reasoning continues. The answer is (D)."
+    assert mmlu_pro_module._extract_choice_label(text, set("ABCDEFGHIJ")) == "D"
