@@ -7,6 +7,7 @@ import pcre
 from tests.models_support import MIN_REALISTIC_BASELINE_SCORE
 from tests.models_support import SUITE_SPECS
 from tests.models_support import find_suspicious_low_baselines
+from tests.models_support import resolve_attn_implementation
 
 # Compile the benchmark-factory pattern once so the audit stays on the repo's PCRE2 backend.
 _EVALUTION_BENCHMARK_FACTORY_PATTERN = pcre.compile(r"evalution\.benchmarks\.([a-zA-Z0-9_]+)\s*\(")
@@ -109,6 +110,38 @@ _NON_CONCRETE_BENCHMARK_FACTORIES = frozenset(
 # These concrete unit-tested suites still need real Llama 3.2 full-model baseline captures on
 # supported GPU hardware before they can be registered into `SUITE_SPECS`.
 _KNOWN_FULL_MODEL_COVERAGE_GAPS = frozenset()
+
+
+def test_resolve_attn_implementation_prefers_flash_attn_when_installed(monkeypatch) -> None:
+    """Keep the requested FlashAttention path when the optional package is present."""
+    import transformers.utils
+
+    monkeypatch.setattr(transformers.utils, "is_flash_attn_2_available", lambda: True)
+
+    assert resolve_attn_implementation() == "paged|flash_attention_2"
+
+
+def test_resolve_attn_implementation_falls_back_to_sdpa(monkeypatch) -> None:
+    """Without flash-attn the loader cannot degrade, so the suite must request SDPA."""
+    import transformers.utils
+
+    monkeypatch.setattr(transformers.utils, "is_flash_attn_2_available", lambda: False)
+
+    assert resolve_attn_implementation() == "paged|sdpa"
+    assert (
+        resolve_attn_implementation("paged|flash_attention_2", fallback="paged|eager")
+        == "paged|eager"
+    )
+    assert resolve_attn_implementation("paged|sdpa") == "paged|sdpa"
+
+
+def test_resolve_attn_implementation_handles_missing_probe(monkeypatch) -> None:
+    """An older transformers build without the probe keeps the previous behavior."""
+    import transformers.utils
+
+    monkeypatch.delattr(transformers.utils, "is_flash_attn_2_available", raising=False)
+
+    assert resolve_attn_implementation() == "paged|flash_attention_2"
 
 
 def _unit_tested_benchmark_factories() -> set[str]:

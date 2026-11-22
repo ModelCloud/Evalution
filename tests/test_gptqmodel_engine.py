@@ -25,6 +25,7 @@ from evalution.engines.gptqmodel_engine import (
     _validate_gptqmodel_backend,
     load_gptqmodel_runtime,
 )
+from tests.accelerator_gates import requires_nvidia_cuda
 
 # Keep shared test fixtures and expectations explicit at module scope.
 _TINYLLAMA_GPTQ_MODEL = Path("/monster/data/model/TinyLlama-1.1B-Chat-v1.0-GPTQ-4bit")
@@ -506,8 +507,8 @@ def test_load_gptqmodel_runtime_prefers_triton_when_marlin_headers_are_missing(m
     reason="local TinyLlama GPTQ weights are not available",
 )
 @pytest.mark.skipif(
-    not torch.cuda.is_available(),
-    reason="CUDA is required for the GPTQModel engine integration test",
+    not requires_nvidia_cuda(),
+    reason="an NVIDIA CUDA device is required for the GPTQModel engine integration test",
 )
 def test_gptqmodel_engine_can_generate_and_score_on_cuda() -> None:
     """Verify gptqmodel engine can generate and score on cuda. Keep the scoring path explicit so benchmark-specific behavior stays auditable."""

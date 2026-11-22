@@ -19,6 +19,7 @@ from tests.models_support import (
     _assert_llama3_2_transformers_execution,
     _select_llama3_2_gpu_baseline,
     assert_metrics_match_baseline,
+    resolve_attn_implementation,
 )
 
 # Keep shared test fixtures and expectations explicit at module scope.
@@ -50,6 +51,7 @@ def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
         import json
 
         import evalution
+        from tests.models_support import resolve_attn_implementation
 
         model_path = {str(LLAMA3_2_1B_INSTRUCT)!r}
         device = {LLAMA3_2_TRANSFORMERS_DEVICE!r}
@@ -60,7 +62,7 @@ def _run_gsm8k_platinum(engine_name: str) -> dict[str, object]:
         if engine_name == "transformers":
             engine = evalution.Transformers(
                 dtype="bfloat16",
-                attn_implementation="paged|flash_attention_2",
+                attn_implementation=resolve_attn_implementation(),
                 device=device,
                 batch_size="auto",
                 seed=seed,
@@ -124,7 +126,10 @@ def test_llama3_2_transformers_vs_transformers_compat_gsm8k_platinum_baselines()
 
     assert transformers_result["engine"]["resolved_engine"] == "Transformers"
     assert compat_result["engine"]["resolved_engine"] == "TransformersCompat"
-    _assert_llama3_2_transformers_execution(transformers_result["engine"])
+    _assert_llama3_2_transformers_execution(
+        transformers_result["engine"],
+        expected_attn_implementation=resolve_attn_implementation(),
+    )
     assert compat_result["engine"]["execution"]["generation_backend"] == "generate_compat"
     assert compat_result["engine"]["execution"]["paged_attention"] is False
 

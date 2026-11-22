@@ -19,6 +19,7 @@ from evalution.engines.tensorrt_llm_engine import (
     TensorRTLLMSession,
     _import_tensorrt_llm,
 )
+from tests.accelerator_gates import requires_nvidia_cuda
 
 # Keep integration tests anchored to the shared local model store used elsewhere in this repo.
 _LOCAL_MODEL_ROOT = Path("/monster/data/model")
@@ -368,8 +369,8 @@ def test_tensorrt_llm_session_gc_and_close_release_runtime_state() -> None:
     reason="tensorrt_llm is required for the TensorRT-LLM engine integration test",
 )
 @pytest.mark.skipif(
-    not torch.cuda.is_available(),
-    reason="CUDA is required for the TensorRT-LLM engine integration test",
+    not requires_nvidia_cuda(),
+    reason="an NVIDIA CUDA device is required for the TensorRT-LLM engine integration test",
 )
 def test_tensorrt_llm_engine_runs_real_cuda_smoke_path(capfd: pytest.CaptureFixture[str]) -> None:
     """Run the real TensorRT-LLM CUDA path and assert the current scoring limitation explicitly."""
