@@ -22,6 +22,7 @@ from tests.models_support import (
     SUITE_SPECS,
     _assert_llama3_2_transformers_execution,
     assert_metrics_match_baseline,
+    resolve_attn_implementation,
 )
 
 # Reuse the standard Llama 3.2 transformer integration marks for the HTTP proving-ground test.
@@ -76,7 +77,12 @@ def _run_suite_subprocess(mode: str, *, gpu_index: str) -> dict[str, object]:
         import evalution.engines as engines
         from evalution.config import Model
         from evalution.engines.openai_server import build_openai_compatible_server
-        from tests.models_support import LLAMA3_2_1B_INSTRUCT, LLAMA3_2_TRANSFORMERS_DEVICE, SUITE_SPECS
+        from tests.models_support import (
+            LLAMA3_2_1B_INSTRUCT,
+            LLAMA3_2_TRANSFORMERS_DEVICE,
+            SUITE_SPECS,
+            resolve_attn_implementation,
+        )
 
         suite_key = {_SUITE_KEY!r}
         mode = {mode!r}
@@ -87,7 +93,7 @@ def _run_suite_subprocess(mode: str, *, gpu_index: str) -> dict[str, object]:
             result = (
                 evalution.Transformers(
                     dtype="bfloat16",
-                    attn_implementation="paged|flash_attention_2",
+                    attn_implementation=resolve_attn_implementation(),
                     device=LLAMA3_2_TRANSFORMERS_DEVICE,
                     batch_size="auto",
                 )
@@ -98,7 +104,7 @@ def _run_suite_subprocess(mode: str, *, gpu_index: str) -> dict[str, object]:
         elif mode == "openai_http":
             backend_engine = engines.Transformers(
                 dtype="bfloat16",
-                attn_implementation="paged|flash_attention_2",
+                attn_implementation=resolve_attn_implementation(),
                 device=LLAMA3_2_TRANSFORMERS_DEVICE,
                 batch_size="auto",
             )
@@ -226,7 +232,10 @@ def test_llama3_2_transformers_openai_compatible_gsm8k_platinum_matches_native_b
         assert openai_result["metadata"][key] == expected_value
 
     assert native_result["engine"]["resolved_engine"] == "Transformers"
-    _assert_llama3_2_transformers_execution(native_result["engine"])
+    _assert_llama3_2_transformers_execution(
+        native_result["engine"],
+        expected_attn_implementation=resolve_attn_implementation(),
+    )
     assert openai_result["engine"]["resolved_engine"] == "OpenAICompatible"
     assert openai_result["engine"]["batch_size"] == _OPENAI_SERVER_BATCH_SIZE
     assert openai_result["engine"]["execution"]["generation_backend"] == "openai_http"

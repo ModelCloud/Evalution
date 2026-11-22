@@ -6,7 +6,7 @@ from __future__ import annotations
 import evalution
 import pytest
 
-from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS
+from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, resolve_attn_implementation
 
 # Keep shared test fixtures and expectations explicit at module scope.
 pytestmark = LLAMA3_2_TRANSFORMERS_TEST_MARKS
@@ -18,7 +18,7 @@ def test_llama3_2_transformers_multirc_full_model_eval() -> None:
     result = (
         evalution.Transformers(
             dtype="bfloat16",
-            attn_implementation="paged|flash_attention_2",
+            attn_implementation=resolve_attn_implementation(),
             device="cuda",
             batch_size=8,
         )

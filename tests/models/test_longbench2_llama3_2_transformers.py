@@ -8,6 +8,7 @@ from __future__ import annotations
 import pytest
 import torch
 
+from tests.accelerator_gates import requires_nvidia_cuda
 from tests.models_support import LLAMA3_2_TRANSFORMERS_TEST_MARKS, run_suite_spec
 
 # Keep shared test fixtures and expectations explicit at module scope.
@@ -17,8 +18,8 @@ _MIN_LONG_BENCH2_VRAM_BYTES = 90 * 1024**3
 pytestmark = [
     *LLAMA3_2_TRANSFORMERS_TEST_MARKS,
     pytest.mark.skipif(
-        not torch.cuda.is_available() or torch.cuda.get_device_properties(0).total_memory < _MIN_LONG_BENCH2_VRAM_BYTES,
-        reason="the LongBench2 legal_single regression requires a 96 GB-class CUDA device",
+        not requires_nvidia_cuda() or torch.cuda.get_device_properties(0).total_memory < _MIN_LONG_BENCH2_VRAM_BYTES,
+        reason="the LongBench2 legal_single regression requires a 96 GB-class NVIDIA CUDA device",
     ),
 ]
 

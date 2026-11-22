@@ -563,10 +563,39 @@ def assert_metrics_match_baseline(
         assert actual[key] == pytest.approx(expected_value, abs=abs_tolerance), f'expected: `{pytest.approx(expected_value, abs=abs_tolerance)}`, actual: `{actual[key]}`'
 
 
-def _assert_llama3_2_transformers_execution(engine: dict[str, Any]) -> None:
+def resolve_attn_implementation(
+    preferred: str = "paged|flash_attention_2",
+    fallback: str | None = None,
+) -> str:
+    """Resolve a flash-attn attention request against the optional package.
+
+    Full-model integration tests hard-code ``paged|flash_attention_2``, but the
+    model loader deliberately does not mask optional attention-backend import
+    failures. Without flash-attn installed the suite therefore fails during
+    model load instead of exercising the portable SDPA path, so resolve the
+    request here and keep SDPA coverage.
+    """
+    if "flash_attention_2" not in preferred:
+        return preferred
+    try:
+        from transformers.utils import is_flash_attn_2_available
+    except ImportError:
+        return fallback if fallback is not None else preferred
+    if is_flash_attn_2_available():
+        return preferred
+    if fallback is not None:
+        return fallback
+    return preferred.replace("flash_attention_2", "sdpa")
+
+
+def _assert_llama3_2_transformers_execution(
+    engine: dict[str, Any],
+    *,
+    expected_attn_implementation: str = "paged|flash_attention_2",
+) -> None:
     # Keep the requested serialized config stable even when the runtime has to degrade backends.
     assert engine["dtype"] == "bfloat16"
-    assert engine["attn_implementation"] == "paged|flash_attention_2"
+    assert engine["attn_implementation"] == expected_attn_implementation
     assert engine["batch_size"] == "auto"
 
     execution = engine["execution"]
@@ -598,11 +627,12 @@ def run_llama3_2_suite(
     suite: Any,
 ) -> tuple[Any, Any]:
     """Run llama3 2 suite."""
+    attn_implementation = resolve_attn_implementation()
     with capsys.disabled():
         result = (
             evalution.Transformers(
                 dtype="bfloat16",
-                attn_implementation="paged|flash_attention_2",
+                attn_implementation=attn_implementation,
                 device=LLAMA3_2_TRANSFORMERS_DEVICE,
                 batch_size="auto",
             )
@@ -612,7 +642,10 @@ def run_llama3_2_suite(
         )
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
-    _assert_llama3_2_transformers_execution(result.engine)
+    _assert_llama3_2_transformers_execution(
+        result.engine,
+        expected_attn_implementation=attn_implementation,
+    )
     assert len(result.tests) == 1
     return result, result.tests[0]
 
@@ -622,10 +655,11 @@ def run_llama3_2_suites(
     suites: list[Any],
 ) -> tuple[Any, list[Any]]:
     """Run llama3 2 suites."""
+    attn_implementation = resolve_attn_implementation()
     with capsys.disabled():
         evaluation = evalution.Transformers(
             dtype="bfloat16",
-            attn_implementation="paged|flash_attention_2",
+            attn_implementation=attn_implementation,
             device=LLAMA3_2_TRANSFORMERS_DEVICE,
             batch_size="auto",
         ).model(path=str(LLAMA3_2_1B_INSTRUCT))
@@ -634,7 +668,10 @@ def run_llama3_2_suites(
         result = evaluation.result()
 
     assert result.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
-    _assert_llama3_2_transformers_execution(result.engine)
+    _assert_llama3_2_transformers_execution(
+        result.engine,
+        expected_attn_implementation=attn_implementation,
+    )
     assert len(result.tests) == len(suites)
     return result, result.tests
 
@@ -644,12 +681,13 @@ def run_llama3_2_compare_suite(
     suite: Any,
 ) -> tuple[Any, Any]:
     """Run llama3 2 compare suite."""
+    attn_implementation = resolve_attn_implementation()
     with capsys.disabled():
         result = (
             evalution.compare(
                 evalution.Transformers(
                     dtype="bfloat16",
-                    attn_implementation="paged|flash_attention_2",
+                    attn_implementation=attn_implementation,
                     device=LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE,
                     batch_size="auto",
                 ).model(
@@ -658,7 +696,7 @@ def run_llama3_2_compare_suite(
                 ),
                 evalution.Transformers(
                     dtype="bfloat16",
-                    attn_implementation="paged|flash_attention_2",
+                    attn_implementation=attn_implementation,
                     device=LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE,
                     batch_size="auto",
                 ).model(
@@ -676,8 +714,14 @@ def run_llama3_2_compare_suite(
     assert result.right.model["path"] == str(LLAMA3_2_1B_INSTRUCT)
     assert result.left.model["label"] == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
     assert result.right.model["label"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
-    _assert_llama3_2_transformers_execution(result.left.engine)
-    _assert_llama3_2_transformers_execution(result.right.engine)
+    _assert_llama3_2_transformers_execution(
+        result.left.engine,
+        expected_attn_implementation=attn_implementation,
+    )
+    _assert_llama3_2_transformers_execution(
+        result.right.engine,
+        expected_attn_implementation=attn_implementation,
+    )
     assert result.left.engine["device"] == LLAMA3_2_TRANSFORMERS_COMPARE_LEFT_DEVICE
     assert result.right.engine["device"] == LLAMA3_2_TRANSFORMERS_COMPARE_RIGHT_DEVICE
     assert len(result.left.tests) == 1
