@@ -9,6 +9,9 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
+# Prefill logits are fp32 even when the model weights are fp16/bf16.
+_PREFILL_LOGIT_BYTES = 4
+
 
 @dataclass(frozen=True, slots=True)
 class MemoryProfile:
@@ -19,6 +22,9 @@ class MemoryProfile:
     total_vram_gib: float
     free_vram_gib: float
     parameter_count_billions: float
+    # Per-token resident cost consumed by the `auto` batch-size heuristic: the KV
+    # cache plus the full-prefix prefill logits when the model forward cannot
+    # slice them with `logits_to_keep`.
     kv_cache_bytes_per_token: int | None
 
 
@@ -27,6 +33,7 @@ def build_memory_profile(
     *,
     input_device: Any,
     configured_dtype: str | None,
+    tokenizer: Any = None,
 ) -> MemoryProfile:
     """Build memory profile."""
     import torch
@@ -47,7 +54,11 @@ def build_memory_profile(
         total_vram_gib=total_vram_gib,
         free_vram_gib=free_vram_gib,
         parameter_count_billions=parameter_count_billions(model),
-        kv_cache_bytes_per_token=kv_cache_bytes_per_token(model, dtype_bytes=dtype_bytes),
+        kv_cache_bytes_per_token=auto_batch_bytes_per_token(
+            model,
+            dtype_bytes=dtype_bytes,
+            tokenizer=tokenizer,
+        ),
     )
 
 
@@ -113,6 +124,72 @@ def parameter_count_billions(model: Any) -> float:
     return 1.0
 
 
+def config_value(config: Any, *names: str) -> Any:
+    """Return the first attribute from `names` that the config actually defines."""
+    if config is None:
+        return None
+    for name in names:
+        value = getattr(config, name, None)
+        if value is not None:
+            return value
+    return None
+
+
+def model_text_config(model: Any) -> Any:
+    """Return the nested text-backbone config used by multimodal checkpoints."""
+    config = getattr(model, "config", None)
+    if config is None:
+        return None
+    if config_value(config, "vocab_size") is not None:
+        return config
+    return getattr(config, "text_config", None) or config
+
+
+def model_vocab_size(model: Any, *, tokenizer: Any = None) -> int | None:
+    """Resolve the output vocabulary used by the prefill logits tensor."""
+    value = config_value(model_text_config(model), "vocab_size")
+    if value:
+        return int(value)
+    if tokenizer is not None:
+        with suppress(Exception):
+            size = len(tokenizer)
+            if size:
+                return int(size)
+    return None
+
+
+def supports_logits_to_keep(model: Any) -> bool:
+    """Mirror transformers' prefill-logits optimization check.
+
+    When ``forward()`` accepts ``logits_to_keep``, ``generate()`` asks for the
+    last-token logits only. Quantized wrappers that do not accept the kwarg
+    fall back to a full ``[batch, prompt, vocab]`` tensor.
+    """
+    try:
+        import inspect
+
+        forward = getattr(model, "forward", None)
+        if forward is None:
+            return False
+        return "logits_to_keep" in inspect.signature(forward).parameters
+    except (TypeError, ValueError):
+        return False
+
+
+def prefill_logits_bytes_per_token(model: Any, *, tokenizer: Any = None) -> int:
+    """Bytes of prefill logits kept resident for every prompt token.
+
+    Returns zero when ``generate()`` can slice the logits to the last token, or
+    when the vocabulary cannot be resolved.
+    """
+    if supports_logits_to_keep(model):
+        return 0
+    vocab_size = model_vocab_size(model, tokenizer=tokenizer)
+    if not vocab_size:
+        return 0
+    return int(vocab_size) * _PREFILL_LOGIT_BYTES
+
+
 def kv_cache_bytes_per_token(model: Any, *, dtype_bytes: int) -> int | None:
     """Implement kv cache bytes per token for this module. Preserve the fallback order expected by the surrounding caller."""
     config = getattr(model, "config", None)
@@ -136,6 +213,25 @@ def kv_cache_bytes_per_token(model: Any, *, dtype_bytes: int) -> int | None:
         return None
 
     return int(2 * int(num_layers) * int(num_kv_heads) * int(head_dim) * dtype_bytes)
+
+
+def auto_batch_bytes_per_token(
+    model: Any,
+    *,
+    dtype_bytes: int,
+    tokenizer: Any = None,
+) -> int | None:
+    """Per-token resident cost consumed by the `auto` batch-size heuristic.
+
+    The heuristic multiplies this value by the prompt-plus-generation length,
+    so a full-prefix logits tensor has to be counted per token here as well.
+    Returns ``None`` only when neither term can be estimated.
+    """
+    kv_cache_bytes = kv_cache_bytes_per_token(model, dtype_bytes=dtype_bytes)
+    logits_bytes = prefill_logits_bytes_per_token(model, tokenizer=tokenizer)
+    if kv_cache_bytes is None:
+        return logits_bytes or None
+    return kv_cache_bytes + logits_bytes
 
 
 def bytes_to_gib(num_bytes: int) -> float:
