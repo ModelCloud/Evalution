@@ -75,6 +75,8 @@ _AUTO_BATCH_LADDER = (
     1536,
     2048,
 )
+# Halve the batch at most this many times when a resolved batch still runs out of memory.
+_AUTO_BATCH_OOM_MAX_RETRIES = 6
 _TRANSFORMERS_NO_TIE_WEIGHTS_PATCH_LOCK = threading.Lock()
 _TRANSFORMERS_NO_TIE_WEIGHTS_ACTIVE: ContextVar[bool] = ContextVar(
     "evalution_transformers_no_tie_weights_active",
@@ -166,6 +168,8 @@ class BaseTransformerSession(BaseInferenceSession):
     paged_attention_enabled: bool = False
     generation_backend: str = "generate"
     standard_batch_size_cap: int | None = None
+    # Set after an OOM retry so later suites do not re-resolve to the same oversized batch.
+    _oom_batch_size_ceiling: int | None = field(default=None, init=False, repr=False)
     stop_criteria_cache: dict[tuple[str, ...], Any] = field(default_factory=dict, repr=False)
     auto_batch_size_cache: dict[tuple[Any, ...], int] = field(default_factory=dict, repr=False)
     execution_logged: bool = field(default=False, repr=False)
@@ -608,14 +612,15 @@ class BaseTransformerSession(BaseInferenceSession):
             with self._state_lock:
                 cached = self.auto_batch_size_cache.get(cache_key)
             if cached is not None:
-                return cached
+                return self._apply_oom_batch_ceiling(cached)
 
             resolved = self._estimate_auto_batch_size(stats)
             with self._state_lock:
                 cached = self.auto_batch_size_cache.get(cache_key)
                 if cached is not None:
-                    return cached
+                    return self._apply_oom_batch_ceiling(cached)
                 self.auto_batch_size_cache[cache_key] = resolved
+            resolved = self._apply_oom_batch_ceiling(resolved)
             get_logger().info(
                 "auto batch size resolved to %d for %d row(s); prompt_tokens(min/avg/max)=%d/%.1f/%d, "
                 "max_new_tokens=%d, max_num_beams=%d, dtype=%s, total_vram_gib=%.1f",
@@ -630,6 +635,21 @@ class BaseTransformerSession(BaseInferenceSession):
                 stats["total_vram_gib"],
             )
             return resolved
+
+    def _apply_oom_batch_ceiling(self, batch_size: int) -> int:
+        """Cap a resolved batch at the largest size that survived an earlier OOM."""
+        with self._state_lock:
+            ceiling = self._oom_batch_size_ceiling
+        if ceiling is None:
+            return batch_size
+        return min(batch_size, ceiling)
+
+    def _record_oom_batch_ceiling(self, batch_size: int) -> None:
+        """Remember the retry size so later suites start below the OOM threshold."""
+        with self._state_lock:
+            ceiling = self._oom_batch_size_ceiling
+            if ceiling is None or batch_size < ceiling:
+                self._oom_batch_size_ceiling = batch_size
 
     # Cache per-stop-string stopping criteria when the installed transformers build exposes them.
     def _get_stop_criteria(self, stop_strings: list[str]) -> Any | None:
@@ -755,7 +775,9 @@ class BaseTransformerSession(BaseInferenceSession):
         raw_batch_size = max(1, min(row_count, max_from_tokens, max_from_vram))
         return min(row_count, _friendly_batch_size(raw_batch_size))
 
-    # Run standard `model.generate()` over one or more fixed batches.
+    # Run standard `model.generate()` over one or more fixed batches. When the
+    # accelerator runs out of memory, halve the batch and retry the same chunk
+    # instead of failing the whole suite.
     def _generate_standard(
         self,
         requests: list[GenerationRequest],
@@ -763,51 +785,78 @@ class BaseTransformerSession(BaseInferenceSession):
         batch_size: int,
     ) -> list[GenerationOutput]:
         """Generate standard. Keep the nested traversal explicit so ordering and metadata stay aligned."""
+        outputs: list[GenerationOutput] = []
+        batch_size = max(1, min(int(batch_size), len(requests)))
+        start = 0
+        retries_left = _AUTO_BATCH_OOM_MAX_RETRIES
+        while start < len(requests):
+            batch = requests[start : start + batch_size]
+            try:
+                outputs.extend(self._generate_standard_batch(batch))
+            except Exception as exc:
+                if not _is_out_of_memory_error(exc) or retries_left <= 0:
+                    raise
+                smaller_batch_size = _fallback_batch_size(batch_size)
+                if smaller_batch_size >= batch_size:
+                    raise
+                get_logger().warning(
+                    "out of memory generating %d request(s); retrying with batch size %d",
+                    len(batch),
+                    smaller_batch_size,
+                )
+                _release_accelerator_memory()
+                batch_size = smaller_batch_size
+                retries_left -= 1
+                self._record_oom_batch_ceiling(smaller_batch_size)
+                continue
+            start += len(batch)
+        return outputs
+
+    # Run one fixed batch through `model.generate()` and decode its outputs.
+    def _generate_standard_batch(self, batch: list[GenerationRequest]) -> list[GenerationOutput]:
+        """Generate standard batch. Keep the nested traversal explicit so ordering and metadata stay aligned."""
         import torch
 
         outputs: list[GenerationOutput] = []
-        for start in range(0, len(requests), batch_size):
-            batch = requests[start : start + batch_size]
-            rendered_prompts = None
-            encoded = None
-            generated = None
-            try:
-                with self._tokenizer_lock:
-                    rendered_prompts = [self._render_request(request) for request in batch]
-                    encoded = self._encode_standard_batch(batch)
-                encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
-                generation_kwargs = self._build_generation_kwargs(batch)
-                stopping_criteria = self._build_stopping_criteria(batch)
-                if stopping_criteria is not None:
-                    generation_kwargs["stopping_criteria"] = stopping_criteria
+        rendered_prompts = None
+        encoded = None
+        generated = None
+        try:
+            with self._tokenizer_lock:
+                rendered_prompts = [self._render_request(request) for request in batch]
+                encoded = self._encode_standard_batch(batch)
+            encoded = {key: value.to(self.input_device) for key, value in encoded.items()}
+            generation_kwargs = self._build_generation_kwargs(batch)
+            stopping_criteria = self._build_stopping_criteria(batch)
+            if stopping_criteria is not None:
+                generation_kwargs["stopping_criteria"] = stopping_criteria
 
-                # Generation may need the session-selected attention backend before calling
-                # `model.generate()`, especially after loader compatibility fallbacks.
-                with self._generation_attention_context(), torch.inference_mode():
-                    generated = self.model.generate(**encoded, **generation_kwargs)
+            # Generation may need the session-selected attention backend before calling
+            # `model.generate()`, especially after loader compatibility fallbacks.
+            with self._generation_attention_context(), torch.inference_mode():
+                generated = self.model.generate(**encoded, **generation_kwargs)
 
-                input_length = encoded["input_ids"].shape[1]
-                with self._tokenizer_lock:
-                    for index, token_ids in enumerate(generated):
-                        generated_tokens = token_ids[input_length:]
-                        text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
-                        text = _truncate_at_stop(text, batch[index].stop).strip()
-                        outputs.append(
-                            GenerationOutput(
-                                prompt=rendered_prompts[index],
-                                text=text,
-                                metadata=batch[index].metadata,
-                            )
+            input_length = encoded["input_ids"].shape[1]
+            with self._tokenizer_lock:
+                for index, token_ids in enumerate(generated):
+                    generated_tokens = token_ids[input_length:]
+                    text = self.tokenizer.decode(generated_tokens, skip_special_tokens=False)
+                    text = _truncate_at_stop(text, batch[index].stop).strip()
+                    outputs.append(
+                        GenerationOutput(
+                            prompt=rendered_prompts[index],
+                            text=text,
+                            metadata=batch[index].metadata,
                         )
-                        del generated_tokens
-            finally:
-                if generated is not None:
-                    del generated
-                if encoded is not None:
-                    del encoded
-                del batch
-                if rendered_prompts is not None:
-                    del rendered_prompts
+                    )
+                    del generated_tokens
+        finally:
+            if generated is not None:
+                del generated
+            if encoded is not None:
+                del encoded
+            if rendered_prompts is not None:
+                del rendered_prompts
         return outputs
 
     # Stream standard generation outputs in submission order while still honoring the continuous API shape.
@@ -2639,6 +2688,31 @@ def _fallback_batch_size(batch_size: int) -> int:
     if batch_size <= 1:
         return 1
     return _friendly_batch_size(max(1, batch_size // 2))
+
+
+def _is_out_of_memory_error(exc: BaseException) -> bool:
+    """Detect accelerator OOM errors across torch versions and device types."""
+    import torch
+
+    oom_type = getattr(torch, "OutOfMemoryError", None)
+    if oom_type is not None and isinstance(exc, oom_type):
+        return True
+    if not isinstance(exc, RuntimeError):
+        return False
+    message = str(exc).lower()
+    return "out of memory" in message and any(
+        marker in message for marker in ("cuda", "hip", "mps", "npu", "xpu")
+    )
+
+
+def _release_accelerator_memory() -> None:
+    """Drop cached allocator blocks before retrying a smaller batch."""
+    gc.collect()
+    with suppress(Exception):
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 
 def _normalize_batch_size(batch_size: int | str) -> int | str:
